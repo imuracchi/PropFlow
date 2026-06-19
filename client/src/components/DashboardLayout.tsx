@@ -1,0 +1,231 @@
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/useMobile";
+import {
+  Building2, LogOut, PanelLeft,
+  Upload, List, MessageCircle, ShieldCheck, ChevronRight
+} from "lucide-react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
+
+const menuItems = [
+  { icon: List, label: "物件一覧", path: "/properties" },
+  { icon: Upload, label: "物件登録", path: "/upload" },
+  { icon: MessageCircle, label: "チャット", path: "/chat/1" },
+  { icon: ShieldCheck, label: "管理画面", path: "/admin" },
+];
+
+const SIDEBAR_WIDTH_KEY = "sidebar-width";
+const DEFAULT_WIDTH = 230;
+const MIN_WIDTH = 180;
+const MAX_WIDTH = 320;
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
+  }, [sidebarWidth]);
+
+  return (
+    <SidebarProvider
+      style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
+    >
+      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
+        {children}
+      </DashboardLayoutContent>
+    </SidebarProvider>
+  );
+}
+
+function DashboardLayoutContent({
+  children,
+  setSidebarWidth,
+}: {
+  children: React.ReactNode;
+  setSidebarWidth: (w: number) => void;
+}) {
+  const [location, setLocation] = useLocation();
+  const { state, toggleSidebar } = useSidebar();
+  const isCollapsed = state === "collapsed";
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const activeMenuItem = menuItems.find(item =>
+    location.startsWith(item.path === "/chat/1" ? "/chat" : item.path)
+  );
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (isCollapsed) setIsResizing(false);
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const left = sidebarRef.current?.getBoundingClientRect().left ?? 0;
+      const w = e.clientX - left;
+      if (w >= MIN_WIDTH && w <= MAX_WIDTH) setSidebarWidth(w);
+    };
+    const handleMouseUp = () => setIsResizing(false);
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    }
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, setSidebarWidth]);
+
+  return (
+    <>
+      <div className="relative" ref={sidebarRef}>
+        <Sidebar collapsible="icon" className="border-r-0" disableTransition={isResizing}>
+          {/* ヘッダー */}
+          <SidebarHeader className="h-16 justify-center border-b border-sidebar-border">
+            <div className="flex items-center gap-3 px-3 w-full">
+              <button
+                onClick={toggleSidebar}
+                className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-colors focus:outline-none shrink-0"
+              >
+                <PanelLeft className="h-4 w-4 text-sidebar-foreground/50" />
+              </button>
+              {!isCollapsed && (
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 bg-sidebar-primary rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                    <Building2 className="w-4 h-4 text-sidebar-primary-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-bold text-sidebar-foreground tracking-tight text-sm block truncate">
+                      PropLink
+                    </span>
+                    <span className="text-[10px] text-sidebar-foreground/40 tracking-wider uppercase block">
+                      Real Estate Platform
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </SidebarHeader>
+
+          {/* ナビゲーション */}
+          <SidebarContent className="gap-0 pt-3">
+            {!isCollapsed && (
+              <p className="text-[10px] font-semibold text-sidebar-foreground/30 uppercase tracking-widest px-5 pb-2">
+                Menu
+              </p>
+            )}
+            <SidebarMenu className="px-2 space-y-0.5">
+              {menuItems.map(item => {
+                const isActive = location.startsWith(
+                  item.path === "/chat/1" ? "/chat" : item.path
+                );
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => setLocation(item.path)}
+                      tooltip={item.label}
+                      className={`h-10 rounded-lg transition-all font-normal group/item relative ${
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-foreground font-medium"
+                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
+                      }`}
+                    >
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-sidebar-primary rounded-r-full" />
+                      )}
+                      <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-sidebar-primary" : ""}`} />
+                      <span className="text-sm">{item.label}</span>
+                      {isActive && !isCollapsed && (
+                        <ChevronRight className="ml-auto h-3 w-3 text-sidebar-foreground/30" />
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarContent>
+
+          {/* フッター */}
+          <SidebarFooter className="p-3 border-t border-sidebar-border">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent/60 transition-colors w-full text-left focus:outline-none group-data-[collapsible=icon]:justify-center">
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarFallback className="text-xs font-bold bg-sidebar-primary text-sidebar-primary-foreground">
+                      自
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+                    <p className="text-xs font-semibold truncate leading-none text-sidebar-foreground">
+                      自社担当者
+                    </p>
+                    <p className="text-[11px] text-sidebar-foreground/40 truncate mt-1">
+                      admin@proplink.jp
+                    </p>
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive gap-2">
+                  <LogOut className="h-4 w-4" />
+                  <span>ログアウト</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarFooter>
+        </Sidebar>
+
+        <div
+          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-sidebar-primary/30 transition-colors ${isCollapsed ? "hidden" : ""}`}
+          onMouseDown={() => { if (!isCollapsed) setIsResizing(true); }}
+          style={{ zIndex: 50 }}
+        />
+      </div>
+
+      <SidebarInset className="bg-background">
+        {isMobile && (
+          <div className="flex border-b h-14 items-center justify-between bg-background px-3 sticky top-0 z-40">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="h-9 w-9 rounded-lg" />
+              <span className="text-sm font-semibold text-foreground">
+                {activeMenuItem?.label ?? "PropLink"}
+              </span>
+            </div>
+          </div>
+        )}
+        <main className="flex-1 p-6">{children}</main>
+      </SidebarInset>
+    </>
+  );
+}
