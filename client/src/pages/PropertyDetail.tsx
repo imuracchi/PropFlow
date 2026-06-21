@@ -441,27 +441,31 @@ function GoogleMapPanel({ address }: { address: string }) {
 
 function StreetViewPanel({ address }: { address: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadStreetView = () => {
     if (!GOOGLE_MAPS_API_KEY || !containerRef.current) return;
-    let cancelled = false;
+    setLoading(true);
 
     loadGoogleMapsScript().then(() => {
-      if (cancelled || !containerRef.current) return;
+      if (!containerRef.current) return;
       const geocoder = new google.maps.Geocoder();
       geocoder.geocode({ address }, (results, status) => {
-        if (cancelled || !containerRef.current) return;
+        if (!containerRef.current) return;
         if (status !== "OK" || !results?.[0]) {
           setError("住所からの位置特定に失敗しました");
+          setLoading(false);
           return;
         }
         const location = results[0].geometry.location;
         const sv = new google.maps.StreetViewService();
         sv.getPanorama({ location, radius: 200 }, (data, svStatus) => {
-          if (cancelled || !containerRef.current) return;
+          if (!containerRef.current) return;
           if (svStatus !== "OK") {
             setError("この地点のストリートビューは利用できません");
+            setLoading(false);
             return;
           }
           new google.maps.StreetViewPanorama(containerRef.current!, {
@@ -470,17 +474,30 @@ function StreetViewPanel({ address }: { address: string }) {
             zoom: 1,
             addressControl: false,
           });
+          setLoaded(true);
+          setLoading(false);
         });
       });
     });
-
-    return () => { cancelled = true; };
-  }, [address]);
+  };
 
   if (error) {
     return (
-      <div className="w-full h-96 bg-muted rounded-lg flex items-center justify-center border border-border">
+      <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center border border-border">
         <p className="text-sm text-muted-foreground">{error}</p>
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return (
+      <div className="w-full py-10 bg-muted rounded-lg flex flex-col items-center justify-center border border-border">
+        <Map className="w-10 h-10 text-primary/40 mb-3" />
+        <p className="text-sm font-medium text-foreground">ストリートビューで現地確認</p>
+        <p className="text-xs text-muted-foreground mt-1">接道状況・前面道路・周辺環境を確認できます</p>
+        <Button className="mt-4 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground" size="sm" onClick={loadStreetView} disabled={loading}>
+          {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />読み込み中...</> : <>ストリートビューを表示</>}
+        </Button>
       </div>
     );
   }
@@ -952,7 +969,13 @@ export default function PropertyDetail() {
                     <Share2 className="w-3 h-3" />
                   </a>
                 </div>
-                <GoogleMapPanel address={property.address} />
+                <iframe
+                  className="w-full h-80 rounded-lg border border-border"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(property.address)}&output=embed&hl=ja&z=16`}
+                  allowFullScreen
+                />
                 <div className="flex items-center gap-1.5 mt-3 text-sm text-muted-foreground"><MapPin className="w-4 h-4 text-primary" />{property.address}</div>
               </div>
               <div className="bg-card border border-border rounded-lg p-5">
