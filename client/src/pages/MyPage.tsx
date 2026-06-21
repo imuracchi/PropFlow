@@ -1,0 +1,475 @@
+import { useRef, useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Building2, Mail, Phone, FileText, Shield, MapPin, EyeOff, RotateCcw, Loader2, Upload, Trash2, ImageIcon,
+  Send, MessageSquare, Bug, Lightbulb, AlertTriangle, HelpCircle, UserX, UserCog, CheckCircle2, Smartphone, Download, Lock,
+  Globe, Clock, Pencil, Check, X, CalendarOff, ChevronDown, ChevronUp
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+
+const PLAN_MAP: Record<string, string> = {
+  standard: "スタンダード",
+  gold: "ゴールド",
+  platinum: "プラチナ",
+};
+
+const STATUS_MAP: Record<string, { label: string; cls: string }> = {
+  available: { label: "公開中", cls: "border border-blue-600 text-blue-600 bg-white" },
+  negotiating: { label: "商談中", cls: "bg-amber-500 text-white" },
+  sold: { label: "売却済", cls: "bg-gray-400 text-white" },
+};
+
+export default function MyPage() {
+  const [, setLocation] = useLocation();
+  const { user, refresh } = useAuth();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const utils = trpc.useUtils();
+  const { data: deletedProperties, isLoading: deletedLoading } = trpc.mypage.deletedProperties.useQuery();
+  const restoreMutation = trpc.mypage.restoreProperty.useMutation({
+    onSuccess: () => {
+      utils.mypage.deletedProperties.invalidate();
+      utils.property.list.invalidate();
+    },
+  });
+  const logoMutation = trpc.auth.updateLogo.useMutation({
+    onSuccess: () => refresh(),
+  });
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 2 * 1024 * 1024) { alert("画像サイズは2MB以下にしてください"); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      logoMutation.mutate({ logoBase64: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  if (!user) return null;
+
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === "accepted") setIsInstalled(true);
+    setInstallPrompt(null);
+  };
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold text-foreground">マイページ</h1>
+
+      {/* PWAインストール案内 */}
+      {!isInstalled && (
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+              <Smartphone className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">アプリとしてインストール</p>
+              <p className="text-xs text-muted-foreground">ホーム画面に追加するとアプリのように使え、通知も受け取れます</p>
+            </div>
+          </div>
+          {installPrompt ? (
+            <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0" onClick={handleInstall}>
+              <Download className="w-4 h-4" />インストール
+            </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground shrink-0 max-w-[200px] text-right">
+              ブラウザのメニューから「ホーム画面に追加」を選択してください
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* プロフィールカード */}
+      <ProfileCard user={user} refresh={refresh} logoInputRef={logoInputRef} logoMutation={logoMutation} />
+
+      {/* パスワード変更 */}
+      <ChangePasswordForm />
+
+      {/* 管理者への連絡 */}
+      <AdminContactForm userEmail={user.email} userName={user.name ?? ""} />
+
+      {/* 非表示物件 */}
+      <div>
+        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+          <EyeOff className="w-5 h-5 text-muted-foreground" />
+          非表示にした物件
+        </h2>
+        {deletedLoading ? (
+          <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+        ) : !deletedProperties || deletedProperties.length === 0 ? (
+          <div className="bg-card border border-border rounded-lg py-10 text-center">
+            <p className="text-sm text-muted-foreground">非表示の物件はありません</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {deletedProperties.map(prop => {
+              const statusInfo = STATUS_MAP[prop.status] ?? STATUS_MAP.available;
+              return (
+                <div key={prop.id} className="bg-card border border-border rounded-lg p-4 opacity-70">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center shrink-0">
+                      <EyeOff className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground text-sm truncate">{prop.name}</h3>
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${statusInfo.cls}`}>{statusInfo.label}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />{prop.address}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0 flex items-center gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-muted-foreground">{prop.price?.toLocaleString() ?? "応相談"}</p>
+                        <p className="text-xs text-muted-foreground">{prop.type}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        disabled={restoreMutation.isPending}
+                        onClick={() => restoreMutation.mutate({ id: prop.id })}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        復元
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const CONTACT_CATEGORIES = [
+  { value: "bug", label: "不具合報告", icon: Bug },
+  { value: "feature", label: "システム要望", icon: Lightbulb },
+  { value: "trouble", label: "ユーザー間トラブル", icon: AlertTriangle },
+  { value: "change", label: "登録情報の変更依頼", icon: UserCog },
+  { value: "withdraw", label: "退会申請", icon: UserX },
+  { value: "other", label: "その他", icon: HelpCircle },
+];
+
+function AdminContactForm({ userEmail, userName }: { userEmail: string; userName: string }) {
+  const [category, setCategory] = useState("");
+  const [message, setMessage] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const adminEmail = "admin@propflow.jp";
+  const categoryLabel = CONTACT_CATEGORIES.find(c => c.value === category)?.label ?? "";
+
+  const handleSend = () => {
+    if (!category || !message.trim()) return;
+    const subject = encodeURIComponent(`[PropFlow] ${categoryLabel} - ${userName}`);
+    const body = encodeURIComponent(
+      `【カテゴリ】${categoryLabel}\n【差出人】${userName}（${userEmail}）\n\n${message}`
+    );
+    window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`, "_blank");
+    setSent(true);
+    setTimeout(() => {
+      setSent(false);
+      setCategory("");
+      setMessage("");
+    }, 3000);
+  };
+
+  if (sent) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-8 text-center">
+        <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-green-500" />
+        <h3 className="font-semibold text-foreground">メールアプリが開きました</h3>
+        <p className="text-sm text-muted-foreground mt-1">内容を確認して送信してください。</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="px-5 py-4 border-b border-border">
+        <h2 className="font-semibold text-foreground flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-primary" />
+          管理者への連絡
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">お問い合わせ内容はメールで管理者に送信されます</p>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">カテゴリ <span className="text-red-500">*</span></label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger><SelectValue placeholder="お問い合わせ内容を選択" /></SelectTrigger>
+            <SelectContent>
+              {CONTACT_CATEGORIES.map(c => (
+                <SelectItem key={c.value} value={c.value}>
+                  <span className="flex items-center gap-2">
+                    <c.icon className="w-3.5 h-3.5" />{c.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">内容 <span className="text-red-500">*</span></label>
+          <Textarea
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder="お問い合わせ内容を詳しくご記入ください..."
+            rows={4}
+          />
+        </div>
+        <div className="flex justify-end">
+          <Button
+            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+            disabled={!category || !message.trim()}
+            onClick={handleSend}
+          >
+            <Send className="w-4 h-4" />
+            メールで送信
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChangePasswordForm() {
+  const [open, setOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const mutation = trpc.auth.changePassword.useMutation();
+
+  const handleSubmit = async () => {
+    setError("");
+    if (newPassword.length < 8) { setError("新しいパスワードは8文字以上で入力してください"); return; }
+    if (newPassword !== confirmPassword) { setError("新しいパスワードが一致しません"); return; }
+    const result = await mutation.mutateAsync({ currentPassword, newPassword });
+    if (result.success) {
+      setSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => { setSuccess(false); setOpen(false); }, 2000);
+    } else {
+      setError(result.error ?? "変更に失敗しました");
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <button className="w-full px-5 py-4 flex items-center justify-between text-left" onClick={() => setOpen(!open)}>
+        <h2 className="font-semibold text-foreground flex items-center gap-2">
+          <Lock className="w-5 h-5 text-primary" />
+          パスワード変更
+        </h2>
+        {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="p-5 pt-0 space-y-4 border-t border-border mt-0 pt-4">
+          {success ? (
+            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              パスワードを変更しました
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">現在のパスワード</label>
+                <Input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="現在のパスワード" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">新しいパスワード</label>
+                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="8文字以上" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">新しいパスワード（確認）</label>
+                <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="もう一度入力" />
+              </div>
+              {error && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+              )}
+              <div className="flex justify-end">
+                <Button
+                  className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={mutation.isPending || !currentPassword || !newPassword || !confirmPassword}
+                  onClick={handleSubmit}
+                >
+                  {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                  パスワードを変更
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProfileCard({ user, refresh, logoInputRef, logoMutation }: { user: any; refresh: () => void; logoInputRef: React.RefObject<HTMLInputElement | null>; logoMutation: any }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    zipCode: "", address: "", phone: "", fax: "", url: "", businessHours: "", holidays: "", bio: "",
+  });
+  const updateMutation = trpc.auth.updateProfile.useMutation({ onSuccess: () => { refresh(); setEditing(false); } });
+
+  const startEdit = () => {
+    setForm({
+      zipCode: user.zipCode ?? "",
+      address: user.address ?? "",
+      phone: user.phone ?? "",
+      fax: user.fax ?? "",
+      url: user.url ?? "",
+      businessHours: user.businessHours ?? "",
+      holidays: user.holidays ?? "",
+      bio: user.bio ?? "",
+    });
+    setEditing(true);
+  };
+
+  const infoItems = [
+    { icon: Building2, label: "会社名", value: user.company },
+    { icon: Mail, label: "メール", value: user.email },
+    { icon: FileText, label: "宅建免許", value: user.license },
+    { icon: MapPin, label: "郵便番号", value: user.zipCode },
+    { icon: MapPin, label: "住所", value: user.address },
+    { icon: Phone, label: "電話番号", value: user.phone },
+    { icon: Phone, label: "FAX", value: user.fax },
+    { icon: Globe, label: "URL", value: user.url },
+    { icon: Clock, label: "営業時間", value: user.businessHours },
+    { icon: CalendarOff, label: "定休日", value: user.holidays },
+    { icon: MessageSquare, label: "一言", value: user.bio },
+  ];
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-5">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+            <span className="text-2xl font-bold text-primary">{(user.name ?? "?").charAt(0)}</span>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">{user.name}</h2>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary">
+                {PLAN_MAP[user.plan] ?? "スタンダード"}
+              </span>
+              {user.role === "admin" && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded bg-violet-100 text-violet-700 flex items-center gap-1">
+                  <Shield className="w-3 h-3" />管理者
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        {!editing && (
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={startEdit}>
+            <Pencil className="w-3.5 h-3.5" />編集
+          </Button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="space-y-4 pt-2 border-t border-border">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label>郵便番号</Label><Input value={form.zipCode} onChange={e => setForm(p => ({ ...p, zipCode: e.target.value }))} placeholder="123-4567" /></div>
+            <div className="space-y-1.5"><Label>電話番号</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="03-1234-5678" /></div>
+          </div>
+          <div className="space-y-1.5"><Label>住所</Label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="東京都港区..." /></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label>FAX</Label><Input value={form.fax} onChange={e => setForm(p => ({ ...p, fax: e.target.value }))} placeholder="03-1234-5679" /></div>
+            <div className="space-y-1.5"><Label>URL</Label><Input value={form.url} onChange={e => setForm(p => ({ ...p, url: e.target.value }))} placeholder="https://example.com" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label>営業時間</Label><Input value={form.businessHours} onChange={e => setForm(p => ({ ...p, businessHours: e.target.value }))} placeholder="平日 9:00〜18:00" /></div>
+            <div className="space-y-1.5"><Label>定休日</Label><Input value={form.holidays} onChange={e => setForm(p => ({ ...p, holidays: e.target.value }))} placeholder="土日祝" /></div>
+          </div>
+          <div className="space-y-1.5"><Label>一言</Label><Textarea value={form.bio} onChange={e => setForm(p => ({ ...p, bio: e.target.value }))} placeholder="会社の紹介や一言メッセージ" rows={2} /></div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" size="sm" className="gap-1" onClick={() => setEditing(false)}><X className="w-3.5 h-3.5" />キャンセル</Button>
+            <Button size="sm" className="gap-1 bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}保存
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm pt-2 border-t border-border">
+          {infoItems.map(item => (
+            <div key={item.label} className="flex items-center gap-2 text-muted-foreground">
+              <item.icon className="w-4 h-4 shrink-0" />
+              <span className="text-xs text-muted-foreground/60">{item.label}:</span>
+              <span className={item.value ? "" : "text-muted-foreground/40 text-xs"}>{item.value || "未設定"}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 会社ロゴ */}
+      <div className="pt-4 border-t border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4 text-muted-foreground" />
+              会社ロゴ
+            </div>
+            {user.logoBase64 ? (
+              <img src={user.logoBase64} alt="会社ロゴ" className="h-10 max-w-[160px] object-contain" />
+            ) : (
+              <span className="text-xs text-muted-foreground">未登録</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => logoInputRef.current?.click()} disabled={logoMutation.isPending}>
+              {logoMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              {user.logoBase64 ? "変更" : "アップロード"}
+            </Button>
+            {user.logoBase64 && (
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => logoMutation.mutate({ logoBase64: null })} disabled={logoMutation.isPending}>
+                <Trash2 className="w-3.5 h-3.5" />削除
+              </Button>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">※ PDF出力時に会社ロゴとして使用されます（推奨: 横長PNG/JPG、2MB以下）</p>
+      </div>
+
+      <div className="pt-4 border-t border-border">
+        <p className="text-xs text-muted-foreground">※ 会社名・メール・宅建免許の変更は下記「管理者への連絡」からお問い合わせください。</p>
+      </div>
+    </div>
+  );
+}

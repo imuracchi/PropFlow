@@ -1,77 +1,95 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Users, Building2, CheckCircle2, XCircle, Clock,
-  Search, TrendingUp, MessageCircle, FileText,
-  CreditCard, AlertCircle, Eye, Trash2, MoreHorizontal,
-  ArrowUpRight, Calendar
+  Search, MessageCircle,
+  MoreHorizontal, ArrowUpRight, Loader2, UserPlus, FileText, Ban, UserCheck,
+  Trash2, EyeOff, Eye, RotateCcw, AlertTriangle
 } from "lucide-react";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { trpc } from "@/lib/trpc";
+import { useState } from "react";
 
-const pendingUsers = [
-  { id: 1, name: "伊藤 一郎", company: "株式会社伊藤不動産", email: "ito@example.com", phone: "03-1234-5678", license: "東京都知事(2)第12345号", appliedAt: "2024/06/14 10:30" },
-  { id: 2, name: "渡辺 花子", company: "渡辺リアルティ合同会社", email: "watanabe@example.com", phone: "06-2345-6789", license: "大阪府知事(1)第67890号", appliedAt: "2024/06/14 14:15" },
-  { id: 3, name: "中村 浩二", company: "中村不動産コンサルティング株式会社", email: "nakamura@example.com", phone: "052-345-6789", license: "愛知県知事(3)第11111号", appliedAt: "2024/06/13 09:00" },
-];
+const PLAN_MAP: Record<string, { label: string; cls: string }> = {
+  standard: { label: "スタンダード", cls: "text-muted-foreground bg-muted" },
+  gold: { label: "ゴールド", cls: "text-amber-700 bg-amber-100" },
+  platinum: { label: "プラチナ", cls: "text-violet-700 bg-violet-100" },
+};
 
-const allUsers = [
-  { id: 1, name: "田中 健太", company: "株式会社〇〇不動産", email: "tanaka@example.com", status: "active", plan: "スタンダード", properties: 8, joinedAt: "2024/01/15" },
-  { id: 2, name: "佐藤 誠", company: "△△リアルティ株式会社", email: "sato@example.com", status: "active", plan: "プレミアム", properties: 15, joinedAt: "2024/02/01" },
-  { id: 3, name: "山本 裕子", company: "□□不動産コンサルティング", email: "yamamoto@example.com", status: "active", plan: "スタンダード", properties: 4, joinedAt: "2024/03/10" },
-  { id: 4, name: "鈴木 大輔", company: "◇◇ホームズ", email: "suzuki@example.com", status: "suspended", plan: "スタンダード", properties: 2, joinedAt: "2024/04/05" },
-];
-
-const allProperties = [
-  { id: 1, name: "パークコート渋谷 3LDK", owner: "株式会社〇〇不動産", status: "available", price: "8,500万円", views: 142, chats: 12, registeredAt: "2024/06/10" },
-  { id: 2, name: "グリーンハイツ世田谷", owner: "△△リアルティ株式会社", status: "negotiating", price: "1億2,000万円", views: 98, chats: 22, registeredAt: "2024/06/08" },
-  { id: 3, name: "練馬区石神井公園 4LDK", owner: "株式会社〇〇不動産", status: "available", price: "5,200万円", views: 67, chats: 5, registeredAt: "2024/06/05" },
-  { id: 4, name: "渋谷区神南 商業ビル", owner: "△△リアルティ株式会社", status: "sold", price: "3億5,000万円", views: 310, chats: 45, registeredAt: "2024/05/20" },
-];
-
-const STATUS_MAP = {
-  available: { label: "公開中", cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  negotiating: { label: "商談中", cls: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  sold: { label: "売却済", cls: "bg-muted text-muted-foreground border-border" },
+const STATUS_MAP: Record<string, { label: string; cls: string }> = {
+  available: { label: "公開中", cls: "border border-blue-600 text-blue-600 bg-white" },
+  negotiating: { label: "商談中", cls: "bg-amber-500 text-white" },
+  sold: { label: "売却済", cls: "bg-gray-400 text-white" },
 };
 
 export default function Admin() {
-  const [approved, setApproved] = useState<number[]>([]);
-  const [rejected, setRejected] = useState<number[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [propSearch, setPropSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
-  const stats = [
-    { label: "登録業者数", value: "24社", icon: Users, change: "+3 今月", accent: "text-primary bg-primary/10 border-primary/20" },
-    { label: "公開物件数", value: "38件", icon: Building2, change: "+5 今月", accent: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
-    { label: "承認待ち", value: `${pendingUsers.length}件`, icon: Clock, change: "要対応", accent: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
-    { label: "今月の収益", value: "¥480,000", icon: TrendingUp, change: "+12%", accent: "text-violet-400 bg-violet-500/10 border-violet-500/20" },
+  const utils = trpc.useUtils();
+  const { data: stats, isLoading: statsLoading } = trpc.admin.stats.useQuery();
+  const { data: pendingUsers, isLoading: pendingLoading } = trpc.admin.pendingUsers.useQuery();
+  const { data: allUsers, isLoading: usersLoading } = trpc.admin.allUsers.useQuery();
+  const { data: adminProperties } = trpc.admin.allProperties.useQuery();
+
+  const approveMutation = trpc.admin.approveUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
+  const rejectMutation = trpc.admin.rejectUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.stats.invalidate(); } });
+  const suspendMutation = trpc.admin.suspendUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
+  const activateMutation = trpc.admin.activateUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
+  const updatePlanMutation = trpc.admin.updatePlan.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
+  const hidePropMutation = trpc.admin.hideProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
+  const restorePropMutation = trpc.admin.restoreProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
+  const hardDeleteMutation = trpc.admin.hardDeleteProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); setDeleteTarget(null); } });
+
+  const pendingCount = pendingUsers?.length ?? 0;
+
+  const filteredUsers = (allUsers ?? []).filter(u => {
+    if (!userSearch) return true;
+    const q = userSearch.toLowerCase();
+    return (u.name ?? "").toLowerCase().includes(q)
+      || (u.company ?? "").toLowerCase().includes(q)
+      || (u.email ?? "").toLowerCase().includes(q);
+  });
+
+  const filteredProperties = (adminProperties ?? []).filter(p => {
+    if (!propSearch) return true;
+    const q = propSearch.toLowerCase();
+    return p.name.toLowerCase().includes(q) || (p.userCompany ?? "").toLowerCase().includes(q);
+  });
+
+  const statCards = [
+    { label: "登録業者数", value: stats ? `${stats.activeUsers}社` : "—", icon: Users, accent: "text-primary bg-primary/10" },
+    { label: "公開物件数", value: stats ? `${stats.totalProperties}件` : "—", icon: Building2, accent: "text-green-600 bg-green-50" },
+    { label: "承認待ち", value: stats ? `${stats.pendingUsers}件` : "—", icon: Clock, accent: stats?.pendingUsers ? "text-amber-600 bg-amber-50" : "text-muted-foreground bg-muted" },
   ];
+
+  if (statsLoading) {
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">管理画面</h1>
-        <p className="text-sm text-muted-foreground mt-1">プラットフォーム全体の管理・監視</p>
+        <h1 className="text-2xl font-bold text-foreground">管理画面</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">プラットフォーム全体の管理・監視</p>
       </div>
 
       {/* サマリーカード */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(stat => (
-          <div key={stat.label} className="bg-card border border-border rounded-xl p-5">
+      <div className="grid grid-cols-3 gap-4">
+        {statCards.map(stat => (
+          <div key={stat.label} className="bg-card border border-border rounded-lg p-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
                 <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <ArrowUpRight className="w-3 h-3" />
-                  {stat.change}
-                </p>
               </div>
-              <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${stat.accent}`}>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.accent}`}>
                 <stat.icon className="w-5 h-5" />
               </div>
             </div>
@@ -81,208 +99,154 @@ export default function Admin() {
 
       {/* タブ */}
       <Tabs defaultValue="pending">
-        <TabsList className="bg-muted border border-border">
-          <TabsTrigger value="pending" className="gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground">
+        <TabsList className="bg-muted">
+          <TabsTrigger value="pending" className="gap-1.5">
             <Clock className="w-3.5 h-3.5" />
             承認待ち
-            {pendingUsers.filter(u => !approved.includes(u.id) && !rejected.includes(u.id)).length > 0 && (
-              <span className="bg-amber-500 text-white text-xs h-4 px-1.5 rounded-full ml-1 leading-4 inline-flex items-center">
-                {pendingUsers.filter(u => !approved.includes(u.id) && !rejected.includes(u.id)).length}
+            {pendingCount > 0 && (
+              <span className="bg-amber-500 text-white text-xs h-5 px-1.5 rounded-full ml-0.5 leading-5 inline-flex items-center">
+                {pendingCount}
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground">
+          <TabsTrigger value="users" className="gap-1.5">
             <Users className="w-3.5 h-3.5" />
             業者管理
           </TabsTrigger>
-          <TabsTrigger value="properties" className="gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground">
+          <TabsTrigger value="properties" className="gap-1.5">
             <Building2 className="w-3.5 h-3.5" />
             物件管理
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground">
-            <CreditCard className="w-3.5 h-3.5" />
-            利用料管理
           </TabsTrigger>
         </TabsList>
 
         {/* 承認待ちタブ */}
         <TabsContent value="pending" className="mt-4 space-y-4">
-          {pendingUsers.map(user => {
-            const isApproved = approved.includes(user.id);
-            const isRejected = rejected.includes(user.id);
-            return (
-              <div key={user.id} className={`bg-card border border-border rounded-xl p-5 transition-opacity ${isApproved || isRejected ? "opacity-50" : ""}`}>
+          {pendingLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          ) : pendingCount === 0 ? (
+            <div className="bg-card border border-border rounded-lg py-12 text-center">
+              <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-500" />
+              <p className="text-muted-foreground">承認待ちのユーザーはいません</p>
+            </div>
+          ) : (
+            pendingUsers!.map(user => (
+              <div key={user.id} className="bg-card border border-border rounded-lg p-5">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <Avatar className="w-12 h-12 shrink-0">
-                    <AvatarFallback className="bg-primary/15 text-primary font-bold border border-primary/20">
-                      {user.name.charAt(0)}
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                      {(user.name ?? "?").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 space-y-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-foreground">{user.name}</span>
-                      <span className="text-sm text-muted-foreground">{user.company}</span>
-                      {isApproved && (
-                        <span className="text-xs border font-medium px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border-emerald-500/30">承認済</span>
-                      )}
-                      {isRejected && (
-                        <span className="text-xs border font-medium px-2 py-0.5 rounded-md bg-red-500/15 text-red-400 border-red-500/30">却下済</span>
-                      )}
+                      {user.company && <span className="text-sm text-muted-foreground">{user.company}</span>}
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 text-xs text-muted-foreground">
                       <span>{user.email}</span>
-                      <span>{user.phone}</span>
-                      <span className="flex items-center gap-1">
-                        <FileText className="w-3 h-3" />
-                        {user.license}
-                      </span>
+                      {user.phone && <span>{user.phone}</span>}
+                      {user.license && (
+                        <span className="flex items-center gap-1">
+                          <FileText className="w-3 h-3" />
+                          {user.license}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground/60 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      申請日時: {user.appliedAt}
+                    <p className="text-xs text-muted-foreground/60">
+                      申請日時: {new Date(user.createdAt).toLocaleString("ja-JP")}
                     </p>
                   </div>
-                  {!isApproved && !isRejected && (
-                    <div className="flex gap-2 shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1 text-red-400 border-red-500/30 hover:bg-red-500/10 bg-background"
-                        onClick={() => setRejected(prev => [...prev, user.id])}
-                      >
-                        <XCircle className="w-4 h-4" />
-                        却下
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
-                        onClick={() => setApproved(prev => [...prev, user.id])}
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        承認
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      variant="outline" size="sm"
+                      className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => rejectMutation.mutate({ id: user.id })}
+                      disabled={rejectMutation.isPending}
+                    >
+                      <XCircle className="w-4 h-4" />却下
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="gap-1 bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                      onClick={() => approveMutation.mutate({ id: user.id })}
+                      disabled={approveMutation.isPending}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />承認
+                    </Button>
+                  </div>
                 </div>
               </div>
-            );
-          })}
+            ))
+          )}
         </TabsContent>
 
         {/* 業者管理タブ */}
         <TabsContent value="users" className="mt-4 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="業者名・メールで検索..." className="pl-10 bg-background border-border" />
-            </div>
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="業者名・メールで検索..." className="pl-10 bg-card border-border" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
           </div>
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
+          {usersLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="bg-card border border-border rounded-lg py-12 text-center">
+              <Users className="w-10 h-10 mx-auto mb-2 text-muted-foreground/30" />
+              <p className="text-muted-foreground">登録業者はまだいません</p>
+            </div>
+          ) : (
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b border-border">
-                  <tr>
-                    {["業者名", "メール", "プラン", "物件数", "ステータス", "登録日", "操作"].map(h => (
-                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    {["業者名", "メール", "プラン", "ステータス", "登録日", "操作"].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {allUsers.map(user => (
-                    <tr key={user.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-7 h-7">
-                            <AvatarFallback className="text-xs bg-primary/15 text-primary font-bold">{user.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-foreground text-xs">{user.name}</p>
-                            <p className="text-xs text-muted-foreground">{user.company}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{user.email}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs border font-medium px-2 py-0.5 rounded-md ${
-                          user.plan === "プレミアム"
-                            ? "text-violet-400 border-violet-500/30 bg-violet-500/10"
-                            : "text-muted-foreground border-border bg-muted"
-                        }`}>
-                          {user.plan}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs text-center">{user.properties}件</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs border font-medium px-2 py-0.5 rounded-md ${
-                          user.status === "active"
-                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                            : "bg-red-500/15 text-red-400 border-red-500/30"
-                        }`}>
-                          {user.status === "active" ? "有効" : "停止中"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{user.joinedAt}</td>
-                      <td className="px-4 py-3">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2 text-xs"><Eye className="w-3.5 h-3.5" />詳細を見る</DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2 text-xs text-destructive"><AlertCircle className="w-3.5 h-3.5" />アカウント停止</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* 物件管理タブ */}
-        <TabsContent value="properties" className="mt-4 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="物件名・業者名で検索..." className="pl-10 bg-background border-border" />
-            </div>
-          </div>
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b border-border">
-                  <tr>
-                    {["物件名", "登録業者", "価格", "ステータス", "閲覧数", "チャット", "登録日", "操作"].map(h => (
-                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {allProperties.map(prop => {
-                    const statusInfo = STATUS_MAP[prop.status as keyof typeof STATUS_MAP];
+                  {filteredUsers.map(user => {
+                    const planInfo = PLAN_MAP[user.plan] ?? PLAN_MAP.standard;
                     return (
-                      <tr key={prop.id} className="hover:bg-muted/30 transition-colors">
+                      <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3">
-                          <p className="font-semibold text-foreground text-xs">{prop.name}</p>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="w-7 h-7">
+                              <AvatarFallback className="text-xs bg-primary/10 text-primary font-bold">{(user.name ?? "?").charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-foreground text-xs">{user.name}</p>
+                              {user.company && <p className="text-xs text-muted-foreground">{user.company}</p>}
+                            </div>
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs">{prop.owner}</td>
-                        <td className="px-4 py-3 text-foreground text-xs font-semibold">{prop.price}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">{user.email}</td>
                         <td className="px-4 py-3">
-                          <span className={`text-xs border font-medium px-2 py-0.5 rounded-md ${statusInfo.cls}`}>
-                            {statusInfo.label}
+                          <Select
+                            value={user.plan}
+                            onValueChange={(v) => updatePlanMutation.mutate({ id: user.id, plan: v as any })}
+                          >
+                            <SelectTrigger className="h-7 w-32 text-xs border-0 bg-transparent p-0">
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded ${planInfo.cls}`}>
+                                {planInfo.label}
+                              </span>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="standard">スタンダード</SelectItem>
+                              <SelectItem value="gold">ゴールド</SelectItem>
+                              <SelectItem value="platinum">プラチナ</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                            user.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                          }`}>
+                            {user.status === "active" ? "有効" : "停止中"}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs text-center">{prop.views}</td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs text-center">
-                          <span className="flex items-center justify-center gap-1">
-                            <MessageCircle className="w-3 h-3" />{prop.chats}
-                          </span>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">
+                          {new Date(user.createdAt).toLocaleDateString("ja-JP")}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs">{prop.registeredAt}</td>
                         <td className="px-4 py-3">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -291,8 +255,15 @@ export default function Admin() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem className="gap-2 text-xs"><Eye className="w-3.5 h-3.5" />詳細を見る</DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2 text-xs text-destructive"><Trash2 className="w-3.5 h-3.5" />削除</DropdownMenuItem>
+                              {user.status === "active" ? (
+                                <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => suspendMutation.mutate({ id: user.id })}>
+                                  <Ban className="w-3.5 h-3.5" />アカウント停止
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem className="gap-2 text-xs" onClick={() => activateMutation.mutate({ id: user.id })}>
+                                  <UserCheck className="w-3.5 h-3.5" />アカウント有効化
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -302,51 +273,117 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
-          </div>
+          )}
         </TabsContent>
 
-        {/* 利用料管理タブ */}
-        <TabsContent value="billing" className="mt-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { label: "今月の収益", value: "¥480,000", sub: "24社 × 月額利用料", accent: "text-primary" },
-              { label: "未払い", value: "¥20,000", sub: "2社が未払い", accent: "text-red-400" },
-              { label: "年間収益（予測）", value: "¥5,760,000", sub: "現在の契約数ベース", accent: "text-emerald-400" },
-            ].map(item => (
-              <div key={item.label} className="bg-card border border-border rounded-xl p-5">
-                <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
-                <p className={`text-2xl font-bold ${item.accent}`}>{item.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{item.sub}</p>
-              </div>
-            ))}
+        {/* 物件管理タブ */}
+        <TabsContent value="properties" className="mt-4 space-y-4">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="物件名・業者名で検索..." className="pl-10 bg-card border-border" value={propSearch} onChange={e => setPropSearch(e.target.value)} />
           </div>
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-border">
-              <h3 className="font-semibold text-foreground text-sm">プラン別契約状況</h3>
+          {filteredProperties.length === 0 ? (
+            <div className="bg-card border border-border rounded-lg py-12 text-center">
+              <Building2 className="w-10 h-10 mx-auto mb-2 text-muted-foreground/30" />
+              <p className="text-muted-foreground">物件はまだ登録されていません</p>
             </div>
-            <div className="p-5 space-y-4">
-              {[
-                { plan: "スタンダード", price: "¥15,000/月", count: 18, barColor: "bg-primary" },
-                { plan: "プレミアム", price: "¥30,000/月", count: 6, barColor: "bg-violet-500" },
-              ].map(item => (
-                <div key={item.plan} className="flex items-center gap-4">
-                  <div className="w-28 shrink-0">
-                    <p className="text-sm font-semibold text-foreground">{item.plan}</p>
-                    <p className="text-xs text-muted-foreground">{item.price}</p>
-                  </div>
-                  <div className="flex-1 bg-muted rounded-full h-2">
-                    <div
-                      className={`${item.barColor} h-2 rounded-full transition-all`}
-                      style={{ width: `${(item.count / 24) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-bold text-foreground shrink-0">{item.count}社</span>
-                </div>
-              ))}
+          ) : (
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    {["物件名", "登録業者", "価格", "ステータス", "表示", "登録日", "操作"].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredProperties.map(prop => {
+                    const statusInfo = STATUS_MAP[prop.status] ?? STATUS_MAP.available;
+                    const isHidden = prop.deleted === 1;
+                    return (
+                      <tr key={prop.id} className={`hover:bg-muted/30 transition-colors ${isHidden ? "opacity-50" : ""}`}>
+                        <td className="px-4 py-3 font-medium text-foreground text-xs">{prop.name}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">{prop.userCompany ?? "—"}</td>
+                        <td className="px-4 py-3 text-foreground text-xs font-semibold">{prop.price.toLocaleString()}</td>
+                        <td className="px-4 py-3">
+                          <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${statusInfo.cls}`}>{statusInfo.label}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {isHidden ? (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground flex items-center gap-1 w-fit">
+                              <EyeOff className="w-3 h-3" />非表示
+                            </span>
+                          ) : (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700 flex items-center gap-1 w-fit">
+                              <Eye className="w-3 h-3" />表示中
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(prop.createdAt).toLocaleDateString("ja-JP")}</td>
+                        <td className="px-4 py-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {isHidden ? (
+                                <DropdownMenuItem className="gap-2 text-xs" onClick={() => restorePropMutation.mutate({ id: prop.id })}>
+                                  <RotateCcw className="w-3.5 h-3.5" />表示に戻す
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem className="gap-2 text-xs" onClick={() => hidePropMutation.mutate({ id: prop.id })}>
+                                  <EyeOff className="w-3.5 h-3.5" />非表示にする
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => setDeleteTarget({ id: prop.id, name: prop.name })}>
+                                <Trash2 className="w-3.5 h-3.5" />完全に削除
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </div>
+
+          )}
         </TabsContent>
       </Tabs>
+
+      {/* 完全削除確認ダイアログ */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-xl shadow-lg p-6 max-w-sm w-full mx-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">完全に削除しますか？</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">この操作は取り消せません。関連するチャット・お気に入りも削除されます。</p>
+              </div>
+            </div>
+            <p className="text-sm text-foreground bg-muted rounded-lg px-3 py-2">{deleteTarget.name}</p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)}>キャンセル</Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                disabled={hardDeleteMutation.isPending}
+                onClick={() => hardDeleteMutation.mutate({ id: deleteTarget.id })}
+              >
+                {hardDeleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                完全に削除
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

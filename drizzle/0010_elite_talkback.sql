@@ -1,0 +1,1 @@
+ALTER TABLE `property_files` MODIFY COLUMN `contentBase64` longtext NOT NULL;

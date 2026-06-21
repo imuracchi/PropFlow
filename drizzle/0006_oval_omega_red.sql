@@ -1,0 +1,1 @@
+ALTER TABLE `properties` ADD `deleted` int DEFAULT 0 NOT NULL;

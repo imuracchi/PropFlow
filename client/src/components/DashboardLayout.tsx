@@ -21,17 +21,21 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   Building2, LogOut, PanelLeft,
-  Upload, List, MessageCircle, ShieldCheck, ChevronRight
+  Upload, List, MessageCircle, ShieldCheck, ChevronRight, UserCircle, Heart
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
-const menuItems = [
+const baseMenuItems = [
   { icon: List, label: "物件一覧", path: "/properties" },
   { icon: Upload, label: "物件登録", path: "/upload" },
-  { icon: MessageCircle, label: "チャット", path: "/chat/1" },
-  { icon: ShieldCheck, label: "管理画面", path: "/admin" },
+  { icon: Heart, label: "お気に入り", path: "/favorites" },
+  { icon: MessageCircle, label: "チャット", path: "/chat" },
+  { icon: UserCircle, label: "マイページ", path: "/mypage" },
 ];
+
+const adminMenuItem = { icon: ShieldCheck, label: "管理画面", path: "/admin", adminOnly: true };
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 230;
@@ -72,11 +76,13 @@ function DashboardLayoutContent({
 }) {
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
+  const { user, logout } = useAuth();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item =>
-    location.startsWith(item.path === "/chat/1" ? "/chat" : item.path)
+  const menuItems = user?.role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMenuItems;
+  const activeMenuItem = [...menuItems].sort((a, b) => b.path.length - a.path.length).find(item =>
+    location === item.path || (item.path !== "/mypage" && location.startsWith(item.path))
   );
   const isMobile = useIsMobile();
 
@@ -111,29 +117,17 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar collapsible="icon" className="border-r-0" disableTransition={isResizing}>
           {/* ヘッダー */}
-          <SidebarHeader className="h-16 justify-center border-b border-sidebar-border">
-            <div className="flex items-center gap-3 px-3 w-full">
+          <SidebarHeader className="border-b border-sidebar-border py-3">
+            <div className="px-3 w-full space-y-2">
+              {!isCollapsed && (
+                <img src="/logo2.png" alt="PropFlow" className="w-full px-2 object-contain" />
+              )}
               <button
                 onClick={toggleSidebar}
                 className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-colors focus:outline-none shrink-0"
               >
                 <PanelLeft className="h-4 w-4 text-sidebar-foreground/50" />
               </button>
-              {!isCollapsed && (
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 bg-sidebar-primary rounded-lg flex items-center justify-center shrink-0 shadow-sm">
-                    <Building2 className="w-4 h-4 text-sidebar-primary-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="font-bold text-sidebar-foreground tracking-tight text-sm block truncate">
-                      PropLink
-                    </span>
-                    <span className="text-[10px] text-sidebar-foreground/40 tracking-wider uppercase block">
-                      Real Estate Platform
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
           </SidebarHeader>
 
@@ -146,9 +140,9 @@ function DashboardLayoutContent({
             )}
             <SidebarMenu className="px-2 space-y-0.5">
               {menuItems.map(item => {
-                const isActive = location.startsWith(
-                  item.path === "/chat/1" ? "/chat" : item.path
-                );
+                const isActive = item.path === "/mypage"
+                  ? location === "/mypage"
+                  : location.startsWith(item.path);
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
@@ -183,21 +177,21 @@ function DashboardLayoutContent({
                 <button className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent/60 transition-colors w-full text-left focus:outline-none group-data-[collapsible=icon]:justify-center">
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarFallback className="text-xs font-bold bg-sidebar-primary text-sidebar-primary-foreground">
-                      自
+                      {(user?.name ?? "?").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
                     <p className="text-xs font-semibold truncate leading-none text-sidebar-foreground">
-                      自社担当者
+                      {user?.name ?? "ユーザー"}
                     </p>
                     <p className="text-[11px] text-sidebar-foreground/40 truncate mt-1">
-                      admin@proplink.jp
+                      {user?.email ?? ""}
                     </p>
                   </div>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive gap-2">
+                <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive gap-2" onClick={logout}>
                   <LogOut className="h-4 w-4" />
                   <span>ログアウト</span>
                 </DropdownMenuItem>
@@ -219,7 +213,7 @@ function DashboardLayoutContent({
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg" />
               <span className="text-sm font-semibold text-foreground">
-                {activeMenuItem?.label ?? "PropLink"}
+                {activeMenuItem?.label ?? "PropFlow"}
               </span>
             </div>
           </div>

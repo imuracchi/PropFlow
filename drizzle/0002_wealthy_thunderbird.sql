@@ -1,0 +1,22 @@
+CREATE TABLE `properties` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`name` varchar(255) NOT NULL,
+	`address` varchar(500) NOT NULL,
+	`type` varchar(64) NOT NULL,
+	`status` enum('available','negotiating','sold') NOT NULL DEFAULT 'available',
+	`price` bigint NOT NULL,
+	`estimatedYield` double,
+	`landArea` double NOT NULL,
+	`buildingArea` double,
+	`zoning` text,
+	`access` text,
+	`negotiation` varchar(32) NOT NULL DEFAULT '固定',
+	`comment` text,
+	`heightDistrict` text,
+	`otherRestrictions` text,
+	`faqs` json,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `properties_id` PRIMARY KEY(`id`)
+);

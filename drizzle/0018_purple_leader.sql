@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `holidays` varchar(255);
