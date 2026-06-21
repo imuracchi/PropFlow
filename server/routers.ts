@@ -363,6 +363,42 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    analyzeTransport: protectedProcedure
+      .input(z.object({ address: z.string() }))
+      .mutation(async ({ input }) => {
+        const { parsed } = await import("dotenv").then(d => d.config());
+        const apiKey = parsed?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) return { transport: null, error: "ANTHROPIC_API_KEYが未設定です" };
+        try {
+          const Anthropic = (await import("@anthropic-ai/sdk")).default;
+          const client = new Anthropic({ apiKey });
+          const msg = await client.messages.create({
+            model: "claude-sonnet-4-6",
+            max_tokens: 300,
+            messages: [{
+              role: "user",
+              content: `以下の住所から最寄りの電車または地下鉄の駅を調べてください。
+複数路線ある場合は近い順に2〜3駅まで記載してください。
+
+住所: ${input.address}
+
+以下の形式で回答してください（テキストのみ、余計な説明は不要）:
+○○線「○○」駅 徒歩○分
+○○線「○○」駅 徒歩○分
+
+不明な場合は「不明」とだけ返してください。`,
+            }],
+          });
+          const reply = msg.content[0];
+          if (reply.type === "text") {
+            return { transport: reply.text.trim(), error: null };
+          }
+          return { transport: null, error: "AIからの応答が不正です" };
+        } catch (err: any) {
+          return { transport: null, error: err.message };
+        }
+      }),
+
     generateComment: protectedProcedure
       .input(z.object({
         name: z.string(),

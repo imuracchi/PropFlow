@@ -62,6 +62,7 @@ export default function PropertyUpload() {
   const [error, setError] = useState("");
 
   const [generatingComment, setGeneratingComment] = useState(false);
+  const [analyzingTransport, setAnalyzingTransport] = useState(false);
   const [showLineConfirm, setShowLineConfirm] = useState(false);
   const [createdPropertyId, setCreatedPropertyId] = useState<number | null>(null);
 
@@ -69,6 +70,7 @@ export default function PropertyUpload() {
   const uploadFileMutation = trpc.property.uploadFile.useMutation();
   const extractMutation = trpc.property.extractFromPdf.useMutation();
   const commentMutation = trpc.property.generateComment.useMutation();
+  const transportMutation = trpc.property.analyzeTransport.useMutation();
   const notifyLineMutation = trpc.property.notifyLine.useMutation();
 
   const fillFormFromData = (data: Record<string, unknown>) => {
@@ -434,7 +436,21 @@ export default function PropertyUpload() {
             { label: "物件名", required: true, input: <Input value={name} onChange={e => setName(e.target.value)} placeholder="例: 港区南青山4" /> },
             { label: "所在地", required: true, input: <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="例: 東京都港区南青山4丁目5番27号" /> },
             { label: "地番", input: <Input value={lotNumber} onChange={e => setLotNumber(e.target.value)} placeholder="例: 70-2、70-4" /> },
-            { label: "交通", input: <Input value={transport} onChange={e => setTransport(e.target.value)} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" /> },
+            { label: "交通", input: (
+              <div className="flex gap-2">
+                <Input className="flex-1" value={transport} onChange={e => setTransport(e.target.value)} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" />
+                <Button variant="outline" size="sm" className="shrink-0 gap-1 text-xs" type="button" disabled={analyzingTransport || !address}
+                  onClick={async () => {
+                    setAnalyzingTransport(true);
+                    const result = await transportMutation.mutateAsync({ address });
+                    if (result.transport) setTransport(result.transport);
+                    setAnalyzingTransport(false);
+                  }}>
+                  {analyzingTransport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  <span className="hidden md:inline">AI分析</span>
+                </Button>
+              </div>
+            )},
             { label: "物件種別", required: true, input: (
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>

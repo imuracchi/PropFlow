@@ -562,9 +562,11 @@ export default function PropertyDetail() {
   });
   const [editError, setEditError] = useState("");
   const [generatingComment, setGeneratingComment] = useState(false);
+  const [analyzingTransport, setAnalyzingTransport] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const updateMutation = trpc.property.update.useMutation();
+  const transportMutation = trpc.property.analyzeTransport.useMutation();
   const deleteMutation = trpc.property.delete.useMutation();
   const commentMutation = trpc.property.generateComment.useMutation();
   const utils = trpc.useUtils();
@@ -1007,7 +1009,7 @@ export default function PropertyDetail() {
                         { label: "物件名", key: "name", required: true },
                         { label: "所在地", key: "address", required: true },
                         { label: "地番", key: "lotNumber" },
-                        { label: "交通", key: "transport" },
+                        { label: "交通", key: "transport", aiTransport: true },
                         { label: "物件種別", key: "type", required: true, select: PROPERTY_TYPES },
                         { label: "売出価格", key: "price", priceField: true },
                         { label: "土地面積（㎡）", key: "landArea", required: true },
@@ -1029,7 +1031,21 @@ export default function PropertyDetail() {
                             {row.label}{row.required && <span className="text-red-500 ml-0.5">*</span>}
                           </span>
                           <div className="flex-1">
-                            {row.priceField ? (
+                            {(row as any).aiTransport ? (
+                              <div className="flex gap-2">
+                                <Input className="flex-1" value={(editForm as any)[row.key]} onChange={e => setEditForm(p => ({ ...p, [row.key]: e.target.value }))} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" />
+                                <Button variant="outline" size="sm" className="shrink-0 gap-1 text-xs" disabled={analyzingTransport || !editForm.address}
+                                  onClick={async () => {
+                                    setAnalyzingTransport(true);
+                                    const result = await transportMutation.mutateAsync({ address: editForm.address });
+                                    if (result.transport) setEditForm(p => ({ ...p, transport: result.transport! }));
+                                    setAnalyzingTransport(false);
+                                  }}>
+                                  {analyzingTransport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                                  <span className="hidden md:inline">AI分析</span>
+                                </Button>
+                              </div>
+                            ) : row.priceField ? (
                               <div className="space-y-1.5">
                                 <Input value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} disabled={editForm.priceNegotiable} className={editForm.priceNegotiable ? "opacity-50" : ""} />
                                 <label className="flex items-center gap-2 cursor-pointer">
