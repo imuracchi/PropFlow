@@ -399,19 +399,22 @@ function PropertyMemo({ propertyId }: { propertyId: number }) {
 
 function GoogleMapPanel({ address }: { address: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadMap = useCallback(() => {
     if (!GOOGLE_MAPS_API_KEY || !containerRef.current) return;
-    let cancelled = false;
+    setLoading(true);
 
     loadGoogleMapsScript().then(() => {
-      if (cancelled || !containerRef.current) return;
+      if (!containerRef.current) return;
       const geocoder = new google.maps.Geocoder();
       geocoder.geocode({ address }, (results, status) => {
-        if (cancelled || !containerRef.current) return;
+        if (!containerRef.current) return;
         if (status !== "OK" || !results?.[0]) {
           setError("住所からの位置特定に失敗しました");
+          setLoading(false);
           return;
         }
         const location = results[0].geometry.location;
@@ -422,16 +425,26 @@ function GoogleMapPanel({ address }: { address: string }) {
           streetViewControl: false,
         });
         new google.maps.Marker({ position: location, map });
+        setLoaded(true);
+        setLoading(false);
       });
     });
-
-    return () => { cancelled = true; };
   }, [address]);
+
+  useEffect(() => { loadMap(); }, [loadMap]);
 
   if (error) {
     return (
       <div className="w-full h-80 bg-muted rounded-lg flex items-center justify-center border border-border">
         <p className="text-sm text-muted-foreground">{error}</p>
+      </div>
+    );
+  }
+
+  if (!loaded && loading) {
+    return (
+      <div className="w-full h-80 bg-muted rounded-lg flex items-center justify-center border border-border">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -969,13 +982,7 @@ export default function PropertyDetail() {
                     <Share2 className="w-3 h-3" />
                   </a>
                 </div>
-                <iframe
-                  className="w-full h-80 rounded-lg border border-border"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(property.address)}&output=embed&hl=ja&z=16`}
-                  allowFullScreen
-                />
+                <GoogleMapPanel address={property.address} />
                 <div className="flex items-center gap-1.5 mt-3 text-sm text-muted-foreground"><MapPin className="w-4 h-4 text-primary" />{property.address}</div>
               </div>
               <div className="bg-card border border-border rounded-lg p-5">
