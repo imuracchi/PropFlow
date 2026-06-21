@@ -196,7 +196,6 @@ export default function MyPage() {
         ) : (
           <div className="space-y-3">
             {deletedProperties.map(prop => {
-              const statusInfo = STATUS_MAP[prop.status] ?? STATUS_MAP.available;
               return (
                 <div key={prop.id} className="bg-card border border-border rounded-lg p-4 opacity-70">
                   <div className="flex items-center gap-4">
@@ -206,7 +205,6 @@ export default function MyPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-foreground text-sm truncate">{prop.name}</h3>
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${statusInfo.cls}`}>{statusInfo.label}</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                         <MapPin className="w-3 h-3" />{prop.address}

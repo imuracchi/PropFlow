@@ -9,11 +9,6 @@ import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
-const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  available: { label: "公開中", cls: "border border-blue-600 text-blue-600 bg-white" },
-  negotiating: { label: "商談中", cls: "bg-amber-500 text-white" },
-  sold: { label: "売却済", cls: "bg-gray-400 text-white" },
-};
 
 export default function ChatRoom() {
   const [, setLocation] = useLocation();
@@ -62,7 +57,6 @@ export default function ChatRoom() {
     setInput("");
   };
 
-  const statusInfo = STATUS_MAP[property?.status ?? "available"] ?? STATUS_MAP.available;
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;

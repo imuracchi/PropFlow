@@ -96,6 +96,11 @@ export default function Features() {
           </div>
         ))}
       </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+        <p className="text-sm text-amber-800 font-medium">現在β版として全機能を無料でご利用いただけます</p>
+        <p className="text-xs text-amber-700 mt-1">今後、より便利にご利用いただくための一部機能について有料プランを導入する場合がございます。</p>
+      </div>
     </div>
   );
 }

@@ -4,11 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
-const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  available: { label: "公開中", cls: "border border-blue-600 text-blue-600 bg-white" },
-  negotiating: { label: "商談中", cls: "bg-amber-500 text-white" },
-  sold: { label: "売却済", cls: "bg-gray-400 text-white" },
-};
 
 type Room = {
   propertyId: number;
@@ -26,7 +21,6 @@ function getLastRead(key: string): number {
 
 function RoomCard({ room, hidden }: { room: Room; hidden?: boolean }) {
   const [, setLocation] = useLocation();
-  const statusInfo = STATUS_MAP[room.propertyStatus] ?? STATUS_MAP.available;
   const lastRead = getLastRead(`room-${room.propertyId}`);
   const hasNew = !hidden && new Date(room.lastMessageAt).getTime() > lastRead;
 
@@ -47,10 +41,8 @@ function RoomCard({ room, hidden }: { room: Room; hidden?: boolean }) {
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 shrink-0">全体</span>
             <h3 className="font-semibold text-foreground text-sm truncate">{room.propertyName}</h3>
             {hasNew && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-orange-500 text-white shrink-0">新着</span>}
-            {hidden ? (
+            {hidden && (
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">非表示</span>
-            ) : (
-              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${statusInfo.cls}`}>{statusInfo.label}</span>
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">

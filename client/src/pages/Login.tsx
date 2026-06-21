@@ -132,6 +132,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
           </TabsContent>
         </Tabs>
         <p className="text-xs text-muted-foreground text-center mt-4">PropFlowは登録審査制です</p>
+        <p className="text-[10px] text-muted-foreground/50 text-center mt-2">現在β版として無料でご利用いただけます。今後、一部機能の有料化を予定しています。</p>
       </div>
     </div>
   );
