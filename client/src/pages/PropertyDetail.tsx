@@ -494,28 +494,32 @@ function StreetViewPanel({ address }: { address: string }) {
     });
   };
 
-  if (error) {
-    return (
-      <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center border border-border">
-        <p className="text-sm text-muted-foreground">{error}</p>
-      </div>
-    );
-  }
-
-  if (!loaded) {
-    return (
-      <div className="w-full py-10 bg-muted rounded-lg flex flex-col items-center justify-center border border-border">
-        <Map className="w-10 h-10 text-primary/40 mb-3" />
-        <p className="text-sm font-medium text-foreground">ストリートビューで現地確認</p>
-        <p className="text-xs text-muted-foreground mt-1">接道状況・前面道路・周辺環境を確認できます</p>
-        <Button className="mt-4 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground" size="sm" onClick={loadStreetView} disabled={loading}>
-          {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />読み込み中...</> : <>ストリートビューを表示</>}
-        </Button>
-      </div>
-    );
-  }
-
-  return <div ref={containerRef} className="w-full h-96 rounded-lg border border-border" />;
+  return (
+    <div>
+      <div ref={containerRef} className={`w-full h-96 rounded-lg border border-border ${loaded ? "" : "hidden"}`} />
+      {error && (
+        <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center border border-border">
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      )}
+      {!loaded && !error && (
+        <div className="w-full py-10 bg-muted rounded-lg flex flex-col items-center justify-center border border-border">
+          {loading ? (
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          ) : (
+            <>
+              <Map className="w-10 h-10 text-primary/40 mb-3" />
+              <p className="text-sm font-medium text-foreground">ストリートビューで現地確認</p>
+              <p className="text-xs text-muted-foreground mt-1">接道状況・前面道路・周辺環境を確認できます</p>
+              <Button className="mt-4 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground" size="sm" onClick={loadStreetView}>
+                ストリートビューを表示
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function PropertyDetail() {
