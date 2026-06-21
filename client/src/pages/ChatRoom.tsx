@@ -69,34 +69,23 @@ export default function ChatRoom() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] max-w-4xl mx-auto">
+    <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-6rem)] h-[calc(100dvh-3.5rem)] max-w-4xl mx-auto overflow-hidden">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between pb-4 border-b border-border">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between pb-2 md:pb-4 border-b border-border shrink-0">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <button
-            className="text-muted-foreground hover:text-primary transition-colors"
+            className="text-muted-foreground hover:text-primary transition-colors shrink-0"
             onClick={() => setLocation("/chat")}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center">
-            <Home className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-foreground text-sm">
-                {property?.name ?? `物件 #${propertyId}`}
-              </h2>
-              <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${statusInfo.cls}`}>
-                {statusInfo.label}
-              </span>
-            </div>
-            {property && (
-              <p className="text-xs text-muted-foreground">{property.address}</p>
-            )}
+          <div className="min-w-0">
+            <h2 className="font-semibold text-foreground text-sm truncate">
+              {property?.name ?? `物件 #${propertyId}`}
+            </h2>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2 shrink-0">
           <Button
             variant="outline"
             size="sm"
@@ -104,7 +93,8 @@ export default function ChatRoom() {
             onClick={() => { setShowParticipants(!showParticipants); if (!showParticipants) setShowFaq(false); }}
           >
             <Users className="w-3.5 h-3.5" />
-            {(participants ?? []).length}名
+            <span className="hidden md:inline">{(participants ?? []).length}名</span>
+            <span className="md:hidden">{(participants ?? []).length}</span>
           </Button>
           {faqs.length > 0 && (
             <Button
@@ -114,7 +104,7 @@ export default function ChatRoom() {
               onClick={() => { setShowFaq(!showFaq); if (!showFaq) setShowParticipants(false); }}
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              よくある質問
+              <span className="hidden md:inline">よくある質問</span>
             </Button>
           )}
           {property && property.userId !== user?.id && (
@@ -125,7 +115,7 @@ export default function ChatRoom() {
               onClick={() => setLocation(`/dm/${property.userId}/${propertyId}`)}
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              登録者へDM
+              <span className="hidden md:inline">登録者へDM</span>
             </Button>
           )}
           <Button
@@ -135,7 +125,7 @@ export default function ChatRoom() {
             onClick={() => setLocation(`/property/${propertyId}`)}
           >
             <Info className="w-3.5 h-3.5" />
-            物件詳細
+            <span className="hidden md:inline">物件詳細</span>
           </Button>
           {!isDeleted && (
             <Button
@@ -145,7 +135,7 @@ export default function ChatRoom() {
               onClick={() => setShowExitConfirm(true)}
             >
               <LogOut className="w-3.5 h-3.5" />
-              退出
+              <span className="hidden md:inline">退出</span>
             </Button>
           )}
         </div>

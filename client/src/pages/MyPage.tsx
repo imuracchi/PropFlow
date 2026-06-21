@@ -376,11 +376,11 @@ function ProfileCard({ user, refresh, logoInputRef, logoMutation }: { user: any;
   ];
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+    <div className="bg-card border border-border rounded-lg p-4 md:p-6 space-y-4">
       <div className="flex items-start justify-between">
-        <div className="flex items-start gap-5">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-2xl font-bold text-primary">{(user.name ?? "?").charAt(0)}</span>
+        <div className="flex items-start gap-3 md:gap-5">
+          <div className="w-12 h-12 md:w-16 md:h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+            <span className="text-xl md:text-2xl font-bold text-primary">{(user.name ?? "?").charAt(0)}</span>
           </div>
           <div>
             <h2 className="text-xl font-bold text-foreground">{user.name}</h2>
@@ -427,7 +427,7 @@ function ProfileCard({ user, refresh, logoInputRef, logoMutation }: { user: any;
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm pt-2 border-t border-border">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm pt-2 border-t border-border">
           {infoItems.map(item => (
             <div key={item.label} className="flex items-center gap-2 text-muted-foreground">
               <item.icon className="w-4 h-4 shrink-0" />
@@ -440,7 +440,7 @@ function ProfileCard({ user, refresh, logoInputRef, logoMutation }: { user: any;
 
       {/* 会社ロゴ */}
       <div className="pt-4 border-t border-border">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
           <div className="flex items-center gap-4">
             <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
               <ImageIcon className="w-4 h-4 text-muted-foreground" />
