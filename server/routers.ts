@@ -421,6 +421,10 @@ export const appRouter = router({
   }),
 
   mypage: router({
+    interestedUsers: protectedProcedure.query(async ({ ctx }) => {
+      return db.getInterestedUsersForMyProperties(ctx.user.id);
+    }),
+
     chatProperties: protectedProcedure.query(async ({ ctx }) => {
       return db.getChatPropertiesByUserId(ctx.user.id);
     }),

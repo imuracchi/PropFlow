@@ -752,3 +752,82 @@ export async function markTokenUsed(token: string) {
   if (!db) return;
   await db.update(registrationTokens).set({ used: 1 }).where(eq(registrationTokens.token, token));
 }
+
+// ---- Interested Users ----
+
+export async function getInterestedUsersForMyProperties(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // 自分が登録した物件のID
+  const myProps = await db.select({ id: properties.id, name: properties.name })
+    .from(properties)
+    .where(and(eq(properties.userId, userId), eq(properties.deleted, 0)));
+
+  if (myProps.length === 0) return [];
+
+  const propIds = myProps.map(p => p.id);
+
+  // お気に入りしているユーザー
+  const favUsers = await db
+    .select({
+      propertyId: favorites.propertyId,
+      userId: favorites.userId,
+      type: sql<string>`'favorite'`,
+    })
+    .from(favorites)
+    .where(sql`${favorites.propertyId} IN (${sql.join(propIds.map(id => sql`${id}`), sql`, `)}) AND ${favorites.userId} != ${userId}`);
+
+  // メモしているユーザー
+  const memoUsers = await db
+    .select({
+      propertyId: propertyMemos.propertyId,
+      userId: propertyMemos.userId,
+      type: sql<string>`'memo'`,
+    })
+    .from(propertyMemos)
+    .where(sql`${propertyMemos.propertyId} IN (${sql.join(propIds.map(id => sql`${id}`), sql`, `)}) AND ${propertyMemos.userId} != ${userId}`);
+
+  // ユニークなユーザーID
+  const allEntries = [...favUsers, ...memoUsers];
+  const userIdSet = new Set(allEntries.map(e => e.userId));
+  if (userIdSet.size === 0) return [];
+
+  const userIds = Array.from(userIdSet);
+  const userList = await db
+    .select({
+      id: users.id, name: users.name, company: users.company,
+      email: users.email, phone: users.phone, fax: users.fax, license: users.license,
+    })
+    .from(users)
+    .where(sql`${users.id} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`);
+
+  // 物件ごと・ユーザーごとにグループ化
+  const result: { propertyId: number; propertyName: string; userId: number; userName: string | null; userCompany: string | null; userEmail: string; userPhone: string | null; userFax: string | null; userLicense: string | null; types: string[] }[] = [];
+
+  for (const entry of allEntries) {
+    const u = userList.find(u => u.id === entry.userId);
+    if (!u) continue;
+    const prop = myProps.find(p => p.id === entry.propertyId);
+    if (!prop) continue;
+    const existing = result.find(r => r.propertyId === entry.propertyId && r.userId === entry.userId);
+    if (existing) {
+      if (!existing.types.includes(entry.type)) existing.types.push(entry.type);
+    } else {
+      result.push({
+        propertyId: entry.propertyId,
+        propertyName: prop.name,
+        userId: u.id,
+        userName: u.name,
+        userCompany: u.company,
+        userEmail: u.email,
+        userPhone: u.phone,
+        userFax: u.fax,
+        userLicense: u.license,
+        types: [entry.type],
+      });
+    }
+  }
+
+  return result;
+}

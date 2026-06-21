@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Building2, Mail, Phone, FileText, Shield, MapPin, EyeOff, RotateCcw, Loader2, Upload, Trash2, ImageIcon,
   Send, MessageSquare, Bug, Lightbulb, AlertTriangle, HelpCircle, UserX, UserCog, CheckCircle2, Smartphone, Download, Lock,
-  Globe, Clock, Pencil, Check, X, CalendarOff, ChevronDown, ChevronUp
+  Globe, Clock, Pencil, Check, X, CalendarOff, ChevronDown, ChevronUp, Heart, StickyNote, Users
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -148,6 +148,9 @@ export default function MyPage() {
 
       {/* プロフィールカード */}
       <ProfileCard user={user} refresh={refresh} logoInputRef={logoInputRef} logoMutation={logoMutation} />
+
+      {/* 興味を持っているユーザー */}
+      <InterestedUsersSection />
 
       {/* LINE連携 */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -534,6 +537,81 @@ function ProfileCard({ user, refresh, logoInputRef, logoMutation }: { user: any;
 
       <div className="pt-4 border-t border-border">
         <p className="text-xs text-muted-foreground">※ 会社名・メール・宅建免許の変更は下記「管理者への連絡」からお問い合わせください。</p>
+      </div>
+    </div>
+  );
+}
+
+function InterestedUsersSection() {
+  const { data, isLoading } = trpc.mypage.interestedUsers.useQuery();
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+
+  if (isLoading) return null;
+  if (!data || data.length === 0) return null;
+
+  // 物件ごとにグループ化
+  const byProperty = new Map<number, { propertyName: string; users: typeof data }>();
+  for (const entry of data) {
+    if (!byProperty.has(entry.propertyId)) {
+      byProperty.set(entry.propertyId, { propertyName: entry.propertyName, users: [] });
+    }
+    byProperty.get(entry.propertyId)!.users.push(entry);
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="px-5 py-4 border-b border-border">
+        <h2 className="font-semibold text-foreground flex items-center gap-2">
+          <Users className="w-5 h-5 text-primary" />
+          あなたの物件に興味を持っているユーザー
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">お気に入り登録やメモを残しているユーザーの一覧です</p>
+      </div>
+      <div className="divide-y divide-border">
+        {Array.from(byProperty.entries()).map(([propId, group]) => (
+          <div key={propId} className="px-5 py-3">
+            <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-primary shrink-0" />
+              {group.propertyName}
+            </p>
+            <div className="space-y-1 ml-6">
+              {group.users.map(entry => {
+                const key = `${propId}-${entry.userId}`;
+                const isExpanded = expandedUser === key;
+                return (
+                  <div key={key}>
+                    <button
+                      className="w-full flex items-center justify-between py-2 text-left hover:bg-muted/50 rounded-lg px-2 -mx-2 transition-colors"
+                      onClick={() => setExpandedUser(isExpanded ? null : key)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-foreground font-medium">{entry.userName}</span>
+                        {entry.userCompany && <span className="text-xs text-muted-foreground">{entry.userCompany}</span>}
+                        <div className="flex items-center gap-1">
+                          {entry.types.includes("favorite") && <Heart className="w-3 h-3 text-red-500 fill-red-500" />}
+                          {entry.types.includes("memo") && <StickyNote className="w-3 h-3 text-amber-500" />}
+                        </div>
+                      </div>
+                      {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                    </button>
+                    {isExpanded && (
+                      <div className="ml-2 mb-2 p-3 bg-muted/30 rounded-lg space-y-1.5 text-sm">
+                        <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">氏名</span><span className="text-foreground">{entry.userName || "—"}</span></div>
+                        <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">会社名</span><span className="text-foreground">{entry.userCompany || "—"}</span></div>
+                        <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">メール</span>
+                          {entry.userEmail ? <a href={`mailto:${entry.userEmail}`} className="text-primary hover:underline">{entry.userEmail}</a> : <span>—</span>}
+                        </div>
+                        <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">電話番号</span><span className="text-foreground">{entry.userPhone || "—"}</span></div>
+                        <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">FAX</span><span className="text-foreground">{entry.userFax || "—"}</span></div>
+                        <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">宅建番号</span><span className="text-foreground">{entry.userLicense || "—"}</span></div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
