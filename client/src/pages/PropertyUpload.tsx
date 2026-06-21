@@ -44,8 +44,15 @@ export default function PropertyUpload() {
   const [estimatedYield, setEstimatedYield] = useState("");
   const [landArea, setLandArea] = useState("");
   const [buildingArea, setBuildingArea] = useState("");
+  const [transport, setTransport] = useState("");
+  const [landCategory, setLandCategory] = useState("");
+  const [rights, setRights] = useState("");
+  const [structure, setStructure] = useState("");
+  const [buildingAge, setBuildingAge] = useState("");
   const [zoning, setZoning] = useState("");
+  const [fireProtection, setFireProtection] = useState("");
   const [access, setAccess] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [negotiation, setNegotiation] = useState("固定");
   const [comment, setComment] = useState("");
   const [heightDistrict, setHeightDistrict] = useState("");
@@ -74,8 +81,15 @@ export default function PropertyUpload() {
     if (data.estimatedYield) setEstimatedYield(String(data.estimatedYield));
     if (data.landArea) setLandArea(String(data.landArea));
     if (data.buildingArea) setBuildingArea(String(data.buildingArea));
+    if (data.transport) setTransport(String(data.transport));
+    if (data.landCategory) setLandCategory(String(data.landCategory));
+    if (data.rights) setRights(String(data.rights));
+    if (data.structure) setStructure(String(data.structure));
+    if (data.buildingAge) setBuildingAge(String(data.buildingAge));
     if (data.zoning) setZoning(String(data.zoning));
+    if (data.fireProtection) setFireProtection(String(data.fireProtection));
     if (data.access) setAccess(String(data.access));
+    if (data.remarks) setRemarks(String(data.remarks));
     if (data.negotiation) setNegotiation(String(data.negotiation) === "交渉可" ? "交渉可" : "固定");
     if (data.comment) setComment(String(data.comment));
     if (data.heightDistrict) setHeightDistrict(String(data.heightDistrict));
@@ -182,8 +196,15 @@ export default function PropertyUpload() {
       estimatedYield: yieldNum,
       landArea: landAreaNum,
       buildingArea: buildingAreaNum,
+      transport: transport || undefined,
+      landCategory: landCategory || undefined,
+      rights: rights || undefined,
+      structure: structure || undefined,
+      buildingAge: buildingAge || undefined,
       zoning: zoning || undefined,
+      fireProtection: fireProtection || undefined,
       access: access || undefined,
+      remarks: remarks || undefined,
       negotiation,
       comment: comment || undefined,
       heightDistrict: heightDistrict || undefined,
@@ -450,20 +471,58 @@ export default function PropertyUpload() {
           <h2 className="font-semibold text-foreground">詳細情報</h2>
         </div>
         <div className="p-5 space-y-4">
+          <div className="space-y-2">
+            <Label>交通</Label>
+            <Input placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" value={transport} onChange={e => setTransport(e.target.value)} />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>用途地域</Label>
-              <Input placeholder="例: 第1種住居地域 建蔽率60%/容積率160%" value={zoning} onChange={e => setZoning(e.target.value)} />
+              <Label>地目</Label>
+              <Input placeholder="例: 宅地" value={landCategory} onChange={e => setLandCategory(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>接道条件</Label>
-              <Input placeholder="例: 南側公道 幅員4.00m" value={access} onChange={e => setAccess(e.target.value)} />
+              <Label>権利</Label>
+              <Input placeholder="例: 所有権" value={rights} onChange={e => setRights(e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label>構造</Label>
+              <Input placeholder="例: RC造" value={structure} onChange={e => setStructure(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>築年数</Label>
+              <Input placeholder="例: 築15年" value={buildingAge} onChange={e => setBuildingAge(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>用途地域</Label>
+              <Input placeholder="例: 第一種中高層住居専用地域" value={zoning} onChange={e => setZoning(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>建蔽/容積</Label>
+              <Input placeholder="例: 60/200" value={access} onChange={e => setAccess(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>防火指定</Label>
+              <Input placeholder="例: 準防火地域" value={fireProtection} onChange={e => setFireProtection(e.target.value)} />
+            </div>
+            <div className="space-y-2">
               <Label>高度地区</Label>
-              <Input placeholder="例: 24M第3種高度地区" value={heightDistrict} onChange={e => setHeightDistrict(e.target.value)} />
+              <Input placeholder="例: 17m第二種高度地区" value={heightDistrict} onChange={e => setHeightDistrict(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>その他制限</Label>
+            <Input placeholder="例: 日影規制：3h-2h（測定面4m）" value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>接道</Label>
+              <Input placeholder="例: 南側公道 幅員4.00m" value={access} onChange={e => setAccess(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>価格交渉</Label>
@@ -477,8 +536,8 @@ export default function PropertyUpload() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label>その他制限</Label>
-            <Input placeholder="例: 建築協定あり" value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} />
+            <Label>備考</Label>
+            <Textarea placeholder="その他の特記事項" rows={2} value={remarks} onChange={e => setRemarks(e.target.value)} />
           </div>
         </div>
       </div>
