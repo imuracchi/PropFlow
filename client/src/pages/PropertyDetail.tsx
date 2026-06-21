@@ -791,9 +791,6 @@ export default function PropertyDetail() {
           {isOwner && !isEditing && (
             <>
               <div className="w-px h-5 bg-border mx-1" />
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={startEditing}>
-                <Pencil className="w-4 h-4" />編集する
-              </Button>
               <Button variant="outline" size="sm" className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowDeleteConfirm(true)}>
                 <EyeOff className="w-4 h-4" />非表示
               </Button>
@@ -835,8 +832,8 @@ export default function PropertyDetail() {
         </div>
       )}
 
-      {/* ── 編集モード ── */}
-      {isEditing && (
+      {/* ── 旧編集モード削除済み ── */}
+      {false && isEditing && (
         <div className="space-y-5">
           <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-lg px-4 py-3">
             <Pencil className="w-4 h-4 shrink-0" />
@@ -936,8 +933,8 @@ export default function PropertyDetail() {
         </div>
       )}
 
-      {/* ── 閲覧モード ── */}
-      {!isEditing && (
+      {/* コンテンツ */}
+      {(
         <>
           {property.comment && (
             <div className="bg-card border border-border rounded-lg p-5">
@@ -985,14 +982,81 @@ export default function PropertyDetail() {
 
             <TabsContent value="overview" className="mt-4">
               <div className="bg-card border border-border rounded-lg">
-                <div className="px-5 py-4 border-b border-border"><h3 className="font-semibold text-foreground">物件概要</h3></div>
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground">物件概要</h3>
+                  {isOwner && (
+                    isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={cancelEditing}><X className="w-3.5 h-3.5" />キャンセル</Button>
+                        <Button size="sm" className="gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground" onClick={saveEditing} disabled={updateMutation.isPending}>
+                          {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}保存
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={startEditing}>
+                        <Pencil className="w-3.5 h-3.5" />編集する
+                      </Button>
+                    )
+                  )}
+                </div>
+                {editError && <div className="px-5 py-2 text-sm text-red-600 bg-red-50">{editError}</div>}
                 <div className="divide-y divide-border">
-                  {details.map(([label, value]) => (
-                    <div key={label} className="flex px-5 py-3.5">
-                      <span className="w-36 shrink-0 text-sm text-muted-foreground">{label}</span>
-                      <span className={`text-sm font-medium ${label === "売出価格" ? "text-primary" : "text-foreground"}`}>{value}</span>
-                    </div>
-                  ))}
+                  {isEditing ? (
+                    <>
+                      {[
+                        { label: "物件名", key: "name", required: true },
+                        { label: "所在地", key: "address", required: true },
+                        { label: "地番", key: "lotNumber" },
+                        { label: "交通", key: "transport" },
+                        { label: "物件種別", key: "type", required: true, select: PROPERTY_TYPES },
+                        { label: "売出価格", key: "price", priceField: true },
+                        { label: "土地面積（㎡）", key: "landArea", required: true },
+                        { label: "地目", key: "landCategory" },
+                        { label: "権利", key: "rights" },
+                        { label: "接道", key: "access" },
+                        { label: "建物面積（㎡）", key: "buildingArea" },
+                        { label: "構造", key: "structure" },
+                        { label: "築年数", key: "buildingAge" },
+                        { label: "用途地域", key: "zoning" },
+                        { label: "防火指定", key: "fireProtection" },
+                        { label: "高度地区", key: "heightDistrict" },
+                        { label: "その他制限", key: "otherRestrictions" },
+                        { label: "価格交渉", key: "negotiation", select: ["固定", "交渉可"] },
+                        { label: "備考", key: "remarks" },
+                      ].map(row => (
+                        <div key={row.label} className="flex flex-col md:flex-row px-5 py-3 gap-1 md:gap-0">
+                          <span className="w-36 shrink-0 text-sm text-muted-foreground pt-2">
+                            {row.label}{row.required && <span className="text-red-500 ml-0.5">*</span>}
+                          </span>
+                          <div className="flex-1">
+                            {row.priceField ? (
+                              <div className="space-y-1.5">
+                                <Input value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} disabled={editForm.priceNegotiable} className={editForm.priceNegotiable ? "opacity-50" : ""} />
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" className="accent-primary w-4 h-4" checked={editForm.priceNegotiable} onChange={e => setEditForm(p => ({ ...p, priceNegotiable: e.target.checked, price: e.target.checked ? "" : p.price }))} />
+                                  <span className="text-sm text-muted-foreground">応相談</span>
+                                </label>
+                              </div>
+                            ) : row.select ? (
+                              <Select value={(editForm as any)[row.key]} onValueChange={v => setEditForm(p => ({ ...p, [row.key]: v }))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{row.select.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                              </Select>
+                            ) : (
+                              <Input value={(editForm as any)[row.key]} onChange={e => setEditForm(p => ({ ...p, [row.key]: e.target.value }))} />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    details.map(([label, value]) => (
+                      <div key={label} className="flex px-5 py-3.5">
+                        <span className="w-36 shrink-0 text-sm text-muted-foreground">{label}</span>
+                        <span className={`text-sm font-medium ${label === "売出価格" ? "text-primary" : "text-foreground"}`}>{value}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </TabsContent>
