@@ -83,25 +83,66 @@ export default function MyPage() {
 
       {/* PWAインストール案内 */}
       {!isInstalled && (
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-              <Smartphone className="w-5 h-5 text-primary" />
+        <div className="bg-primary/5 border border-primary/20 rounded-lg overflow-hidden">
+          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                <Smartphone className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">PropFlowをアプリとしてインストール</p>
+                <p className="text-xs text-muted-foreground">ホーム画面に追加するとアプリのように使え、プッシュ通知も受け取れます</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">アプリとしてインストール</p>
-              <p className="text-xs text-muted-foreground">ホーム画面に追加するとアプリのように使え、通知も受け取れます</p>
-            </div>
+            {installPrompt && (
+              <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0" onClick={handleInstall}>
+                <Download className="w-4 h-4" />今すぐインストール
+              </Button>
+            )}
           </div>
-          {installPrompt ? (
-            <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0" onClick={handleInstall}>
-              <Download className="w-4 h-4" />インストール
-            </Button>
-          ) : (
-            <p className="text-xs text-muted-foreground shrink-0 max-w-[200px] text-right">
-              ブラウザのメニューから「ホーム画面に追加」を選択してください
-            </p>
-          )}
+          <div className="border-t border-primary/10 p-4 space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-white bg-gray-800 rounded px-1.5 py-0.5">iPhone</span>
+                <span className="text-sm font-medium text-foreground">iPhoneの場合</span>
+              </div>
+              <ol className="text-xs text-muted-foreground space-y-1.5 ml-1">
+                <li className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">1</span>
+                  <span>Safariでこのページを開きます（Chromeでは不可）</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">2</span>
+                  <span>画面下部の <strong>共有ボタン（□に↑）</strong> をタップ</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">3</span>
+                  <span>「<strong>ホーム画面に追加</strong>」をタップ → 「追加」で完了</span>
+                </li>
+              </ol>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-white bg-[#3DDC84] rounded px-1.5 py-0.5">Android</span>
+                <span className="text-sm font-medium text-foreground">Androidの場合</span>
+              </div>
+              <ol className="text-xs text-muted-foreground space-y-1.5 ml-1">
+                <li className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">1</span>
+                  <span>Chromeでこのページを開きます</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">2</span>
+                  <span>画面上部の「<strong>インストール</strong>」バナー、または右上の <strong>︙メニュー</strong> をタップ</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">3</span>
+                  <span>「<strong>アプリをインストール</strong>」をタップ → ホーム画面に追加されます</span>
+                </li>
+              </ol>
+            </div>
+            <p className="text-[11px] text-muted-foreground/60">※ インストール後はアプリとして起動でき、ブラウザを閉じていても通知を受け取れます</p>
+          </div>
         </div>
       )}
 

@@ -15,6 +15,7 @@ import DirectMessage from "./pages/DirectMessage";
 import Favorites from "./pages/Favorites";
 import MyPage from "./pages/MyPage";
 import Admin from "./pages/Admin";
+import Features from "./pages/Features";
 import Register from "./pages/Register";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
@@ -158,6 +159,9 @@ function AppContent() {
         </Route>
         <Route path="/mypage">
           {() => (<DashboardLayout><MyPage key="mypage" /></DashboardLayout>)}
+        </Route>
+        <Route path="/features">
+          {() => (<DashboardLayout><Features /></DashboardLayout>)}
         </Route>
         <Route path="/admin">
           {() => <AdminRoute />}

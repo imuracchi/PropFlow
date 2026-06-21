@@ -21,7 +21,7 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   Building2, LogOut, PanelLeft,
-  Upload, List, MessageCircle, ShieldCheck, ChevronRight, UserCircle, Heart
+  Upload, List, MessageCircle, ShieldCheck, ChevronRight, UserCircle, Heart, HelpCircle
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -33,6 +33,7 @@ const baseMenuItems = [
   { icon: Heart, label: "お気に入り", path: "/favorites" },
   { icon: MessageCircle, label: "チャット", path: "/chat" },
   { icon: UserCircle, label: "マイページ", path: "/mypage" },
+  { icon: HelpCircle, label: "できること", path: "/features" },
 ];
 
 const adminMenuItem = { icon: ShieldCheck, label: "管理画面", path: "/admin", adminOnly: true };
