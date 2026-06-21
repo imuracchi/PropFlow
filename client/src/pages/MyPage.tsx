@@ -28,8 +28,6 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 export default function MyPage() {
   const [, setLocation] = useLocation();
   const { user, refresh } = useAuth();
-  const logoInputRef = useRef<HTMLInputElement>(null);
-
   const utils = trpc.useUtils();
   const { data: deletedProperties, isLoading: deletedLoading } = trpc.mypage.deletedProperties.useQuery();
   const restoreMutation = trpc.mypage.restoreProperty.useMutation({
@@ -135,7 +133,7 @@ export default function MyPage() {
       )}
 
       {/* プロフィールカード */}
-      <ProfileCard user={user} refresh={refresh} logoInputRef={logoInputRef} logoMutation={logoMutation} />
+      <ProfileCard user={user} refresh={refresh} logoMutation={logoMutation} />
 
       {/* LINE連携 */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -440,7 +438,8 @@ function ChangePasswordForm() {
   );
 }
 
-function ProfileCard({ user, refresh, logoInputRef, logoMutation }: { user: any; refresh: () => void; logoInputRef: React.RefObject<HTMLInputElement | null>; logoMutation: any }) {
+function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () => void; logoMutation: any }) {
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     zipCode: "", address: "", phone: "", fax: "", url: "", businessHours: "", holidays: "", bio: "",
