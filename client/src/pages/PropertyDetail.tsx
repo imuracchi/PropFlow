@@ -712,7 +712,6 @@ export default function PropertyDetail() {
     ["高度地区", property.heightDistrict || "—"],
     ["その他制限", property.otherRestrictions || "—"],
     ["価格交渉", property.negotiation],
-    ["ステータス", STATUS_MAP[property.status] ?? property.status],
     ["登録業者", property.userCompany || property.userName || "—"],
     ["登録日", createdDate],
   ];
@@ -726,7 +725,6 @@ export default function PropertyDetail() {
       {/* ヘッダー */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium px-2.5 py-1 rounded border border-blue-600 text-blue-600 bg-white">{STATUS_MAP[property.status]}</span>
           <span className="text-xs font-medium px-2.5 py-1 rounded bg-muted text-muted-foreground flex items-center gap-1">
             <Building2 className="w-3 h-3" />{property.type}
           </span>

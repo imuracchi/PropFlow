@@ -95,12 +95,11 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const exportCsv = (onlySelected = false) => {
     const target = onlySelected ? filtered.filter(p => selectedIds.has(p.id)) : filtered;
     if (target.length === 0) return;
-    const headers = ["物件名", "住所", "物件種別", "ステータス", "価格（円）", "利回り（%）", "土地面積（㎡）", "坪数", "建物面積（㎡）", "建物坪数", "用途地域", "接道条件", "価格交渉", "登録業者", "登録日"];
+    const headers = ["物件名", "住所", "物件種別", "価格（円）", "利回り（%）", "土地面積（㎡）", "坪数", "建物面積（㎡）", "建物坪数", "用途地域", "接道条件", "価格交渉", "登録業者", "登録日"];
     const rows = target.map(p => [
       p.name,
       p.address,
       p.type,
-      STATUS_LABEL[p.status] ?? p.status,
       p.priceNegotiable ? "応相談" : (p.price ?? ""),
       p.estimatedYield ?? "",
       p.landArea.toFixed(2),
@@ -194,17 +193,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       </div>
 
       <div className="flex items-center gap-3">
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40 bg-card border-border">
-            <SelectValue placeholder="ステータス：全て" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">ステータス：全て</SelectItem>
-            <SelectItem value="available">公開中</SelectItem>
-            <SelectItem value="negotiating">商談中</SelectItem>
-            <SelectItem value="sold">売却済</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={filterType} onValueChange={setFilterType}>
           <SelectTrigger className="w-44 bg-card border-border">
             <SelectValue placeholder="物件種別：全て" />
@@ -281,9 +269,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       </td>
                       <td className="px-4 py-4">
                         <div className="hidden md:flex items-center gap-2 mb-1">
-                          <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${statusInfo.cls}`}>
-                            {statusInfo.label}
-                          </span>
                           <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">
                             {property.type}
                           </span>
