@@ -476,7 +476,7 @@ export default function PropertyUpload() {
             { label: "用途地域", input: <Input value={zoning} onChange={e => setZoning(e.target.value)} placeholder="例: 第一種中高層住居専用地域 建蔽率60%/容積率200%" /> },
             { label: "防火指定", input: <Input value={fireProtection} onChange={e => setFireProtection(e.target.value)} placeholder="例: 準防火地域" /> },
             { label: "高度地区", input: <Input value={heightDistrict} onChange={e => setHeightDistrict(e.target.value)} placeholder="例: 17m第二種高度地区" /> },
-            { label: "その他制限", input: <Input value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} placeholder="例: 日影規制：3h-2h（測定面4m）" /> },
+            { label: "その他制限", input: <Textarea className="min-h-[2.5rem]" rows={2} value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} placeholder="例: 日影規制：3h-2h（測定面4m）" /> },
             { label: "価格交渉", input: (
               <Select value={negotiation} onValueChange={setNegotiation}>
                 <SelectTrigger><SelectValue /></SelectTrigger>

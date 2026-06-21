@@ -1022,9 +1022,9 @@ export default function PropertyDetail() {
                         { label: "用途地域", key: "zoning" },
                         { label: "防火指定", key: "fireProtection" },
                         { label: "高度地区", key: "heightDistrict" },
-                        { label: "その他制限", key: "otherRestrictions" },
+                        { label: "その他制限", key: "otherRestrictions", textarea: true },
                         { label: "価格交渉", key: "negotiation", select: ["固定", "交渉可"] },
-                        { label: "備考", key: "remarks" },
+                        { label: "備考", key: "remarks", textarea: true },
                       ].map(row => (
                         <div key={row.label} className="flex flex-col md:flex-row px-5 py-3 gap-1 md:gap-0">
                           <span className="w-36 shrink-0 text-sm text-muted-foreground pt-2">
@@ -1058,6 +1058,8 @@ export default function PropertyDetail() {
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>{row.select.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                               </Select>
+                            ) : (row as any).textarea ? (
+                              <Textarea className="min-h-[2.5rem]" rows={2} value={(editForm as any)[row.key]} onChange={e => setEditForm(p => ({ ...p, [row.key]: e.target.value }))} />
                             ) : (
                               <Input value={(editForm as any)[row.key]} onChange={e => setEditForm(p => ({ ...p, [row.key]: e.target.value }))} />
                             )}
