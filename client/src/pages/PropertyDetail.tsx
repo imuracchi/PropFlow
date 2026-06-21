@@ -702,7 +702,7 @@ export default function PropertyDetail() {
         <p className="text-sm text-muted-foreground">
           登録：{property.userCompany || property.userName || "—"} / {createdDate}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" className={`gap-1.5 ${isFavorite ? "text-red-500 border-red-200 bg-red-50" : ""}`} onClick={toggleFavorite}>
             <Heart className={`w-4 h-4 ${isFavorite ? "fill-red-500" : ""}`} />お気に入り
           </Button>
@@ -890,22 +890,22 @@ export default function PropertyDetail() {
           {/* 紹介者 */}
           <IntroducerCard property={property} />
 
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-card border border-border rounded-lg p-4">
-              <p className="text-xs text-primary mb-1">売出価格</p>
-              <p className="text-xl font-bold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-card border border-border rounded-lg p-3 md:p-4">
+              <p className="text-[10px] md:text-xs text-primary mb-0.5">売出価格</p>
+              <p className="text-sm md:text-xl font-bold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4">
-              <p className="text-xs text-muted-foreground mb-1">想定利回り</p>
-              <p className="text-xl font-bold text-foreground">{property.estimatedYield ? `${property.estimatedYield}%` : "—"}</p>
+            <div className="bg-card border border-border rounded-lg p-3 md:p-4">
+              <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5">想定利回り</p>
+              <p className="text-sm md:text-xl font-bold text-foreground">{property.estimatedYield ? `${property.estimatedYield}%` : "—"}</p>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4">
-              <p className="text-xs text-muted-foreground mb-1">土地面積</p>
-              <p className="text-lg font-bold text-foreground">{property.landArea.toFixed(2)}㎡</p>
+            <div className="bg-card border border-border rounded-lg p-3 md:p-4">
+              <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5">土地面積</p>
+              <p className="text-sm md:text-lg font-bold text-foreground">{property.landArea.toFixed(2)}㎡</p>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4">
-              <p className="text-xs text-muted-foreground mb-1">建物延床面積</p>
-              <p className="text-lg font-bold text-foreground">{property.buildingArea ? `${property.buildingArea.toFixed(2)}㎡` : "—"}</p>
+            <div className="bg-card border border-border rounded-lg p-3 md:p-4">
+              <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5">建物延床面積</p>
+              <p className="text-sm md:text-lg font-bold text-foreground">{property.buildingArea ? `${property.buildingArea.toFixed(2)}㎡` : "—"}</p>
             </div>
           </div>
 

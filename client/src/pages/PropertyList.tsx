@@ -249,7 +249,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">住所</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">土地面積</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">建物面積</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">価格</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">価格</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">利回り</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">用途地域</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">接道条件</th>
@@ -280,7 +280,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                         />
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="hidden md:flex items-center gap-2 mb-1">
                           <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${statusInfo.cls}`}>
                             {statusInfo.label}
                           </span>
@@ -289,6 +289,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                           </span>
                         </div>
                         <p className="font-medium text-foreground text-sm">{property.name}</p>
+                        <p className="md:hidden text-xs font-semibold text-primary mt-0.5">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
                       </td>
                       <td className="px-4 py-4 text-sm text-muted-foreground max-w-[200px] hidden md:table-cell">
                         {property.address}
@@ -307,7 +308,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-right whitespace-nowrap">
+                      <td className="px-4 py-4 text-right whitespace-nowrap hidden md:table-cell">
                         <p className="font-semibold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
                       </td>
                       <td className="px-4 py-4 text-right whitespace-nowrap hidden lg:table-cell">
