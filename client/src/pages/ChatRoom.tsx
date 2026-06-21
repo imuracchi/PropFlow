@@ -71,7 +71,7 @@ export default function ChatRoom() {
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-6rem)] h-[calc(100dvh-3.5rem)] max-w-4xl mx-auto overflow-hidden">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between pb-2 md:pb-4 border-b border-border shrink-0">
+      <div className="flex items-center justify-between pb-2 md:pb-4 border-b-2 border-blue-500 shrink-0">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <button
             className="text-muted-foreground hover:text-primary transition-colors shrink-0"
@@ -79,6 +79,7 @@ export default function ChatRoom() {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 shrink-0">全体</span>
           <div className="min-w-0">
             <h2 className="font-semibold text-foreground text-sm truncate">
               {property?.name ?? `物件 #${propertyId}`}
@@ -304,7 +305,7 @@ export default function ChatRoom() {
           </div>
         </div>
       ) : (
-      <div className="pt-4 border-t border-border">
+      <div className="pt-4 border-t-2 border-blue-500">
         <div className="flex items-end gap-2">
           <Input
             value={input}
