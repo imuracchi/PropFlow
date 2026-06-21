@@ -21,7 +21,7 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   Building2, LogOut, PanelLeft,
-  Upload, List, MessageCircle, ShieldCheck, ChevronRight, UserCircle, Heart, HelpCircle
+  Upload, List, MessageCircle, ShieldCheck, ChevronRight, UserCircle, Heart, HelpCircle, Users
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -32,6 +32,7 @@ const baseMenuItems = [
   { icon: Upload, label: "物件登録", path: "/upload" },
   { icon: Heart, label: "お気に入り", path: "/favorites" },
   { icon: MessageCircle, label: "チャット", path: "/chat" },
+  { icon: Users, label: "興味者リスト", path: "/interested" },
   { icon: UserCircle, label: "マイページ", path: "/mypage" },
   { icon: HelpCircle, label: "できること", path: "/features" },
 ];

@@ -149,9 +149,6 @@ export default function MyPage() {
       {/* プロフィールカード */}
       <ProfileCard user={user} refresh={refresh} logoInputRef={logoInputRef} logoMutation={logoMutation} />
 
-      {/* 興味を持っているユーザー */}
-      <InterestedUsersSection />
-
       {/* LINE連携 */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="px-5 py-4 flex items-center justify-between">
