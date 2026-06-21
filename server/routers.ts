@@ -631,6 +631,13 @@ export const appRouter = router({
         return u;
       }),
 
+    deleteUser: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteUser(input.id);
+        return { success: true };
+      }),
+
     updatePlan: adminProcedure
       .input(z.object({
         id: z.number(),

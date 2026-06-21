@@ -102,7 +102,7 @@ export async function getAdminStats() {
   if (!db) return { activeUsers: 0, pendingUsers: 0, totalProperties: 0 };
   const [activeResult] = await db.select({ c: count() }).from(users).where(eq(users.status, "active"));
   const [pendingResult] = await db.select({ c: count() }).from(users).where(eq(users.status, "pending"));
-  const [propResult] = await db.select({ c: count() }).from(properties);
+  const [propResult] = await db.select({ c: count() }).from(properties).where(eq(properties.deleted, 0));
   return {
     activeUsers: activeResult.c,
     pendingUsers: pendingResult.c,

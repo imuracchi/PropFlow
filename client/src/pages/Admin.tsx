@@ -43,6 +43,7 @@ export default function Admin() {
   const rejectMutation = trpc.admin.rejectUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const suspendMutation = trpc.admin.suspendUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
   const activateMutation = trpc.admin.activateUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
+  const deleteUserMutation = trpc.admin.deleteUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const updatePlanMutation = trpc.admin.updatePlan.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
   const hidePropMutation = trpc.admin.hideProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const restorePropMutation = trpc.admin.restoreProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
@@ -66,7 +67,7 @@ export default function Admin() {
 
   const statCards = [
     { label: "登録業者数", value: stats ? `${stats.activeUsers}社` : "—", icon: Users, accent: "text-primary bg-primary/10" },
-    { label: "公開物件数", value: stats ? `${stats.totalProperties}件` : "—", icon: Building2, accent: "text-green-600 bg-green-50" },
+    { label: "表示中物件数", value: stats ? `${stats.totalProperties}件` : "—", icon: Building2, accent: "text-green-600 bg-green-50" },
     { label: "承認待ち", value: stats ? `${stats.pendingUsers}件` : "—", icon: Clock, accent: stats?.pendingUsers ? "text-amber-600 bg-amber-50" : "text-muted-foreground bg-muted" },
   ];
 
@@ -265,6 +266,10 @@ export default function Admin() {
                                   <UserCheck className="w-3.5 h-3.5" />アカウント有効化
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => { if (confirm(`${user.name}を完全に削除しますか？この操作は取り消せません。`)) deleteUserMutation.mutate({ id: user.id }); }}>
+                                <Trash2 className="w-3.5 h-3.5" />アカウント削除
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -293,23 +298,19 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["物件名", "登録業者", "価格", "ステータス", "表示", "登録日", "操作"].map(h => (
+                    {["物件名", "登録業者", "価格", "表示", "登録日", "操作"].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredProperties.map(prop => {
-                    const statusInfo = STATUS_MAP[prop.status] ?? STATUS_MAP.available;
                     const isHidden = prop.deleted === 1;
                     return (
                       <tr key={prop.id} className={`hover:bg-muted/30 transition-colors ${isHidden ? "opacity-50" : ""}`}>
-                        <td className="px-4 py-3 font-medium text-foreground text-xs">{prop.name}</td>
+                        <td className="px-4 py-3 font-medium text-primary text-xs"><a href={`/property/${prop.id}`} className="hover:underline">{prop.name}</a></td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{prop.userCompany ?? "—"}</td>
                         <td className="px-4 py-3 text-foreground text-xs font-semibold">{prop.price?.toLocaleString() ?? "応相談"}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${statusInfo.cls}`}>{statusInfo.label}</span>
-                        </td>
                         <td className="px-4 py-3">
                           {isHidden ? (
                             <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground flex items-center gap-1 w-fit">
