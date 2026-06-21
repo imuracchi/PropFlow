@@ -59,10 +59,11 @@ function exportPropertyCsv(
 }
 
 function printProperty(
-  property: { name: string; address: string; type: string; status: string; price: number; estimatedYield: number | null; landArea: number; buildingArea: number | null; comment: string | null; userCompany: string | null; userName: string | null; userLicense: string | null; userPhone: string | null; userFax: string | null; userUrl: string | null; userEmail: string | null },
+  property: { name: string; address: string; type: string; status: string; price: number; estimatedYield: number | null; landArea: number; buildingArea: number | null; comment: string | null; userCompany: string | null; userName: string | null },
   details: [string, string][],
   createdDate: string,
-  myLogo: string | null | undefined
+  myLogo: string | null | undefined,
+  myUser: { name: string | null; company: string | null; email: string; phone: string | null; fax: string | null; url: string | null; license: string | null } | null
 ) {
   const STATUS_LABEL: Record<string, string> = { available: "公開中", negotiating: "商談中", sold: "売却済" };
   const logoHtml = myLogo
@@ -111,18 +112,18 @@ function printProperty(
 ${property.comment ? `<div class="comment-box"><div class="comment-title">紹介コメント</div><p>${property.comment}</p></div>` : ""}
 <div class="section-title">物件概要</div>
 <table>${details.map(([l, v]) => `<tr><th>${l}</th><td>${v}</td></tr>`).join("")}</table>
-<div class="section-title">紹介者情報</div>
+${myUser ? `<div class="section-title">お問い合わせ</div>
 <table>
 ${[
-  ["紹介者", property.userName],
-  ["宅建番号", property.userLicense],
-  ["会社名", property.userCompany],
-  ["電話番号", property.userPhone],
-  ["FAX", property.userFax],
-  ["URL", property.userUrl],
-  ["メール", property.userEmail],
+  ["担当者", myUser.name],
+  ["会社名", myUser.company],
+  ["宅建番号", myUser.license],
+  ["電話番号", myUser.phone],
+  ["FAX", myUser.fax],
+  ["URL", myUser.url],
+  ["メール", myUser.email],
 ].map(([l, v]) => `<tr><th>${l}</th><td>${v || "—"}</td></tr>`).join("")}
-</table>
+</table>` : ""}
 <div class="footer">PropFlow - 不動産買取プラットフォーム</div>
 </body></html>`;
 
@@ -758,7 +759,7 @@ export default function PropertyDetail() {
               }
             }}
           ><Share2 className="w-4 h-4" />共有</Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => printProperty(property, details, createdDate, user?.logoBase64)}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => printProperty(property, details, createdDate, user?.logoBase64, user ? { name: user.name, company: user.company, email: user.email, phone: user.phone, fax: user.fax, url: user.url, license: user.license } : null)}>
             <Printer className="w-4 h-4" />PDF出力
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportPropertyCsv(property, details, createdDate)}>
