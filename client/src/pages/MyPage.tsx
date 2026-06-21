@@ -42,18 +42,6 @@ export default function MyPage() {
     onSuccess: () => { utils.auth.me.invalidate(); refresh(); },
   });
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return;
-    if (file.size > 2 * 1024 * 1024) { alert("画像サイズは2MB以下にしてください"); return; }
-    const reader = new FileReader();
-    reader.onload = () => {
-      logoMutation.mutate({ logoBase64: reader.result as string });
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
 
   if (!user) return null;
 
