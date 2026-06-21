@@ -557,7 +557,8 @@ export default function PropertyDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "", address: "", type: "", price: "", priceNegotiable: false, estimatedYield: "",
-    landArea: "", buildingArea: "", zoning: "", access: "",
+    landArea: "", buildingArea: "", transport: "", landCategory: "", rights: "",
+    structure: "", buildingAge: "", zoning: "", fireProtection: "", access: "", remarks: "",
     negotiation: "", comment: "", heightDistrict: "", otherRestrictions: "",
   });
   const [editError, setEditError] = useState("");
@@ -583,8 +584,15 @@ export default function PropertyDetail() {
         estimatedYield: property.estimatedYield ? String(property.estimatedYield) : "",
         landArea: String(property.landArea),
         buildingArea: property.buildingArea ? String(property.buildingArea) : "",
+        transport: property.transport || "",
+        landCategory: property.landCategory || "",
+        rights: property.rights || "",
+        structure: property.structure || "",
+        buildingAge: property.buildingAge || "",
         zoning: property.zoning || "",
+        fireProtection: property.fireProtection || "",
         access: property.access || "",
+        remarks: property.remarks || "",
         negotiation: property.negotiation,
         comment: property.comment || "",
         heightDistrict: property.heightDistrict || "",
@@ -626,8 +634,15 @@ export default function PropertyDetail() {
       estimatedYield: f.estimatedYield ? Number(f.estimatedYield) : null,
       landArea: landAreaNum,
       buildingArea: f.buildingArea ? Number(f.buildingArea) : null,
+      transport: f.transport || null,
+      landCategory: f.landCategory || null,
+      rights: f.rights || null,
+      structure: f.structure || null,
+      buildingAge: f.buildingAge || null,
       zoning: f.zoning || null,
+      fireProtection: f.fireProtection || null,
       access: f.access || null,
+      remarks: f.remarks || null,
       negotiation: f.negotiation,
       comment: f.comment || null,
       heightDistrict: f.heightDistrict || null,
@@ -864,12 +879,25 @@ export default function PropertyDetail() {
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="px-5 py-4 border-b border-border"><h2 className="font-semibold text-foreground">詳細情報</h2></div>
             <div className="p-5 space-y-4">
+              <div className="space-y-2"><Label>交通</Label><Input value={editForm.transport} onChange={e => setEditForm(p => ({ ...p, transport: e.target.value }))} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>地目</Label><Input value={editForm.landCategory} onChange={e => setEditForm(p => ({ ...p, landCategory: e.target.value }))} placeholder="例: 宅地" /></div>
+                <div className="space-y-2"><Label>権利</Label><Input value={editForm.rights} onChange={e => setEditForm(p => ({ ...p, rights: e.target.value }))} placeholder="例: 所有権" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>構造</Label><Input value={editForm.structure} onChange={e => setEditForm(p => ({ ...p, structure: e.target.value }))} placeholder="例: RC造" /></div>
+                <div className="space-y-2"><Label>築年数</Label><Input value={editForm.buildingAge} onChange={e => setEditForm(p => ({ ...p, buildingAge: e.target.value }))} placeholder="例: 築15年" /></div>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>用途地域</Label><Input value={editForm.zoning} onChange={e => setEditForm(p => ({ ...p, zoning: e.target.value }))} /></div>
-                <div className="space-y-2"><Label>接道条件</Label><Input value={editForm.access} onChange={e => setEditForm(p => ({ ...p, access: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>防火指定</Label><Input value={editForm.fireProtection} onChange={e => setEditForm(p => ({ ...p, fireProtection: e.target.value }))} placeholder="例: 準防火地域" /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>高度地区</Label><Input value={editForm.heightDistrict} onChange={e => setEditForm(p => ({ ...p, heightDistrict: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>接道</Label><Input value={editForm.access} onChange={e => setEditForm(p => ({ ...p, access: e.target.value }))} /></div>
+              </div>
+              <div className="space-y-2"><Label>その他制限</Label><Input value={editForm.otherRestrictions} onChange={e => setEditForm(p => ({ ...p, otherRestrictions: e.target.value }))} /></div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>価格交渉</Label>
                   <Select value={editForm.negotiation} onValueChange={v => setEditForm(p => ({ ...p, negotiation: v }))}>
@@ -877,8 +905,8 @@ export default function PropertyDetail() {
                     <SelectContent><SelectItem value="固定">固定</SelectItem><SelectItem value="交渉可">交渉可</SelectItem></SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2"><Label>備考</Label><Input value={editForm.remarks} onChange={e => setEditForm(p => ({ ...p, remarks: e.target.value }))} /></div>
               </div>
-              <div className="space-y-2"><Label>その他制限</Label><Input value={editForm.otherRestrictions} onChange={e => setEditForm(p => ({ ...p, otherRestrictions: e.target.value }))} /></div>
             </div>
           </div>
 
