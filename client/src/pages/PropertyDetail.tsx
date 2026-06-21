@@ -975,26 +975,58 @@ export default function PropertyDetail() {
             </TabsContent>
 
             <TabsContent value="map" className="mt-4 space-y-4">
-              <div className="bg-card border border-border rounded-lg p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-foreground flex items-center gap-2"><Map className="w-4 h-4 text-primary" />Googleマップ</h3>
+              {/* PC: 埋め込み表示 */}
+              <div className="hidden md:block">
+                <div className="bg-card border border-border rounded-lg p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-foreground flex items-center gap-2"><Map className="w-4 h-4 text-primary" />Googleマップ</h3>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      大きな地図で開く
+                      <Share2 className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <GoogleMapPanel address={property.address} />
+                  <div className="flex items-center gap-1.5 mt-3 text-sm text-muted-foreground"><MapPin className="w-4 h-4 text-primary" />{property.address}</div>
+                </div>
+                <div className="bg-card border border-border rounded-lg p-5 mt-4">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2 mb-3"><Map className="w-4 h-4 text-primary" />ストリートビュー（接道状況確認）</h3>
+                  <StreetViewPanel address={property.address} />
+                  <p className="text-xs text-muted-foreground mt-2">接道状況・前面道路・周辺環境をドラッグで確認できます</p>
+                </div>
+              </div>
+              {/* スマホ: アプリで開くボタン */}
+              <div className="md:hidden space-y-3">
+                <div className="bg-card border border-border rounded-lg p-5">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2 mb-2"><Map className="w-4 h-4 text-primary" />Googleマップ</h3>
+                  <div className="flex items-center gap-1.5 mb-4 text-sm text-muted-foreground"><MapPin className="w-4 h-4 text-primary" />{property.address}</div>
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
                   >
-                    大きな地図で開く
-                    <Share2 className="w-3 h-3" />
+                    <Button className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
+                      <Map className="w-4 h-4" />Googleマップで開く
+                    </Button>
                   </a>
                 </div>
-                <GoogleMapPanel address={property.address} />
-                <div className="flex items-center gap-1.5 mt-3 text-sm text-muted-foreground"><MapPin className="w-4 h-4 text-primary" />{property.address}</div>
-              </div>
-              <div className="bg-card border border-border rounded-lg p-5">
-                <h3 className="font-semibold text-foreground flex items-center gap-2 mb-3"><Map className="w-4 h-4 text-primary" />ストリートビュー（接道状況確認）</h3>
-                <StreetViewPanel address={property.address} />
-                <p className="text-xs text-muted-foreground mt-2">接道状況・前面道路・周辺環境をドラッグで確認できます</p>
+                <div className="bg-card border border-border rounded-lg p-5">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2 mb-2"><Map className="w-4 h-4 text-primary" />ストリートビュー</h3>
+                  <p className="text-xs text-muted-foreground mb-4">接道状況・前面道路・周辺環境を確認できます</p>
+                  <a
+                    href={`https://www.google.com/maps/@?api=1&map_action=pano&query=${encodeURIComponent(property.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
+                      <Map className="w-4 h-4" />ストリートビューで開く
+                    </Button>
+                  </a>
+                </div>
               </div>
             </TabsContent>
 
