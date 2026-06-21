@@ -424,130 +424,58 @@ export default function PropertyUpload() {
         </div>
       )}
 
-      {/* 基本情報 */}
+      {/* 物件概要 */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">基本情報</h2>
+          <h2 className="font-semibold text-foreground">物件概要</h2>
         </div>
-        <div className="p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>物件名 <span className="text-red-500">*</span></Label>
-              <Input placeholder="例: 白金台 更地（328㎡）" value={name} onChange={e => setName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>物件種別 <span className="text-red-500">*</span></Label>
+        <div className="divide-y divide-border">
+          {[
+            { label: "物件名", required: true, input: <Input value={name} onChange={e => setName(e.target.value)} placeholder="例: 港区南青山4" /> },
+            { label: "所在地", required: true, input: <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="例: 東京都港区南青山4丁目5番27号" /> },
+            { label: "地番", input: <Input value={lotNumber} onChange={e => setLotNumber(e.target.value)} placeholder="例: 70-2、70-4" /> },
+            { label: "交通", input: <Input value={transport} onChange={e => setTransport(e.target.value)} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" /> },
+            { label: "物件種別", required: true, input: (
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
-                <SelectContent>
-                  {PROPERTY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{PROPERTY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>所在地 <span className="text-red-500">*</span></Label>
-            <Input placeholder="例: 東京都港区白金台3丁目16番29号" value={address} onChange={e => setAddress(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>地番</Label>
-            <Input placeholder="例: 70-2、70-4" value={lotNumber} onChange={e => setLotNumber(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>売出価格（円）</Label>
-            <Input placeholder="例: 158390000" value={price} onChange={e => setPrice(e.target.value)} disabled={priceNegotiable} className={priceNegotiable ? "opacity-50" : ""} />
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="accent-primary w-4 h-4" checked={priceNegotiable} onChange={e => { setPriceNegotiable(e.target.checked); if (e.target.checked) setPrice(""); }} />
-              <span className="text-sm text-muted-foreground">応相談</span>
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>土地面積（㎡） <span className="text-red-500">*</span></Label>
-              <Input placeholder="例: 328.62" value={landArea} onChange={e => setLandArea(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>建物延床面積（㎡）</Label>
-              <Input placeholder="例: 650.20" value={buildingArea} onChange={e => setBuildingArea(e.target.value)} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 詳細情報 */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-5 py-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">詳細情報</h2>
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="space-y-2">
-            <Label>交通</Label>
-            <Input placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" value={transport} onChange={e => setTransport(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>地目</Label>
-              <Input placeholder="例: 宅地" value={landCategory} onChange={e => setLandCategory(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>権利</Label>
-              <Input placeholder="例: 所有権" value={rights} onChange={e => setRights(e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>構造</Label>
-              <Input placeholder="例: RC造" value={structure} onChange={e => setStructure(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>築年数</Label>
-              <Input placeholder="例: 築15年" value={buildingAge} onChange={e => setBuildingAge(e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>用途地域</Label>
-              <Input placeholder="例: 第一種中高層住居専用地域" value={zoning} onChange={e => setZoning(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>建蔽/容積</Label>
-              <Input placeholder="例: 60/200" value={access} onChange={e => setAccess(e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>防火指定</Label>
-              <Input placeholder="例: 準防火地域" value={fireProtection} onChange={e => setFireProtection(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>高度地区</Label>
-              <Input placeholder="例: 17m第二種高度地区" value={heightDistrict} onChange={e => setHeightDistrict(e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>その他制限</Label>
-            <Input placeholder="例: 日影規制：3h-2h（測定面4m）" value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>接道</Label>
-              <Input placeholder="例: 南側公道 幅員4.00m" value={access} onChange={e => setAccess(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>価格交渉</Label>
+            )},
+            { label: "売出価格", input: (
+              <div className="space-y-1.5">
+                <Input placeholder="例: 158390000" value={price} onChange={e => setPrice(e.target.value)} disabled={priceNegotiable} className={priceNegotiable ? "opacity-50" : ""} />
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" className="accent-primary w-4 h-4" checked={priceNegotiable} onChange={e => { setPriceNegotiable(e.target.checked); if (e.target.checked) setPrice(""); }} />
+                  <span className="text-sm text-muted-foreground">応相談</span>
+                </label>
+              </div>
+            )},
+            { label: "土地面積（㎡）", required: true, input: <Input value={landArea} onChange={e => setLandArea(e.target.value)} placeholder="例: 201.59" /> },
+            { label: "地目", input: <Input value={landCategory} onChange={e => setLandCategory(e.target.value)} placeholder="例: 宅地" /> },
+            { label: "権利", input: <Input value={rights} onChange={e => setRights(e.target.value)} placeholder="例: 所有権" /> },
+            { label: "接道", input: <Input value={access} onChange={e => setAccess(e.target.value)} placeholder="例: 南側公道 幅員4.00m" /> },
+            { label: "建物面積（㎡）", input: <Input value={buildingArea} onChange={e => setBuildingArea(e.target.value)} placeholder="例: 650.20" /> },
+            { label: "構造", input: <Input value={structure} onChange={e => setStructure(e.target.value)} placeholder="例: RC造" /> },
+            { label: "築年数", input: <Input value={buildingAge} onChange={e => setBuildingAge(e.target.value)} placeholder="例: 築15年" /> },
+            { label: "用途地域", input: <Input value={zoning} onChange={e => setZoning(e.target.value)} placeholder="例: 第一種中高層住居専用地域 建蔽率60%/容積率200%" /> },
+            { label: "防火指定", input: <Input value={fireProtection} onChange={e => setFireProtection(e.target.value)} placeholder="例: 準防火地域" /> },
+            { label: "高度地区", input: <Input value={heightDistrict} onChange={e => setHeightDistrict(e.target.value)} placeholder="例: 17m第二種高度地区" /> },
+            { label: "その他制限", input: <Input value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} placeholder="例: 日影規制：3h-2h（測定面4m）" /> },
+            { label: "価格交渉", input: (
               <Select value={negotiation} onValueChange={setNegotiation}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="固定">固定</SelectItem>
-                  <SelectItem value="交渉可">交渉可</SelectItem>
-                </SelectContent>
+                <SelectContent><SelectItem value="固定">固定</SelectItem><SelectItem value="交渉可">交渉可</SelectItem></SelectContent>
               </Select>
+            )},
+            { label: "備考", input: <Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="その他の特記事項" rows={2} /> },
+          ].map(row => (
+            <div key={row.label} className="flex flex-col md:flex-row px-5 py-3 gap-1 md:gap-0">
+              <span className="w-36 shrink-0 text-sm text-muted-foreground pt-2">
+                {row.label}{row.required && <span className="text-red-500 ml-0.5">*</span>}
+              </span>
+              <div className="flex-1">{row.input}</div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label>備考</Label>
-            <Textarea placeholder="その他の特記事項" rows={2} value={remarks} onChange={e => setRemarks(e.target.value)} />
-          </div>
+          ))}
         </div>
       </div>
 
