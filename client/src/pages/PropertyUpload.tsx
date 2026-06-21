@@ -353,6 +353,15 @@ export default function PropertyUpload() {
             <Sparkles className="w-5 h-5" />AIで情報を抽出
           </Button>
         </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm space-y-1.5">
+          <p className="font-semibold text-amber-800">【ご注意ください】</p>
+          <ul className="text-amber-700 space-y-1 text-xs list-disc list-inside">
+            <li>AIで情報を抽出する場合は、必ず手動で内容を確認してください。</li>
+            <li>PDFファイルは後からも追加できます。</li>
+            <li>多くのPDFファイルをアップしすぎると、抽出が困難になる場合がございます。</li>
+          </ul>
+        </div>
       </div>
     );
   }
