@@ -135,6 +135,47 @@ export default function MyPage() {
       {/* プロフィールカード */}
       <ProfileCard user={user} refresh={refresh} logoMutation={logoMutation} />
 
+      {/* 会社ロゴ */}
+      <div className="bg-card border border-border rounded-lg p-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <div className="flex items-center gap-4">
+            <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4 text-muted-foreground" />
+              会社ロゴ
+            </div>
+            {user.logoBase64 ? (
+              <img src={user.logoBase64} alt="会社ロゴ" className="h-10 max-w-[160px] object-contain" />
+            ) : (
+              <span className="text-xs text-muted-foreground">未登録</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs border border-border rounded-md px-3 py-1.5 hover:border-primary hover:text-primary transition-colors">
+              <input type="file" accept="image/*" className="hidden" onChange={e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 2 * 1024 * 1024) { alert("画像サイズは2MB以下にしてください"); return; }
+                const reader = new FileReader();
+                reader.onload = () => {
+                  logoMutation.mutate({ logoBase64: reader.result as string }, {
+                    onSuccess: () => { utils.auth.me.invalidate(); },
+                  });
+                };
+                reader.readAsDataURL(file);
+              }} />
+              {logoMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              {user.logoBase64 ? "変更" : "アップロード"}
+            </label>
+            {user.logoBase64 && (
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => logoMutation.mutate({ logoBase64: null })} disabled={logoMutation.isPending}>
+                <Trash2 className="w-3.5 h-3.5" />削除
+              </Button>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">※ PDF出力時に会社ロゴとして使用されます（推奨: 横長PNG/JPG、2MB以下）</p>
+      </div>
+
       {/* LINE連携 */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="px-5 py-4 flex items-center justify-between">
@@ -536,45 +577,6 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
           ))}
         </div>
       )}
-
-      {/* 会社ロゴ */}
-      <div className="pt-4 border-t border-border">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div className="flex items-center gap-4">
-            <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <ImageIcon className="w-4 h-4 text-muted-foreground" />
-              会社ロゴ
-            </div>
-            {user.logoBase64 ? (
-              <img src={user.logoBase64} alt="会社ロゴ" className="h-10 max-w-[160px] object-contain" />
-            ) : (
-              <span className="text-xs text-muted-foreground">未登録</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              if (!file.type.startsWith("image/")) return;
-              if (file.size > 2 * 1024 * 1024) { alert("画像サイズは2MB以下にしてください"); return; }
-              const reader = new FileReader();
-              reader.onload = () => { logoMutation.mutate({ logoBase64: reader.result as string }); };
-              reader.readAsDataURL(file);
-              e.target.value = "";
-            }} />
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => logoInputRef.current?.click()} disabled={logoMutation.isPending}>
-              {logoMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-              {user.logoBase64 ? "変更" : "アップロード"}
-            </Button>
-            {user.logoBase64 && (
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => logoMutation.mutate({ logoBase64: null })} disabled={logoMutation.isPending}>
-                <Trash2 className="w-3.5 h-3.5" />削除
-              </Button>
-            )}
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">※ PDF出力時に会社ロゴとして使用されます（推奨: 横長PNG/JPG、2MB以下）</p>
-      </div>
 
       <div className="pt-4 border-t border-border">
         <p className="text-xs text-muted-foreground">※ 会社名・メール・宅建免許の変更は下記「管理者への連絡」からお問い合わせください。</p>
