@@ -93,13 +93,12 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const exportCsv = (onlySelected = false) => {
     const target = onlySelected ? filtered.filter(p => selectedIds.has(p.id)) : filtered;
     if (target.length === 0) return;
-    const headers = ["物件名", "住所", "物件種別", "価格（円）", "利回り（%）", "土地面積（㎡）", "坪数", "建物面積（㎡）", "建物坪数", "用途地域", "接道条件", "価格交渉", "登録業者", "登録日"];
+    const headers = ["物件名", "住所", "物件種別", "価格（円）", "土地面積（㎡）", "坪数", "建物面積（㎡）", "建物坪数", "用途地域", "接道条件", "価格交渉", "登録業者", "登録日"];
     const rows = target.map(p => [
       p.name,
       p.address,
       p.type,
       p.priceNegotiable ? "応相談" : (p.price ?? ""),
-      p.estimatedYield ?? "",
       p.landArea.toFixed(2),
       toTsubo(p.landArea),
       p.buildingArea ? p.buildingArea.toFixed(2) : "",
@@ -236,7 +235,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">土地面積</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">建物面積</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">価格</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">利回り</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">用途地域</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">接道条件</th>
                   <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">価格交渉</th>
@@ -293,13 +291,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       </td>
                       <td className="px-4 py-4 text-right whitespace-nowrap hidden md:table-cell">
                         <p className="font-semibold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
-                      </td>
-                      <td className="px-4 py-4 text-right whitespace-nowrap hidden lg:table-cell">
-                        {property.estimatedYield ? (
-                          <span className="font-semibold text-green-600">{property.estimatedYield}%</span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
                       </td>
                       <td className="px-4 py-4 text-xs text-muted-foreground max-w-[140px] hidden xl:table-cell">
                         {property.zoning || "—"}
