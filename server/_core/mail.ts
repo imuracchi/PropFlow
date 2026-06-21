@@ -12,7 +12,7 @@ export async function sendMail(to: string, subject: string, html: string) {
   try {
     const resend = new Resend(apiKey);
     await resend.emails.send({
-      from: "PropFlow <onboarding@resend.dev>",
+      from: "PropFlow <noreply@propflow.jp>",
       to,
       subject,
       html,
