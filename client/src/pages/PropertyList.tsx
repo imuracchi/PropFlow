@@ -93,19 +93,29 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const exportCsv = (onlySelected = false) => {
     const target = onlySelected ? filtered.filter(p => selectedIds.has(p.id)) : filtered;
     if (target.length === 0) return;
-    const headers = ["物件名", "住所", "物件種別", "価格（円）", "土地面積（㎡）", "坪数", "建物面積（㎡）", "建物坪数", "用途地域", "接道条件", "価格交渉", "登録業者", "登録日"];
+    const headers = ["物件名", "所在地", "地番", "交通", "物件種別", "価格（円）", "土地面積（㎡）", "坪数", "地目", "権利", "接道", "建物面積（㎡）", "建物坪数", "構造", "築年数", "用途地域", "防火指定", "高度地区", "その他制限", "価格交渉", "備考", "登録業者", "登録日"];
     const rows = target.map(p => [
       p.name,
       p.address,
+      (p as any).lotNumber ?? "",
+      (p as any).transport ?? "",
       p.type,
       p.priceNegotiable ? "応相談" : (p.price ?? ""),
       p.landArea.toFixed(2),
       toTsubo(p.landArea),
+      (p as any).landCategory ?? "",
+      (p as any).rights ?? "",
+      p.access ?? "",
       p.buildingArea ? p.buildingArea.toFixed(2) : "",
       p.buildingArea ? toTsubo(p.buildingArea) : "",
+      (p as any).structure ?? "",
+      (p as any).buildingAge ?? "",
       p.zoning ?? "",
-      p.access ?? "",
+      (p as any).fireProtection ?? "",
+      (p as any).heightDistrict ?? "",
+      (p as any).otherRestrictions ?? "",
       p.negotiation,
+      (p as any).remarks ?? "",
       p.userCompany ?? "",
       new Date(p.createdAt).toLocaleDateString("ja-JP"),
     ]);
