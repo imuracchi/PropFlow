@@ -555,10 +555,9 @@ export default function PropertyDetail() {
   // 物件編集
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: "", address: "", type: "", price: "", estimatedYield: "",
+    name: "", address: "", type: "", price: "", priceNegotiable: false, estimatedYield: "",
     landArea: "", buildingArea: "", zoning: "", access: "",
     negotiation: "", comment: "", heightDistrict: "", otherRestrictions: "",
-    status: "" as string,
   });
   const [editError, setEditError] = useState("");
   const [generatingComment, setGeneratingComment] = useState(false);
@@ -578,7 +577,8 @@ export default function PropertyDetail() {
         name: property.name,
         address: property.address,
         type: property.type,
-        price: String(property.price),
+        price: property.price ? String(property.price) : "",
+        priceNegotiable: property.priceNegotiable === 1,
         estimatedYield: property.estimatedYield ? String(property.estimatedYield) : "",
         landArea: String(property.landArea),
         buildingArea: property.buildingArea ? String(property.buildingArea) : "",
@@ -588,7 +588,6 @@ export default function PropertyDetail() {
         comment: property.comment || "",
         heightDistrict: property.heightDistrict || "",
         otherRestrictions: property.otherRestrictions || "",
-        status: property.status,
       });
     }
   }, [property, isEditing]);
@@ -603,13 +602,17 @@ export default function PropertyDetail() {
   const saveEditing = async () => {
     setEditError("");
     const f = editForm;
-    if (!f.name || !f.address || !f.type || !f.price || !f.landArea) {
+    if (!f.name || !f.address || !f.type || !f.landArea) {
       setEditError("必須項目を入力してください");
       return;
     }
-    const priceNum = Number(f.price.replace(/,/g, ""));
+    if (!f.priceNegotiable && !f.price) {
+      setEditError("価格を入力するか「応相談」にチェックしてください");
+      return;
+    }
+    const priceNum = f.price ? Number(f.price.replace(/,/g, "")) : null;
     const landAreaNum = Number(f.landArea);
-    if (isNaN(priceNum) || priceNum <= 0) { setEditError("価格を正しく入力してください"); return; }
+    if (priceNum !== null && (isNaN(priceNum) || priceNum <= 0)) { setEditError("価格を正しく入力してください"); return; }
     if (isNaN(landAreaNum) || landAreaNum <= 0) { setEditError("土地面積を正しく入力してください"); return; }
 
     await updateMutation.mutateAsync({
@@ -617,8 +620,8 @@ export default function PropertyDetail() {
       name: f.name,
       address: f.address,
       type: f.type,
-      status: f.status as "available" | "negotiating" | "sold",
       price: priceNum,
+      priceNegotiable: f.priceNegotiable,
       estimatedYield: f.estimatedYield ? Number(f.estimatedYield) : null,
       landArea: landAreaNum,
       buildingArea: f.buildingArea ? Number(f.buildingArea) : null,
@@ -831,20 +834,16 @@ export default function PropertyDetail() {
                 </div>
               </div>
               <div className="space-y-2"><Label>所在地 <span className="text-red-500">*</span></Label><Input value={editForm.address} onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))} /></div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>売出価格（円） <span className="text-red-500">*</span></Label><Input value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} /></div>
-                <div className="space-y-2"><Label>想定利回り（%）</Label><Input value={editForm.estimatedYield} onChange={e => setEditForm(p => ({ ...p, estimatedYield: e.target.value }))} /></div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>ステータス</Label>
-                  <Select value={editForm.status} onValueChange={v => setEditForm(p => ({ ...p, status: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="available">公開中</SelectItem>
-                      <SelectItem value="negotiating">商談中</SelectItem>
-                      <SelectItem value="sold">売却済</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>売出価格（円）</Label>
+                  <Input value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} disabled={editForm.priceNegotiable} className={editForm.priceNegotiable ? "opacity-50" : ""} />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="accent-primary w-4 h-4" checked={editForm.priceNegotiable} onChange={e => setEditForm(p => ({ ...p, priceNegotiable: e.target.checked, price: e.target.checked ? "" : p.price }))} />
+                    <span className="text-sm text-muted-foreground">応相談</span>
+                  </label>
                 </div>
+                <div className="space-y-2"><Label>想定利回り（%）</Label><Input value={editForm.estimatedYield} onChange={e => setEditForm(p => ({ ...p, estimatedYield: e.target.value }))} /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>土地面積（㎡） <span className="text-red-500">*</span></Label><Input value={editForm.landArea} onChange={e => setEditForm(p => ({ ...p, landArea: e.target.value }))} /></div>
