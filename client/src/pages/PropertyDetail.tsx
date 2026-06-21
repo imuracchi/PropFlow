@@ -1033,7 +1033,7 @@ export default function PropertyDetail() {
                           <div className="flex-1">
                             {(row as any).aiTransport ? (
                               <div className="flex gap-2">
-                                <Input className="flex-1" value={(editForm as any)[row.key]} onChange={e => setEditForm(p => ({ ...p, [row.key]: e.target.value }))} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" />
+                                <Textarea className="flex-1 min-h-[2.5rem]" rows={2} value={(editForm as any)[row.key]} onChange={e => setEditForm(p => ({ ...p, [row.key]: e.target.value }))} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" />
                                 <Button variant="outline" size="sm" className="shrink-0 gap-1 text-xs" disabled={analyzingTransport || !editForm.address}
                                   onClick={async () => {
                                     setAnalyzingTransport(true);
@@ -1069,7 +1069,7 @@ export default function PropertyDetail() {
                     details.map(([label, value]) => (
                       <div key={label} className="flex px-5 py-3.5">
                         <span className="w-36 shrink-0 text-sm text-muted-foreground">{label}</span>
-                        <span className={`text-sm font-medium ${label === "売出価格" ? "text-primary" : "text-foreground"}`}>{value}</span>
+                        <span className={`text-sm font-medium whitespace-pre-wrap ${label === "売出価格" ? "text-primary" : "text-foreground"}`}>{value}</span>
                       </div>
                     ))
                   )}

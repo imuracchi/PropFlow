@@ -438,7 +438,7 @@ export default function PropertyUpload() {
             { label: "地番", input: <Input value={lotNumber} onChange={e => setLotNumber(e.target.value)} placeholder="例: 70-2、70-4" /> },
             { label: "交通", input: (
               <div className="flex gap-2">
-                <Input className="flex-1" value={transport} onChange={e => setTransport(e.target.value)} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" />
+                <Textarea className="flex-1 min-h-[2.5rem]" rows={2} value={transport} onChange={e => setTransport(e.target.value)} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" />
                 <Button variant="outline" size="sm" className="shrink-0 gap-1 text-xs" type="button" disabled={analyzingTransport || !address}
                   onClick={async () => {
                     setAnalyzingTransport(true);
