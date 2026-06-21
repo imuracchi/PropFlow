@@ -38,8 +38,9 @@ export default function MyPage() {
       utils.property.list.invalidate();
     },
   });
+  const utils = trpc.useUtils();
   const logoMutation = trpc.auth.updateLogo.useMutation({
-    onSuccess: () => refresh(),
+    onSuccess: () => { utils.auth.me.invalidate(); refresh(); },
   });
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
