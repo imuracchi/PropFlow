@@ -305,7 +305,7 @@ export default function Admin() {
                       <tr key={prop.id} className={`hover:bg-muted/30 transition-colors ${isHidden ? "opacity-50" : ""}`}>
                         <td className="px-4 py-3 font-medium text-foreground text-xs">{prop.name}</td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{prop.userCompany ?? "—"}</td>
-                        <td className="px-4 py-3 text-foreground text-xs font-semibold">{prop.price.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-foreground text-xs font-semibold">{prop.price?.toLocaleString() ?? "応相談"}</td>
                         <td className="px-4 py-3">
                           <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${statusInfo.cls}`}>{statusInfo.label}</span>
                         </td>

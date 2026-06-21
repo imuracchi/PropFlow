@@ -87,7 +87,7 @@ export default function DirectMessage() {
             <p className="text-xs text-muted-foreground">関連物件</p>
             <p className="text-sm font-medium text-foreground truncate">{property.name}</p>
           </div>
-          <p className="text-xs text-primary shrink-0">{property.price.toLocaleString()}円</p>
+          <p className="text-xs text-primary shrink-0">{property.price?.toLocaleString() ?? "応相談"}</p>
         </div>
       )}
 
