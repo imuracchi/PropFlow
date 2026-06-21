@@ -403,7 +403,7 @@ function GoogleMapPanel({ address }: { address: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadMap = useCallback(() => {
+  const loadMap = () => {
     if (!GOOGLE_MAPS_API_KEY || !containerRef.current) return;
     setLoading(true);
 
@@ -429,27 +429,29 @@ function GoogleMapPanel({ address }: { address: string }) {
         setLoading(false);
       });
     });
-  }, [address]);
+  };
 
-  useEffect(() => { loadMap(); }, [loadMap]);
-
-  if (error) {
-    return (
-      <div className="w-full h-80 bg-muted rounded-lg flex items-center justify-center border border-border">
-        <p className="text-sm text-muted-foreground">{error}</p>
-      </div>
-    );
-  }
-
-  if (!loaded && loading) {
-    return (
-      <div className="w-full h-80 bg-muted rounded-lg flex items-center justify-center border border-border">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  return <div ref={containerRef} className="w-full h-80 rounded-lg border border-border" />;
+  return (
+    <div>
+      <div ref={containerRef} className={`w-full h-80 rounded-lg border border-border ${loaded ? "" : "hidden"}`} />
+      {error && (
+        <div className="w-full h-80 bg-muted rounded-lg flex items-center justify-center border border-border">
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      )}
+      {!loaded && !error && (
+        <div className="w-full h-80 bg-muted rounded-lg flex items-center justify-center border border-border">
+          {loading ? (
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          ) : (
+            <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground" size="sm" onClick={loadMap}>
+              <MapPin className="w-4 h-4" />地図を表示
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function StreetViewPanel({ address }: { address: string }) {
