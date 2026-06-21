@@ -31,7 +31,6 @@ const MODE_TITLE: Record<ListMode, string> = {
 
 export default function PropertyList({ mode = "all", hideHeader = false }: { mode?: ListMode; hideHeader?: boolean }) {
   const [, setLocation] = useLocation();
-  const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -61,7 +60,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   });
 
   const filtered = baseFiltered
-    .filter(p => filterStatus === "all" || p.status === filterStatus)
     .filter(p => filterType === "all" || p.type === filterType)
     .filter(p => {
       if (!searchQuery) return true;
