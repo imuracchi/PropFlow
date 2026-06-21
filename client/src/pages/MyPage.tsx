@@ -565,6 +565,16 @@ function ProfileCard({ user, refresh, logoInputRef, logoMutation }: { user: any;
             )}
           </div>
           <div className="flex items-center gap-2">
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (!file.type.startsWith("image/")) return;
+              if (file.size > 2 * 1024 * 1024) { alert("画像サイズは2MB以下にしてください"); return; }
+              const reader = new FileReader();
+              reader.onload = () => { logoMutation.mutate({ logoBase64: reader.result as string }); };
+              reader.readAsDataURL(file);
+              e.target.value = "";
+            }} />
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => logoInputRef.current?.click()} disabled={logoMutation.isPending}>
               {logoMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
               {user.logoBase64 ? "変更" : "アップロード"}
