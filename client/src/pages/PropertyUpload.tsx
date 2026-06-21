@@ -38,6 +38,7 @@ export default function PropertyUpload() {
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [lotNumber, setLotNumber] = useState("");
   const [type, setType] = useState("");
   const [price, setPrice] = useState("");
   const [priceNegotiable, setPriceNegotiable] = useState(false);
@@ -73,6 +74,7 @@ export default function PropertyUpload() {
   const fillFormFromData = (data: Record<string, unknown>) => {
     if (data.name) setName(String(data.name));
     if (data.address) setAddress(String(data.address));
+    if (data.lotNumber) setLotNumber(String(data.lotNumber));
     if (data.type) {
       const t = String(data.type);
       if (PROPERTY_TYPES.includes(t)) setType(t);
@@ -190,7 +192,7 @@ export default function PropertyUpload() {
     const validFaqs = faqs.filter(f => f.q.trim() && f.a.trim());
 
     const result = await createMutation.mutateAsync({
-      name, address, type,
+      name, address, lotNumber: lotNumber || undefined, type,
       price: priceNum,
       priceNegotiable,
       estimatedYield: yieldNum,
@@ -447,19 +449,17 @@ export default function PropertyUpload() {
             <Label>所在地 <span className="text-red-500">*</span></Label>
             <Input placeholder="例: 東京都港区白金台3丁目16番29号" value={address} onChange={e => setAddress(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>売出価格（円）</Label>
-              <Input placeholder="例: 158390000" value={price} onChange={e => setPrice(e.target.value)} disabled={priceNegotiable} className={priceNegotiable ? "opacity-50" : ""} />
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="accent-primary w-4 h-4" checked={priceNegotiable} onChange={e => { setPriceNegotiable(e.target.checked); if (e.target.checked) setPrice(""); }} />
-                <span className="text-sm text-muted-foreground">応相談</span>
-              </label>
-            </div>
-            <div className="space-y-2">
-              <Label>想定利回り（%）</Label>
-              <Input placeholder="例: 4.8" value={estimatedYield} onChange={e => setEstimatedYield(e.target.value)} />
-            </div>
+          <div className="space-y-2">
+            <Label>地番</Label>
+            <Input placeholder="例: 70-2、70-4" value={lotNumber} onChange={e => setLotNumber(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>売出価格（円）</Label>
+            <Input placeholder="例: 158390000" value={price} onChange={e => setPrice(e.target.value)} disabled={priceNegotiable} className={priceNegotiable ? "opacity-50" : ""} />
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" className="accent-primary w-4 h-4" checked={priceNegotiable} onChange={e => { setPriceNegotiable(e.target.checked); if (e.target.checked) setPrice(""); }} />
+              <span className="text-sm text-muted-foreground">応相談</span>
+            </label>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

@@ -150,6 +150,7 @@ export async function getPropertyById(id: number) {
       userId: properties.userId,
       name: properties.name,
       address: properties.address,
+      lotNumber: properties.lotNumber,
       type: properties.type,
       status: properties.status,
       price: properties.price,

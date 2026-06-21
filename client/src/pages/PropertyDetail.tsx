@@ -105,7 +105,6 @@ function printProperty(
 </div>
 <div class="summary">
   <div class="summary-card"><div class="summary-label">売出価格</div><div class="summary-value price">${property.priceNegotiable ? "応相談" : (property.price?.toLocaleString() ?? "—") + "円"}</div></div>
-  <div class="summary-card"><div class="summary-label">想定利回り</div><div class="summary-value">${property.estimatedYield ? property.estimatedYield + "%" : "—"}</div></div>
   <div class="summary-card"><div class="summary-label">土地面積</div><div class="summary-value">${property.landArea.toFixed(2)}㎡</div></div>
   <div class="summary-card"><div class="summary-label">建物延床面積</div><div class="summary-value">${property.buildingArea ? property.buildingArea.toFixed(2) + "㎡" : "—"}</div></div>
 </div>
@@ -556,7 +555,7 @@ export default function PropertyDetail() {
   // 物件編集
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: "", address: "", type: "", price: "", priceNegotiable: false, estimatedYield: "",
+    name: "", address: "", lotNumber: "", type: "", price: "", priceNegotiable: false,
     landArea: "", buildingArea: "", transport: "", landCategory: "", rights: "",
     structure: "", buildingAge: "", zoning: "", fireProtection: "", access: "", remarks: "",
     negotiation: "", comment: "", heightDistrict: "", otherRestrictions: "",
@@ -578,6 +577,7 @@ export default function PropertyDetail() {
       setEditForm({
         name: property.name,
         address: property.address,
+        lotNumber: property.lotNumber || "",
         type: property.type,
         price: property.price ? String(property.price) : "",
         priceNegotiable: property.priceNegotiable === 1,
@@ -628,6 +628,7 @@ export default function PropertyDetail() {
       id: propertyId,
       name: f.name,
       address: f.address,
+      lotNumber: f.lotNumber || null,
       type: f.type,
       price: priceNum,
       priceNegotiable: f.priceNegotiable,
@@ -721,10 +722,10 @@ export default function PropertyDetail() {
   const details: [string, string][] = [
     ["物件名", property.name],
     ["所在地", property.address],
+    ["地番", property.lotNumber || "—"],
     ["交通", property.transport || "—"],
     ["物件種別", property.type],
     ["売出価格", property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"],
-    ["想定利回り", property.estimatedYield ? `${property.estimatedYield}%` : "—"],
     ["土地面積", `${property.landArea.toFixed(2)}㎡（${toTsubo(property.landArea)}坪）`],
     ["地目", property.landCategory || "—"],
     ["権利", property.rights || "—"],
@@ -857,6 +858,7 @@ export default function PropertyDetail() {
                 </div>
               </div>
               <div className="space-y-2"><Label>所在地 <span className="text-red-500">*</span></Label><Input value={editForm.address} onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>地番</Label><Input value={editForm.lotNumber} onChange={e => setEditForm(p => ({ ...p, lotNumber: e.target.value }))} placeholder="例: 70-2、70-4" /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>売出価格（円）</Label>
@@ -866,7 +868,6 @@ export default function PropertyDetail() {
                     <span className="text-sm text-muted-foreground">応相談</span>
                   </label>
                 </div>
-                <div className="space-y-2"><Label>想定利回り（%）</Label><Input value={editForm.estimatedYield} onChange={e => setEditForm(p => ({ ...p, estimatedYield: e.target.value }))} /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>土地面積（㎡） <span className="text-red-500">*</span></Label><Input value={editForm.landArea} onChange={e => setEditForm(p => ({ ...p, landArea: e.target.value }))} /></div>
@@ -959,14 +960,10 @@ export default function PropertyDetail() {
           {/* 紹介者 */}
           <IntroducerCard property={property} />
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="bg-card border border-border rounded-lg p-3 md:p-4">
               <p className="text-[10px] md:text-xs text-primary mb-0.5">売出価格</p>
               <p className="text-sm md:text-xl font-bold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-3 md:p-4">
-              <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5">想定利回り</p>
-              <p className="text-sm md:text-xl font-bold text-foreground">{property.estimatedYield ? `${property.estimatedYield}%` : "—"}</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-3 md:p-4">
               <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5">土地面積</p>

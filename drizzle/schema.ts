@@ -34,6 +34,7 @@ export const properties = mysqlTable("properties", {
   userId: int("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   address: varchar("address", { length: 500 }).notNull(),
+  lotNumber: varchar("lotNumber", { length: 255 }),
   type: varchar("type", { length: 64 }).notNull(),
   status: mysqlEnum("status", ["available", "negotiating", "sold"]).default("available").notNull(),
   price: bigint("price", { mode: "number" }),
