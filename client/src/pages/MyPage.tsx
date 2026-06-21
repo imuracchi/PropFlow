@@ -90,8 +90,8 @@ export default function MyPage() {
                 <Smartphone className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">PropFlowをアプリとしてインストール</p>
-                <p className="text-xs text-muted-foreground">ホーム画面に追加するとアプリのように使え、プッシュ通知も受け取れます</p>
+                <p className="text-sm font-semibold text-foreground">PropFlowをスマホのホーム画面に追加</p>
+                <p className="text-xs text-muted-foreground">アプリのように使え、プッシュ通知も受け取れます</p>
               </div>
             </div>
             {installPrompt && (
