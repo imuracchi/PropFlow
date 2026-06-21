@@ -1014,19 +1014,6 @@ export default function PropertyDetail() {
                     </Button>
                   </a>
                 </div>
-                <div className="bg-card border border-border rounded-lg p-5">
-                  <h3 className="font-semibold text-foreground flex items-center gap-2 mb-2"><Map className="w-4 h-4 text-primary" />ストリートビュー</h3>
-                  <p className="text-xs text-muted-foreground mb-4">接道状況・前面道路・周辺環境を確認できます</p>
-                  <a
-                    href={`https://www.google.com/maps/@?api=1&map_action=pano&query=${encodeURIComponent(property.address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
-                      <Map className="w-4 h-4" />ストリートビューで開く
-                    </Button>
-                  </a>
-                </div>
               </div>
             </TabsContent>
 
