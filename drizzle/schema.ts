@@ -87,6 +87,15 @@ export const directMessages = mysqlTable("direct_messages", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const registrationTokens = mysqlTable("registration_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  used: int("used").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const pushSubscriptions = mysqlTable("push_subscriptions", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

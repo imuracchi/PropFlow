@@ -42,38 +42,85 @@ export const appRouter = router({
         return { success: true } as const;
       }),
 
-    register: publicProcedure
-      .input(z.object({
-        email: z.string().email(),
-        password: z.string().min(8),
-        name: z.string().min(1),
-        company: z.string().optional(),
-        phone: z.string().optional(),
-        license: z.string().optional(),
-      }))
+    sendRegistrationEmail: publicProcedure
+      .input(z.object({ email: z.string().email() }))
       .mutation(async ({ input }) => {
         const existing = await db.getUserByEmail(input.email);
         if (existing) {
           return { success: false, error: "このメールアドレスは既に登録されています" } as const;
         }
-        const isFirstUser = (await db.countUsers()) === 0;
+        const token = nanoid(32);
+        const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+        await db.createRegistrationToken(input.email, token, expiresAt);
+        const siteUrl = process.env.SITE_URL || (process.env.NODE_ENV === "production" ? "https://propflow-production-2ce9.up.railway.app" : "http://localhost:3000");
+        const registerUrl = `${siteUrl}/register/${token}`;
+        const { sendMail } = await import("./_core/mail");
+        await sendMail(input.email, "【PropFlow】新規登録のご案内", `
+          <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px;">
+            <h2 style="color:#2563eb;">PropFlow 新規登録</h2>
+            <p>以下のリンクから登録を完了してください。</p>
+            <a href="${registerUrl}" style="display:inline-block;background:#2563eb;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">登録フォームを開く</a>
+            <p style="color:#888;font-size:13px;">このリンクの有効期限は72時間です。</p>
+            <p style="color:#888;font-size:13px;">心当たりがない場合はこのメールを無視してください。</p>
+          </div>
+        `);
+        return { success: true } as const;
+      }),
+
+    register: publicProcedure
+      .input(z.object({
+        token: z.string(),
+        password: z.string().min(8),
+        name: z.string().min(1),
+        company: z.string().min(1),
+        license: z.string().min(1),
+        phone: z.string().optional(),
+        mobile: z.string().optional(),
+        fax: z.string().optional(),
+        url: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const tokenData = await db.getRegistrationToken(input.token);
+        if (!tokenData) {
+          return { success: false, error: "無効なリンクです" } as const;
+        }
+        if (tokenData.used === 1) {
+          return { success: false, error: "このリンクは既に使用されています" } as const;
+        }
+        if (new Date() > tokenData.expiresAt) {
+          return { success: false, error: "リンクの有効期限が切れています。再度メールを送信してください" } as const;
+        }
+        const existing = await db.getUserByEmail(tokenData.email);
+        if (existing) {
+          return { success: false, error: "このメールアドレスは既に登録されています" } as const;
+        }
         const hashed = await hashPassword(input.password);
         await db.createUser({
           openId: nanoid(),
-          email: input.email,
+          email: tokenData.email,
           passwordHash: hashed,
           name: input.name,
-          company: input.company ?? null,
+          company: input.company,
+          license: input.license,
           phone: input.phone ?? null,
-          license: input.license ?? null,
+          fax: input.fax ?? null,
+          url: input.url ?? null,
           loginMethod: "email",
-          role: isFirstUser ? "admin" : "user",
-          status: isFirstUser ? "active" : "pending",
+          role: "user",
+          status: "pending",
         });
-        if (isFirstUser) {
-          return { success: true, message: "管理者アカウントを作成しました" } as const;
+        await db.markTokenUsed(input.token);
+        return { success: true, message: "申請を受け付けました。管理者の承認をお待ちください" } as const;
+      }),
+
+    verifyToken: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const tokenData = await db.getRegistrationToken(input.token);
+        if (!tokenData || tokenData.used === 1 || new Date() > tokenData.expiresAt) {
+          return { valid: false, email: null } as const;
         }
-        return { success: true, message: "登録申請を受け付けました。管理者の承認をお待ちください" } as const;
+        return { valid: true, email: tokenData.email } as const;
       }),
 
     updateLogo: protectedProcedure

@@ -15,6 +15,7 @@ import DirectMessage from "./pages/DirectMessage";
 import Favorites from "./pages/Favorites";
 import MyPage from "./pages/MyPage";
 import Admin from "./pages/Admin";
+import Register from "./pages/Register";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import { trpc } from "./lib/trpc";
@@ -103,6 +104,12 @@ function AppContent() {
   const [, setLocation] = useLocation();
 
   return (
+    <Switch>
+      <Route path="/register/:token">
+        {() => <Register />}
+      </Route>
+      <Route>
+        {() => (
     <AuthGuard>
       <Switch>
         <Route path="/properties">
@@ -165,6 +172,9 @@ function AppContent() {
         <Route component={NotFound} />
       </Switch>
     </AuthGuard>
+        )}
+      </Route>
+    </Switch>
   );
 }
 

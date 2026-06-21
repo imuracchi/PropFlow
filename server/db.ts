@@ -1,6 +1,6 @@
 import { eq, desc, count, and, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions } from "../drizzle/schema";
+import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -730,4 +730,25 @@ export async function getPushSubscriptionsByUserIds(userIds: number[]) {
   if (userIds.length === 0) return [];
   return db.select().from(pushSubscriptions)
     .where(sql`${pushSubscriptions.userId} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`);
+}
+
+// ---- Registration Tokens ----
+
+export async function createRegistrationToken(email: string, token: string, expiresAt: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(registrationTokens).values({ email, token, expiresAt });
+}
+
+export async function getRegistrationToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(registrationTokens).where(eq(registrationTokens.token, token)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function markTokenUsed(token: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(registrationTokens).set({ used: 1 }).where(eq(registrationTokens.token, token));
 }
