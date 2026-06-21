@@ -134,6 +134,13 @@
   [role="tab"] {
     color: oklch(0.50 0.02 250);
     transition: color 0.15s;
+    font-size: 0.8rem;
+  }
+
+  @media (min-width: 768px) {
+    [role="tab"] {
+      font-size: 0.875rem;
+    }
   }
 
   [role="tab"]:hover:not([data-state="active"]) {

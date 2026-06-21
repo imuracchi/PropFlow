@@ -147,7 +147,7 @@ function DashboardLayoutContent({
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      onClick={() => setLocation(item.path)}
+                      onClick={() => { setLocation(item.path); if (isMobile) toggleSidebar(); }}
                       tooltip={item.label}
                       className={`h-10 rounded-lg transition-all font-normal group/item relative ${
                         isActive
@@ -209,10 +209,10 @@ function DashboardLayoutContent({
 
       <SidebarInset className="bg-background">
         {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background px-3 sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg" />
-              <span className="text-sm font-semibold text-foreground">
+          <div className="flex border-b h-14 items-center justify-between bg-primary px-3 sticky top-0 z-40">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger className="h-10 w-10 rounded-lg bg-white/20 text-white hover:bg-white/30" />
+              <span className="text-sm font-semibold text-white">
                 {activeMenuItem?.label ?? "PropFlow"}
               </span>
             </div>

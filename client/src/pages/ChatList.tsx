@@ -181,7 +181,7 @@ export default function ChatList() {
       </div>
 
       <Tabs defaultValue="mine">
-        <TabsList className="bg-muted">
+        <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap justify-start">
           <TabsTrigger value="mine" className="gap-1.5">
             <MessageCircle className="w-3.5 h-3.5" />
             参加中チャット
