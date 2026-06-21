@@ -569,7 +569,7 @@ export default function PropertyDetail() {
   const commentMutation = trpc.property.generateComment.useMutation();
   const utils = trpc.useUtils();
 
-  const isOwner = user && property && user.id === property.userId;
+  const isOwner = user && property && (user.id === property.userId || user.role === "admin");
   const currentFaqs = faqs ?? (property?.faqs as FaqItem[] | null) ?? [];
 
   useEffect(() => {
