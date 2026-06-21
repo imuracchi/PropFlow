@@ -101,9 +101,6 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
                   メールに記載のリンクから登録を完了してください。<br />
                   <span className="text-xs text-muted-foreground/60">有効期限: 72時間</span>
                 </p>
-                <Button variant="outline" onClick={() => { setRegSent(false); setRegEmail(""); }}>
-                  別のメールで登録
-                </Button>
               </div>
             ) : (
               <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
