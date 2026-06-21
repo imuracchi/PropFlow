@@ -622,6 +622,15 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    getUserDetail: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const user = await db.getUserById(input.id);
+        if (!user) return null;
+        const { passwordHash, ...u } = user;
+        return u;
+      }),
+
     updatePlan: adminProcedure
       .input(z.object({
         id: z.number(),

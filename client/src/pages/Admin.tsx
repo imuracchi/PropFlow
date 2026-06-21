@@ -7,7 +7,7 @@ import {
   Users, Building2, CheckCircle2, XCircle, Clock,
   Search, MessageCircle,
   MoreHorizontal, ArrowUpRight, Loader2, UserPlus, FileText, Ban, UserCheck,
-  Trash2, EyeOff, Eye, RotateCcw, AlertTriangle
+  Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -31,6 +31,7 @@ export default function Admin() {
   const [userSearch, setUserSearch] = useState("");
   const [propSearch, setPropSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
   const { data: stats, isLoading: statsLoading } = trpc.admin.stats.useQuery();
@@ -209,15 +210,15 @@ export default function Admin() {
                     return (
                       <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
+                          <button className="flex items-center gap-2 text-left hover:opacity-70 transition-opacity" onClick={() => setSelectedUserId(user.id)}>
                             <Avatar className="w-7 h-7">
                               <AvatarFallback className="text-xs bg-primary/10 text-primary font-bold">{(user.name ?? "?").charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-foreground text-xs">{user.name}</p>
+                              <p className="font-medium text-primary text-xs hover:underline">{user.name}</p>
                               {user.company && <p className="text-xs text-muted-foreground">{user.company}</p>}
                             </div>
-                          </div>
+                          </button>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{user.email}</td>
                         <td className="px-4 py-3">
@@ -384,6 +385,93 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {/* 業者詳細モーダル */}
+      {selectedUserId && (
+        <UserDetailModal userId={selectedUserId} onClose={() => setSelectedUserId(null)} />
+      )}
+    </div>
+  );
+}
+
+const PLAN_LABEL: Record<string, string> = { standard: "スタンダード", gold: "ゴールド", platinum: "プラチナ" };
+
+function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => void }) {
+  const { data: user, isLoading } = trpc.admin.getUserDetail.useQuery({ id: userId });
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div className="bg-card rounded-xl p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  const items = [
+    { icon: Users, label: "氏名", value: user.name },
+    { icon: Building2, label: "会社名", value: user.company },
+    { icon: Mail, label: "メール", value: user.email },
+    { icon: FileText, label: "宅建番号", value: user.license },
+    { icon: MapPin, label: "郵便番号", value: user.zipCode },
+    { icon: MapPin, label: "住所", value: user.address },
+    { icon: Phone, label: "電話番号", value: user.phone },
+    { icon: Phone, label: "FAX", value: user.fax },
+    { icon: Globe, label: "URL", value: user.url },
+    { icon: Clock, label: "営業時間", value: user.businessHours },
+    { icon: Clock, label: "定休日", value: user.holidays },
+    { icon: MessageCircle, label: "一言", value: user.bio },
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-xl shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+              <span className="text-lg font-bold text-primary">{(user.name ?? "?").charAt(0)}</span>
+            </div>
+            <div>
+              <h2 className="font-bold text-foreground">{user.name}</h2>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary">{PLAN_LABEL[user.plan] ?? "スタンダード"}</span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded ${user.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                  {user.status === "active" ? "有効" : "停止中"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button className="text-muted-foreground hover:text-foreground p-1" onClick={onClose}>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 space-y-3">
+          {items.map(item => (
+            <div key={item.label} className="flex items-center gap-3 text-sm">
+              <item.icon className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground w-20 shrink-0">{item.label}</span>
+              {item.label === "メール" && item.value ? (
+                <a href={`mailto:${item.value}`} className="text-primary hover:underline">{item.value}</a>
+              ) : item.label === "URL" && item.value ? (
+                <a href={item.value.startsWith("http") ? item.value : `https://${item.value}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{item.value}</a>
+              ) : (
+                <span className={item.value ? "text-foreground" : "text-muted-foreground/40"}>{item.value || "未設定"}</span>
+              )}
+            </div>
+          ))}
+          {user.logoBase64 && (
+            <div className="pt-3 border-t border-border">
+              <p className="text-xs text-muted-foreground mb-2">会社ロゴ</p>
+              <img src={user.logoBase64} alt="ロゴ" className="h-12 object-contain" />
+            </div>
+          )}
+          <div className="pt-3 border-t border-border text-xs text-muted-foreground space-y-1">
+            <p>登録日: {new Date(user.createdAt).toLocaleDateString("ja-JP")}</p>
+            <p>最終ログイン: {new Date(user.lastSignedIn).toLocaleDateString("ja-JP")}</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
