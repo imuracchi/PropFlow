@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft, Heart, Share2, Pencil, MessageCircle,
   HelpCircle, MapPin, Map, Building2,
-  ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, FileText, Upload, Printer, Download, StickyNote, UserCircle
+  ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, FileText, Upload, Download, StickyNote, UserCircle
 } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -58,74 +58,177 @@ function exportPropertyCsv(
   URL.revokeObjectURL(url);
 }
 
-function printProperty(
-  property: { name: string; address: string; type: string; status: string; price: number; estimatedYield: number | null; landArea: number; buildingArea: number | null; comment: string | null; userCompany: string | null; userName: string | null },
-  details: [string, string][],
+async function printProperty(
+  p: {
+    name: string; address: string; type: string; status: string;
+    price: number | null; priceNegotiable: number;
+    landArea: number; buildingArea: number | null;
+    comment: string | null; transport: string | null;
+    lotNumber: string | null; landCategory: string | null;
+    rights: string | null; structure: string | null;
+    buildingAge: string | null; zoning: string | null;
+    fireProtection: string | null; access: string | null;
+    heightDistrict: string | null; otherRestrictions: string | null;
+    negotiation: string; remarks: string | null;
+    userCompany: string | null; userName: string | null;
+  },
   createdDate: string,
   myLogo: string | null | undefined,
   myUser: { name: string | null; company: string | null; email: string; phone: string | null; fax: string | null; url: string | null; license: string | null } | null
 ) {
-  const STATUS_LABEL: Record<string, string> = { available: "公開中", negotiating: "商談中", sold: "売却済" };
+  const addr = encodeURIComponent(p.address);
+  const key = GOOGLE_MAPS_API_KEY;
+  const mapImg = `https://maps.googleapis.com/maps/api/staticmap?center=${addr}&zoom=16&size=640x480&scale=2&maptype=roadmap&markers=color:red%7C${addr}&key=${key}`;
+  const svImg = `https://maps.googleapis.com/maps/api/streetview?location=${addr}&size=640x480&key=${key}`;
+  const wideImg = `https://maps.googleapis.com/maps/api/staticmap?center=${addr}&zoom=14&size=640x480&scale=2&maptype=roadmap&markers=color:red%7C${addr}&key=${key}`;
+  const priceText = p.priceNegotiable ? "応相談" : (p.price?.toLocaleString() ?? "—") + "円";
   const logoHtml = myLogo
-    ? `<img src="${myLogo}" alt="logo" style="height:36px;max-width:180px;object-fit:contain;" />`
-    : `<span style="font-size:18px;font-weight:700;color:#2563eb;">PropFlow</span>`;
+    ? `<img src="${myLogo}" alt="logo" style="height:50px;max-width:260px;object-fit:contain;" />`
+    : (myUser?.company
+      ? `<span style="font-size:18px;font-weight:700;">${myUser.company}</span>`
+      : `<span style="font-size:18px;font-weight:700;color:#1e40af;">PropFlow</span>`);
+  const v = (s: string | null | undefined) => s || "—";
+  const contactRows = myUser ? [
+    ["会社名", myUser.company], ["担当者", myUser.name], ["宅建番号", myUser.license],
+    ["TEL", myUser.phone], ["FAX", myUser.fax], ["E-mail", myUser.email], ["URL", myUser.url],
+  ].filter(([, val]) => val).map(([l, val]) => `<tr><th>${l}</th><td>${val}</td></tr>`).join("") : "";
+  const footer = `<div class="ft">${myUser?.company || "PropFlow"} - 物件紹介資料</div>`;
+  const hdr = `<div class="hdr"><div>${logoHtml}</div><div class="hdr-r">出力日: ${new Date().toLocaleDateString("ja-JP")}</div></div>`;
+
+  let routeData: { polyline: string; duration: string; distance: string; startLat: number; startLng: number; endLat: number; endLng: number; steps: { instruction: string; distance: string }[] } | null = null;
+  const quoteMatch = p.transport?.match(/「([^」]+)」駅/);
+  const plainMatch = p.transport?.match(/(\S+駅)/);
+  const stationName = quoteMatch ? quoteMatch[1] + "駅" : plainMatch?.[1];
+  if (stationName && key) {
+    try {
+      await loadGoogleMapsScript();
+      const g = (window as any).google;
+      const result = await new g.maps.DirectionsService().route({
+        origin: stationName,
+        destination: p.address,
+        travelMode: g.maps.TravelMode.WALKING,
+      });
+      const leg = result.routes[0].legs[0];
+      const poly = result.routes[0].overview_polyline;
+      routeData = {
+        polyline: typeof poly === "string" ? poly : poly?.points || poly,
+        duration: leg.duration?.text || "",
+        distance: leg.distance?.text || "",
+        startLat: leg.start_location.lat(),
+        startLng: leg.start_location.lng(),
+        endLat: leg.end_location.lat(),
+        endLng: leg.end_location.lng(),
+        steps: (leg.steps || []).map((s: any) => ({ instruction: s.instructions || "", distance: s.distance?.text || "" })),
+      };
+    } catch (e) { console.warn("Directions failed:", e); }
+  }
+
+  const page4 = routeData ? `<div class="page">
+${hdr}
+<div class="mt">交通アクセス</div>
+${p.transport ? `<div class="tb">🚃 ${p.transport}</div>` : ""}
+<div style="display:flex;gap:14px;margin-top:12px;">
+<div style="flex:1;font-size:11px;line-height:2;">
+${routeData.steps.map((s: any, i: number) => `<div style="padding:2px 0;border-bottom:1px solid #eee;"><span style="display:inline-block;width:18px;color:#1e40af;font-weight:700;">${i + 1}.</span>${s.instruction} <span style="color:#94a3b8;font-size:10px;">${s.distance}</span></div>`).join("")}
+</div>
+<div style="flex:1.6;">
+<img src="https://maps.googleapis.com/maps/api/staticmap?size=640x480&scale=2&maptype=roadmap&path=color:0x4285F4ff%7Cweight:5%7Cenc:${encodeURIComponent(routeData.polyline)}&markers=color:green%7Clabel:S%7C${routeData.startLat},${routeData.startLng}&markers=color:red%7Clabel:G%7C${routeData.endLat},${routeData.endLng}&key=${key}" alt="ルート地図" style="width:100%;border:1px solid #d0d7de;" />
+</div>
+</div>
+${footer}
+</div>` : `<div class="page">
+${hdr}
+<div class="mt">交通アクセス</div>
+${p.transport ? `<div class="tb">🚃 ${p.transport}</div>` : ""}
+<div class="ma">📍 ${p.address}</div>
+<div class="mi"><img src="${wideImg}" alt="広域地図" /></div>
+${footer}
+</div>`;
+
   const html = `<!DOCTYPE html>
 <html lang="ja"><head><meta charset="UTF-8">
-<title>${property.name} - PropFlow</title>
+<title>${p.name} - 物件紹介資料</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif; color: #1a1a1a; padding: 40px; font-size: 13px; line-height: 1.6; }
-  h1 { font-size: 22px; margin-bottom: 4px; }
-  .header { border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px; }
-  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin-right: 6px; }
-  .badge-status { background: #2563eb; color: white; }
-  .badge-type { background: #f0f0f0; color: #555; }
-  .meta { color: #666; font-size: 12px; margin-top: 6px; }
-  .summary { display: flex; gap: 16px; margin: 20px 0; }
-  .summary-card { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
-  .summary-label { font-size: 11px; color: #888; }
-  .summary-value { font-size: 18px; font-weight: 700; margin-top: 2px; }
-  .summary-value.price { color: #2563eb; }
-  .comment-box { background: #fffbeb; border: 1px solid #f5d98a; border-radius: 8px; padding: 14px; margin: 20px 0; }
-  .comment-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
-  th { width: 140px; color: #888; font-weight: normal; }
-  .section-title { font-size: 15px; font-weight: 600; margin: 24px 0 8px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
-  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #ddd; color: #999; font-size: 11px; text-align: center; }
-  @media print { body { padding: 20px; } }
+@page{size:A4 portrait;margin:12mm 15mm}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;color:#1a1a1a;font-size:11px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{page-break-after:always}.page:last-child{page-break-after:auto}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3a5f;padding-bottom:10px;margin-bottom:14px}
+.hdr-r{text-align:right;font-size:10px;color:#64748b}
+.ttl{text-align:center;font-size:20px;font-weight:800;color:#1e3a5f;letter-spacing:6px;margin-bottom:12px}
+.pn{text-align:center;font-size:17px;font-weight:700;padding:8px 12px;background:#f0f4f8;border:1px solid #d0d7de;margin-bottom:10px}
+.cards{display:flex;gap:8px;margin-bottom:12px}
+.cd{flex:1;border:2px solid #d0d7de;border-radius:6px;padding:6px 8px;text-align:center}
+.cd.pr{border-color:#1e40af;background:#eff6ff}
+.cd-l{font-size:9px;color:#64748b;letter-spacing:1px}
+.cd-v{font-size:15px;font-weight:700;margin-top:1px}
+.cd.pr .cd-v{color:#1e40af}
+.cmt{background:#fffbeb;border:1px solid #f5d98a;padding:8px 10px;margin-bottom:12px;font-size:11px}
+.cmt b{display:block;margin-bottom:3px}
+.sec{font-size:12px;font-weight:700;color:#1e3a5f;border-left:4px solid #1e40af;padding-left:8px;margin:12px 0 6px}
+table.dt{width:100%;border-collapse:collapse;border:1px solid #94a3b8}
+table.dt th,table.dt td{border:1px solid #94a3b8;padding:4px 7px;font-size:11px;vertical-align:top}
+table.dt th{background:#e8edf2;color:#334155;font-weight:600;width:72px;white-space:nowrap}
+table.ct{width:100%;border-collapse:collapse;border:1px solid #94a3b8}
+table.ct th,table.ct td{border:1px solid #94a3b8;padding:3px 7px;font-size:11px}
+table.ct th{background:#e8edf2;color:#334155;font-weight:600;width:72px}
+.ft{text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #d0d7de;padding-top:6px;margin-top:16px}
+.mt{font-size:17px;font-weight:700;color:#1e3a5f;border-bottom:3px solid #1e3a5f;padding-bottom:8px;margin-bottom:14px}
+.ma{font-size:12px;color:#475569;margin-bottom:10px}
+.mi{text-align:center;margin:20px 0}
+.mi img{max-width:100%;border:1px solid #d0d7de}
+.tb{background:#f8fafc;border:1px solid #d0d7de;padding:10px 14px;margin-bottom:14px;font-size:12px}
+@media screen{body{background:#cbd5e1}.page{width:210mm;min-height:297mm;background:#fff;margin:20px auto;padding:12mm 15mm;box-shadow:0 2px 12px rgba(0,0,0,.18)}}
 </style></head><body>
-<div class="header">
-  <div class="header-top"><div>${logoHtml}</div><div style="text-align:right;font-size:11px;color:#888;">出力日: ${new Date().toLocaleDateString("ja-JP")}</div></div>
-  <div><span class="badge badge-status">${STATUS_LABEL[property.status] ?? property.status}</span><span class="badge badge-type">${property.type}</span></div>
-  <h1>${property.name}</h1>
-  <div class="meta">📍 ${property.address}</div>
-  <div class="meta">登録：${property.userCompany || property.userName || "—"} / ${createdDate}</div>
-</div>
-<div class="summary">
-  <div class="summary-card"><div class="summary-label">売出価格</div><div class="summary-value price">${property.priceNegotiable ? "応相談" : (property.price?.toLocaleString() ?? "—") + "円"}</div></div>
-  <div class="summary-card"><div class="summary-label">土地面積</div><div class="summary-value">${property.landArea.toFixed(2)}㎡</div></div>
-  <div class="summary-card"><div class="summary-label">建物延床面積</div><div class="summary-value">${property.buildingArea ? property.buildingArea.toFixed(2) + "㎡" : "—"}</div></div>
-</div>
-${property.comment ? `<div class="comment-box"><div class="comment-title">紹介コメント</div><p>${property.comment}</p></div>` : ""}
-<div class="section-title">物件概要</div>
-<table>${details.map(([l, v]) => `<tr><th>${l}</th><td>${v}</td></tr>`).join("")}</table>
-${myUser ? `<div class="section-title">お問い合わせ</div>
-<table>
-${[
-  ["担当者", myUser.name],
-  ["会社名", myUser.company],
-  ["宅建番号", myUser.license],
-  ["電話番号", myUser.phone],
-  ["FAX", myUser.fax],
-  ["URL", myUser.url],
-  ["メール", myUser.email],
-].map(([l, v]) => `<tr><th>${l}</th><td>${v || "—"}</td></tr>`).join("")}
-</table>` : ""}
-<div class="footer">PropFlow - 不動産買取プラットフォーム</div>
-</body></html>`;
 
+<div class="page">
+${hdr}
+<div class="ttl">物 件 概 要 書</div>
+<div class="pn">${p.name}</div>
+<div class="cards">
+<div class="cd pr"><div class="cd-l">売出価格</div><div class="cd-v">${priceText}</div></div>
+<div class="cd"><div class="cd-l">土地面積</div><div class="cd-v">${p.landArea.toFixed(2)}㎡</div></div>
+<div class="cd"><div class="cd-l">建物延床面積</div><div class="cd-v">${p.buildingArea ? p.buildingArea.toFixed(2) + "㎡" : "—"}</div></div>
+</div>
+${p.comment ? `<div class="cmt"><b>紹介コメント</b>${p.comment}</div>` : ""}
+<div class="sec">物件概要</div>
+<table class="dt">
+<tr><th>所在地</th><td colspan="3">${p.address}</td></tr>
+<tr><th>地番</th><td>${v(p.lotNumber)}</td><th>物件種別</th><td>${p.type}</td></tr>
+<tr><th>交通</th><td colspan="3">${v(p.transport)}</td></tr>
+<tr><th>売出価格</th><td>${priceText}</td><th>価格交渉</th><td>${p.negotiation}</td></tr>
+<tr><th>土地面積</th><td>${p.landArea.toFixed(2)}㎡（${toTsubo(p.landArea)}坪）</td><th>建物延床面積</th><td>${p.buildingArea ? p.buildingArea.toFixed(2) + "㎡（" + toTsubo(p.buildingArea) + "坪）" : "—"}</td></tr>
+<tr><th>地目</th><td>${v(p.landCategory)}</td><th>権利</th><td>${v(p.rights)}</td></tr>
+<tr><th>構造</th><td>${v(p.structure)}</td><th>築年数</th><td>${v(p.buildingAge)}</td></tr>
+<tr><th>接道</th><td colspan="3">${v(p.access)}</td></tr>
+<tr><th>用途地域</th><td>${v(p.zoning)}</td><th>防火指定</th><td>${v(p.fireProtection)}</td></tr>
+<tr><th>高度地区</th><td>${v(p.heightDistrict)}</td><th>その他制限</th><td>${v(p.otherRestrictions)}</td></tr>
+<tr><th>備考</th><td colspan="3">${v(p.remarks)}</td></tr>
+<tr><th>登録業者</th><td>${p.userCompany || p.userName || "—"}</td><th>登録日</th><td>${createdDate}</td></tr>
+</table>
+${myUser ? `<div class="sec">お問い合わせ先</div><table class="ct">${contactRows}</table>` : ""}
+${footer}
+</div>
+
+<div class="page">
+${hdr}
+<div class="mt">所在地地図</div>
+<div class="ma">📍 ${p.address}</div>
+<div class="mi"><img src="${mapImg}" alt="所在地地図" /></div>
+${footer}
+</div>
+
+<div class="page">
+${hdr}
+<div class="mt">現地写真（ストリートビュー）</div>
+<div class="ma">📍 ${p.address}</div>
+<div class="mi"><img src="${svImg}" alt="ストリートビュー" /></div>
+${footer}
+</div>
+
+${page4}
+
+</body></html>`;
   const w = window.open("", "_blank");
   if (!w) return;
   w.document.write(html);
@@ -784,8 +887,8 @@ export default function PropertyDetail() {
               }
             }}
           ><Share2 className="w-4 h-4" />共有</Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => printProperty(property, details, createdDate, user?.logoBase64, user ? { name: user.name, company: user.company, email: user.email, phone: user.phone, fax: user.fax, url: user.url, license: user.license } : null)}>
-            <Printer className="w-4 h-4" />PDF出力
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => printProperty(property, createdDate, user?.logoBase64, user ? { name: user.name, company: user.company, email: user.email, phone: user.phone, fax: user.fax, url: user.url, license: user.license } : null)}>
+            <FileText className="w-4 h-4" />紹介資料
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportPropertyCsv(property, details, createdDate)}>
             <Download className="w-4 h-4" />CSV
