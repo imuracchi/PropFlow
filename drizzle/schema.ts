@@ -71,6 +71,7 @@ export const messages = mysqlTable("messages", {
   userId: int("userId").notNull(),
   content: text("content").notNull(),
   attachment: varchar("attachment", { length: 500 }),
+  type: mysqlEnum("type", ["message", "announcement", "system"]).default("message").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -127,6 +128,21 @@ export const propertyMemos = mysqlTable("property_memos", {
   userId: int("userId").notNull(),
   propertyId: int("propertyId").notNull(),
   content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const buyerPreferences = mysqlTable("buyer_preferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  areas: json("areas").$type<string[]>(),
+  types: json("types").$type<string[]>(),
+  minPrice: bigint("minPrice", { mode: "number" }),
+  maxPrice: bigint("maxPrice", { mode: "number" }),
+  minLandArea: double("minLandArea"),
+  maxLandArea: double("maxLandArea"),
+  stations: text("stations"),
+  notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

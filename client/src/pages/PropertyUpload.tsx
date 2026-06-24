@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChevronLeft, Plus, Trash2, HelpCircle, Loader2, CheckCircle2,
-  Upload, FileText, X, Sparkles, Bell
+  Upload, FileText, X, Sparkles, Bell, Camera, StickyNote
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -59,6 +59,9 @@ export default function PropertyUpload() {
   const [heightDistrict, setHeightDistrict] = useState("");
   const [otherRestrictions, setOtherRestrictions] = useState("");
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [memo, setMemo] = useState("");
   const [error, setError] = useState("");
 
   const [generatingComment, setGeneratingComment] = useState(false);
@@ -68,6 +71,7 @@ export default function PropertyUpload() {
 
   const createMutation = trpc.property.create.useMutation();
   const uploadFileMutation = trpc.property.uploadFile.useMutation();
+  const saveMemoMutation = trpc.memo.save.useMutation();
   const extractMutation = trpc.property.extractFromPdf.useMutation();
   const commentMutation = trpc.property.generateComment.useMutation();
   const transportMutation = trpc.property.analyzeTransport.useMutation();
@@ -103,8 +107,8 @@ export default function PropertyUpload() {
   const handleFilesSelect = (files: FileList | File[]) => {
     const newFiles: File[] = [];
     for (const file of Array.from(files)) {
-      if (file.type !== "application/pdf") {
-        setExtractError("PDFファイルのみアップロードできます");
+      if (file.type !== "application/pdf" && !file.type.startsWith("image/")) {
+        setExtractError("PDFまたは画像ファイルをアップロードしてください");
         continue;
       }
       if (file.size > 20 * 1024 * 1024) {
@@ -147,7 +151,7 @@ export default function PropertyUpload() {
       const filesBase64 = await Promise.all(pdfFiles.map(fileToBase64));
 
       setExtractProgress(`AIが${pdfFiles.length}件のPDFを解析中... しばらくお待ちください`);
-      const result = await extractMutation.mutateAsync({ filesBase64 });
+      const result = await extractMutation.mutateAsync({ filesBase64, fileNames: pdfFiles.map(f => f.name) });
 
       if (result.data) {
         setExtractProgress("抽出データをフォームに反映中...");
@@ -174,6 +178,9 @@ export default function PropertyUpload() {
     setFaqs(prev => prev.map((f, idx) => idx === i ? { ...f, [field]: value } : f));
   const removeFaq = (i: number) => setFaqs(prev => prev.filter((_, idx) => idx !== i));
 
+  const [submitting, setSubmitting] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState("");
+
   const handleSubmit = async () => {
     setError("");
     if (!name || !address || !type || !landArea) {
@@ -193,42 +200,72 @@ export default function PropertyUpload() {
     const yieldNum = estimatedYield ? Number(estimatedYield) : null;
     const validFaqs = faqs.filter(f => f.q.trim() && f.a.trim());
 
-    const result = await createMutation.mutateAsync({
-      name, address, lotNumber: lotNumber || undefined, type,
-      price: priceNum,
-      priceNegotiable,
-      estimatedYield: yieldNum,
-      landArea: landAreaNum,
-      buildingArea: buildingAreaNum,
-      transport: transport || undefined,
-      landCategory: landCategory || undefined,
-      rights: rights || undefined,
-      structure: structure || undefined,
-      buildingAge: buildingAge || undefined,
-      zoning: zoning || undefined,
-      fireProtection: fireProtection || undefined,
-      access: access || undefined,
-      remarks: remarks || undefined,
-      negotiation,
-      comment: comment || undefined,
-      heightDistrict: heightDistrict || undefined,
-      otherRestrictions: otherRestrictions || undefined,
-      faqs: validFaqs.length > 0 ? validFaqs : undefined,
-      files: pdfFiles.length > 0 ? pdfFiles.map(f => ({ name: f.name, size: f.size })) : undefined,
-    });
+    setSubmitting(true);
+    setSubmitProgress("物件情報を登録中...");
 
-    if (result) {
-      for (const file of pdfFiles) {
-        const base64 = await fileToBase64(file);
-        await uploadFileMutation.mutateAsync({
-          propertyId: result.id,
-          name: file.name,
-          size: file.size,
-          contentBase64: base64,
-        });
+    try {
+      const result = await createMutation.mutateAsync({
+        name, address, lotNumber: lotNumber || undefined, type,
+        price: priceNum,
+        priceNegotiable,
+        estimatedYield: yieldNum,
+        landArea: landAreaNum,
+        buildingArea: buildingAreaNum,
+        transport: transport || undefined,
+        landCategory: landCategory || undefined,
+        rights: rights || undefined,
+        structure: structure || undefined,
+        buildingAge: buildingAge || undefined,
+        zoning: zoning || undefined,
+        fireProtection: fireProtection || undefined,
+        access: access || undefined,
+        remarks: remarks || undefined,
+        negotiation,
+        comment: comment || undefined,
+        heightDistrict: heightDistrict || undefined,
+        otherRestrictions: otherRestrictions || undefined,
+        faqs: validFaqs.length > 0 ? validFaqs : undefined,
+        files: pdfFiles.length > 0 ? pdfFiles.map(f => ({ name: f.name, size: f.size })) : undefined,
+      });
+
+      if (result) {
+        const totalFiles = pdfFiles.length + photoFiles.length;
+        let uploaded = 0;
+        for (const file of pdfFiles) {
+          uploaded++;
+          setSubmitProgress(`資料をアップロード中... (${uploaded}/${totalFiles})`);
+          const base64 = await fileToBase64(file);
+          await uploadFileMutation.mutateAsync({
+            propertyId: result.id,
+            name: file.name,
+            size: file.size,
+            contentBase64: base64,
+          });
+        }
+        for (const photo of photoFiles) {
+          uploaded++;
+          setSubmitProgress(`写真をアップロード中... (${uploaded}/${totalFiles})`);
+          const base64 = await fileToBase64(photo);
+          await uploadFileMutation.mutateAsync({
+            propertyId: result.id,
+            name: photo.name,
+            size: photo.size,
+            contentBase64: base64,
+          });
+        }
+        if (memo.trim()) {
+          setSubmitProgress("メモを保存中...");
+          await saveMemoMutation.mutateAsync({ propertyId: result.id, content: memo.trim() });
+        }
+        setSubmitting(false);
+        setCreatedPropertyId(result.id);
+        setShowLineConfirm(true);
+      } else {
+        setSubmitting(false);
       }
-      setCreatedPropertyId(result.id);
-      setShowLineConfirm(true);
+    } catch (err: any) {
+      setSubmitting(false);
+      setError(err.message || "登録に失敗しました");
     }
   };
 
@@ -298,7 +335,7 @@ export default function PropertyUpload() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="application/pdf"
+          accept="application/pdf,image/*"
           multiple
           className="hidden"
           onChange={e => { if (e.target.files) { handleFilesSelect(e.target.files); e.target.value = ""; } }}
@@ -317,10 +354,10 @@ export default function PropertyUpload() {
               <Upload className="w-7 h-7 text-primary" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">PDFファイルをドロップ</p>
+              <p className="font-semibold text-foreground">PDF・画像ファイルをドロップ</p>
               <p className="text-sm text-muted-foreground mt-1">またはクリックしてファイルを選択</p>
             </div>
-            <p className="text-xs text-muted-foreground">物件概要書・登記簿謄本・間取り図など（最大20MB）</p>
+            <p className="text-xs text-muted-foreground">物件概要書・登記簿謄本・間取り図・現場写真など（PDF/JPG/PNG、最大20MB）</p>
           </div>
         </div>
 
@@ -373,6 +410,18 @@ export default function PropertyUpload() {
   // ── Step 2: Form ──
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {submitting && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-xl shadow-lg p-8 max-w-md w-full mx-4 text-center space-y-4">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">物件を登録しています</h3>
+            <p className="text-sm text-muted-foreground">{submitProgress}</p>
+            <p className="text-xs text-muted-foreground">このままお待ちください。ページを閉じないでください。</p>
+          </div>
+        </div>
+      )}
       <div>
         <button
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mb-4"
@@ -539,6 +588,94 @@ export default function PropertyUpload() {
           {!name || !address || !type || !price || !landArea ? (
             <p className="text-xs text-muted-foreground mt-2">※ AI生成には基本情報（物件名・所在地・種別・価格・土地面積）の入力が必要です</p>
           ) : null}
+        </div>
+      </div>
+
+      {/* 現場写真 */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Camera className="w-4 h-4 text-muted-foreground" />
+            <span className="font-semibold text-foreground text-sm">現場写真</span>
+            <span className="text-xs text-muted-foreground">（任意）</span>
+          </div>
+        </div>
+        <div className="p-5 space-y-3">
+          <label
+            className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg py-6 cursor-pointer hover:border-primary/40 transition-colors"
+            onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={e => {
+              e.preventDefault(); e.stopPropagation();
+              const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/") && f.size <= 10 * 1024 * 1024);
+              if (files.length > 0) {
+                setPhotoFiles(prev => [...prev, ...files]);
+                files.forEach(f => {
+                  const reader = new FileReader();
+                  reader.onload = () => setPhotoPreviews(prev => [...prev, reader.result as string]);
+                  reader.readAsDataURL(f);
+                });
+              }
+            }}
+          >
+            <Camera className="w-8 h-8 text-muted-foreground/50 mb-2" />
+            <span className="text-sm text-muted-foreground">ドロップまたはクリックして写真を選択</span>
+            <span className="text-xs text-muted-foreground mt-1">JPG, PNG（各10MBまで）</span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => {
+                const files = Array.from(e.target.files ?? []).filter(f => f.type.startsWith("image/") && f.size <= 10 * 1024 * 1024);
+                if (files.length > 0) {
+                  setPhotoFiles(prev => [...prev, ...files]);
+                  files.forEach(f => {
+                    const reader = new FileReader();
+                    reader.onload = () => setPhotoPreviews(prev => [...prev, reader.result as string]);
+                    reader.readAsDataURL(f);
+                  });
+                }
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {photoPreviews.length > 0 && (
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+              {photoPreviews.map((src, i) => (
+                <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-border">
+                  <img src={src} alt={`写真${i + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => {
+                      setPhotoFiles(prev => prev.filter((_, j) => j !== i));
+                      setPhotoPreviews(prev => prev.filter((_, j) => j !== i));
+                    }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 自分専用メモ */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <StickyNote className="w-4 h-4 text-muted-foreground" />
+            <span className="font-semibold text-foreground text-sm">自分専用メモ</span>
+            <span className="text-xs text-muted-foreground">（任意・他のユーザーには表示されません）</span>
+          </div>
+        </div>
+        <div className="p-5">
+          <Textarea
+            placeholder="自分用のメモを記入（他のユーザーには見えません）"
+            rows={3}
+            value={memo}
+            onChange={e => setMemo(e.target.value)}
+          />
         </div>
       </div>
 

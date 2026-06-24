@@ -265,7 +265,6 @@ export const appRouter = router({
           files: input.files ?? null,
         });
         if (result) {
-          await db.toggleFavorite(ctx.user.id, result.id);
         }
         return result;
       }),
@@ -419,9 +418,10 @@ export const appRouter = router({
     extractFromPdf: protectedProcedure
       .input(z.object({
         filesBase64: z.array(z.string()).min(1),
+        fileNames: z.array(z.string()).optional(),
       }))
       .mutation(async ({ input }) => {
-        const { data, error } = await parsePropertyFromPdfs(input.filesBase64);
+        const { data, error } = await parsePropertyFromPdfs(input.filesBase64, input.fileNames);
 
         if (error) {
           return { success: !!(data), data, error } as const;
@@ -443,16 +443,15 @@ export const appRouter = router({
       .input(z.object({ propertyId: z.number(), content: z.string() }))
       .mutation(async ({ input, ctx }) => {
         await db.saveMemo(ctx.user.id, input.propertyId, input.content);
-        // メモを書いたら自動でお気に入りにも追加
-        const favIds = await db.getFavoritePropertyIds(ctx.user.id);
-        if (!favIds.includes(input.propertyId)) {
-          await db.toggleFavorite(ctx.user.id, input.propertyId);
-        }
         return { success: true };
       }),
 
     ids: protectedProcedure.query(async ({ ctx }) => {
       return db.getMemoPropertyIds(ctx.user.id);
+    }),
+
+    all: protectedProcedure.query(async ({ ctx }) => {
+      return db.getAllMemos(ctx.user.id);
     }),
 
     delete: protectedProcedure
@@ -559,6 +558,12 @@ export const appRouter = router({
       return db.getExitedChatIds(ctx.user.id);
     }),
 
+    announceCount: protectedProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getAnnouncementCount(input.propertyId);
+      }),
+
     exit: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
@@ -610,6 +615,73 @@ export const appRouter = router({
             `/chat/${input.propertyId}`
           ).catch(() => {});
         }
+        return { success: true };
+      }),
+
+    announce: protectedProcedure
+      .input(z.object({
+        propertyId: z.number(),
+        content: z.string().min(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.propertyId);
+        if (!prop || prop.userId !== ctx.user.id) {
+          return { success: false, error: "お知らせは物件のオーナーのみ投稿できます" };
+        }
+        await db.createMessage({
+          propertyId: input.propertyId,
+          userId: ctx.user.id,
+          content: input.content,
+          type: "announcement",
+        });
+        const dmUserIds = await db.getDmUserIdsForProperty(input.propertyId, ctx.user.id);
+        if (dmUserIds.length > 0) {
+          const { sendPushToUsers } = await import("./_core/webpush");
+          sendPushToUsers(
+            dmUserIds,
+            `📢 ${prop.name}`,
+            `お知らせ: ${input.content.slice(0, 100)}`,
+            `/chat/${input.propertyId}`
+          ).catch(() => {});
+        }
+        return { success: true };
+      }),
+
+    deleteAnnounce: protectedProcedure
+      .input(z.object({ messageId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.deleteMessage(input.messageId, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+
+  buyer: router({
+    getPreference: protectedProcedure.query(async ({ ctx }) => {
+      return db.getBuyerPreference(ctx.user.id);
+    }),
+
+    savePreference: protectedProcedure
+      .input(z.object({
+        areas: z.array(z.string()).nullable().optional(),
+        types: z.array(z.string()).nullable().optional(),
+        minPrice: z.number().nullable().optional(),
+        maxPrice: z.number().nullable().optional(),
+        minLandArea: z.number().nullable().optional(),
+        maxLandArea: z.number().nullable().optional(),
+        stations: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await db.upsertBuyerPreference(ctx.user.id, {
+          areas: input.areas ?? null,
+          types: input.types ?? null,
+          minPrice: input.minPrice ?? null,
+          maxPrice: input.maxPrice ?? null,
+          minLandArea: input.minLandArea ?? null,
+          maxLandArea: input.maxLandArea ?? null,
+          stations: input.stations ?? null,
+          notes: input.notes ?? null,
+        });
         return { success: true };
       }),
   }),

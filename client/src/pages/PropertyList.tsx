@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Search, SlidersHorizontal, Heart, Building2, Clock,
+  Search, SlidersHorizontal, Heart, Building2, Clock, Target,
   Plus, Landmark, MapPin, Loader2, Download, StickyNote
 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -20,12 +20,13 @@ function toTsubo(sqm: number) {
   return (sqm * 0.3025).toFixed(2);
 }
 
-type ListMode = "all" | "mine" | "favorites" | "chat";
+type ListMode = "all" | "mine" | "favorites" | "memo" | "chat";
 
 const MODE_TITLE: Record<ListMode, string> = {
   all: "物件一覧",
   mine: "登録済み物件",
   favorites: "お気に入り物件",
+  memo: "メモした物件",
   chat: "チャット中の物件",
 };
 
@@ -40,6 +41,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const { data: favoriteIds } = trpc.favorite.ids.useQuery();
   const { data: memoIds } = trpc.memo.ids.useQuery();
   const { data: chatPropertyIds } = trpc.mypage.chatProperties.useQuery(undefined, { enabled: mode === "chat" });
+  const { data: buyerPref } = trpc.buyer.getPreference.useQuery();
+  const { data: allMemos } = trpc.memo.all.useQuery();
   const toggleMutation = trpc.favorite.toggle.useMutation();
   const utils = trpc.useUtils();
 
@@ -48,6 +51,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     await toggleMutation.mutateAsync({ propertyId: id });
     utils.favorite.ids.invalidate();
     utils.favorite.list.invalidate();
+    utils.property.list.invalidate();
   };
 
   const chatIds = (chatPropertyIds ?? []).map(c => c.id);
@@ -55,6 +59,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const baseFiltered = (properties ?? []).filter(p => {
     if (mode === "mine") return p.userId === user?.id;
     if (mode === "favorites") return (favoriteIds ?? []).includes(p.id);
+    if (mode === "memo") return (memoIds ?? []).includes(p.id);
     if (mode === "chat") return chatIds.includes(p.id);
     return true;
   });
@@ -70,6 +75,45 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     });
 
   const types = [...new Set(baseFiltered.map(p => p.type))];
+
+  const calcMatch = (p: typeof filtered[0]): number | null => {
+    if (!buyerPref) return null;
+    const checks: { weight: number; match: boolean }[] = [];
+    if (buyerPref.areas && buyerPref.areas.length > 0) {
+      checks.push({ weight: 25, match: buyerPref.areas.some(a => p.address.includes(a)) });
+    }
+    if (buyerPref.types && buyerPref.types.length > 0) {
+      checks.push({ weight: 20, match: buyerPref.types.includes(p.type) });
+    }
+    if (buyerPref.minPrice || buyerPref.maxPrice) {
+      const price = p.price;
+      if (price && !p.priceNegotiable) {
+        const inRange = (!buyerPref.minPrice || price >= buyerPref.minPrice) && (!buyerPref.maxPrice || price <= buyerPref.maxPrice);
+        checks.push({ weight: 25, match: inRange });
+      }
+    }
+    if (buyerPref.minLandArea || buyerPref.maxLandArea) {
+      const inRange = (!buyerPref.minLandArea || p.landArea >= buyerPref.minLandArea) && (!buyerPref.maxLandArea || p.landArea <= buyerPref.maxLandArea);
+      checks.push({ weight: 15, match: inRange });
+    }
+    if (buyerPref.stations) {
+      const transport = (p as any).transport ?? "";
+      const stationKeywords = buyerPref.stations.split(/[,、\s]+/).filter(Boolean);
+      checks.push({ weight: 15, match: stationKeywords.some(k => transport.includes(k)) });
+    }
+    if (checks.length === 0) return null;
+    const totalWeight = checks.reduce((s, c) => s + c.weight, 0);
+    const earned = checks.filter(c => c.match).reduce((s, c) => s + c.weight, 0);
+    return Math.round((earned / totalWeight) * 100);
+  };
+
+  const matchRates = new Map<number, number | null>();
+  filtered.forEach(p => matchRates.set(p.id, calcMatch(p)));
+
+  const [sortByMatch, setSortByMatch] = useState(false);
+  const sortedFiltered = sortByMatch && buyerPref
+    ? [...filtered].sort((a, b) => (matchRates.get(b.id) ?? -1) - (matchRates.get(a.id) ?? -1))
+    : filtered;
 
   const STATUS_LABEL: Record<string, string> = { available: "公開中", negotiating: "商談中", sold: "売却済" };
 
@@ -93,7 +137,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const exportCsv = (onlySelected = false) => {
     const target = onlySelected ? filtered.filter(p => selectedIds.has(p.id)) : filtered;
     if (target.length === 0) return;
-    const headers = ["物件名", "所在地", "地番", "交通", "物件種別", "価格（円）", "土地面積（㎡）", "坪数", "地目", "権利", "接道", "建物面積（㎡）", "建物坪数", "構造", "築年数", "用途地域", "防火指定", "高度地区", "その他制限", "価格交渉", "備考", "登録業者", "登録日"];
+    const memoMap = new Map((allMemos ?? []).map(m => [m.propertyId, m.content]));
+    const headers = ["物件名", "所在地", "地番", "交通", "物件種別", "価格（円）", "土地面積（㎡）", "坪数", "地目", "権利", "接道", "建物面積（㎡）", "建物坪数", "構造", "築年数", "用途地域", "防火指定", "高度地区", "その他制限", "価格交渉", "備考", "登録者", "登録日", "メモ"];
     const rows = target.map(p => [
       p.name,
       p.address,
@@ -118,6 +163,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       (p as any).remarks ?? "",
       p.userCompany ?? "",
       new Date(p.createdAt).toLocaleDateString("ja-JP"),
+      memoMap.get(p.id) ?? "",
     ]);
     const bom = "﻿";
     const csv = bom + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -211,6 +257,17 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
             ))}
           </SelectContent>
         </Select>
+        {buyerPref && (
+          <Button
+            variant={sortByMatch ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 shrink-0"
+            onClick={() => setSortByMatch(!sortByMatch)}
+          >
+            <Target className="w-3.5 h-3.5" />
+            マッチ率順
+          </Button>
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -245,19 +302,21 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">土地面積</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">建物面積</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">価格</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">用途地域</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">接道条件</th>
                   <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">価格交渉</th>
+                  {buyerPref && (
+                    <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">マッチ</th>
+                  )}
                   <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">
                     <Heart className="w-3.5 h-3.5 mx-auto text-muted-foreground" />
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map(property => {
+                {sortedFiltered.map(property => {
                   const statusInfo = STATUS_MAP[property.status] ?? STATUS_MAP.available;
                   const isFav = (favoriteIds ?? []).includes(property.id);
                   const hasMemo = (memoIds ?? []).includes(property.id);
+                  const matchRate = matchRates.get(property.id);
                   return (
                     <tr
                       key={property.id}
@@ -302,27 +361,40 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       <td className="px-4 py-4 text-right whitespace-nowrap hidden md:table-cell">
                         <p className="font-semibold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
                       </td>
-                      <td className="px-4 py-4 text-xs text-muted-foreground max-w-[140px] hidden xl:table-cell">
-                        {property.zoning || "—"}
-                      </td>
-                      <td className="px-4 py-4 text-xs text-muted-foreground max-w-[140px] hidden xl:table-cell">
-                        {property.access || "—"}
-                      </td>
                       <td className="px-4 py-4 text-center whitespace-nowrap hidden xl:table-cell">
                         <span className={`text-xs font-medium ${property.negotiation === "交渉可" ? "text-green-600 font-semibold" : "text-foreground"}`}>
                           {property.negotiation}
                         </span>
                       </td>
+                      {buyerPref && (
+                        <td className="text-center px-2 py-4 whitespace-nowrap">
+                          {matchRate !== null && matchRate !== undefined ? (
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                              matchRate >= 80 ? "bg-green-100 text-green-700" :
+                              matchRate >= 50 ? "bg-blue-100 text-blue-700" :
+                              matchRate >= 30 ? "bg-amber-100 text-amber-700" :
+                              "bg-gray-100 text-gray-500"
+                            }`}>
+                              {matchRate}%
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-4 text-center">
                         <div className="flex items-center justify-center gap-1">
                           {hasMemo && (
                             <span title="メモあり"><StickyNote className="w-3.5 h-3.5 text-amber-500" /></span>
                           )}
                           <button
-                            className="p-1.5 rounded-md hover:bg-muted transition-colors"
+                            className="p-1.5 rounded-md hover:bg-muted transition-colors flex items-center gap-0.5"
                             onClick={(e) => toggleFavorite(property.id, e)}
                           >
                             <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground/40"}`} />
+                            {(property as any).favoriteCount > 0 && (
+                              <span className="text-[10px] font-medium text-red-500">{(property as any).favoriteCount}</span>
+                            )}
                           </button>
                         </div>
                       </td>

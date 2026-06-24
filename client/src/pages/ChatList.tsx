@@ -3,6 +3,7 @@ import { MessageCircle, Home, Loader2, MapPin, EyeOff, Globe, User, Trash2 } fro
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 
 type Room = {
@@ -89,20 +90,20 @@ function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
       }}
     >
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center shrink-0">
-          <User className="w-5 h-5 text-violet-600" />
+        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+          <Home className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 shrink-0">DM</span>
-            {thread.propertyName && (
-              <span className="text-xs text-primary truncate">{thread.propertyName}</span>
-            )}
             {hasNew && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-orange-500 text-white shrink-0">新着</span>}
           </div>
-          <p className="text-sm font-semibold text-foreground mt-0.5 truncate">
+          <p className="text-sm font-semibold text-foreground truncate">
+            {thread.propertyName || "物件なし"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+            <User className="w-3 h-3 inline mr-1" />
             {thread.partnerName}
-            {thread.partnerCompany && <span className="text-xs text-muted-foreground font-normal ml-1.5">{thread.partnerCompany}</span>}
+            {thread.partnerCompany && <span className="ml-1">({thread.partnerCompany})</span>}
           </p>
         </div>
         <div className="text-right shrink-0 flex items-center gap-2">
@@ -137,18 +138,25 @@ function EmptyState({ icon: Icon, message }: { icon: typeof MessageCircle; messa
   );
 }
 
-export default function ChatList() {
+export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" }) {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const { data: myRooms, isLoading: myLoading } = trpc.chat.myRooms.useQuery();
   const { data: allRooms, isLoading: allLoading } = trpc.chat.allRooms.useQuery();
   const { data: dmThreads } = trpc.dm.threads.useQuery();
   const { data: exitedIds } = trpc.chat.exitedIds.useQuery();
   const { data: exitedDmKeys } = trpc.dm.exitedKeys.useQuery();
+  const { data: properties } = trpc.property.list.useQuery(undefined, { enabled: mode === "owner" });
   const dmExitMutation = trpc.dm.exit.useMutation();
   const utils = trpc.useUtils();
 
   if (myLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
+
+  const myPropertyIds = mode === "owner"
+    ? new Set((properties ?? []).filter(p => p.userId === user?.id).map(p => p.id))
+    : null;
 
   const exitedSet = new Set(exitedIds ?? []);
   const exitedDmSet = new Set(exitedDmKeys ?? []);
@@ -165,71 +173,63 @@ export default function ChatList() {
   };
   const allActiveRooms = (allRooms ?? []).filter(r => !r.propertyDeleted);
 
+  if (mode === "owner") {
+    const ownerRooms = allActiveRooms.filter(r => myPropertyIds!.has(r.propertyId));
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">お知らせ管理</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">自社物件のお知らせを管理・投稿できます</p>
+        </div>
+        {allLoading ? (
+          <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+        ) : ownerRooms.length === 0 ? (
+          <EmptyState icon={MessageCircle} message="自社物件がまだありません" />
+        ) : (
+          <div className="space-y-3">
+            {ownerRooms.map(room => <RoomCard key={`room-${room.propertyId}`} room={room} />)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">チャット</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">物件ごとのチャットルーム</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">ダイレクトメッセージ</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">物件登録者との1対1のやり取り</p>
+        </div>
+        <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation("/properties")}>
+          <Home className="w-4 h-4" />新しく物件の質問
+        </Button>
+      </div>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+        物件に関してのご質問・ご相談は、物件一覧 &gt; 物件を選択 &gt;「登録者にDM」ボタンからできます
       </div>
 
-      <Tabs defaultValue="mine">
-        <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap justify-start">
-          <TabsTrigger value="mine" className="gap-1.5">
+      <Tabs defaultValue="active">
+        <TabsList className="bg-muted">
+          <TabsTrigger value="active" className="gap-1.5">
             <MessageCircle className="w-3.5 h-3.5" />
-            参加中チャット
-            {(myActiveRooms.length + activeDmThreads.length) > 0 && (
-              <span className="text-xs bg-primary/10 text-primary px-1.5 rounded-full ml-0.5">{myActiveRooms.length + activeDmThreads.length}</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="all" className="gap-1.5">
-            <Globe className="w-3.5 h-3.5" />
-            全てのチャット
-            {allActiveRooms.length > 0 && (
-              <span className="text-xs bg-muted-foreground/20 text-muted-foreground px-1.5 rounded-full ml-0.5">{allActiveRooms.length}</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="dm" className="gap-1.5">
-            <User className="w-3.5 h-3.5" />
-            ダイレクト
+            DM
             {activeDmThreads.length > 0 && (
-              <span className="text-xs bg-violet-100 text-violet-600 px-1.5 rounded-full ml-0.5">{activeDmThreads.length}</span>
+              <span className="text-xs bg-primary/10 text-primary px-1.5 rounded-full ml-0.5">{activeDmThreads.length}</span>
             )}
           </TabsTrigger>
           <TabsTrigger value="hidden" className="gap-1.5">
             <EyeOff className="w-3.5 h-3.5" />
             非表示
-            {(myHiddenRooms.length + hiddenDmThreads.length) > 0 && (
-              <span className="text-xs bg-muted text-muted-foreground px-1.5 rounded-full ml-0.5">{myHiddenRooms.length + hiddenDmThreads.length}</span>
+            {hiddenDmThreads.length > 0 && (
+              <span className="text-xs bg-muted text-muted-foreground px-1.5 rounded-full ml-0.5">{hiddenDmThreads.length}</span>
             )}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="mine" className="mt-4">
-          {myActiveRooms.length === 0 && activeDmThreads.length === 0 ? (
-            <EmptyState icon={MessageCircle} message="参加中のチャットはありません" />
-          ) : (
-            <div className="space-y-3">
-              {myActiveRooms.map(room => <RoomCard key={`room-${room.propertyId}`} room={room} />)}
-              {activeDmThreads.map(thread => <DmCard key={`dm-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="all" className="mt-4">
-          {allLoading ? (
-            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-          ) : allActiveRooms.length === 0 ? (
-            <EmptyState icon={Globe} message="チャットルームはまだありません" />
-          ) : (
-            <div className="space-y-3">
-              {allActiveRooms.map(room => <RoomCard key={room.propertyId} room={room} />)}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="dm" className="mt-4">
+        <TabsContent value="active" className="mt-4">
           {activeDmThreads.length === 0 ? (
-            <EmptyState icon={User} message="ダイレクトメッセージはありません" />
+            <EmptyState icon={MessageCircle} message="ダイレクトメッセージはありません" />
           ) : (
             <div className="space-y-3">
               {activeDmThreads.map(thread => <DmCard key={dmKey(thread)} thread={thread} onHide={() => handleDmHide(thread)} />)}
@@ -238,11 +238,10 @@ export default function ChatList() {
         </TabsContent>
 
         <TabsContent value="hidden" className="mt-4">
-          {myHiddenRooms.length === 0 && hiddenDmThreads.length === 0 ? (
-            <EmptyState icon={EyeOff} message="非表示のチャットはありません" />
+          {hiddenDmThreads.length === 0 ? (
+            <EmptyState icon={EyeOff} message="非表示のDMはありません" />
           ) : (
             <div className="space-y-3">
-              {myHiddenRooms.map(room => <RoomCard key={room.propertyId} room={room} hidden />)}
               {hiddenDmThreads.map(thread => <DmCard key={`hidden-${dmKey(thread)}`} thread={thread} />)}
             </div>
           )}

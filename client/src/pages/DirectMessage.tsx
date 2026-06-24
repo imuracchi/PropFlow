@@ -104,7 +104,7 @@ export default function DirectMessage() {
                 {!isMe && (
                   <span className="text-xs font-semibold text-foreground">{msg.senderName}</span>
                 )}
-                <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
                   isMe
                     ? "bg-primary text-primary-foreground rounded-tr-sm"
                     : "bg-card border border-border text-foreground rounded-tl-sm shadow-sm"
@@ -122,14 +122,27 @@ export default function DirectMessage() {
       </div>
 
       {/* 入力エリア */}
-      <div className="pt-4 border-t-2 border-violet-500">
+      <div className="pt-3 border-t-2 border-violet-500">
         <div className="flex items-end gap-2">
-          <Input
+          <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder="メッセージを入力..."
-            className="bg-card border-border"
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder="メッセージを入力...（Shift+Enterで改行）"
+            rows={2}
+            className="flex-1 resize-none bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-32 overflow-y-auto"
+            style={{ minHeight: "56px", height: "auto" }}
+            ref={(el) => {
+              if (el) {
+                el.style.height = "auto";
+                el.style.height = Math.min(el.scrollHeight, 128) + "px";
+              }
+            }}
           />
           <Button
             className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 h-10 w-10 shadow-sm"

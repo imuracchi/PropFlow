@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ChevronLeft, Heart, Share2, Pencil, MessageCircle,
+  ChevronLeft, Heart, Share2, Pencil, MessageCircle, Bell, Camera,
   HelpCircle, MapPin, Map, Building2,
   ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, FileText, Upload, Download, StickyNote, UserCircle
 } from "lucide-react";
@@ -204,7 +204,7 @@ ${p.comment ? `<div class="cmt"><b>紹介コメント</b>${p.comment}</div>` : "
 <tr><th>用途地域</th><td>${v(p.zoning)}</td><th>防火指定</th><td>${v(p.fireProtection)}</td></tr>
 <tr><th>高度地区</th><td>${v(p.heightDistrict)}</td><th>その他制限</th><td>${v(p.otherRestrictions)}</td></tr>
 <tr><th>備考</th><td colspan="3">${v(p.remarks)}</td></tr>
-<tr><th>登録業者</th><td>${p.userCompany || p.userName || "—"}</td><th>登録日</th><td>${createdDate}</td></tr>
+<tr><th>登録者</th><td>${p.userCompany || p.userName || "—"}</td><th>登録日</th><td>${createdDate}</td></tr>
 </table>
 ${myUser ? `<div class="sec">お問い合わせ先</div><table class="ct">${contactRows}</table>` : ""}
 ${footer}
@@ -250,6 +250,136 @@ function downloadBase64File(name: string, base64: string) {
   URL.revokeObjectURL(url);
 }
 
+const IMAGE_EXTS = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i;
+
+function PropertyPhotos({ isOwner, propertyId }: { isOwner: boolean; propertyId: number }) {
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [viewPhoto, setViewPhoto] = useState<string | null>(null);
+
+  const { data: files } = trpc.property.listFiles.useQuery({ propertyId });
+  const uploadMutation = trpc.property.uploadFile.useMutation();
+  const deleteMutation = trpc.property.deleteFile.useMutation();
+  const utils = trpc.useUtils();
+
+  const photos = (files ?? []).filter(f => IMAGE_EXTS.test(f.name));
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    file.arrayBuffer().then(buf =>
+      btoa(new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), ""))
+    );
+
+  const handleUpload = async (fileList: FileList) => {
+    const imgs = Array.from(fileList).filter(f => f.type.startsWith("image/"));
+    if (imgs.length === 0) return;
+    setUploading(true);
+    for (const img of imgs) {
+      const base64 = await fileToBase64(img);
+      await uploadMutation.mutateAsync({ propertyId, name: img.name, size: img.size, contentBase64: base64 });
+    }
+    utils.property.listFiles.invalidate({ propertyId });
+    setUploading(false);
+  };
+
+  const loadPhoto = async (fileId: number): Promise<string> => {
+    const result = await utils.property.downloadFile.fetch({ fileId });
+    if (!result) return "";
+    const ext = (result as any).name?.split(".").pop()?.toLowerCase() ?? "jpg";
+    const mime = ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg";
+    return `data:${mime};base64,${(result as any).contentBase64}`;
+  };
+
+  if (photos.length === 0 && !isOwner) return null;
+
+  return (
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+        <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+          <Camera className="w-4 h-4 text-muted-foreground" />
+          現場写真（{photos.length}枚）
+        </h3>
+        {isOwner && (
+          <label className="text-xs text-primary hover:underline cursor-pointer flex items-center gap-1">
+            <Upload className="w-3.5 h-3.5" />追加
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => { if (e.target.files) handleUpload(e.target.files); e.target.value = ""; }}
+            />
+          </label>
+        )}
+      </div>
+      {uploading && (
+        <div className="px-5 py-2 text-xs text-primary flex items-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />アップロード中...
+        </div>
+      )}
+      {photos.length === 0 ? (
+        <div className="p-5 text-center text-sm text-muted-foreground">
+          写真はまだありません
+        </div>
+      ) : (
+        <div className="p-3 grid grid-cols-3 md:grid-cols-4 gap-2">
+          {photos.map(photo => (
+            <PhotoThumb
+              key={photo.id}
+              photo={photo}
+              isOwner={isOwner}
+              onView={async () => { const src = await loadPhoto(photo.id); setViewPhoto(src); }}
+              onDelete={async () => { await deleteMutation.mutateAsync({ fileId: photo.id }); utils.property.listFiles.invalidate({ propertyId }); }}
+            />
+          ))}
+        </div>
+      )}
+      {viewPhoto && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setViewPhoto(null)}>
+          <img src={viewPhoto} alt="写真" className="max-w-full max-h-full object-contain rounded-lg" />
+          <button className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2" onClick={() => setViewPhoto(null)}>
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PhotoThumb({ photo, isOwner, onView, onDelete }: { photo: { id: number; name: string }; isOwner: boolean; onView: () => void; onDelete: () => void }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const utils = trpc.useUtils();
+
+  useEffect(() => {
+    utils.property.downloadFile.fetch({ fileId: photo.id }).then(result => {
+      if (!result) return;
+      const ext = photo.name.split(".").pop()?.toLowerCase() ?? "jpg";
+      const mime = ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg";
+      setSrc(`data:${mime};base64,${(result as any).contentBase64}`);
+    });
+  }, [photo.id]);
+
+  return (
+    <div className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-muted cursor-pointer" onClick={onView}>
+      {src ? (
+        <img src={src} alt={photo.name} className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {isOwner && (
+        <button
+          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={e => { e.stopPropagation(); onDelete(); }}
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: number }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -257,7 +387,8 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   const [downloading, setDownloading] = useState<number | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
 
-  const { data: files, isLoading } = trpc.property.listFiles.useQuery({ propertyId });
+  const { data: allFiles, isLoading } = trpc.property.listFiles.useQuery({ propertyId });
+  const files = (allFiles ?? []).filter(f => !IMAGE_EXTS.test(f.name));
   const uploadMutation = trpc.property.uploadFile.useMutation();
   const deleteMutation = trpc.property.deleteFile.useMutation();
   const utils = trpc.useUtils();
@@ -388,7 +519,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
 function IntroducerCard({ property }: { property: any }) {
   const [open, setOpen] = useState(false);
   const items = [
-    { label: "紹介者", value: property.userName },
+    { label: "登録者", value: property.userName },
     { label: "宅建番号", value: property.userLicense },
     { label: "会社名", value: property.userCompany },
     { label: "電話番号", value: property.userPhone },
@@ -402,7 +533,7 @@ function IntroducerCard({ property }: { property: any }) {
       <button className="w-full px-5 py-3.5 flex items-center justify-between text-left" onClick={() => setOpen(!open)}>
         <span className="font-semibold text-foreground text-sm flex items-center gap-2">
           <UserCircle className="w-4 h-4 text-primary" />
-          紹介者情報
+          登録者情報
         </span>
         {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
       </button>
@@ -639,6 +770,7 @@ export default function PropertyDetail() {
   );
 
   const { data: favoriteIds } = trpc.favorite.ids.useQuery();
+  const { data: announceCount } = trpc.chat.announceCount.useQuery({ propertyId }, { enabled: !!propertyId });
   const toggleFavMutation = trpc.favorite.toggle.useMutation();
   const isFavorite = (favoriteIds ?? []).includes(propertyId);
 
@@ -844,7 +976,7 @@ export default function PropertyDetail() {
     ["その他制限", property.otherRestrictions || "—"],
     ["価格交渉", property.negotiation],
     ["備考", property.remarks || "—"],
-    ["登録業者", property.userCompany || property.userName || "—"],
+    ["登録者", property.userCompany || property.userName || "—"],
     ["登録日", createdDate],
   ];
 
@@ -872,9 +1004,23 @@ export default function PropertyDetail() {
           <Button variant="outline" size="sm" className={`gap-1.5 ${isFavorite ? "text-red-500 border-red-200 bg-red-50" : ""}`} onClick={toggleFavorite}>
             <Heart className={`w-4 h-4 ${isFavorite ? "fill-red-500" : ""}`} />お気に入り
           </Button>
-          <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/chat/${property.id}`)}>
-            <MessageCircle className="w-4 h-4" />問い合わせチャット
-          </Button>
+          {property.userId !== user?.id && (
+            <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
+              <MessageCircle className="w-4 h-4" />登録者にDM
+            </Button>
+          )}
+          {property.userId === user?.id ? (
+            <Button variant="outline" size="sm" className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setLocation(`/chat/${property.id}`)}>
+              <Bell className="w-4 h-4" />お知らせを投稿
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/chat/${property.id}`)}>
+              <Bell className="w-4 h-4" />お知らせ
+              {(announceCount ?? 0) > 0 && (
+                <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 rounded-full">{announceCount}</span>
+              )}
+            </Button>
+          )}
           <Button
             variant="outline" size="sm" className="gap-1.5"
             onClick={async () => {
@@ -1055,11 +1201,11 @@ export default function PropertyDetail() {
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <p className="text-sm text-foreground leading-relaxed">{property.comment}</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">※ このコメントは登録業者が記入した内容です。</p>
+              <p className="text-xs text-muted-foreground mt-2">※ このコメントは登録者が記入した内容です。</p>
             </div>
           )}
 
-          {/* 紹介者 */}
+          {/* 登録者 */}
           <IntroducerCard property={property} />
 
           <div className="grid grid-cols-3 gap-3">
@@ -1182,7 +1328,11 @@ export default function PropertyDetail() {
               </div>
             </TabsContent>
 
-            <TabsContent value="files" className="mt-4">
+            <TabsContent value="files" className="mt-4 space-y-4">
+              <PropertyPhotos
+                isOwner={!!isOwner}
+                propertyId={propertyId}
+              />
               <PropertyFiles
                 isOwner={!!isOwner}
                 propertyId={propertyId}
@@ -1297,15 +1447,17 @@ export default function PropertyDetail() {
 
           <PropertyMemo propertyId={propertyId} />
 
-          <div className="bg-card border border-border rounded-lg p-5 flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-foreground">この物件について問い合わせる</h3>
-              <p className="text-sm text-muted-foreground mt-0.5">物件専用チャットルームで担当者・他の業者と情報交換できます</p>
+          {property.userId !== user?.id && (
+            <div className="bg-card border border-border rounded-lg p-5 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground">この物件について問い合わせる</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">登録者にダイレクトメッセージで問い合わせできます</p>
+              </div>
+              <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
+                <MessageCircle className="w-4 h-4" />登録者にDM
+              </Button>
             </div>
-            <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/chat/${property.id}`)}>
-              <MessageCircle className="w-4 h-4" />チャットルームへ
-            </Button>
-          </div>
+          )}
         </>
       )}
     </div>

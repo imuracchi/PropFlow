@@ -1,6 +1,6 @@
 import { eq, desc, count, and, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens } from "../drizzle/schema";
+import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -115,6 +115,11 @@ export async function getAdminStats() {
 export async function listProperties() {
   const db = await getDb();
   if (!db) return [];
+  const favCountSub = db
+    .select({ propertyId: favorites.propertyId, cnt: count().as("cnt") })
+    .from(favorites)
+    .groupBy(favorites.propertyId)
+    .as("fav_count");
   return db
     .select({
       id: properties.id,
@@ -143,9 +148,11 @@ export async function listProperties() {
       createdAt: properties.createdAt,
       userName: users.name,
       userCompany: users.company,
+      favoriteCount: sql<number>`COALESCE(${favCountSub.cnt}, 0)`.as("favoriteCount"),
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
+    .leftJoin(favCountSub, eq(properties.id, favCountSub.propertyId))
     .where(eq(properties.deleted, 0))
     .orderBy(desc(properties.createdAt));
 }
@@ -350,6 +357,12 @@ export async function getMemoPropertyIds(userId: number) {
   return result.map(r => r.propertyId);
 }
 
+export async function getAllMemos(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ propertyId: propertyMemos.propertyId, content: propertyMemos.content }).from(propertyMemos).where(eq(propertyMemos.userId, userId));
+}
+
 // ---- Favorites ----
 
 export async function getFavoritesByUserId(userId: number) {
@@ -432,6 +445,7 @@ export async function getMessagesByPropertyId(propertyId: number) {
       userId: messages.userId,
       content: messages.content,
       attachment: messages.attachment,
+      type: messages.type,
       createdAt: messages.createdAt,
       userName: users.name,
       userCompany: users.company,
@@ -442,7 +456,13 @@ export async function getMessagesByPropertyId(propertyId: number) {
     .orderBy(messages.createdAt);
 }
 
-export async function createMessage(data: { propertyId: number; userId: number; content: string; attachment?: string | null }) {
+export async function deleteMessage(messageId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(messages).where(and(eq(messages.id, messageId), eq(messages.userId, userId)));
+}
+
+export async function createMessage(data: { propertyId: number; userId: number; content: string; attachment?: string | null; type?: "message" | "announcement" | "system" }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.insert(messages).values({
@@ -450,6 +470,7 @@ export async function createMessage(data: { propertyId: number; userId: number; 
     userId: data.userId,
     content: data.content,
     attachment: data.attachment ?? null,
+    type: data.type ?? "message",
   });
 }
 
@@ -657,6 +678,32 @@ export async function getDirectMessages(userId1: number, userId2: number, proper
     .orderBy(directMessages.createdAt);
 }
 
+export async function getAnnouncementCount(propertyId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db
+    .select({ cnt: count() })
+    .from(messages)
+    .where(and(eq(messages.propertyId, propertyId), eq(messages.type, "announcement")));
+  return rows[0]?.cnt ?? 0;
+}
+
+export async function getDmUserIdsForProperty(propertyId: number, excludeUserId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .selectDistinct({ userId: directMessages.senderId })
+    .from(directMessages)
+    .where(eq(directMessages.propertyId, propertyId));
+  const rows2 = await db
+    .selectDistinct({ userId: directMessages.receiverId })
+    .from(directMessages)
+    .where(eq(directMessages.propertyId, propertyId));
+  const ids = new Set([...rows.map(r => r.userId), ...rows2.map(r => r.userId)]);
+  ids.delete(excludeUserId);
+  return [...ids];
+}
+
 export async function sendDirectMessage(senderId: number, receiverId: number, content: string, propertyId: number | null = null) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -847,4 +894,31 @@ export async function getInterestedUsersForMyProperties(userId: number) {
   }
 
   return result;
+}
+
+export async function getBuyerPreference(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(buyerPreferences).where(eq(buyerPreferences.userId, userId));
+  return rows[0] ?? null;
+}
+
+export async function upsertBuyerPreference(userId: number, data: {
+  areas?: string[] | null;
+  types?: string[] | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  minLandArea?: number | null;
+  maxLandArea?: number | null;
+  stations?: string | null;
+  notes?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getBuyerPreference(userId);
+  if (existing) {
+    await db.update(buyerPreferences).set(data).where(eq(buyerPreferences.userId, userId));
+  } else {
+    await db.insert(buyerPreferences).values({ userId, ...data });
+  }
 }

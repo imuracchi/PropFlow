@@ -20,24 +20,38 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
-  Building2, LogOut, PanelLeft,
+  Building2, LogOut, PanelLeft, Target, Bell,
   Upload, List, MessageCircle, ShieldCheck, ChevronRight, UserCircle, Heart, HelpCircle, Users
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 
-const baseMenuItems = [
-  { icon: List, label: "物件一覧", path: "/properties" },
-  { icon: Upload, label: "物件登録", path: "/upload" },
-  { icon: Heart, label: "お気に入り", path: "/favorites" },
-  { icon: MessageCircle, label: "チャット", path: "/chat" },
-  { icon: Users, label: "興味者リスト", path: "/interested" },
-  { icon: UserCircle, label: "マイページ", path: "/mypage" },
-  { icon: HelpCircle, label: "できること", path: "/features" },
+type MenuItem = { icon: typeof List; label: string; path: string };
+type MenuSection = { title: string | null; items: MenuItem[] };
+
+const baseSections: MenuSection[] = [
+  { title: "買いたい", items: [
+    { icon: List, label: "物件一覧", path: "/properties" },
+    { icon: Target, label: "希望条件", path: "/buyer-preference" },
+    { icon: Heart, label: "お気に入り", path: "/favorites" },
+    { icon: MessageCircle, label: "質問や相談DM", path: "/dm-list" },
+  ]},
+  { title: "売りたい", items: [
+    { icon: Upload, label: "物件登録", path: "/upload" },
+    { icon: Building2, label: "自社物件一覧", path: "/my-properties" },
+    { icon: Bell, label: "お知らせ管理", path: "/chat-sell" },
+    { icon: Users, label: "興味者リスト", path: "/interested" },
+  ]},
+  { title: "マイページ", items: [
+    { icon: UserCircle, label: "マイページ", path: "/mypage" },
+    { icon: HelpCircle, label: "できること", path: "/features" },
+  ]},
 ];
 
-const adminMenuItem = { icon: ShieldCheck, label: "管理画面", path: "/admin", adminOnly: true };
+const adminSection: MenuSection = { title: null, items: [
+  { icon: ShieldCheck, label: "管理画面", path: "/admin" },
+] };
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 230;
@@ -82,9 +96,12 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const menuItems = user?.role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMenuItems;
-  const activeMenuItem = [...menuItems].sort((a, b) => b.path.length - a.path.length).find(item =>
-    location === item.path || (item.path !== "/mypage" && location.startsWith(item.path))
+  const sections = user?.role === "admin" ? [...baseSections, adminSection] : baseSections;
+  const allItems = sections.flatMap(s => s.items);
+  const matchPath = (basePath: string) =>
+    location === basePath || location.startsWith(basePath + "/");
+  const activeMenuItem = [...allItems].sort((a, b) => b.path.length - a.path.length).find(item =>
+    matchPath(item.path.split("?")[0])
   );
   const isMobile = useIsMobile();
 
@@ -135,41 +152,47 @@ function DashboardLayoutContent({
 
           {/* ナビゲーション */}
           <SidebarContent className="gap-0 pt-3">
-            {!isCollapsed && (
-              <p className="text-[10px] font-semibold text-sidebar-foreground/30 uppercase tracking-widest px-5 pb-2">
-                Menu
-              </p>
-            )}
-            <SidebarMenu className="px-2 space-y-0.5">
-              {menuItems.map(item => {
-                const isActive = item.path === "/mypage"
-                  ? location === "/mypage"
-                  : location.startsWith(item.path);
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => { setLocation(item.path); if (isMobile) toggleSidebar(); }}
-                      tooltip={item.label}
-                      className={`h-10 rounded-lg transition-all font-normal group/item relative ${
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-foreground font-medium"
-                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
-                      }`}
-                    >
-                      {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-sidebar-primary rounded-r-full" />
-                      )}
-                      <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-sidebar-primary" : ""}`} />
-                      <span className="text-sm">{item.label}</span>
-                      {isActive && !isCollapsed && (
-                        <ChevronRight className="ml-auto h-3 w-3 text-sidebar-foreground/30" />
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            {sections.map((section, si) => (
+              <div key={si}>
+                {!isCollapsed && section.title && (
+                  <p className="text-[10px] font-semibold text-sidebar-foreground/30 uppercase tracking-widest px-5 pb-1 pt-4">
+                    {section.title}
+                  </p>
+                )}
+                {isCollapsed && section.title && (
+                  <div className="mx-auto my-2 w-5 border-t border-sidebar-border" />
+                )}
+                <SidebarMenu className="px-2 space-y-0.5">
+                  {section.items.map(item => {
+                    const basePath = item.path.split("?")[0];
+                    const isActive = matchPath(basePath);
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          onClick={() => { setLocation(item.path); if (isMobile) toggleSidebar(); }}
+                          tooltip={item.label}
+                          className={`h-10 rounded-lg transition-all font-normal group/item relative ${
+                            isActive
+                              ? "bg-sidebar-accent text-sidebar-foreground font-medium"
+                              : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
+                          }`}
+                        >
+                          {isActive && (
+                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-sidebar-primary rounded-r-full" />
+                          )}
+                          <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-sidebar-primary" : ""}`} />
+                          <span className="text-sm">{item.label}</span>
+                          {isActive && !isCollapsed && (
+                            <ChevronRight className="ml-auto h-3 w-3 text-sidebar-foreground/30" />
+                          )}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </div>
+            ))}
           </SidebarContent>
 
           {/* フッター */}

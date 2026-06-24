@@ -17,6 +17,7 @@ import MyPage from "./pages/MyPage";
 import Admin from "./pages/Admin";
 import InterestedUsers from "./pages/InterestedUsers";
 import Features from "./pages/Features";
+import BuyerPreference from "./pages/BuyerPreference";
 import Register from "./pages/Register";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
@@ -148,12 +149,25 @@ function AppContent() {
             </DashboardLayout>
           )}
         </Route>
-        <Route path="/chat">
+        <Route path="/chat-sell">
+          {() => (
+            <DashboardLayout>
+              <ChatList mode="owner" />
+            </DashboardLayout>
+          )}
+        </Route>
+        <Route path="/dm-list">
           {() => (
             <DashboardLayout>
               <ChatList />
             </DashboardLayout>
           )}
+        </Route>
+        <Route path="/buyer-preference">
+          {() => (<DashboardLayout><BuyerPreference /></DashboardLayout>)}
+        </Route>
+        <Route path="/my-properties">
+          {() => (<DashboardLayout><PropertyList mode="mine" /></DashboardLayout>)}
         </Route>
         <Route path="/favorites">
           {() => (<DashboardLayout><Favorites /></DashboardLayout>)}
