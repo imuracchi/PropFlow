@@ -74,7 +74,11 @@ async function printProperty(
   },
   createdDate: string,
   myLogo: string | null | undefined,
-  myUser: { name: string | null; company: string | null; email: string; phone: string | null; fax: string | null; url: string | null; license: string | null } | null
+  myUser: { name: string | null; company: string | null; email: string; phone: string | null; fax: string | null; url: string | null; license: string | null } | null,
+  photoDataUrls?: string[],
+  w?: Window | null,
+  pages?: { summary: boolean; map: boolean; streetview: boolean; photos: boolean; route: boolean; attachments: boolean },
+  attachmentNames?: string[]
 ) {
   const addr = encodeURIComponent(p.address);
   const key = GOOGLE_MAPS_API_KEY;
@@ -86,7 +90,7 @@ async function printProperty(
     ? `<img src="${myLogo}" alt="logo" style="height:50px;max-width:260px;object-fit:contain;" />`
     : (myUser?.company
       ? `<span style="font-size:18px;font-weight:700;">${myUser.company}</span>`
-      : `<span style="font-size:18px;font-weight:700;color:#1e40af;">PropFlow</span>`);
+      : ``);
   const v = (s: string | null | undefined) => s || "—";
   const contactRows = myUser ? [
     ["会社名", myUser.company], ["担当者", myUser.name], ["宅建番号", myUser.license],
@@ -94,6 +98,12 @@ async function printProperty(
   ].filter(([, val]) => val).map(([l, val]) => `<tr><th>${l}</th><td>${val}</td></tr>`).join("") : "";
   const footer = `<div class="ft">${myUser?.company || "PropFlow"} - 物件紹介資料</div>`;
   const hdr = `<div class="hdr"><div>${logoHtml}</div><div class="hdr-r">出力日: ${new Date().toLocaleDateString("ja-JP")}</div></div>`;
+
+  const pg = pages ?? { summary: true, map: true, streetview: true, photos: true, route: true, attachments: true };
+  if (!w) {
+    w = window.open("", "_blank");
+    if (!w) return;
+  }
 
   let routeData: { polyline: string; duration: string; distance: string; startLat: number; startLng: number; endLat: number; endLng: number; steps: { instruction: string; distance: string }[] } | null = null;
   const quoteMatch = p.transport?.match(/「([^」]+)」駅/);
@@ -147,7 +157,7 @@ ${footer}
 
   const html = `<!DOCTYPE html>
 <html lang="ja"><head><meta charset="UTF-8">
-<title>${p.name} - 物件紹介資料</title>
+<title>${p.name}物件概要</title>
 <style>
 @page{size:A4 portrait;margin:12mm 15mm}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -179,9 +189,19 @@ table.ct th{background:#e8edf2;color:#334155;font-weight:600;width:72px}
 .mi img{max-width:100%;border:1px solid #d0d7de}
 .tb{background:#f8fafc;border:1px solid #d0d7de;padding:10px 14px;margin-bottom:14px;font-size:12px}
 @media screen{body{background:#cbd5e1}.page{width:210mm;min-height:297mm;background:#fff;margin:20px auto;padding:12mm 15mm;box-shadow:0 2px 12px rgba(0,0,0,.18)}}
+.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:#1e3a5f;padding:10px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.toolbar button{background:#fff;color:#1e3a5f;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.toolbar button:hover{background:#e2e8f0}
+.toolbar .title{color:#fff;font-size:14px;font-weight:600;flex:1}
+@media print{.toolbar{display:none}body{background:#fff}}
 </style></head><body>
+<div class="toolbar">
+<span class="title">紹介資料プレビュー</span>
+<button onclick="window.print()">🖨 印刷 / PDF保存</button>
+</div>
+<div style="height:52px"></div>
 
-<div class="page">
+${pg.summary ? `<div class="page">
 ${hdr}
 <div class="ttl">物 件 概 要 書</div>
 <div class="pn">${p.name}</div>
@@ -208,32 +228,62 @@ ${p.comment ? `<div class="cmt"><b>紹介コメント</b>${p.comment}</div>` : "
 </table>
 ${myUser ? `<div class="sec">お問い合わせ先</div><table class="ct">${contactRows}</table>` : ""}
 ${footer}
-</div>
+</div>` : ""}
 
-<div class="page">
+${pg.map ? `<div class="page">
 ${hdr}
 <div class="mt">所在地地図</div>
 <div class="ma">📍 ${p.address}</div>
 <div class="mi"><img src="${mapImg}" alt="所在地地図" /></div>
 ${footer}
-</div>
+</div>` : ""}
 
-<div class="page">
+${pg.streetview ? `<div class="page">
 ${hdr}
 <div class="mt">現地写真（ストリートビュー）</div>
 <div class="ma">📍 ${p.address}</div>
 <div class="mi"><img src="${svImg}" alt="ストリートビュー" /></div>
 ${footer}
-</div>
+</div>` : ""}
 
-${page4}
+${pg.photos && photoDataUrls && photoDataUrls.length > 0 ? `<div class="page">
+${hdr}
+<div class="mt">現場写真（${photoDataUrls.length}枚）</div>
+<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px;">
+${photoDataUrls.map((src, i) => `<img src="${src}" alt="写真${i + 1}" style="width:100%;border:1px solid #d0d7de;border-radius:4px;object-fit:cover;aspect-ratio:4/3;" />`).join("\n")}
+</div>
+${footer}
+</div>` : ""}
+
+${pg.route ? page4 : ""}
+
+${pg.attachments && attachmentNames && attachmentNames.length > 0 ? `<div class="page">
+${hdr}
+<div class="mt">添付資料一覧</div>
+<table class="dt" style="margin-top:16px;">
+<tr><th style="width:40px;">№</th><th>資料名</th></tr>
+${attachmentNames.map((name, i) => `<tr><td style="text-align:center;">${i + 1}</td><td>${name}</td></tr>`).join("\n")}
+</table>
+${footer}
+</div>` : ""}
 
 </body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) return;
+  w.document.open();
   w.document.write(html);
   w.document.close();
-  w.onload = () => { w.print(); };
+  return html;
+}
+
+function previewBase64File(name: string, base64: string) {
+  const byteString = atob(base64);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+  const ext = name.split(".").pop()?.toLowerCase() ?? "pdf";
+  const mime = ext === "pdf" ? "application/pdf" : `image/${ext}`;
+  const blob = new Blob([ab], { type: mime });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
 }
 
 function downloadBase64File(name: string, base64: string) {
@@ -241,7 +291,9 @@ function downloadBase64File(name: string, base64: string) {
   const ab = new ArrayBuffer(byteString.length);
   const ia = new Uint8Array(ab);
   for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-  const blob = new Blob([ab], { type: "application/pdf" });
+  const ext = name.split(".").pop()?.toLowerCase() ?? "pdf";
+  const mime = ext === "pdf" ? "application/pdf" : `image/${ext}`;
+  const blob = new Blob([ab], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -262,7 +314,7 @@ function PropertyPhotos({ isOwner, propertyId }: { isOwner: boolean; propertyId:
   const deleteMutation = trpc.property.deleteFile.useMutation();
   const utils = trpc.useUtils();
 
-  const photos = (files ?? []).filter(f => IMAGE_EXTS.test(f.name));
+  const photos = (files ?? []).filter(f => (f as any).category === "photo");
 
   const fileToBase64 = (file: File): Promise<string> =>
     file.arrayBuffer().then(buf =>
@@ -275,7 +327,7 @@ function PropertyPhotos({ isOwner, propertyId }: { isOwner: boolean; propertyId:
     setUploading(true);
     for (const img of imgs) {
       const base64 = await fileToBase64(img);
-      await uploadMutation.mutateAsync({ propertyId, name: img.name, size: img.size, contentBase64: base64 });
+      await uploadMutation.mutateAsync({ propertyId, name: img.name, size: img.size, contentBase64: base64, category: "photo" });
     }
     utils.property.listFiles.invalidate({ propertyId });
     setUploading(false);
@@ -388,7 +440,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   const [downloadingAll, setDownloadingAll] = useState(false);
 
   const { data: allFiles, isLoading } = trpc.property.listFiles.useQuery({ propertyId });
-  const files = (allFiles ?? []).filter(f => !IMAGE_EXTS.test(f.name));
+  const files = (allFiles ?? []).filter(f => (f as any).category !== "photo");
   const uploadMutation = trpc.property.uploadFile.useMutation();
   const deleteMutation = trpc.property.deleteFile.useMutation();
   const utils = trpc.useUtils();
@@ -416,6 +468,11 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   const handleDelete = async (fileId: number) => {
     await deleteMutation.mutateAsync({ fileId });
     utils.property.listFiles.invalidate({ propertyId });
+  };
+
+  const handlePreview = async (fileId: number) => {
+    const result = await utils.property.downloadFile.fetch({ fileId });
+    if (result) previewBase64File(result.name, result.contentBase64);
   };
 
   const handleDownload = async (fileId: number) => {
@@ -494,7 +551,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
           {currentFiles.map(file => (
             <div key={file.id} className="flex items-center gap-3 px-5 py-3.5">
               <FileText className="w-5 h-5 text-red-500 shrink-0" />
-              <span className="text-sm text-foreground flex-1">{file.name}</span>
+              <button className="text-sm text-primary hover:underline flex-1 text-left truncate" onClick={() => handlePreview(file.id)}>{file.name}</button>
               <span className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
               <button
                 className="text-primary hover:text-primary/70 p-1"
@@ -799,8 +856,16 @@ export default function PropertyDetail() {
   const [generatingComment, setGeneratingComment] = useState(false);
   const [analyzingTransport, setAnalyzingTransport] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [printPages, setPrintPages] = useState({ summary: true, map: true, streetview: true, photos: true, route: true, attachments: true });
+  const [printAttachments, setPrintAttachments] = useState<Set<number>>(new Set());
+  const [printDocFiles, setPrintDocFiles] = useState<{ id: number; name: string }[]>([]);
+  const [printGenerating, setPrintGenerating] = useState(false);
 
   const updateMutation = trpc.property.update.useMutation();
+  const saveDocMutation = trpc.document.save.useMutation({
+    onSuccess: () => utils.document.list.invalidate(),
+  });
   const transportMutation = trpc.property.analyzeTransport.useMutation();
   const deleteMutation = trpc.property.delete.useMutation();
   const commentMutation = trpc.property.generateComment.useMutation();
@@ -1033,7 +1098,13 @@ export default function PropertyDetail() {
               }
             }}
           ><Share2 className="w-4 h-4" />共有</Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => printProperty(property, createdDate, user?.logoBase64, user ? { name: user.name, company: user.company, email: user.email, phone: user.phone, fax: user.fax, url: user.url, license: user.license } : null)}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={async () => {
+            const files = await utils.property.listFiles.fetch({ propertyId: property.id });
+            const docs = (files ?? []).filter((f: any) => f.category !== "photo" && /\.pdf$/i.test(f.name));
+            setPrintDocFiles(docs.map((f: any) => ({ id: f.id, name: f.name })));
+            setPrintAttachments(new Set(docs.map((f: any) => f.id)));
+            setShowPrintDialog(true);
+          }}>
             <FileText className="w-4 h-4" />紹介資料
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportPropertyCsv(property, details, createdDate)}>
@@ -1049,6 +1120,126 @@ export default function PropertyDetail() {
           )}
         </div>
       </div>
+
+      {/* 紹介資料ページ選択ダイアログ */}
+      {showPrintDialog && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-xl shadow-lg p-6 max-w-sm w-full mx-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">紹介資料の作成</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">含めるページを選択してください</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {([
+                { key: "summary", label: "物件概要書" },
+                { key: "map", label: "所在地地図" },
+                { key: "streetview", label: "ストリートビュー" },
+                { key: "photos", label: "現場写真" },
+                { key: "route", label: "交通アクセス（徒歩ルート）" },
+              ] as const).map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    className="accent-primary w-4 h-4"
+                    checked={printPages[key]}
+                    onChange={() => setPrintPages(prev => ({ ...prev, [key]: !prev[key] }))}
+                  />
+                  <span className="text-sm text-foreground">{label}</span>
+                </label>
+              ))}
+              {printDocFiles.length > 0 && (
+                <>
+                  <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      className="accent-primary w-4 h-4"
+                      checked={printPages.attachments}
+                      onChange={() => setPrintPages(prev => ({ ...prev, attachments: !prev.attachments }))}
+                    />
+                    <span className="text-sm text-foreground font-medium">添付資料一覧</span>
+                  </label>
+                  {printPages.attachments && (
+                    <div className="ml-8 space-y-1 border-l-2 border-border pl-3">
+                      {printDocFiles.map(f => (
+                        <label key={f.id} className="flex items-center gap-2 py-1 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors">
+                          <input
+                            type="checkbox"
+                            className="accent-primary w-3.5 h-3.5"
+                            checked={printAttachments.has(f.id)}
+                            onChange={() => setPrintAttachments(prev => {
+                              const next = new Set(prev);
+                              next.has(f.id) ? next.delete(f.id) : next.add(f.id);
+                              return next;
+                            })}
+                          />
+                          <FileText className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{f.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setShowPrintDialog(false)}>キャンセル</Button>
+              <Button
+                className="flex-1 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={printGenerating || !Object.values(printPages).some(v => v)}
+                onClick={() => {
+                  setPrintGenerating(true);
+                  const w = window.open("", "_blank");
+                  if (!w) { setPrintGenerating(false); return; }
+                  w.document.write(`<html><head><title>作成中</title></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666;"><p>紹介資料を作成中...</p></body></html>`);
+                  (async () => {
+                    try {
+                      let photoUrls: string[] = [];
+                      if (printPages.photos) {
+                        const files = await utils.property.listFiles.fetch({ propertyId: property.id });
+                        const photos = (files ?? []).filter((f: any) => f.category === "photo");
+                        const results = await Promise.all(photos.map(photo =>
+                          utils.property.downloadFile.fetch({ fileId: photo.id }).then(dl => {
+                            if (!dl) return null;
+                            const ext = photo.name.split(".").pop()?.toLowerCase() ?? "jpg";
+                            const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+                            return `data:${mime};base64,${(dl as any).contentBase64}`;
+                          })
+                        ));
+                        photoUrls = results.filter((u): u is string => !!u);
+                      }
+                      const selectedAttachNames = printPages.attachments
+                        ? printDocFiles.filter(f => printAttachments.has(f.id)).map(f => f.name)
+                        : [];
+                      const html = await printProperty(property, createdDate, user?.logoBase64, user ? { name: user.name, company: user.company, email: user.email, phone: user.phone, fax: user.fax, url: user.url, license: user.license } : null, photoUrls, w, printPages, selectedAttachNames);
+                      if (html) {
+                        saveDocMutation.mutate({
+                          propertyId: property.id,
+                          title: `${property.name} - ${new Date().toLocaleDateString("ja-JP")}`,
+                          htmlContent: html,
+                          attachmentIds: [...printAttachments],
+                        });
+                      }
+                    } catch (e) {
+                      console.error("紹介資料エラー:", e);
+                      w.document.body.innerHTML = `<p style="color:red;">紹介資料の作成に失敗しました</p>`;
+                    }
+                    setPrintGenerating(false);
+                    setShowPrintDialog(false);
+                  })();
+                }}
+              >
+                {printGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                作成
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 削除確認ダイアログ */}
       {showDeleteConfirm && (
@@ -1226,8 +1417,8 @@ export default function PropertyDetail() {
           <Tabs defaultValue="overview">
             <TabsList className="w-full grid grid-cols-4 bg-muted">
               <TabsTrigger value="overview">物件概要</TabsTrigger>
-              <TabsTrigger value="files" className="gap-1.5"><FileText className="w-3.5 h-3.5" />ファイル</TabsTrigger>
-              <TabsTrigger value="map" className="gap-1.5"><Map className="w-3.5 h-3.5" />地図</TabsTrigger>
+              <TabsTrigger value="files" className="gap-1.5"><FileText className="w-3.5 h-3.5" />資料</TabsTrigger>
+              <TabsTrigger value="map" className="gap-1.5"><Map className="w-3.5 h-3.5" />地図と写真</TabsTrigger>
               <TabsTrigger value="faq" className="gap-1.5"><HelpCircle className="w-3.5 h-3.5" />よくある質問</TabsTrigger>
             </TabsList>
 
@@ -1329,10 +1520,6 @@ export default function PropertyDetail() {
             </TabsContent>
 
             <TabsContent value="files" className="mt-4 space-y-4">
-              <PropertyPhotos
-                isOwner={!!isOwner}
-                propertyId={propertyId}
-              />
               <PropertyFiles
                 isOwner={!!isOwner}
                 propertyId={propertyId}
@@ -1380,6 +1567,10 @@ export default function PropertyDetail() {
                   </a>
                 </div>
               </div>
+              <PropertyPhotos
+                isOwner={!!isOwner}
+                propertyId={propertyId}
+              />
             </TabsContent>
 
             <TabsContent value="faq" className="mt-4">

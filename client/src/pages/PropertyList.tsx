@@ -334,6 +334,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       </td>
                       <td className="px-4 py-4">
                         <div className="hidden md:flex items-center gap-2 mb-1">
+                          <span className="text-[10px] text-muted-foreground/60">#{property.id}</span>
                           <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">
                             {property.type}
                           </span>

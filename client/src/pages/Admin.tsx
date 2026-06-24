@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Users, Building2, CheckCircle2, XCircle, Clock,
-  Search, MessageCircle,
+  Search, MessageCircle, Bell, ScrollText, Shield,
   MoreHorizontal, ArrowUpRight, Loader2, UserPlus, FileText, Ban, UserCheck,
   Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin
 } from "lucide-react";
@@ -38,6 +38,9 @@ export default function Admin() {
   const { data: pendingUsers, isLoading: pendingLoading } = trpc.admin.pendingUsers.useQuery();
   const { data: allUsers, isLoading: usersLoading } = trpc.admin.allUsers.useQuery();
   const { data: adminProperties } = trpc.admin.allProperties.useQuery();
+  const { data: activityLogs } = trpc.admin.activityLogs.useQuery();
+  const { data: adminDmMessages } = trpc.admin.allDmMessages.useQuery();
+  const { data: adminAnnouncements } = trpc.admin.allAnnouncements.useQuery();
 
   const approveMutation = trpc.admin.approveUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const rejectMutation = trpc.admin.rejectUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.stats.invalidate(); } });
@@ -48,6 +51,8 @@ export default function Admin() {
   const hidePropMutation = trpc.admin.hideProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const restorePropMutation = trpc.admin.restoreProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const hardDeleteMutation = trpc.admin.hardDeleteProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); setDeleteTarget(null); } });
+  const deleteDmMutation = trpc.admin.deleteDm.useMutation({ onSuccess: () => { utils.admin.allDmMessages.invalidate(); } });
+  const deleteAnnounceMutation = trpc.admin.deleteAnnouncement.useMutation({ onSuccess: () => { utils.admin.allAnnouncements.invalidate(); } });
 
   const pendingCount = pendingUsers?.length ?? 0;
 
@@ -118,6 +123,18 @@ export default function Admin() {
           <TabsTrigger value="properties" className="gap-1.5">
             <Building2 className="w-3.5 h-3.5" />
             物件管理
+          </TabsTrigger>
+          <TabsTrigger value="dm" className="gap-1.5">
+            <MessageCircle className="w-3.5 h-3.5" />
+            DM管理
+          </TabsTrigger>
+          <TabsTrigger value="announce" className="gap-1.5">
+            <Bell className="w-3.5 h-3.5" />
+            お知らせ管理
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="gap-1.5">
+            <ScrollText className="w-3.5 h-3.5" />
+            操作ログ
           </TabsTrigger>
         </TabsList>
 
@@ -200,7 +217,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["業者名", "メール", "プラン", "ステータス", "登録日", "操作"].map(h => (
+                    {["業者名", "メール", "プラン", "ステータス", "最終ログイン", "規約同意", "操作"].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -247,7 +264,14 @@ export default function Admin() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">
-                          {new Date(user.createdAt).toLocaleDateString("ja-JP")}
+                          {new Date(user.lastSignedIn).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td className="px-4 py-3">
+                          {(user as any).termsAgreedAt ? (
+                            <span className="text-xs text-green-600 font-medium">済</span>
+                          ) : (
+                            <span className="text-xs text-red-500 font-medium">未</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <DropdownMenu>
@@ -298,7 +322,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["物件名", "登録業者", "価格", "表示", "登録日", "操作"].map(h => (
+                    {["ID", "物件名", "登録者", "価格", "表示", "登録日", "操作"].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -308,6 +332,7 @@ export default function Admin() {
                     const isHidden = prop.deleted === 1;
                     return (
                       <tr key={prop.id} className={`hover:bg-muted/30 transition-colors ${isHidden ? "opacity-50" : ""}`}>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">#{prop.id}</td>
                         <td className="px-4 py-3 font-medium text-primary text-xs"><a href={`/property/${prop.id}`} className="hover:underline">{prop.name}</a></td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{prop.userCompany ?? "—"}</td>
                         <td className="px-4 py-3 text-foreground text-xs font-semibold">{prop.price?.toLocaleString() ?? "応相談"}</td>
@@ -354,6 +379,127 @@ export default function Admin() {
               </table>
             </div>
 
+          )}
+        </TabsContent>
+
+        {/* DM管理タブ */}
+        <TabsContent value="dm" className="mt-4 space-y-4">
+          {(adminDmMessages ?? []).length === 0 ? (
+            <div className="bg-card border border-border rounded-lg py-12 text-center text-muted-foreground">DMはありません</div>
+          ) : (
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <div className="max-h-[600px] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-card"><tr className="border-b border-border">
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">№</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">物件名</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">内容</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">発言者</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">日時</th>
+                    <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground">操作</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-border">
+                    {(adminDmMessages ?? []).map((m: any) => {
+                      const dmUrl = m.propertyId ? `/dm/${m.receiverId}/${m.propertyId}` : `/dm/${m.receiverId}`;
+                      return (
+                        <tr key={m.id}>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground">#{m.id}</td>
+                          <td className="px-4 py-2.5 text-sm">{m.propertyName || "—"}</td>
+                          <td className="px-4 py-2.5 text-sm max-w-[250px] truncate">{m.content}</td>
+                          <td className="px-4 py-2.5">
+                            <button className="text-sm text-primary hover:underline" onClick={() => window.open(dmUrl, "_blank")}>
+                              {m.senderName ?? "?"}
+                              {m.senderCompany && <span className="text-xs text-muted-foreground ml-1">({m.senderCompany})</span>}
+                            </button>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{new Date(m.createdAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+                          <td className="px-4 py-2.5 text-center">
+                            <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1 h-6 px-2"
+                              onClick={() => { if (confirm("このDMを削除しますか？")) deleteDmMutation.mutate({ messageId: m.id }); }}
+                            ><Trash2 className="w-3 h-3" />削除</Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* お知らせ管理タブ */}
+        <TabsContent value="announce" className="mt-4 space-y-4">
+          {(adminAnnouncements ?? []).length === 0 ? (
+            <div className="bg-card border border-border rounded-lg py-12 text-center text-muted-foreground">お知らせはありません</div>
+          ) : (
+            <div className="space-y-3">
+              {(adminAnnouncements ?? []).map((a: any) => (
+                <div key={a.id} className="bg-card border border-amber-200 rounded-lg overflow-hidden">
+                  <div className="bg-amber-50 px-4 py-2 flex items-center gap-2 border-b border-amber-200">
+                    <Bell className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-xs font-semibold text-amber-800">{a.propertyName || `物件#${a.propertyId}`}</span>
+                    <span className="text-[10px] text-amber-400">#{a.id}</span>
+                    <span className="text-xs text-amber-500 ml-auto">{new Date(a.createdAt).toLocaleString("ja-JP")}</span>
+                    <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1 h-6 px-2"
+                      onClick={() => { if (confirm("このお知らせを削除しますか？")) deleteAnnounceMutation.mutate({ messageId: a.id }); }}
+                    ><Trash2 className="w-3 h-3" />削除</Button>
+                  </div>
+                  <div className="px-4 py-2.5">
+                    <p className="text-sm">{a.content}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{a.userName}{a.userCompany ? `（${a.userCompany}）` : ""}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* 操作ログタブ */}
+        <TabsContent value="logs" className="mt-4 space-y-4">
+          {(activityLogs ?? []).length === 0 ? (
+            <div className="bg-card border border-border rounded-lg py-12 text-center text-muted-foreground">操作ログはありません</div>
+          ) : (
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <div className="max-h-[600px] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-card"><tr className="border-b border-border">
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">№</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">日時</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">ユーザー</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">アクション</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">詳細</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-border">
+                    {(activityLogs ?? []).map((log: any) => (
+                      <tr key={log.id}>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">#{log.id}</td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{new Date(log.createdAt).toLocaleString("ja-JP")}</td>
+                        <td className="px-4 py-2.5 text-sm">{log.userName ?? "?"}<span className="text-xs text-muted-foreground ml-1">{log.userCompany ? `(${log.userCompany})` : ""}</span></td>
+                        <td className="px-4 py-2.5">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                            log.action === "login" ? "bg-green-100 text-green-700" :
+                            log.action === "property_create" ? "bg-blue-100 text-blue-700" :
+                            log.action === "dm_send" ? "bg-violet-100 text-violet-700" :
+                            log.action === "announce" ? "bg-amber-100 text-amber-700" :
+                            log.action === "terms_agree" ? "bg-emerald-100 text-emerald-700" :
+                            "bg-muted text-muted-foreground"
+                          }`}>{
+                            log.action === "login" ? "ログイン" :
+                            log.action === "property_create" ? "物件登録" :
+                            log.action === "dm_send" ? "DM送信" :
+                            log.action === "announce" ? "お知らせ" :
+                            log.action === "terms_agree" ? "規約同意" :
+                            log.action
+                          }</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{log.detail ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </TabsContent>
       </Tabs>

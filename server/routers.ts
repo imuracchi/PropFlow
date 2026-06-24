@@ -36,6 +36,7 @@ export const appRouter = router({
           return { success: false, error: "アカウントが停止されています。管理者にお問い合わせください" } as const;
         }
         await db.updateLastSignedIn(user.id);
+        db.logActivity(user.id, "login").catch(() => {});
         const token = await createSessionToken(user.id, user.openId);
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
@@ -185,6 +186,13 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    agreeTerms: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        await db.agreeToTerms(ctx.user.id);
+        db.logActivity(ctx.user.id, "terms_agree", "利用規約に同意").catch(() => {});
+        return { success: true };
+      }),
+
     unsubscribePush: protectedProcedure
       .input(z.object({ endpoint: z.string() }))
       .mutation(async ({ input, ctx }) => {
@@ -265,6 +273,7 @@ export const appRouter = router({
           files: input.files ?? null,
         });
         if (result) {
+          db.logActivity(ctx.user.id, "property_create", `物件「${input.name}」を登録`).catch(() => {});
         }
         return result;
       }),
@@ -326,9 +335,10 @@ export const appRouter = router({
         name: z.string(),
         size: z.number(),
         contentBase64: z.string(),
+        category: z.enum(["document", "photo"]).optional(),
       }))
       .mutation(async ({ input }) => {
-        await db.addPropertyFile(input);
+        await db.addPropertyFile({ ...input, category: input.category ?? "document" });
         return { success: true };
       }),
 
@@ -517,6 +527,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         await db.rejoinDm(ctx.user.id, input.receiverId, input.propertyId ?? null);
         await db.sendDirectMessage(ctx.user.id, input.receiverId, input.content, input.propertyId ?? null);
+        db.logActivity(ctx.user.id, "dm_send", `DM送信 (相手ID:${input.receiverId})`).catch(() => {});
         return { success: true };
       }),
 
@@ -634,6 +645,7 @@ export const appRouter = router({
           content: input.content,
           type: "announcement",
         });
+        db.logActivity(ctx.user.id, "announce", `お知らせ投稿 (物件ID:${input.propertyId})`).catch(() => {});
         const dmUserIds = await db.getDmUserIdsForProperty(input.propertyId, ctx.user.id);
         if (dmUserIds.length > 0) {
           const { sendPushToUsers } = await import("./_core/webpush");
@@ -682,6 +694,37 @@ export const appRouter = router({
           stations: input.stations ?? null,
           notes: input.notes ?? null,
         });
+        return { success: true };
+      }),
+  }),
+
+  document: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return db.listGeneratedDocuments(ctx.user.id);
+    }),
+
+    save: protectedProcedure
+      .input(z.object({
+        propertyId: z.number(),
+        title: z.string(),
+        htmlContent: z.string(),
+        attachmentIds: z.array(z.number()),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await db.saveGeneratedDocument({ userId: ctx.user.id, ...input });
+        return { success: true };
+      }),
+
+    getHtml: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input, ctx }) => {
+        return db.getGeneratedDocumentHtml(input.id, ctx.user.id);
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.deleteGeneratedDocument(input.id, ctx.user.id);
         return { success: true };
       }),
   }),
@@ -776,6 +819,32 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         await db.updateUserPlan(input.id, input.plan);
+        return { success: true };
+      }),
+
+    activityLogs: adminProcedure.query(async () => {
+      return db.getActivityLogs(500);
+    }),
+
+    allDmMessages: adminProcedure.query(async () => {
+      return db.getAllDmMessagesAdmin();
+    }),
+
+    deleteDm: adminProcedure
+      .input(z.object({ messageId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.adminDeleteDm(input.messageId);
+        return { success: true };
+      }),
+
+    allAnnouncements: adminProcedure.query(async () => {
+      return db.getAllAnnouncementsAdmin();
+    }),
+
+    deleteAnnouncement: adminProcedure
+      .input(z.object({ messageId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.adminDeleteMessage(input.messageId);
         return { success: true };
       }),
   }),

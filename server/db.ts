@@ -1,6 +1,6 @@
 import { eq, desc, count, and, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences } from "../drizzle/schema";
+import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -297,7 +297,7 @@ export async function listPropertyFiles(propertyId: number) {
   const db = await getDb();
   if (!db) return [];
   return db
-    .select({ id: propertyFiles.id, name: propertyFiles.name, size: propertyFiles.size, createdAt: propertyFiles.createdAt })
+    .select({ id: propertyFiles.id, name: propertyFiles.name, size: propertyFiles.size, category: propertyFiles.category, createdAt: propertyFiles.createdAt })
     .from(propertyFiles)
     .where(eq(propertyFiles.propertyId, propertyId))
     .orderBy(propertyFiles.createdAt);
@@ -310,7 +310,7 @@ export async function getPropertyFileContent(fileId: number) {
   return result[0] ?? null;
 }
 
-export async function addPropertyFile(data: { propertyId: number; name: string; size: number; contentBase64: string }) {
+export async function addPropertyFile(data: { propertyId: number; name: string; size: number; contentBase64: string; category?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.insert(propertyFiles).values(data);
@@ -921,4 +921,191 @@ export async function upsertBuyerPreference(userId: number, data: {
   } else {
     await db.insert(buyerPreferences).values({ userId, ...data });
   }
+}
+
+// ---- Activity Logs ----
+
+export async function logActivity(userId: number, action: string, detail?: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(activityLogs).values({ userId, action, detail: detail ?? null });
+}
+
+export async function getActivityLogs(limit = 200) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: activityLogs.id,
+      userId: activityLogs.userId,
+      action: activityLogs.action,
+      detail: activityLogs.detail,
+      createdAt: activityLogs.createdAt,
+      userName: users.name,
+      userCompany: users.company,
+    })
+    .from(activityLogs)
+    .leftJoin(users, eq(activityLogs.userId, users.id))
+    .orderBy(desc(activityLogs.createdAt))
+    .limit(limit);
+}
+
+// ---- Terms Agreement ----
+
+export async function agreeToTerms(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ termsAgreedAt: new Date() }).where(eq(users.id, userId));
+}
+
+// ---- Admin: Delete Messages ----
+
+export async function adminDeleteMessage(messageId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(messages).where(eq(messages.id, messageId));
+}
+
+export async function adminDeleteDmThread(senderId: number, receiverId: number, propertyId: number | null) {
+  const db = await getDb();
+  if (!db) return;
+  const cond = propertyId
+    ? and(
+        or(
+          and(eq(directMessages.senderId, senderId), eq(directMessages.receiverId, receiverId)),
+          and(eq(directMessages.senderId, receiverId), eq(directMessages.receiverId, senderId))
+        ),
+        eq(directMessages.propertyId, propertyId)
+      )
+    : and(
+        or(
+          and(eq(directMessages.senderId, senderId), eq(directMessages.receiverId, receiverId)),
+          and(eq(directMessages.senderId, receiverId), eq(directMessages.receiverId, senderId))
+        ),
+        sql`${directMessages.propertyId} IS NULL`
+      );
+  await db.delete(directMessages).where(cond!);
+}
+
+export async function getAllDmMessagesAdmin(limit = 200) {
+  const db = await getDb();
+  if (!db) return [];
+  const senderAlias = sql`sender`.as("sender");
+  const rows = await db
+    .select({
+      id: directMessages.id,
+      senderId: directMessages.senderId,
+      receiverId: directMessages.receiverId,
+      propertyId: directMessages.propertyId,
+      content: directMessages.content,
+      createdAt: directMessages.createdAt,
+    })
+    .from(directMessages)
+    .orderBy(desc(directMessages.createdAt))
+    .limit(limit);
+
+  const userIds = new Set<number>();
+  const propIds = new Set<number>();
+  for (const r of rows) {
+    userIds.add(r.senderId);
+    userIds.add(r.receiverId);
+    if (r.propertyId) propIds.add(r.propertyId);
+  }
+
+  const userList = userIds.size > 0 ? await db.select({ id: users.id, name: users.name, company: users.company }).from(users).where(sql`${users.id} IN (${sql.join([...userIds].map(id => sql`${id}`), sql`, `)})`) : [];
+  const propList = propIds.size > 0 ? await db.select({ id: properties.id, name: properties.name }).from(properties).where(sql`${properties.id} IN (${sql.join([...propIds].map(id => sql`${id}`), sql`, `)})`) : [];
+
+  const userMap = new Map(userList.map(u => [u.id, u]));
+  const propMap = new Map(propList.map(p => [p.id, p]));
+
+  return rows.map(r => ({
+    id: r.id,
+    senderId: r.senderId,
+    receiverId: r.receiverId,
+    senderName: userMap.get(r.senderId)?.name ?? null,
+    senderCompany: userMap.get(r.senderId)?.company ?? null,
+    receiverName: userMap.get(r.receiverId)?.name ?? null,
+    propertyId: r.propertyId,
+    propertyName: r.propertyId ? propMap.get(r.propertyId)?.name ?? null : null,
+    content: r.content,
+    createdAt: r.createdAt,
+  }));
+}
+
+export async function adminDeleteDm(messageId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(directMessages).where(eq(directMessages.id, messageId));
+}
+
+export async function getAllAnnouncementsAdmin() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: messages.id,
+      propertyId: messages.propertyId,
+      userId: messages.userId,
+      content: messages.content,
+      createdAt: messages.createdAt,
+      userName: users.name,
+      userCompany: users.company,
+      propertyName: properties.name,
+    })
+    .from(messages)
+    .leftJoin(users, eq(messages.userId, users.id))
+    .leftJoin(properties, eq(messages.propertyId, properties.id))
+    .where(eq(messages.type, "announcement"))
+    .orderBy(desc(messages.createdAt));
+}
+
+// ---- Generated Documents ----
+
+export async function saveGeneratedDocument(data: { userId: number; propertyId: number; title: string; htmlContent: string; attachmentIds: number[] }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(generatedDocuments).values(data);
+}
+
+export async function listGeneratedDocuments(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const docs = await db
+    .select({
+      id: generatedDocuments.id,
+      propertyId: generatedDocuments.propertyId,
+      title: generatedDocuments.title,
+      attachmentIds: generatedDocuments.attachmentIds,
+      createdAt: generatedDocuments.createdAt,
+      propertyName: properties.name,
+    })
+    .from(generatedDocuments)
+    .leftJoin(properties, eq(generatedDocuments.propertyId, properties.id))
+    .where(eq(generatedDocuments.userId, userId))
+    .orderBy(desc(generatedDocuments.createdAt));
+
+  const allIds = docs.flatMap(d => (d.attachmentIds as number[] | null) ?? []);
+  let fileMap = new Map<number, string>();
+  if (allIds.length > 0) {
+    const files = await db.select({ id: propertyFiles.id, name: propertyFiles.name }).from(propertyFiles).where(sql`${propertyFiles.id} IN (${sql.join(allIds.map(id => sql`${id}`), sql`, `)})`);
+    fileMap = new Map(files.map(f => [f.id, f.name]));
+  }
+
+  return docs.map(d => ({
+    ...d,
+    attachmentNames: ((d.attachmentIds as number[] | null) ?? []).map(id => ({ id, name: fileMap.get(id) ?? `ファイル#${id}` })),
+  }));
+}
+
+export async function getGeneratedDocumentHtml(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select({ htmlContent: generatedDocuments.htmlContent }).from(generatedDocuments).where(and(eq(generatedDocuments.id, id), eq(generatedDocuments.userId, userId))).limit(1);
+  return rows[0]?.htmlContent ?? null;
+}
+
+export async function deleteGeneratedDocument(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(generatedDocuments).where(and(eq(generatedDocuments.id, id), eq(generatedDocuments.userId, userId)));
 }

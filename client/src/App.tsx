@@ -18,6 +18,7 @@ import Admin from "./pages/Admin";
 import InterestedUsers from "./pages/InterestedUsers";
 import Features from "./pages/Features";
 import BuyerPreference from "./pages/BuyerPreference";
+import DocumentList from "./pages/DocumentList";
 import Register from "./pages/Register";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
@@ -162,6 +163,9 @@ function AppContent() {
               <ChatList />
             </DashboardLayout>
           )}
+        </Route>
+        <Route path="/documents">
+          {() => (<DashboardLayout><DocumentList /></DashboardLayout>)}
         </Route>
         <Route path="/buyer-preference">
           {() => (<DashboardLayout><BuyerPreference /></DashboardLayout>)}

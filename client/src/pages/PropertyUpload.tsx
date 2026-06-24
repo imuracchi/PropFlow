@@ -251,6 +251,7 @@ export default function PropertyUpload() {
             name: photo.name,
             size: photo.size,
             contentBase64: base64,
+            category: "photo",
           });
         }
         if (memo.trim()) {

@@ -24,6 +24,7 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  termsAgreedAt: timestamp("termsAgreedAt"),
 });
 
 export type User = typeof users.$inferSelect;
@@ -84,6 +85,7 @@ export const propertyFiles = mysqlTable("property_files", {
   name: varchar("name", { length: 500 }).notNull(),
   size: int("size").notNull(),
   contentBase64: longtext("contentBase64").notNull(),
+  category: mysqlEnum("category", ["document", "photo"]).default("document").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -145,6 +147,24 @@ export const buyerPreferences = mysqlTable("buyer_preferences", {
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const activityLogs = mysqlTable("activity_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  action: varchar("action", { length: 64 }).notNull(),
+  detail: text("detail"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const generatedDocuments = mysqlTable("generated_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  propertyId: int("propertyId").notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  htmlContent: longtext("htmlContent").notNull(),
+  attachmentIds: json("attachmentIds").$type<number[]>(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export const favorites = mysqlTable("favorites", {
