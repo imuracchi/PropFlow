@@ -152,18 +152,18 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           {/* ナビゲーション */}
-          <SidebarContent className="gap-0 pt-3">
+          <SidebarContent className="gap-0 pt-1">
             {sections.map((section, si) => (
               <div key={si}>
                 {!isCollapsed && section.title && (
-                  <p className="text-[11px] font-semibold text-sidebar-foreground/40 tracking-widest px-5 pb-1 pt-5">
+                  <p className="text-[11px] font-semibold text-sidebar-foreground/40 tracking-widest px-5 pb-0.5 pt-3">
                     {section.title}
                   </p>
                 )}
                 {isCollapsed && section.title && (
-                  <div className="mx-auto my-2 w-5 border-t border-sidebar-border" />
+                  <div className="mx-auto my-1 w-5 border-t border-sidebar-border" />
                 )}
-                <SidebarMenu className="px-2 space-y-0.5">
+                <SidebarMenu className="px-2 space-y-0">
                   {section.items.map(item => {
                     const basePath = item.path.split("?")[0];
                     const isActive = matchPath(basePath);
@@ -173,7 +173,7 @@ function DashboardLayoutContent({
                           isActive={isActive}
                           onClick={() => { setLocation(item.path); if (isMobile) toggleSidebar(); }}
                           tooltip={item.label}
-                          className={`h-11 rounded-lg transition-all font-normal group/item relative ${
+                          className={`h-9 rounded-lg transition-all font-normal group/item relative ${
                             isActive
                               ? "bg-sidebar-accent text-sidebar-foreground font-medium"
                               : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
