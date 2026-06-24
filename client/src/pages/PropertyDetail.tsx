@@ -597,14 +597,14 @@ function IntroducerCard({ property }: { property: any }) {
       {open && (
         <div className="border-t border-border divide-y divide-border">
           {items.map(item => (
-            <div key={item.label} className="flex px-5 py-3">
-              <span className="w-28 shrink-0 text-sm text-muted-foreground">{item.label}</span>
+            <div key={item.label} className="flex px-5 py-3.5">
+              <span className="w-32 shrink-0 text-[15px] text-muted-foreground">{item.label}</span>
               {item.label === "URL" && item.value ? (
-                <a href={item.value.startsWith("http") ? item.value : `https://${item.value}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">{item.value}</a>
+                <a href={item.value.startsWith("http") ? item.value : `https://${item.value}`} target="_blank" rel="noopener noreferrer" className="text-[15px] text-primary hover:underline">{item.value}</a>
               ) : item.label === "メール" && item.value ? (
-                <a href={`mailto:${item.value}`} className="text-sm text-primary hover:underline">{item.value}</a>
+                <a href={`mailto:${item.value}`} className="text-[15px] text-primary hover:underline">{item.value}</a>
               ) : (
-                <span className={`text-sm ${item.value ? "text-foreground" : "text-muted-foreground/40"}`}>{item.value || "未設定"}</span>
+                <span className={`text-[15px] ${item.value ? "text-foreground" : "text-muted-foreground/40"}`}>{item.value || "未設定"}</span>
               )}
             </div>
           ))}
@@ -1046,7 +1046,7 @@ export default function PropertyDetail() {
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl">
       <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors" onClick={() => setLocation("/properties")}>
         <ChevronLeft className="w-4 h-4" />物件一覧に戻る
       </button>
@@ -1054,15 +1054,15 @@ export default function PropertyDetail() {
       {/* ヘッダー */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium px-2.5 py-1 rounded bg-muted text-muted-foreground flex items-center gap-1">
-            <Building2 className="w-3 h-3" />{property.type}
+          <span className="text-sm font-medium px-3 py-1 rounded bg-muted text-muted-foreground flex items-center gap-1.5">
+            <Building2 className="w-4 h-4" />{property.type}
           </span>
         </div>
-        <h1 className="text-2xl font-bold text-foreground">{property.name}</h1>
-        <div className="flex items-start gap-1 text-sm text-muted-foreground">
-          <MapPin className="w-4 h-4 shrink-0 mt-0.5" /><span>{property.address}</span>
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">{property.name}</h1>
+        <div className="flex items-start gap-1.5 text-base text-muted-foreground">
+          <MapPin className="w-5 h-5 shrink-0 mt-0.5" /><span>{property.address}</span>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           登録：{property.userCompany || property.userName || "—"} / {createdDate}
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -1385,12 +1385,12 @@ export default function PropertyDetail() {
                   {(property.userCompany || property.userName || "?").charAt(0)}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">紹介コメント</p>
-                  <p className="text-xs text-muted-foreground">{property.userCompany || property.userName} / {createdDate}</p>
+                  <p className="text-base font-semibold text-foreground">紹介コメント</p>
+                  <p className="text-sm text-muted-foreground">{property.userCompany || property.userName} / {createdDate}</p>
                 </div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-sm text-foreground leading-relaxed">{property.comment}</p>
+                <p className="text-[15px] text-foreground leading-relaxed">{property.comment}</p>
               </div>
               <p className="text-xs text-muted-foreground mt-2">※ このコメントは登録者が記入した内容です。</p>
             </div>
@@ -1509,9 +1509,9 @@ export default function PropertyDetail() {
                     </>
                   ) : (
                     details.map(([label, value]) => (
-                      <div key={label} className="flex px-5 py-3.5">
-                        <span className="w-36 shrink-0 text-sm text-muted-foreground">{label}</span>
-                        <span className={`text-sm font-medium whitespace-pre-wrap ${label === "売出価格" ? "text-primary" : "text-foreground"}`}>{value}</span>
+                      <div key={label} className="flex px-5 py-4">
+                        <span className="w-40 shrink-0 text-[15px] text-muted-foreground">{label}</span>
+                        <span className={`text-[15px] font-medium whitespace-pre-wrap ${label === "売出価格" ? "text-primary text-lg font-bold" : "text-foreground"}`}>{value}</span>
                       </div>
                     ))
                   )}

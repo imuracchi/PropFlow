@@ -46,7 +46,7 @@ export default function InterestedUsers() {
   }
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto">
+    <div className="space-y-5 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-foreground">興味者リスト</h1>
         <p className="text-sm text-muted-foreground mt-0.5">あなたの物件にお気に入り・メモをしたユーザー</p>

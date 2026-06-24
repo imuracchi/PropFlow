@@ -156,7 +156,7 @@ function DashboardLayoutContent({
             {sections.map((section, si) => (
               <div key={si}>
                 {!isCollapsed && section.title && (
-                  <p className="text-[10px] font-semibold text-sidebar-foreground/30 uppercase tracking-widest px-5 pb-1 pt-4">
+                  <p className="text-[11px] font-semibold text-sidebar-foreground/40 tracking-widest px-5 pb-1 pt-5">
                     {section.title}
                   </p>
                 )}
@@ -173,7 +173,7 @@ function DashboardLayoutContent({
                           isActive={isActive}
                           onClick={() => { setLocation(item.path); if (isMobile) toggleSidebar(); }}
                           tooltip={item.label}
-                          className={`h-10 rounded-lg transition-all font-normal group/item relative ${
+                          className={`h-11 rounded-lg transition-all font-normal group/item relative ${
                             isActive
                               ? "bg-sidebar-accent text-sidebar-foreground font-medium"
                               : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
@@ -183,7 +183,7 @@ function DashboardLayoutContent({
                             <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-sidebar-primary rounded-r-full" />
                           )}
                           <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-sidebar-primary" : ""}`} />
-                          <span className="text-sm">{item.label}</span>
+                          <span className="text-[15px]">{item.label}</span>
                           {isActive && !isCollapsed && (
                             <ChevronRight className="ml-auto h-3 w-3 text-sidebar-foreground/30" />
                           )}

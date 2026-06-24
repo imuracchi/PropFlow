@@ -55,7 +55,7 @@ export default function DirectMessage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] max-w-4xl mx-auto">
+    <div className="flex flex-col h-[calc(100vh-6rem)] max-w-4xl">
       {/* ヘッダー */}
       <div className="flex items-center justify-between pb-4 border-b-2 border-violet-500">
         <div className="flex items-center gap-3">

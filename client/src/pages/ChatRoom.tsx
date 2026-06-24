@@ -50,7 +50,7 @@ export default function ChatRoom() {
   }
 
   return (
-    <div className="space-y-5 max-w-3xl mx-auto">
+    <div className="space-y-5 max-w-4xl">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">

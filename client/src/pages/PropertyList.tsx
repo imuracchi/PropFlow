@@ -286,9 +286,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr className="border-b border-border">
+                <tr className="border-b border-border bg-muted/50">
                   <th className="w-10 px-3 py-3">
                     <input
                       type="checkbox"
@@ -297,16 +297,16 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">タイトル</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">住所</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">土地面積</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">建物面積</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">価格</th>
-                  <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">価格交渉</th>
+                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap">タイトル</th>
+                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">住所</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">土地面積</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">建物面積</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">価格</th>
+                  <th className="text-center px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">価格交渉</th>
                   {buyerPref && (
-                    <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">マッチ</th>
+                    <th className="text-center px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap">マッチ</th>
                   )}
-                  <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">
+                  <th className="text-center px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap">
                     <Heart className="w-3.5 h-3.5 mx-auto text-muted-foreground" />
                   </th>
                 </tr>
@@ -335,35 +335,35 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       <td className="px-4 py-4">
                         <div className="hidden md:flex items-center gap-2 mb-1">
                           <span className="text-[10px] text-muted-foreground/60">#{property.id}</span>
-                          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                          <span className="text-xs font-medium px-2.5 py-0.5 rounded bg-muted text-muted-foreground">
                             {property.type}
                           </span>
                         </div>
-                        <p className="font-medium text-foreground text-sm">{property.name}</p>
+                        <p className="font-medium text-foreground text-[15px]">{property.name}</p>
                         <p className="md:hidden text-xs font-semibold text-primary mt-0.5">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
                       </td>
-                      <td className="px-4 py-4 text-sm text-muted-foreground max-w-[200px] hidden md:table-cell">
+                      <td className="px-4 py-4 text-sm text-muted-foreground max-w-[250px] hidden md:table-cell">
                         {property.address}
                       </td>
                       <td className="px-4 py-4 text-right whitespace-nowrap hidden lg:table-cell">
-                        <p className="font-medium">{property.landArea.toFixed(2)}㎡</p>
+                        <p className="text-sm font-medium">{property.landArea.toFixed(2)}㎡</p>
                         <p className="text-xs text-muted-foreground">（{toTsubo(property.landArea)}坪）</p>
                       </td>
                       <td className="px-4 py-4 text-right whitespace-nowrap hidden lg:table-cell">
                         {property.buildingArea ? (
                           <>
-                            <p className="font-medium">{property.buildingArea.toFixed(2)}㎡</p>
+                            <p className="text-sm font-medium">{property.buildingArea.toFixed(2)}㎡</p>
                             <p className="text-xs text-muted-foreground">（{toTsubo(property.buildingArea)}坪）</p>
                           </>
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-sm text-muted-foreground">—</span>
                         )}
                       </td>
                       <td className="px-4 py-4 text-right whitespace-nowrap hidden md:table-cell">
-                        <p className="font-semibold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
+                        <p className="text-[15px] font-semibold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
                       </td>
                       <td className="px-4 py-4 text-center whitespace-nowrap hidden xl:table-cell">
-                        <span className={`text-xs font-medium ${property.negotiation === "交渉可" ? "text-green-600 font-semibold" : "text-foreground"}`}>
+                        <span className={`text-sm font-medium ${property.negotiation === "交渉可" ? "text-green-600 font-semibold" : "text-foreground"}`}>
                           {property.negotiation}
                         </span>
                       </td>

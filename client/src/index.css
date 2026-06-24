@@ -45,11 +45,11 @@
 :root {
   --radius: 0.5rem;
 
-  --background: oklch(0.97 0.003 250);
-  --foreground: oklch(0.18 0.02 250);
+  --background: oklch(0.965 0.006 250);
+  --foreground: oklch(0.16 0.02 250);
 
   --card: oklch(1.0 0 0);
-  --card-foreground: oklch(0.18 0.02 250);
+  --card-foreground: oklch(0.16 0.02 250);
 
   --popover: oklch(1.0 0 0);
   --popover-foreground: oklch(0.18 0.02 250);
@@ -69,8 +69,8 @@
   --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(1.0 0 0);
 
-  --border: oklch(0.91 0.005 250);
-  --input: oklch(0.91 0.005 250);
+  --border: oklch(0.92 0.004 250);
+  --input: oklch(0.92 0.004 250);
   --ring: oklch(0.55 0.20 260);
 
   --chart-1: oklch(0.55 0.20 260);
@@ -99,6 +99,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 768px) {
+    body {
+      font-size: 14px;
+    }
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -134,12 +142,12 @@
   [role="tab"] {
     color: oklch(0.50 0.02 250);
     transition: color 0.15s;
-    font-size: 0.8rem;
+    font-size: 0.875rem;
   }
 
   @media (min-width: 768px) {
     [role="tab"] {
-      font-size: 0.875rem;
+      font-size: 0.9375rem;
     }
   }
 
@@ -160,6 +168,39 @@
   button[class*="variant"] ,
   button[class*="outline"] {
     transition: all 0.15s ease;
+  }
+
+  /* カード・テーブルの影 */
+  .bg-card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  }
+
+  /* テーブル行ホバー強化 */
+  tbody tr {
+    transition: background-color 0.15s, box-shadow 0.15s;
+  }
+  tbody tr:hover {
+    background-color: oklch(0.97 0.01 250);
+    box-shadow: inset 3px 0 0 oklch(0.55 0.20 260);
+  }
+
+  /* ページタイトル装飾 */
+  h1.text-2xl {
+    letter-spacing: -0.01em;
+  }
+
+  /* フォーム要素の底上げ */
+  label, .label {
+    font-size: 0.9375rem;
+  }
+  input, textarea, select, [role="combobox"] {
+    font-size: 0.9375rem !important;
+  }
+
+  /* text-sm/text-xsの底上げ（PC） */
+  @media (min-width: 768px) {
+    .text-xs { font-size: 0.8125rem !important; }
+    .text-sm { font-size: 0.9375rem !important; }
   }
 
   button[class*="outline"]:hover,

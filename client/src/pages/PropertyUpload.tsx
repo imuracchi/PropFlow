@@ -273,7 +273,7 @@ export default function PropertyUpload() {
   // ── Step 1: PDF Upload ──
   if (step === "upload") {
     return (
-      <div className="max-w-3xl mx-auto space-y-6 relative">
+      <div className="space-y-6 max-w-4xl relative">
         {/* 解析中オーバーレイ */}
         {extracting && (
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -410,7 +410,7 @@ export default function PropertyUpload() {
 
   // ── Step 2: Form ──
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="space-y-6 max-w-4xl">
       {submitting && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-card border border-border rounded-xl shadow-lg p-8 max-w-md w-full mx-4 text-center space-y-4">
@@ -724,9 +724,9 @@ export default function PropertyUpload() {
       )}
 
       <div className="flex gap-4">
-        <Button variant="outline" className="flex-1 h-12" onClick={() => setStep("upload")}>戻る</Button>
+        <Button variant="outline" className="h-11 px-8" onClick={() => setStep("upload")}>戻る</Button>
         <Button
-          className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shadow-sm"
+          className="h-11 px-12 bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shadow-sm"
           onClick={handleSubmit}
           disabled={createMutation.isPending}
         >

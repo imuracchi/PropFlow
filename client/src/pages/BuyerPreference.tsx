@@ -70,7 +70,7 @@ export default function BuyerPreference() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Target className="w-6 h-6 text-primary" />
@@ -191,7 +191,7 @@ export default function BuyerPreference() {
         </div>
 
         <Button
-          className="w-full gap-2"
+          className="w-auto px-12 h-11 gap-2"
           onClick={handleSave}
           disabled={saveMutation.isPending}
         >
