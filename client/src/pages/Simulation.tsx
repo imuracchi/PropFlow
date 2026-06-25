@@ -2,10 +2,27 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, Calculator, Printer } from "lucide-react";
+import { ChevronLeft, Calculator, Printer, Search, MapPin, ExternalLink } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2 } from "lucide-react";
+
+const PREF_CODES: Record<string, string> = {
+  "北海道":"01","青森":"02","岩手":"03","宮城":"04","秋田":"05","山形":"06","福島":"07",
+  "茨城":"08","栃木":"09","群馬":"10","埼玉":"11","千葉":"12","東京":"13","神奈川":"14",
+  "新潟":"15","富山":"16","石川":"17","福井":"18","山梨":"19","長野":"20","岐阜":"21",
+  "静岡":"22","愛知":"23","三重":"24","滋賀":"25","京都":"26","大阪":"27","兵庫":"28",
+  "奈良":"29","和歌山":"30","鳥取":"31","島根":"32","岡山":"33","広島":"34","山口":"35",
+  "徳島":"36","香川":"37","愛媛":"38","高知":"39","福岡":"40","佐賀":"41","長崎":"42",
+  "熊本":"43","大分":"44","宮崎":"45","鹿児島":"46","沖縄":"47",
+};
+
+function detectPrefCode(address: string): string | null {
+  for (const [name, code] of Object.entries(PREF_CODES)) {
+    if (address.includes(name)) return code;
+  }
+  return null;
+}
 
 function toTsubo(sqm: number) {
   return (sqm * 0.3025).toFixed(2);
@@ -37,6 +54,7 @@ export default function Simulation() {
   const [, params] = useRoute("/simulation/:id");
   const propertyId = Number(params?.id);
 
+  const saveDocMutation = trpc.document.save.useMutation();
   const { data: property, isLoading } = trpc.property.getById.useQuery(
     { id: propertyId },
     { enabled: !!propertyId }
@@ -174,6 +192,13 @@ ${COST_ITEMS.map(item => {
     if (!w) return;
     w.document.write(html);
     w.document.close();
+
+    saveDocMutation.mutate({
+      propertyId,
+      title: `${property?.name ?? "物件"} - シミュレーション ${new Date().toLocaleDateString("ja-JP")}`,
+      htmlContent: html,
+      attachmentIds: [],
+    });
   };
 
   if (isLoading) {
@@ -288,6 +313,9 @@ ${COST_ITEMS.map(item => {
             </div>
           </div>
 
+          {/* 参考坪単価 */}
+          <ReferencePrice address={property?.address ?? ""} onApply={(price) => setPricePerTsubo(String(price))} />
+
           {/* 結果 */}
           <div className="bg-card border-2 border-primary rounded-lg overflow-hidden">
             <div className="px-5 py-3 bg-primary text-primary-foreground">
@@ -322,6 +350,134 @@ ${COST_ITEMS.map(item => {
           <Button className="w-auto px-8 gap-2" onClick={handlePrint}>
             <Printer className="w-4 h-4" />PDF保存
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReferencePrice({ address, onApply }: { address: string; onApply: (price: number) => void }) {
+  const prefCode = detectPrefCode(address);
+  const now = new Date();
+  const defaultYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+  const defaultQuarter = Math.max(1, Math.ceil(now.getMonth() / 3) - 1);
+  const [year, setYear] = useState(String(defaultYear));
+  const [quarter, setQuarter] = useState(String(defaultQuarter));
+  const [searched, setSearched] = useState(false);
+
+  const { data, isLoading, refetch } = trpc.landPrice.search.useQuery(
+    { area: prefCode ?? "13", year: Number(year), quarter: Number(quarter) },
+    { enabled: false }
+  );
+
+  const handleSearch = () => {
+    setSearched(true);
+    refetch();
+  };
+
+  const items = data?.data ?? [];
+  const avgPrice = items.length > 0
+    ? Math.round(items.reduce((s, d) => s + d.pricePerUnit, 0) / items.length)
+    : 0;
+
+  return (
+    <div className="bg-card border border-amber-200 rounded-lg overflow-hidden">
+      <div className="px-5 py-3 border-b border-amber-200 bg-amber-50">
+        <h2 className="font-semibold text-amber-800 flex items-center gap-2">
+          <MapPin className="w-4 h-4" />参考坪単価（近隣取引事例）
+        </h2>
+      </div>
+      <div className="p-5 space-y-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Label className="text-sm shrink-0">取引時期</Label>
+          <Input type="number" value={year} onChange={e => setYear(e.target.value)} className="w-24 text-center" />
+          <span className="text-sm text-muted-foreground">年 第</span>
+          <select value={quarter} onChange={e => setQuarter(e.target.value)} className="border border-border rounded px-2 py-1.5 text-sm">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+          </select>
+          <span className="text-sm text-muted-foreground">四半期</span>
+          <Button size="sm" className="gap-1.5" onClick={handleSearch} disabled={isLoading || !prefCode}>
+            {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+            検索
+          </Button>
+        </div>
+
+        {!prefCode && (
+          <p className="text-xs text-red-500">住所から都道府県を判定できませんでした</p>
+        )}
+
+        {data?.error && (
+          <p className="text-xs text-red-500">{data.error}</p>
+        )}
+
+        {searched && items.length > 0 && (
+          <>
+            <div className="flex items-center justify-between bg-amber-50 rounded-lg px-4 py-3">
+              <div>
+                <p className="text-xs text-amber-600">近隣取引の平均坪単価</p>
+                <p className="text-xl font-bold text-amber-800">{avgPrice.toLocaleString()} 円/坪</p>
+              </div>
+              <Button size="sm" variant="outline" className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100" onClick={() => onApply(avgPrice)}>
+                この値を適用
+              </Button>
+            </div>
+
+            <div className="max-h-48 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-card">
+                  <tr className="border-b border-border">
+                    <th className="text-left px-2 py-1.5 text-muted-foreground">地区</th>
+                    <th className="text-right px-2 py-1.5 text-muted-foreground">坪単価</th>
+                    <th className="text-right px-2 py-1.5 text-muted-foreground">取引価格</th>
+                    <th className="text-right px-2 py-1.5 text-muted-foreground">面積</th>
+                    <th className="text-left px-2 py-1.5 text-muted-foreground">時期</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {items.slice(0, 20).map((d, i) => (
+                    <tr key={i} className="hover:bg-muted/30">
+                      <td className="px-2 py-1.5">{d.district}</td>
+                      <td className="px-2 py-1.5 text-right font-medium">{d.pricePerUnit > 0 ? d.pricePerUnit.toLocaleString() : "—"}</td>
+                      <td className="px-2 py-1.5 text-right">{d.tradePrice.toLocaleString()}</td>
+                      <td className="px-2 py-1.5 text-right">{d.area}㎡</td>
+                      <td className="px-2 py-1.5">{d.period}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {items.length}件の取引事例（上位20件表示）
+            </p>
+          </>
+        )}
+
+        {searched && items.length === 0 && !isLoading && !data?.error && (
+          <p className="text-sm text-muted-foreground">該当する取引事例が見つかりませんでした。時期を変更して再検索してください。</p>
+        )}
+
+        <div className="pt-3 border-t border-border space-y-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground">
+              データ出典：国土交通省「不動産情報ライブラリ」不動産取引価格情報
+            </span>
+            <a href="https://www.reinfolib.mlit.go.jp/" target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
+              <ExternalLink className="w-2.5 h-2.5" />詳細
+            </a>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+            <p className="text-xs text-blue-700 font-medium mb-1">最新の成約価格を確認するには</p>
+            <p className="text-xs text-blue-600">上記は過去の取引データです。最新の成約価格はREINSで確認できます。</p>
+            <a
+              href="https://system.reins.jp/login/main/KG/GKG001200"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-blue-700 hover:underline"
+            >
+              <ExternalLink className="w-3 h-3" />REINS 成約価格検索を開く
+            </a>
+          </div>
         </div>
       </div>
     </div>

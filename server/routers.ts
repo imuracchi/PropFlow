@@ -698,6 +698,61 @@ export const appRouter = router({
       }),
   }),
 
+  landPrice: router({
+    search: protectedProcedure
+      .input(z.object({
+        area: z.string(),
+        city: z.string().optional(),
+        year: z.number().optional(),
+        quarter: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { parsed } = await import("dotenv").then(d => d.config());
+        const apiKey = parsed?.MLIT_API_KEY || process.env.MLIT_API_KEY;
+        if (!apiKey) {
+          return { data: [], error: "MLIT_API_KEYが未設定です" };
+        }
+        const now = new Date();
+        const year = input.year ?? now.getFullYear();
+        const quarter = input.quarter ?? Math.ceil(now.getMonth() / 3);
+        const params = new URLSearchParams({
+          year: String(year),
+          quarter: String(quarter),
+          area: input.area,
+          priceClassification: "01",
+          language: "ja",
+        });
+        if (input.city) params.set("city", input.city);
+
+        try {
+          const res = await fetch(`https://www.reinfolib.mlit.go.jp/ex-api/external/XIT001?${params}`, {
+            headers: { "Ocp-Apim-Subscription-Key": apiKey },
+          });
+          if (!res.ok) {
+            return { data: [], error: `API応答エラー: ${res.status}` };
+          }
+          const json = await res.json();
+          const items = (json.data ?? [])
+            .filter((d: any) => d.Type === "宅地(土地)" || d.Type === "宅地(土地と建物)")
+            .map((d: any) => ({
+              type: d.Type,
+              district: d.DistrictName,
+              tradePrice: Number(d.TradePrice) || 0,
+              pricePerUnit: Number(d.PricePerUnit) || 0,
+              unitPrice: Number(d.UnitPrice) || 0,
+              area: Number(d.Area) || 0,
+              landShape: d.LandShape,
+              use: d.Use,
+              cityPlanning: d.CityPlanning,
+              period: d.Period,
+            }));
+          return { data: items, error: null };
+        } catch (err: any) {
+          return { data: [], error: `取得エラー: ${err.message}` };
+        }
+      }),
+  }),
+
   document: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       return db.listGeneratedDocuments(ctx.user.id);

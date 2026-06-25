@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FileText, Trash2, Loader2, Download, Eye, Building2 } from "lucide-react";
+import { FileText, Trash2, Loader2, Download, Eye, Building2, Calculator } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 export default function DocumentList() {
@@ -114,7 +114,14 @@ export default function DocumentList() {
                   <React.Fragment key={doc.id}>
                   <tr className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-foreground text-sm">{doc.title}</p>
+                      <div className="flex items-center gap-2">
+                        {doc.title.includes("シミュレーション") ? (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700 shrink-0">試算</span>
+                        ) : (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 shrink-0">資料</span>
+                        )}
+                        <p className="font-medium text-foreground text-sm">{doc.title}</p>
+                      </div>
                       <p className="md:hidden text-xs text-muted-foreground mt-0.5">{doc.propertyName ?? `物件#${doc.propertyId}`}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
