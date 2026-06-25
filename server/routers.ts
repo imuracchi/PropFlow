@@ -369,6 +369,24 @@ export const appRouter = router({
         await sendLineBroadcast(
           `🏠 新着物件が登録されました\n\n📋 ${prop.name}\n📍 ${prop.address}\n💰 ${priceLine}\n🏷 ${prop.type}${commentLine}\n\n▼ 詳細はこちら\n${siteUrl}/property/${prop.id}`
         );
+        const { sendMail } = await import("./_core/mail");
+        const emails = await db.getActiveUserEmails();
+        const mailHtml = `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+            <h2 style="color:#1e3a5f;">🏠 新着物件のお知らせ</h2>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">
+              <p style="font-size:18px;font-weight:700;color:#1e3a5f;margin:0 0 8px;">${prop.name}</p>
+              <p style="margin:4px 0;color:#475569;">📍 ${prop.address}</p>
+              <p style="margin:4px 0;color:#475569;">💰 ${priceLine}</p>
+              <p style="margin:4px 0;color:#475569;">🏷 ${prop.type}</p>
+              ${prop.comment ? `<p style="margin:8px 0;color:#475569;">💬 ${prop.comment}</p>` : ""}
+            </div>
+            <a href="${siteUrl}/property/${prop.id}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">物件の詳細を見る</a>
+            <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
+          </div>`;
+        for (const email of emails) {
+          sendMail(email, `【PropFlow】新着物件: ${prop.name}`, mailHtml).catch(() => {});
+        }
         return { success: true };
       }),
 
@@ -528,6 +546,44 @@ export const appRouter = router({
         await db.rejoinDm(ctx.user.id, input.receiverId, input.propertyId ?? null);
         await db.sendDirectMessage(ctx.user.id, input.receiverId, input.content, input.propertyId ?? null);
         db.logActivity(ctx.user.id, "dm_send", `DM送信 (相手ID:${input.receiverId})`).catch(() => {});
+
+        const senderName = ctx.user.name ?? "ユーザー";
+
+        // プッシュ通知
+        const { sendPushToUsers } = await import("./_core/webpush");
+        const dmPath = input.propertyId ? `/dm/${ctx.user.id}/${input.propertyId}` : `/dm/${ctx.user.id}`;
+        sendPushToUsers(
+          [input.receiverId],
+          `💬 ${senderName}さんからDM`,
+          input.content.slice(0, 100),
+          dmPath
+        ).catch(() => {});
+        const senderCompany = ctx.user.company ?? "";
+        const receiverEmail = await db.getUserEmailById(input.receiverId);
+        if (receiverEmail) {
+          const { sendMail } = await import("./_core/mail");
+          const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+          const dmUrl = input.propertyId
+            ? `${siteUrl}/dm/${ctx.user.id}/${input.propertyId}`
+            : `${siteUrl}/dm/${ctx.user.id}`;
+          const propInfo = input.propertyId
+            ? await db.getPropertyById(input.propertyId)
+            : null;
+          const mailHtml = `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+              <h2 style="color:#1e3a5f;">💬 DMが届きました</h2>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">
+                <p style="font-size:14px;font-weight:700;color:#1e3a5f;margin:0 0 4px;">${senderName}${senderCompany ? `（${senderCompany}）` : ""}</p>
+                ${propInfo ? `<p style="margin:4px 0;font-size:13px;color:#64748b;">📋 ${propInfo.name}</p>` : ""}
+                <div style="background:white;border:1px solid #e2e8f0;border-radius:6px;padding:12px;margin-top:8px;">
+                  <p style="margin:0;color:#1a1a1a;white-space:pre-wrap;">${input.content}</p>
+                </div>
+              </div>
+              <a href="${dmUrl}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">DMを確認・返信する</a>
+              <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
+            </div>`;
+          sendMail(receiverEmail, `【PropFlow】${senderName}さんからDMが届きました`, mailHtml).catch(() => {});
+        }
         return { success: true };
       }),
 

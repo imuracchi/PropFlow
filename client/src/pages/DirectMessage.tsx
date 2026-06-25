@@ -59,7 +59,7 @@ export default function DirectMessage() {
       {/* ヘッダー */}
       <div className="flex items-center justify-between pb-4 border-b-2 border-violet-500">
         <div className="flex items-center gap-3">
-          <button className="text-muted-foreground hover:text-primary transition-colors" onClick={() => setLocation("/chat")}>
+          <button className="text-muted-foreground hover:text-primary transition-colors" onClick={() => setLocation("/dm-list")}>
             <ChevronLeft className="w-5 h-5" />
           </button>
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 shrink-0">DM</span>

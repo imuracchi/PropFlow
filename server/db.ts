@@ -110,6 +110,20 @@ export async function getAdminStats() {
   };
 }
 
+export async function getActiveUserEmails(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ email: users.email }).from(users).where(eq(users.status, "active"));
+  return rows.map(r => r.email);
+}
+
+export async function getUserEmailById(userId: number): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  return rows[0]?.email ?? null;
+}
+
 // ---- Properties ----
 
 export async function listProperties() {
