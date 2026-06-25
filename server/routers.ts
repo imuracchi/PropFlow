@@ -796,8 +796,9 @@ export const appRouter = router({
       }))
       .query(async ({ input }) => {
         const apiKey = process.env.MLIT_API_KEY;
+        console.log("[MLIT] API Key exists:", !!apiKey, "length:", apiKey?.length);
         if (!apiKey) {
-          return { data: [], error: "MLIT_API_KEYが未設定です" };
+          return { data: [], error: "MLIT_API_KEYが未設定です。Railwayの環境変数を確認してください。" };
         }
         const now = new Date();
         const year = input.year ?? now.getFullYear();
