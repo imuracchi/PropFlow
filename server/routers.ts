@@ -791,15 +791,31 @@ export const appRouter = router({
       .input(z.object({
         area: z.string(),
         city: z.string().optional(),
+        address: z.string().optional(),
         year: z.number().optional(),
         quarter: z.number().optional(),
       }))
       .query(async ({ input }) => {
         const apiKey = process.env.MLIT_API_KEY;
-        console.log("[MLIT] API Key exists:", !!apiKey, "length:", apiKey?.length);
         if (!apiKey) {
           return { data: [], error: "MLIT_API_KEYが未設定です。Railwayの環境変数を確認してください。" };
         }
+
+        let cityCode = input.city;
+        if (!cityCode && input.address) {
+          try {
+            const citiesRes = await fetch(`https://www.reinfolib.mlit.go.jp/ex-api/external/XIT002?area=${input.area}`, {
+              headers: { "Ocp-Apim-Subscription-Key": apiKey },
+            });
+            if (citiesRes.ok) {
+              const citiesJson = await citiesRes.json();
+              const cities = citiesJson.data ?? [];
+              const matched = cities.find((c: any) => input.address!.includes(c.name));
+              if (matched) cityCode = matched.id;
+            }
+          } catch (e) { console.warn("City code lookup failed:", e); }
+        }
+
         const now = new Date();
         const year = input.year ?? now.getFullYear();
         const quarter = input.quarter ?? Math.ceil(now.getMonth() / 3);
@@ -810,7 +826,7 @@ export const appRouter = router({
           priceClassification: "01",
           language: "ja",
         });
-        if (input.city) params.set("city", input.city);
+        if (cityCode) params.set("city", cityCode);
 
         try {
           const res = await fetch(`https://www.reinfolib.mlit.go.jp/ex-api/external/XIT001?${params}`, {

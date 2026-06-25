@@ -366,7 +366,7 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
   const [searched, setSearched] = useState(false);
 
   const { data, isLoading, refetch } = trpc.landPrice.search.useQuery(
-    { area: prefCode ?? "13", year: Number(year), quarter: Number(quarter) },
+    { area: prefCode ?? "13", address, year: Number(year), quarter: Number(quarter) },
     { enabled: false }
   );
 
@@ -422,33 +422,33 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
               </Button>
             </div>
 
-            <div className="max-h-48 overflow-y-auto">
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-card">
-                  <tr className="border-b border-border">
-                    <th className="text-left px-2 py-1.5 text-muted-foreground">地区</th>
-                    <th className="text-right px-2 py-1.5 text-muted-foreground">坪単価</th>
-                    <th className="text-right px-2 py-1.5 text-muted-foreground">取引価格</th>
-                    <th className="text-right px-2 py-1.5 text-muted-foreground">面積</th>
-                    <th className="text-left px-2 py-1.5 text-muted-foreground">時期</th>
+            <div className="max-h-64 overflow-y-auto border border-border rounded-lg">
+              <table className="w-full">
+                <thead className="sticky top-0 bg-muted/80">
+                  <tr>
+                    <th className="text-left px-3 py-2 text-sm font-medium text-muted-foreground">地区</th>
+                    <th className="text-right px-3 py-2 text-sm font-medium text-muted-foreground">坪単価（円）</th>
+                    <th className="text-right px-3 py-2 text-sm font-medium text-muted-foreground">取引価格（円）</th>
+                    <th className="text-right px-3 py-2 text-sm font-medium text-muted-foreground">面積</th>
+                    <th className="text-left px-3 py-2 text-sm font-medium text-muted-foreground">時期</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {items.slice(0, 20).map((d, i) => (
+                  {items.slice(0, 30).map((d, i) => (
                     <tr key={i} className="hover:bg-muted/30">
-                      <td className="px-2 py-1.5">{d.district}</td>
-                      <td className="px-2 py-1.5 text-right font-medium">{d.pricePerUnit > 0 ? d.pricePerUnit.toLocaleString() : "—"}</td>
-                      <td className="px-2 py-1.5 text-right">{d.tradePrice.toLocaleString()}</td>
-                      <td className="px-2 py-1.5 text-right">{d.area}㎡</td>
-                      <td className="px-2 py-1.5">{d.period}</td>
+                      <td className="px-3 py-2 text-sm">{d.district}</td>
+                      <td className="px-3 py-2 text-sm text-right font-medium text-primary">{d.pricePerUnit > 0 ? d.pricePerUnit.toLocaleString() : "—"}</td>
+                      <td className="px-3 py-2 text-sm text-right">{d.tradePrice.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-sm text-right">{d.area}㎡</td>
+                      <td className="px-3 py-2 text-sm text-muted-foreground">{d.period}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <p className="text-[10px] text-muted-foreground mt-1">
-              {items.length}件の取引事例（上位20件表示）
+            <p className="text-xs text-muted-foreground mt-2">
+              {items.length}件の取引事例（上位30件表示）
             </p>
           </>
         )}
