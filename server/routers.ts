@@ -763,8 +763,7 @@ export const appRouter = router({
         quarter: z.number().optional(),
       }))
       .query(async ({ input }) => {
-        const { parsed } = await import("dotenv").then(d => d.config());
-        const apiKey = parsed?.MLIT_API_KEY || process.env.MLIT_API_KEY;
+        const apiKey = process.env.MLIT_API_KEY;
         if (!apiKey) {
           return { data: [], error: "MLIT_API_KEYが未設定です" };
         }
