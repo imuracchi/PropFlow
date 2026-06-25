@@ -733,6 +733,21 @@ export async function getDmUserIdsForProperty(propertyId: number, excludeUserId:
   return [...ids];
 }
 
+export async function getInterestedUserIdsForProperty(propertyId: number, excludeUserId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const dmSenders = await db.selectDistinct({ userId: directMessages.senderId }).from(directMessages).where(eq(directMessages.propertyId, propertyId));
+  const dmReceivers = await db.selectDistinct({ userId: directMessages.receiverId }).from(directMessages).where(eq(directMessages.propertyId, propertyId));
+  const favUsers = await db.selectDistinct({ userId: favorites.userId }).from(favorites).where(eq(favorites.propertyId, propertyId));
+  const ids = new Set([
+    ...dmSenders.map(r => r.userId),
+    ...dmReceivers.map(r => r.userId),
+    ...favUsers.map(r => r.userId),
+  ]);
+  ids.delete(excludeUserId);
+  return [...ids];
+}
+
 export async function sendDirectMessage(senderId: number, receiverId: number, content: string, propertyId: number | null = null) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

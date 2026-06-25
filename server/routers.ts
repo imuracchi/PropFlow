@@ -717,18 +717,18 @@ export const appRouter = router({
           type: "announcement",
         });
         db.logActivity(ctx.user.id, "announce", `お知らせ投稿 (物件ID:${input.propertyId})`).catch(() => {});
-        const dmUserIds = await db.getDmUserIdsForProperty(input.propertyId, ctx.user.id);
-        if (dmUserIds.length > 0) {
+        const interestedIds = await db.getInterestedUserIdsForProperty(input.propertyId, ctx.user.id);
+        if (interestedIds.length > 0) {
           const { sendPushToUsers } = await import("./_core/webpush");
           sendPushToUsers(
-            dmUserIds,
+            interestedIds,
             `📢 ${prop.name}`,
             `お知らせ: ${input.content.slice(0, 100)}`,
             `/chat/${input.propertyId}`
           ).catch(() => {});
           const { sendMail } = await import("./_core/mail");
           const siteUrl = process.env.SITE_URL || "https://propflow.jp";
-          for (const uid of dmUserIds) {
+          for (const uid of interestedIds) {
             const email = await db.getUserEmailIfNotify(uid, "announce");
             if (email) {
               sendMail(email, `【PropFlow】${prop.name} お知らせ`, `
