@@ -52,6 +52,7 @@ export default function Admin() {
   const restorePropMutation = trpc.admin.restoreProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const hardDeleteMutation = trpc.admin.hardDeleteProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); setDeleteTarget(null); } });
   const deleteDmMutation = trpc.admin.deleteDm.useMutation({ onSuccess: () => { utils.admin.allDmMessages.invalidate(); } });
+  const loginAsMutation = trpc.admin.loginAs.useMutation();
   const deleteAnnounceMutation = trpc.admin.deleteAnnouncement.useMutation({ onSuccess: () => { utils.admin.allAnnouncements.invalidate(); } });
 
   const pendingCount = pendingUsers?.length ?? 0;
@@ -290,6 +291,16 @@ export default function Admin() {
                                   <UserCheck className="w-3.5 h-3.5" />アカウント有効化
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="gap-2 text-xs text-primary" onClick={() => {
+                                if (confirm(`${user.name}として代理ログインしますか？`)) {
+                                  loginAsMutation.mutate({ userId: user.id }, {
+                                    onSuccess: () => { window.location.href = "/properties"; },
+                                  });
+                                }
+                              }}>
+                                <ArrowUpRight className="w-3.5 h-3.5" />このユーザーとしてログイン
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => { if (confirm(`${user.name}を完全に削除しますか？この操作は取り消せません。`)) deleteUserMutation.mutate({ id: user.id }); }}>
                                 <Trash2 className="w-3.5 h-3.5" />アカウント削除

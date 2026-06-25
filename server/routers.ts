@@ -817,40 +817,54 @@ export const appRouter = router({
         }
 
         const now = new Date();
-        const year = input.year ?? now.getFullYear();
-        const quarter = input.quarter ?? Math.ceil(now.getMonth() / 3);
-        const params = new URLSearchParams({
-          year: String(year),
-          quarter: String(quarter),
-          area: input.area,
-          priceClassification: "01",
-          language: "ja",
-        });
-        if (cityCode) params.set("city", cityCode);
+        let currentYear = now.getFullYear();
+        let currentQuarter = Math.ceil(now.getMonth() / 3);
 
-        try {
-          const res = await fetch(`https://www.reinfolib.mlit.go.jp/ex-api/external/XIT001?${params}`, {
-            headers: { "Ocp-Apim-Subscription-Key": apiKey },
-          });
-          if (!res.ok) {
-            return { data: [], error: `API応答エラー: ${res.status}` };
-          }
-          const json = await res.json();
-          const items = (json.data ?? [])
-            .filter((d: any) => d.Type === "宅地(土地)" || d.Type === "宅地(土地と建物)")
-            .map((d: any) => ({
+        const parseItems = (data: any[]) => data
+          .filter((d: any) => d.Type === "宅地(土地)" || d.Type === "宅地(土地と建物)")
+          .map((d: any) => {
+            const tradePrice = Number(d.TradePrice) || 0;
+            const area = Number(d.Area) || 0;
+            let pricePerUnit = Number(d.PricePerUnit) || 0;
+            if (pricePerUnit === 0 && tradePrice > 0 && area > 0) {
+              pricePerUnit = Math.round(tradePrice / (area * 0.3025));
+            }
+            return {
               type: d.Type,
               district: d.DistrictName,
-              tradePrice: Number(d.TradePrice) || 0,
-              pricePerUnit: Number(d.PricePerUnit) || 0,
+              tradePrice,
+              pricePerUnit,
               unitPrice: Number(d.UnitPrice) || 0,
-              area: Number(d.Area) || 0,
+              area,
               landShape: d.LandShape,
               use: d.Use,
               cityPlanning: d.CityPlanning,
               period: d.Period,
-            }));
-          return { data: items, error: null };
+            };
+          });
+
+        try {
+          let allItems: any[] = [];
+          for (let attempt = 0; attempt < 8 && allItems.length < 15; attempt++) {
+            const params = new URLSearchParams({
+              year: String(currentYear),
+              quarter: String(currentQuarter),
+              area: input.area,
+              priceClassification: "01",
+              language: "ja",
+            });
+            if (cityCode) params.set("city", cityCode);
+            const res = await fetch(`https://www.reinfolib.mlit.go.jp/ex-api/external/XIT001?${params}`, {
+              headers: { "Ocp-Apim-Subscription-Key": apiKey },
+            });
+            if (res.ok) {
+              const json = await res.json();
+              allItems.push(...parseItems(json.data ?? []));
+            }
+            currentQuarter--;
+            if (currentQuarter < 1) { currentQuarter = 4; currentYear--; }
+          }
+          return { data: allItems.slice(0, 15), error: null };
         } catch (err: any) {
           return { data: [], error: `取得エラー: ${err.message}` };
         }
@@ -979,6 +993,18 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await db.updateUserPlan(input.id, input.plan);
         return { success: true };
+      }),
+
+    loginAs: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const targetUser = await db.getUserById(input.userId);
+        if (!targetUser) return { success: false, error: "ユーザーが見つかりません" } as const;
+        const token = await createSessionToken(targetUser.id, targetUser.openId);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        db.logActivity(ctx.user.id, "admin_login_as", `管理者が${targetUser.name}（ID:${targetUser.id}）として代理ログイン`).catch(() => {});
+        return { success: true } as const;
       }),
 
     activityLogs: adminProcedure.query(async () => {

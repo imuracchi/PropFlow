@@ -54,7 +54,9 @@ export default function Simulation() {
   const [, params] = useRoute("/simulation/:id");
   const propertyId = Number(params?.id);
 
-  const saveDocMutation = trpc.document.save.useMutation();
+  const saveDocMutation = trpc.document.save.useMutation({
+    onSuccess: () => { alert("ダウンロード資料に保存されました"); },
+  });
   const { data: property, isLoading } = trpc.property.getById.useQuery(
     { id: propertyId },
     { enabled: !!propertyId }
@@ -358,15 +360,10 @@ ${COST_ITEMS.map(item => {
 
 function ReferencePrice({ address, onApply }: { address: string; onApply: (price: number) => void }) {
   const prefCode = detectPrefCode(address);
-  const now = new Date();
-  const defaultYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
-  const defaultQuarter = Math.max(1, Math.ceil(now.getMonth() / 3) - 1);
-  const [year, setYear] = useState(String(defaultYear));
-  const [quarter, setQuarter] = useState(String(defaultQuarter));
   const [searched, setSearched] = useState(false);
 
   const { data, isLoading, refetch } = trpc.landPrice.search.useQuery(
-    { area: prefCode ?? "13", address, year: Number(year), quarter: Number(quarter) },
+    { area: prefCode ?? "13", address },
     { enabled: false }
   );
 
@@ -376,9 +373,12 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
   };
 
   const items = data?.data ?? [];
-  const avgPrice = items.length > 0
-    ? Math.round(items.reduce((s, d) => s + d.pricePerUnit, 0) / items.length)
+  const itemsWithPrice = items.filter(d => d.pricePerUnit > 0);
+  const avgPrice = itemsWithPrice.length > 0
+    ? Math.round(itemsWithPrice.reduce((s, d) => s + d.pricePerUnit, 0) / itemsWithPrice.length)
     : 0;
+
+  const periods = [...new Set(items.map(d => d.period).filter(Boolean))];
 
   return (
     <div className="bg-card border border-amber-200 rounded-lg overflow-hidden">
@@ -388,17 +388,10 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
         </h2>
       </div>
       <div className="p-5 space-y-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <Label className="text-sm shrink-0">取引時期</Label>
-          <Input type="number" value={year} onChange={e => setYear(e.target.value)} className="w-24 text-center" />
-          <span className="text-sm text-muted-foreground">年 第</span>
-          <select value={quarter} onChange={e => setQuarter(e.target.value)} className="border border-border rounded px-2 py-1.5 text-sm">
-            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
-          </select>
-          <span className="text-sm text-muted-foreground">四半期</span>
+        <div>
           <Button size="sm" className="gap-1.5" onClick={handleSearch} disabled={isLoading || !prefCode}>
             {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-            検索
+            近隣の取引事例を検索
           </Button>
         </div>
 
@@ -414,7 +407,7 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
           <>
             <div className="flex items-center justify-between bg-amber-50 rounded-lg px-4 py-3">
               <div>
-                <p className="text-xs text-amber-600">近隣取引の平均坪単価</p>
+                <p className="text-xs text-amber-600">近隣取引の平均坪単価{periods.length > 0 ? `（${periods.join("、")}）` : ""}</p>
                 <p className="text-xl font-bold text-amber-800">{avgPrice.toLocaleString()} 円/坪</p>
               </div>
               <Button size="sm" variant="outline" className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100" onClick={() => onApply(avgPrice)}>
@@ -430,7 +423,6 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
                     <th className="text-right px-3 py-2 text-sm font-medium text-muted-foreground">坪単価（円）</th>
                     <th className="text-right px-3 py-2 text-sm font-medium text-muted-foreground">取引価格（円）</th>
                     <th className="text-right px-3 py-2 text-sm font-medium text-muted-foreground">面積</th>
-                    <th className="text-left px-3 py-2 text-sm font-medium text-muted-foreground">時期</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -440,7 +432,6 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
                       <td className="px-3 py-2 text-sm text-right font-medium text-primary">{d.pricePerUnit > 0 ? d.pricePerUnit.toLocaleString() : "—"}</td>
                       <td className="px-3 py-2 text-sm text-right">{d.tradePrice.toLocaleString()}</td>
                       <td className="px-3 py-2 text-sm text-right">{d.area}㎡</td>
-                      <td className="px-3 py-2 text-sm text-muted-foreground">{d.period}</td>
                     </tr>
                   ))}
                 </tbody>

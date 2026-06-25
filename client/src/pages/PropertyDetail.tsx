@@ -864,7 +864,7 @@ export default function PropertyDetail() {
 
   const updateMutation = trpc.property.update.useMutation();
   const saveDocMutation = trpc.document.save.useMutation({
-    onSuccess: () => utils.document.list.invalidate(),
+    onSuccess: () => { utils.document.list.invalidate(); alert("ダウンロード資料に保存されました"); },
   });
   const transportMutation = trpc.property.analyzeTransport.useMutation();
   const deleteMutation = trpc.property.delete.useMutation();
