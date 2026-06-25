@@ -193,6 +193,21 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    getNotifySettings: protectedProcedure.query(async ({ ctx }) => {
+      return db.getNotifySettings(ctx.user.id);
+    }),
+
+    updateNotifySettings: protectedProcedure
+      .input(z.object({
+        notifyNewProperty: z.number(),
+        notifyDm: z.number(),
+        notifyAnnounce: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await db.updateNotifySettings(ctx.user.id, input);
+        return { success: true };
+      }),
+
     unsubscribePush: protectedProcedure
       .input(z.object({ endpoint: z.string() }))
       .mutation(async ({ input, ctx }) => {
@@ -370,7 +385,7 @@ export const appRouter = router({
           `🏠 新着物件が登録されました\n\n📋 ${prop.name}\n📍 ${prop.address}\n💰 ${priceLine}\n🏷 ${prop.type}${commentLine}\n\n▼ 詳細はこちら\n${siteUrl}/property/${prop.id}`
         );
         const { sendMail } = await import("./_core/mail");
-        const emails = await db.getActiveUserEmails();
+        const emails = await db.getActiveUserEmailsForNotify("newProperty");
         const mailHtml = `
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
             <h2 style="color:#1e3a5f;">🏠 新着物件のお知らせ</h2>
@@ -559,7 +574,7 @@ export const appRouter = router({
           dmPath
         ).catch(() => {});
         const senderCompany = ctx.user.company ?? "";
-        const receiverEmail = await db.getUserEmailById(input.receiverId);
+        const receiverEmail = await db.getUserEmailIfNotify(input.receiverId, "dm");
         if (receiverEmail) {
           const { sendMail } = await import("./_core/mail");
           const siteUrl = process.env.SITE_URL || "https://propflow.jp";
@@ -711,6 +726,23 @@ export const appRouter = router({
             `お知らせ: ${input.content.slice(0, 100)}`,
             `/chat/${input.propertyId}`
           ).catch(() => {});
+          const { sendMail } = await import("./_core/mail");
+          const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+          for (const uid of dmUserIds) {
+            const email = await db.getUserEmailIfNotify(uid, "announce");
+            if (email) {
+              sendMail(email, `【PropFlow】${prop.name} お知らせ`, `
+                <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+                  <h2 style="color:#1e3a5f;">📢 お知らせ</h2>
+                  <div style="background:#fffbeb;border:1px solid #f5d98a;border-radius:8px;padding:16px;margin:16px 0;">
+                    <p style="font-size:14px;font-weight:700;color:#1e3a5f;margin:0 0 4px;">${prop.name}</p>
+                    <p style="margin:8px 0;color:#1a1a1a;">${input.content}</p>
+                  </div>
+                  <a href="${siteUrl}/chat/${input.propertyId}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">お知らせを確認する</a>
+                  <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
+                </div>`).catch(() => {});
+            }
+          }
         }
         return { success: true };
       }),

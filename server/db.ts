@@ -110,18 +110,33 @@ export async function getAdminStats() {
   };
 }
 
-export async function getActiveUserEmails(): Promise<string[]> {
+export async function getActiveUserEmailsForNotify(type: "newProperty" | "dm" | "announce"): Promise<string[]> {
   const db = await getDb();
   if (!db) return [];
-  const rows = await db.select({ email: users.email }).from(users).where(eq(users.status, "active"));
+  const col = type === "newProperty" ? users.notifyNewProperty : type === "dm" ? users.notifyDm : users.notifyAnnounce;
+  const rows = await db.select({ email: users.email }).from(users).where(and(eq(users.status, "active"), eq(col, 1)));
   return rows.map(r => r.email);
 }
 
-export async function getUserEmailById(userId: number): Promise<string | null> {
+export async function getUserEmailIfNotify(userId: number, type: "newProperty" | "dm" | "announce"): Promise<string | null> {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  const col = type === "newProperty" ? users.notifyNewProperty : type === "dm" ? users.notifyDm : users.notifyAnnounce;
+  const rows = await db.select({ email: users.email }).from(users).where(and(eq(users.id, userId), eq(col, 1))).limit(1);
   return rows[0]?.email ?? null;
+}
+
+export async function updateNotifySettings(userId: number, settings: { notifyNewProperty: number; notifyDm: number; notifyAnnounce: number }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set(settings).where(eq(users.id, userId));
+}
+
+export async function getNotifySettings(userId: number) {
+  const db = await getDb();
+  if (!db) return { notifyNewProperty: 1, notifyDm: 1, notifyAnnounce: 1 };
+  const rows = await db.select({ notifyNewProperty: users.notifyNewProperty, notifyDm: users.notifyDm, notifyAnnounce: users.notifyAnnounce }).from(users).where(eq(users.id, userId)).limit(1);
+  return rows[0] ?? { notifyNewProperty: 1, notifyDm: 1, notifyAnnounce: 1 };
 }
 
 // ---- Properties ----

@@ -202,6 +202,9 @@ export default function MyPage() {
         </div>
       </div>
 
+      {/* メール通知設定 */}
+      <NotifySettings />
+
       {/* パスワード変更 */}
       <ChangePasswordForm />
 
@@ -397,6 +400,70 @@ function AdminContactForm({ userEmail, userName }: { userEmail: string; userName
             メールで送信
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function NotifySettings() {
+  const { data: settings, isLoading } = trpc.auth.getNotifySettings.useQuery();
+  const mutation = trpc.auth.updateNotifySettings.useMutation();
+  const utils = trpc.useUtils();
+
+  const [notifyNewProperty, setNotifyNewProperty] = useState(1);
+  const [notifyDm, setNotifyDm] = useState(1);
+  const [notifyAnnounce, setNotifyAnnounce] = useState(1);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (settings && !loaded) {
+      setNotifyNewProperty(settings.notifyNewProperty);
+      setNotifyDm(settings.notifyDm);
+      setNotifyAnnounce(settings.notifyAnnounce);
+      setLoaded(true);
+    }
+  }, [settings]);
+
+  const save = async (np: number, dm: number, an: number) => {
+    setNotifyNewProperty(np);
+    setNotifyDm(dm);
+    setNotifyAnnounce(an);
+    await mutation.mutateAsync({ notifyNewProperty: np, notifyDm: dm, notifyAnnounce: an });
+    utils.auth.getNotifySettings.invalidate();
+  };
+
+  if (isLoading) return null;
+
+  return (
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="px-5 py-4 border-b border-border">
+        <h2 className="font-semibold text-foreground flex items-center gap-2">
+          📩 メール通知設定
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">チェックを入れた項目のメール通知を受け取ります</p>
+      </div>
+      <div className="p-5 space-y-3">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" className="accent-primary w-4 h-4" checked={notifyNewProperty === 1} onChange={e => save(e.target.checked ? 1 : 0, notifyDm, notifyAnnounce)} />
+          <div>
+            <span className="text-sm font-medium">新着物件情報</span>
+            <p className="text-xs text-muted-foreground">新しい物件が登録された時にメールでお知らせ</p>
+          </div>
+        </label>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" className="accent-primary w-4 h-4" checked={notifyDm === 1} onChange={e => save(notifyNewProperty, e.target.checked ? 1 : 0, notifyAnnounce)} />
+          <div>
+            <span className="text-sm font-medium">DMが届いた</span>
+            <p className="text-xs text-muted-foreground">ダイレクトメッセージを受信した時にメールでお知らせ</p>
+          </div>
+        </label>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" className="accent-primary w-4 h-4" checked={notifyAnnounce === 1} onChange={e => save(notifyNewProperty, notifyDm, e.target.checked ? 1 : 0)} />
+          <div>
+            <span className="text-sm font-medium">お気に入り物件でのお知らせ</span>
+            <p className="text-xs text-muted-foreground">DM中の物件でオーナーからお知らせが投稿された時にメールでお知らせ</p>
+          </div>
+        </label>
       </div>
     </div>
   );
