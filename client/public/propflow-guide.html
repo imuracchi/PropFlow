@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>PropFlow - 不動産情報プラットフォーム ご案内</title>
+<style>
+@page { size: A4 portrait; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 210mm; min-height: 297mm; position: relative; page-break-after: always; padding: 18mm 20mm; }
+.page:last-child { page-break-after: auto; }
+
+.cover { background: #f8fafc; color: #1e3a5f; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border: 3px solid #1e3a5f; }
+.cover-logo { font-size: 48px; font-weight: 800; letter-spacing: 4px; margin-bottom: 16px; }
+.cover-sub { font-size: 20px; font-weight: 400; opacity: 0.9; letter-spacing: 2px; margin-bottom: 40px; }
+.cover-logo { color: #2563eb; }
+.cover-tagline { font-size: 16px; color: #475569; line-height: 2; }
+.cover-bottom { position: absolute; bottom: 30mm; left: 0; right: 0; text-align: center; font-size: 12px; color: #94a3b8; }
+
+.page-title { font-size: 24px; font-weight: 800; color: #1e3a5f; margin-bottom: 6px; }
+.page-subtitle { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+.section { margin-bottom: 16px; }
+.section-title { font-size: 16px; font-weight: 700; color: #1e3a5f; border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 10px; }
+
+.problem-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+.problem-box h3 { color: #dc2626; font-size: 14px; margin-bottom: 4px; }
+.problem-box p { color: #7f1d1d; font-size: 12px; }
+.solution-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+.solution-box h3 { color: #1e40af; font-size: 14px; margin-bottom: 4px; }
+.solution-box p { color: #1e3a5f; font-size: 12px; }
+
+.feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.feature-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
+.feature-card .icon { font-size: 22px; margin-bottom: 4px; }
+.feature-card h3 { font-size: 13px; font-weight: 700; color: #1e3a5f; margin-bottom: 3px; }
+.feature-card p { font-size: 11px; color: #475569; line-height: 1.5; }
+
+.flow { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 12px; }
+.flow-step { flex: 1; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 6px; }
+.flow-step .num { display: inline-block; width: 26px; height: 26px; line-height: 26px; border-radius: 50%; background: #2563eb; color: white; font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.flow-step h4 { font-size: 11px; font-weight: 700; color: #1e3a5f; margin-bottom: 2px; }
+.flow-step p { font-size: 9px; color: #64748b; }
+.flow-arrow { font-size: 18px; color: #2563eb; margin-top: 20px; }
+
+.benefit-list { list-style: none; padding: 0; }
+.benefit-list li { padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; display: flex; align-items: flex-start; gap: 6px; }
+.check { color: #059669; font-weight: 700; font-size: 14px; line-height: 1; }
+
+.cta-box { background: linear-gradient(135deg, #1e3a5f, #2563eb); color: white; border-radius: 12px; padding: 20px; text-align: center; margin-top: 16px; }
+.cta-box h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.cta-box p { font-size: 12px; opacity: 0.9; margin-bottom: 12px; }
+.cta-url { display: inline-block; background: white; color: #1e3a5f; font-weight: 700; font-size: 15px; padding: 8px 28px; border-radius: 8px; text-decoration: none; }
+
+.footer { position: absolute; bottom: 12mm; left: 20mm; right: 20mm; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+
+/* App mockup */
+.app { border: 2px solid #cbd5e1; border-radius: 8px; overflow: hidden; margin-bottom: 10px; font-size: 11px; display: flex; }
+.app-side { width: 130px; background: #1e293b; color: #94a3b8; padding: 8px 0; font-size: 9px; flex-shrink: 0; }
+.app-side .logo { text-align: center; font-size: 12px; font-weight: 800; color: white; padding: 4px 0 8px; border-bottom: 1px solid #334155; margin-bottom: 6px; }
+.app-side .sec-label { font-size: 7px; color: #475569; padding: 6px 10px 2px; letter-spacing: 1px; }
+.app-side .menu-item { padding: 3px 10px; display: flex; align-items: center; gap: 4px; }
+.app-side .menu-item.active { background: #334155; color: white; font-weight: 600; border-left: 2px solid #60a5fa; }
+.app-main { flex: 1; background: #f8fafc; }
+.app-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 8px 12px; font-size: 12px; font-weight: 700; color: #1e3a5f; }
+.app-content { padding: 10px 12px; }
+
+.mock-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+.mock-table th { background: #f1f5f9; padding: 4px 6px; text-align: left; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0; }
+.mock-table td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; }
+.mock-btn { display: inline-block; background: #2563eb; color: white; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-weight: 600; }
+.mock-btn-outline { display: inline-block; border: 1px solid #cbd5e1; color: #475569; padding: 2px 8px; border-radius: 4px; font-size: 8px; }
+.mock-btn-amber { display: inline-block; background: #f59e0b; color: white; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-weight: 600; }
+.mock-input { border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 8px; font-size: 9px; background: white; display: inline-block; }
+.mock-card { background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 6px; }
+.mock-badge { display: inline-block; font-size: 7px; padding: 1px 5px; border-radius: 3px; font-weight: 600; }
+.mock-tab { display: inline-block; padding: 3px 10px; font-size: 9px; border: 1px solid #e2e8f0; }
+.mock-tab.active { font-weight: 600; color: #2563eb; border-bottom: 2px solid #2563eb; background: white; }
+
+.annotation { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 11px; color: #92400e; }
+.annotation strong { color: #78350f; }
+.step-label { display: inline-block; background: #dc2626; color: white; font-size: 9px; font-weight: 700; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; margin-right: 3px; }
+
+.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:#1e3a5f;padding:10px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.toolbar button{background:#fff;color:#1e3a5f;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.toolbar button:hover{background:#e2e8f0}
+.toolbar .ttl{color:#fff;font-size:14px;font-weight:600;flex:1}
+@media print{.toolbar{display:none}.spacer{display:none}}
+@media screen{body{background:#cbd5e1}.page{background:#fff;margin:20px auto;box-shadow:0 2px 12px rgba(0,0,0,.18)}}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+<span class="ttl">PropFlow ご案内資料</span>
+<button onclick="window.print()">印刷 / PDF保存</button>
+</div>
+<div class="spacer" style="height:52px"></div>
+
+<!-- PAGE 1: Cover -->
+<div class="page cover">
+<div style="width:100%;display:flex;flex-direction:column;align-items:center;">
+<div class="cover-logo" style="font-size:42px;margin-bottom:8px;">PropFlow</div>
+<div class="cover-sub" style="font-size:16px;margin-bottom:14px;">不動産情報プラットフォーム</div>
+<div style="background:#2563eb;color:white;border-radius:10px;padding:14px 24px;margin-bottom:18px;">
+<div style="font-size:20px;font-weight:800;line-height:1.6;text-align:center;">
+不動産情報の共有を<br>今のやり方よりもっと便利に
+</div>
+</div>
+<div class="cover-tagline" style="font-size:12px;line-height:1.8;margin-bottom:20px;">
+PDF・画像からAIが自動読み取り → 紹介資料を1クリック生成<br>
+利益シミュレーション・DM・お知らせ配信まで、これ一つで完結。
+</div>
+
+<!-- スクリーンショット風モックアップ -->
+<div style="display:flex;gap:12px;justify-content:center;align-items:stretch;width:100%;max-width:580px;">
+
+<!-- 物件一覧 -->
+<div style="flex:1;border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);background:white;max-width:190px;display:flex;flex-direction:column;">
+<div style="background:#1e293b;padding:3px 6px;display:flex;align-items:center;gap:4px;">
+<div style="width:4px;height:4px;border-radius:50%;background:#ef4444;"></div>
+<div style="width:4px;height:4px;border-radius:50%;background:#f59e0b;"></div>
+<div style="width:4px;height:4px;border-radius:50%;background:#22c55e;"></div>
+<span style="font-size:6px;color:#94a3b8;margin-left:4px;">物件一覧</span>
+</div>
+<div style="display:flex;font-size:7px;flex:1;">
+<div style="width:50px;background:#1e293b;padding:4px 3px;color:#94a3b8;line-height:1.6;">
+<div style="font-size:5px;color:#475569;">買いたい</div>
+<div style="color:white;font-weight:600;background:#334155;padding:1px 3px;border-radius:2px;margin:1px 0;">≡ 物件一覧</div>
+<div>◎ 希望条件</div>
+<div>♡ お気に入り</div>
+<div style="font-size:5px;color:#475569;margin-top:3px;">売りたい</div>
+<div>↑ 物件登録</div>
+</div>
+<div style="flex:1;padding:4px;background:#f8fafc;">
+<div style="font-size:7px;font-weight:700;color:#1e3a5f;margin-bottom:2px;">物件一覧</div>
+<div style="background:white;border:1px solid #e2e8f0;border-radius:2px;padding:2px 3px;margin-bottom:2px;font-size:5px;">🔍 検索...</div>
+<div style="background:white;border:1px solid #e2e8f0;border-radius:2px;padding:2px;margin-bottom:1px;">
+<div style="font-size:6px;font-weight:600;color:#1e3a5f;">大田区久が原 事業用地</div>
+<div style="display:flex;justify-content:space-between;font-size:5px;"><span style="color:#64748b;">923㎡</span><span style="color:#2563eb;font-weight:700;">3.5億</span><span style="background:#dcfce7;color:#166534;padding:0 2px;border-radius:2px;">85%</span></div>
+</div>
+<div style="background:white;border:1px solid #e2e8f0;border-radius:2px;padding:2px;">
+<div style="font-size:6px;font-weight:600;color:#1e3a5f;">千代田区神田 土地</div>
+<div style="display:flex;justify-content:space-between;font-size:5px;"><span style="color:#64748b;">106㎡</span><span style="color:#2563eb;font-weight:700;">応相談</span><span style="background:#dbeafe;color:#1e40af;padding:0 2px;border-radius:2px;">60%</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 物件詳細 -->
+<div style="flex:1;border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);background:white;max-width:190px;display:flex;flex-direction:column;">
+<div style="background:#1e293b;padding:3px 6px;display:flex;align-items:center;gap:4px;">
+<div style="width:4px;height:4px;border-radius:50%;background:#ef4444;"></div>
+<div style="width:4px;height:4px;border-radius:50%;background:#f59e0b;"></div>
+<div style="width:4px;height:4px;border-radius:50%;background:#22c55e;"></div>
+<span style="font-size:6px;color:#94a3b8;margin-left:4px;">物件詳細</span>
+</div>
+<div style="padding:6px;font-size:6px;flex:1;">
+<div style="display:inline-block;background:#f1f5f9;padding:1px 4px;border-radius:2px;font-size:6px;color:#475569;margin-bottom:2px;">土地</div>
+<div style="font-size:9px;font-weight:700;color:#1e3a5f;margin-bottom:1px;">大田区久が原2丁目 事業用地</div>
+<div style="font-size:6px;color:#64748b;margin-bottom:4px;">📍 東京都大田区久が原2丁目</div>
+<div style="display:flex;gap:2px;margin-bottom:4px;flex-wrap:wrap;">
+<span style="background:#2563eb;color:white;padding:1px 4px;border-radius:2px;font-size:5px;font-weight:600;">💬 登録者にDM</span>
+<span style="border:1px solid #cbd5e1;padding:1px 3px;border-radius:2px;font-size:5px;">📋 紹介資料</span>
+<span style="border:1px solid #cbd5e1;padding:1px 3px;border-radius:2px;font-size:5px;">📊 試算</span>
+</div>
+<div style="border-top:1px solid #e2e8f0;padding-top:3px;line-height:1.8;">
+<div style="display:flex;"><span style="width:36px;color:#94a3b8;">価格</span><span style="color:#2563eb;font-weight:700;">350,000,000円</span></div>
+<div style="display:flex;"><span style="width:36px;color:#94a3b8;">面積</span><span>923.07㎡</span></div>
+<div style="display:flex;"><span style="width:36px;color:#94a3b8;">交通</span><span>久が原駅 徒歩8分</span></div>
+</div>
+</div>
+</div>
+
+<!-- シミュレーション -->
+<div style="flex:1;border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);background:white;max-width:190px;display:flex;flex-direction:column;">
+<div style="background:#1e293b;padding:3px 6px;display:flex;align-items:center;gap:4px;">
+<div style="width:4px;height:4px;border-radius:50%;background:#ef4444;"></div>
+<div style="width:4px;height:4px;border-radius:50%;background:#f59e0b;"></div>
+<div style="width:4px;height:4px;border-radius:50%;background:#22c55e;"></div>
+<span style="font-size:6px;color:#94a3b8;margin-left:4px;">利益シミュレーション</span>
+</div>
+<div style="padding:6px;font-size:6px;flex:1;">
+<div style="font-size:8px;font-weight:700;color:#1e3a5f;margin-bottom:4px;">📊 利益シミュレーション</div>
+<div style="display:flex;gap:4px;">
+<div style="flex:1;">
+<div style="font-size:6px;font-weight:600;color:#475569;margin-bottom:2px;">原価明細</div>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:2px;padding:2px;line-height:1.6;font-size:5px;">
+土地代金: 350,000,000<br>
+仲介(買): 11,616,000<br>
+仲介(売): 14,000,000<br>
+<strong style="color:#2563eb;">合計: 375,616,000</strong>
+</div>
+</div>
+<div style="flex:1;">
+<div style="font-size:6px;font-weight:600;color:#475569;margin-bottom:2px;">売買価格</div>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:2px;padding:2px;line-height:1.6;font-size:5px;">
+坪単価: 4,500,000<br>
+坪数: 101.27<br>
+<strong style="color:#2563eb;">合計: 455,715,000</strong>
+</div>
+<div style="margin-top:3px;border:1px solid #2563eb;border-radius:2px;overflow:hidden;">
+<div style="background:#2563eb;color:white;padding:1px 3px;font-size:5px;font-weight:600;">結果</div>
+<div style="padding:2px 3px;font-size:6px;">
+<div style="display:flex;justify-content:space-between;"><span>利益</span><span style="color:#059669;font-weight:700;">+80,099,000</span></div>
+<div style="display:flex;justify-content:space-between;"><span>利益率</span><span style="color:#059669;font-weight:700;">17.6%</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+<div class="cover-bottom">propflow.jp</div>
+</div>
+
+<!-- PAGE 2: Problem & Solution -->
+<div class="page">
+<div class="page-title">PropFlowが解決する課題</div>
+<div class="page-subtitle">LINEやメール、足で集めた情報の共有、こんなお悩みありませんか？</div>
+<div class="section">
+<div class="problem-box"><h3>課題1: LINEやメールの情報が流れて埋もれる</h3><p>LINEグループやメールで送られてきたPDF・写真が次々と流れて埋もれます。「あの物件どこだっけ？」と探す時間が無駄になっています。</p></div>
+<div class="problem-box"><h3>課題2: 足で集めた情報を資料にまとめるのが大変</h3><p>現地を見て、PDFを受け取って、必要な情報を自社の紹介資料にまとめ直す。1件あたり数十分、複数件あれば1日がかりの作業です。</p></div>
+<div class="problem-box"><h3>課題3: 問い合わせ対応で1日が終わる</h3><p>「この物件の詳細は？」「坪単価いくら？」「接道は？」—— 同じような質問に何度も答えることに時間を取られます。</p></div>
+</div>
+<div class="section">
+<div class="section-title">PropFlowの解決策</div>
+<div class="solution-box"><h3>物件情報をデータベース化</h3><p>PDFをアップロードするだけで、AIが物件情報を自動で読み取り。検索・フィルタ・一覧表示で必要な物件がすぐに見つかります。</p></div>
+<div class="solution-box"><h3>紹介資料を1クリックで自動生成</h3><p>物件概要書・地図・ストリートビュー・現場写真を含む紹介資料を自動生成。会社ロゴ入りで、そのまま送れる品質です。</p></div>
+<div class="solution-box"><h3>情報を見れば質問が減る</h3><p>物件の詳細情報・写真・地図が全てPropFlowに集約。「詳細はPropFlowを見てください」で対応完了。</p></div>
+</div>
+<div class="footer">PropFlow - 不動産情報プラットフォーム | propflow.jp</div>
+</div>
+
+<!-- PAGE 3: Features -->
+<div class="page">
+<div class="page-title">主な機能</div>
+<div class="page-subtitle">売りたい人も、買いたい人も、業務を効率化</div>
+<div class="feature-grid">
+<div class="feature-card"><div class="icon">📄</div><h3>AI物件情報読み取り</h3><p>PDFや画像をアップロードするだけで、AIが物件名・所在地・価格・面積・交通など20以上の項目を自動抽出します。</p></div>
+<div class="feature-card"><div class="icon">📋</div><h3>紹介資料の自動生成</h3><p>物件概要書・所在地地図・ストリートビュー・現場写真・交通アクセスを含む紹介資料をワンクリックで生成。</p></div>
+<div class="feature-card"><div class="icon">📊</div><h3>利益シミュレーション</h3><p>原価16項目と売買価格から利益・利益率を自動計算。仲介手数料も自動算出。PDF保存で記録を残せます。</p></div>
+<div class="feature-card"><div class="icon">🎯</div><h3>希望条件マッチング</h3><p>買い手が希望エリア・種別・予算・面積を登録すると、物件一覧にマッチ率が%で表示されます。</p></div>
+<div class="feature-card"><div class="icon">💬</div><h3>ダイレクトメッセージ</h3><p>物件登録者と買い手の1対1のDM。物件単位で整理されるので、やり取りが迷子になりません。</p></div>
+<div class="feature-card"><div class="icon">📢</div><h3>お知らせ配信</h3><p>物件登録者から興味を持っているユーザーへ一斉にお知らせを配信。価格変更や商談状況の告知に。</p></div>
+<div class="feature-card"><div class="icon">📸</div><h3>現場写真管理</h3><p>現場写真をアップロード・ギャラリー表示。紹介資料にも自動で含めることができます。</p></div>
+<div class="feature-card"><div class="icon">🗺️</div><h3>地図・ストリートビュー</h3><p>物件の所在地をGoogleマップで確認。ストリートビューで現地の様子も確認できます。</p></div>
+</div>
+<div class="footer">PropFlow - 不動産情報プラットフォーム | propflow.jp</div>
+</div>
+
+<!-- PAGE 4: Registration & Flow -->
+<div class="page">
+<div class="page-title">ご利用の流れ</div>
+<div class="page-subtitle">新規登録からご利用開始まで</div>
+
+<div class="section">
+<div class="section-title">新規登録（無料）</div>
+<div class="flow">
+<div class="flow-step"><div class="num">1</div><h4>新規登録タブを選択</h4><p>ログイン画面で「新規登録」タブをクリック</p></div>
+<div class="flow-arrow">→</div>
+<div class="flow-step"><div class="num">2</div><h4>メールアドレスを送信</h4><p>メールアドレスを入力して登録用リンクを送信</p></div>
+<div class="flow-arrow">→</div>
+<div class="flow-step"><div class="num">3</div><h4>届いたメールから登録</h4><p>リンクから会社名・氏名・パスワードを入力</p></div>
+<div class="flow-arrow">→</div>
+<div class="flow-step"><div class="num">4</div><h4>管理者の承認</h4><p>承認後にメールが届きログイン可能に</p></div>
+</div>
+<div style="display:flex;gap:10px;">
+<div style="flex:1;">
+<div style="border:2px solid #cbd5e1;border-radius:8px;overflow:hidden;">
+<div style="background:#1e3a5f;color:white;padding:4px 10px;font-size:9px;font-weight:600;">ログイン画面</div>
+<div style="padding:12px;background:#f8fafc;text-align:center;">
+<div style="font-size:14px;font-weight:800;color:#1e3a5f;margin-bottom:8px;">PropFlow</div>
+<div style="display:flex;justify-content:center;margin-bottom:8px;">
+<div class="mock-tab">ログイン</div>
+<div class="mock-tab active">新規登録</div>
+</div>
+<div style="background:white;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:left;">
+<div style="font-size:11px;font-weight:700;color:#1e3a5f;">新規登録</div>
+<div style="font-size:8px;color:#64748b;margin-bottom:6px;">メールアドレスを入力すると、登録用リンクが届きます</div>
+<div style="font-size:8px;color:#475569;margin-bottom:2px;">メールアドレス</div>
+<div class="mock-input" style="width:100%;margin-bottom:6px;">✉ example@company.com</div>
+<div class="mock-btn" style="display:block;text-align:center;padding:5px;">✉ 登録用リンクを送信</div>
+</div>
+</div>
+</div>
+</div>
+<div style="flex:1;">
+<div style="border:2px solid #cbd5e1;border-radius:8px;overflow:hidden;">
+<div style="background:#1e3a5f;color:white;padding:4px 10px;font-size:9px;font-weight:600;">メール送信完了画面</div>
+<div style="padding:16px;background:#f8fafc;text-align:center;">
+<div style="font-size:14px;font-weight:800;color:#1e3a5f;margin-bottom:10px;">PropFlow</div>
+<div style="width:40px;height:40px;border-radius:50%;background:#f0fdf4;border:1px solid #bbf7d0;margin:0 auto 8px;line-height:40px;font-size:20px;">✓</div>
+<div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:4px;">メールを送信しました</div>
+<div style="font-size:9px;color:#64748b;">example@company.com に<br>登録用リンクを送信しました。<br>メール内のリンクから登録を完了してください。<br><span style="font-size:8px;color:#94a3b8;">有効期限: 72時間</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="section" style="margin-top:14px;">
+<div class="section-title">売りたい方</div>
+<div class="flow">
+<div class="flow-step"><div class="num">1</div><h4>資料をアップ</h4><p>PDF・画像をアップロード</p></div>
+<div class="flow-arrow">→</div>
+<div class="flow-step"><div class="num">2</div><h4>AIが自動入力</h4><p>物件情報を自動読み取り</p></div>
+<div class="flow-arrow">→</div>
+<div class="flow-step"><div class="num">3</div><h4>登録完了</h4><p>紹介資料生成・LINE通知</p></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">買いたい方</div>
+<div class="flow">
+<div class="flow-step"><div class="num">1</div><h4>希望条件を登録</h4><p>エリア・種別・予算を登録</p></div>
+<div class="flow-arrow">→</div>
+<div class="flow-step"><div class="num">2</div><h4>マッチ物件を確認</h4><p>マッチ率で効率的に探索</p></div>
+<div class="flow-arrow">→</div>
+<div class="flow-step"><div class="num">3</div><h4>DMで問い合わせ</h4><p>登録者にDM・シミュレーション</p></div>
+</div>
+</div>
+<div class="footer">PropFlow - 不動産情報プラットフォーム | propflow.jp</div>
+</div>
+
+<!-- PAGE 5: 使い方 - 物件登録 -->
+<div class="page">
+<div class="page-title">使い方ガイド①</div>
+<div class="page-subtitle">物件を登録する</div>
+
+<div class="section">
+<div class="section-title">STEP 1: 資料をアップロード</div>
+<div class="app">
+<div class="app-side">
+<div class="logo">PropFlow</div>
+<div class="sec-label">買いたい</div>
+<div class="menu-item">≡ 物件一覧</div>
+<div class="menu-item">◎ 希望条件</div>
+<div class="menu-item">♡ お気に入り</div>
+<div class="menu-item">○ 質問や相談DM</div>
+<div class="sec-label">売りたい</div>
+<div class="menu-item active">↑ 物件登録</div>
+<div class="menu-item">⊞ 自社物件一覧</div>
+<div class="menu-item">🔔 お知らせ管理</div>
+<div class="menu-item">👥 興味者リスト</div>
+<div class="sec-label">マイページ</div>
+<div class="menu-item">↓ ダウンロード資料</div>
+<div class="menu-item">👤 マイページ</div>
+</div>
+<div class="app-main">
+<div class="app-header">物件登録</div>
+<div class="app-content" style="text-align:center;padding:16px;">
+<div style="border:2px dashed #94a3b8;border-radius:8px;padding:20px;">
+<div style="font-size:24px;margin-bottom:2px;">📄</div>
+<div style="font-weight:600;font-size:11px;color:#1e3a5f;">PDF・画像ファイルをドロップ</div>
+<div style="font-size:8px;color:#64748b;margin-top:2px;">またはクリックしてファイルを選択</div>
+<div style="font-size:8px;color:#94a3b8;margin-top:2px;">物件概要書・登記簿謄本・現場写真など</div>
+</div>
+<div style="margin-top:8px;"><span class="mock-btn" style="padding:5px 16px;">📋 AIで物件情報を読み取る</span></div>
+</div>
+</div>
+</div>
+<div class="annotation">
+<span class="step-label">1</span> サイドバー「<strong>物件登録</strong>」をクリック → PDFや画像をドラッグ&ドロップ<br>
+<span class="step-label">2</span> 「<strong>AIで物件情報を読み取る</strong>」ボタンで自動抽出開始
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">STEP 2: 内容を確認して登録</div>
+<div class="app">
+<div class="app-side">
+<div class="logo">PropFlow</div>
+<div class="sec-label">買いたい</div>
+<div class="menu-item">≡ 物件一覧</div>
+<div class="menu-item">◎ 希望条件</div>
+<div class="menu-item">♡ お気に入り</div>
+<div class="menu-item">○ 質問や相談DM</div>
+<div class="sec-label">売りたい</div>
+<div class="menu-item active">↑ 物件登録</div>
+<div class="menu-item">⊞ 自社物件一覧</div>
+<div class="menu-item">🔔 お知らせ管理</div>
+<div class="menu-item">👥 興味者リスト</div>
+</div>
+<div class="app-main">
+<div class="app-header">物件登録 - 入力フォーム</div>
+<div class="app-content">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:9px;">
+<div><span style="color:#64748b;">物件名</span><div class="mock-input" style="width:100%;">大田区久が原2丁目 事業用地</div></div>
+<div><span style="color:#64748b;">物件種別</span><div class="mock-input" style="width:100%;">土地</div></div>
+<div style="grid-column:span 2;"><span style="color:#64748b;">所在地</span><div class="mock-input" style="width:100%;">東京都大田区久が原2丁目8番</div></div>
+<div><span style="color:#64748b;">売出価格</span><div class="mock-input" style="width:100%;">350,000,000 円</div></div>
+<div><span style="color:#64748b;">土地面積</span><div class="mock-input" style="width:100%;">923.07 ㎡</div></div>
+</div>
+<div style="margin-top:6px;padding:6px;background:#fffbeb;border:1px solid #f5d98a;border-radius:4px;font-size:8px;"><strong>紹介コメント</strong>：AIが自動生成 or 手入力</div>
+<div style="margin-top:6px;border:1px dashed #94a3b8;border-radius:4px;padding:6px;text-align:center;font-size:8px;">📸 現場写真アップ（ドラッグ&ドロップ対応）</div>
+<div style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end;">
+<span class="mock-btn-outline">戻る</span>
+<span class="mock-btn" style="padding:4px 16px;">✓ 物件を登録する</span>
+</div>
+</div>
+</div>
+</div>
+<div class="annotation">
+<span class="step-label">3</span> AIが読み取った情報が<strong>自動入力済み</strong>。確認して必要に応じて修正<br>
+<span class="step-label">4</span> 現場写真・自分専用メモ・よくある質問も登録可能<br>
+<span class="step-label">5</span> 「物件を登録する」で完了。登録中はオーバーレイで進捗表示
+</div>
+</div>
+<div class="footer">PropFlow - 不動産情報プラットフォーム | propflow.jp</div>
+</div>
+
+<!-- PAGE 6: 使い方 - 物件一覧・詳細 -->
+<div class="page">
+<div class="page-title">使い方ガイド②</div>
+<div class="page-subtitle">物件を探す・詳細を確認する</div>
+
+<div class="section">
+<div class="section-title">物件一覧</div>
+<div class="app">
+<div class="app-side">
+<div class="logo">PropFlow</div>
+<div class="sec-label">買いたい</div>
+<div class="menu-item active">≡ 物件一覧</div>
+<div class="menu-item">◎ 希望条件</div>
+<div class="menu-item">♡ お気に入り</div>
+<div class="menu-item">○ 質問や相談DM</div>
+<div class="sec-label">売りたい</div>
+<div class="menu-item">↑ 物件登録</div>
+<div class="menu-item">⊞ 自社物件一覧</div>
+<div class="menu-item">🔔 お知らせ管理</div>
+<div class="menu-item">👥 興味者リスト</div>
+</div>
+<div class="app-main">
+<div class="app-header" style="display:flex;justify-content:space-between;align-items:center;">物件一覧 <span class="mock-btn">+ 物件を登録</span></div>
+<div class="app-content">
+<div class="mock-input" style="width:100%;margin-bottom:6px;">🔍 エリア・住所・業者名で検索...</div>
+<div style="margin-bottom:6px;display:flex;gap:4px;">
+<span class="mock-btn-outline">種別：全て ▼</span>
+<span class="mock-btn-outline" style="color:#2563eb;border-color:#2563eb;">🎯 マッチ率順</span>
+</div>
+<table class="mock-table">
+<tr><th></th><th>タイトル</th><th>住所</th><th>面積</th><th>価格</th><th>マッチ</th><th>♡</th></tr>
+<tr><td>☐</td><td style="font-weight:600;"><span style="font-size:7px;color:#94a3b8;">#14</span> <span style="font-size:8px;color:#94a3b8;">土地</span><br>大田区久が原2丁目 事業用地</td><td style="font-size:8px;">大田区久が原2丁目</td><td>923㎡</td><td style="color:#2563eb;font-weight:600;">350,000,000</td><td><span class="mock-badge" style="background:#dcfce7;color:#166534;">85%</span></td><td style="color:#ef4444;">♡3</td></tr>
+<tr><td>☐</td><td style="font-weight:600;"><span style="font-size:7px;color:#94a3b8;">#15</span> <span style="font-size:8px;color:#94a3b8;">土地</span><br>千代田区神田和泉町 土地</td><td style="font-size:8px;">千代田区神田和泉町</td><td>106㎡</td><td style="color:#2563eb;font-weight:600;">応相談</td><td><span class="mock-badge" style="background:#dbeafe;color:#1e40af;">60%</span></td><td style="color:#ef4444;">♡1</td></tr>
+</table>
+</div>
+</div>
+</div>
+<div class="annotation">
+<strong>マッチ率</strong>：「希望条件」に登録した条件との一致率が自動表示される<br>
+<strong>♡の数字</strong>：お気に入り登録数（人気度の参考）<br>
+<strong>#ID</strong>：物件管理番号 / 検索・フィルタで絞り込み可能
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">物件詳細</div>
+<div class="app">
+<div class="app-side">
+<div class="logo">PropFlow</div>
+<div class="sec-label">買いたい</div>
+<div class="menu-item active">≡ 物件一覧</div>
+<div class="menu-item">◎ 希望条件</div>
+</div>
+<div class="app-main">
+<div class="app-header">< 物件一覧に戻る</div>
+<div class="app-content">
+<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
+<span class="mock-badge" style="background:#f1f5f9;color:#475569;">土地</span>
+</div>
+<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:2px;">大田区久が原2丁目 事業用地（923.07㎡）</div>
+<div style="font-size:8px;color:#64748b;margin-bottom:4px;">📍 東京都大田区久が原2丁目8番</div>
+<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px;">
+<span class="mock-btn-outline">♡ お気に入り</span>
+<span class="mock-btn">💬 登録者にDM</span>
+<span class="mock-btn-outline">🔔 お知らせ</span>
+<span class="mock-btn-outline">📋 紹介資料</span>
+<span class="mock-btn-outline">📊 シミュレーション</span>
+<span class="mock-btn-outline">↓ CSV</span>
+</div>
+<div style="display:flex;gap:2px;margin-bottom:6px;">
+<span class="mock-tab active">物件概要</span>
+<span class="mock-tab">資料</span>
+<span class="mock-tab">地図と写真</span>
+<span class="mock-tab">よくある質問</span>
+</div>
+<table class="mock-table">
+<tr><th style="width:70px;">所在地</th><td>東京都大田区久が原2丁目8番</td></tr>
+<tr><th>売出価格</th><td style="color:#2563eb;font-weight:700;">350,000,000 円</td></tr>
+<tr><th>土地面積</th><td>923.07㎡（279.23坪）</td></tr>
+<tr><th>交通</th><td>東急池上線「久が原」駅 徒歩8分</td></tr>
+</table>
+</div>
+</div>
+</div>
+<div class="annotation">
+<strong>登録者にDM</strong>：物件登録者と直接1対1のメッセージ<br>
+<strong>紹介資料</strong>：ページを選んで紹介資料を自動生成（ダウンロード資料に保存）<br>
+<strong>シミュレーション</strong>：利益シミュレーションページへ
+</div>
+</div>
+<div class="footer">PropFlow - 不動産情報プラットフォーム | propflow.jp</div>
+</div>
+
+<!-- PAGE 7: 使い方 - 紹介資料・シミュレーション -->
+<div class="page">
+<div class="page-title">使い方ガイド③</div>
+<div class="page-subtitle">紹介資料の作成・利益シミュレーション</div>
+
+<div class="section">
+<div class="section-title">紹介資料の自動生成</div>
+<div style="display:flex;gap:8px;">
+<div style="flex:1;">
+<div style="border:2px solid #cbd5e1;border-radius:8px;overflow:hidden;">
+<div style="background:#1e3a5f;color:white;padding:4px 10px;font-size:9px;font-weight:600;">ページ選択ダイアログ</div>
+<div style="padding:10px;background:#f8fafc;font-size:10px;line-height:2;">
+<div style="display:flex;align-items:center;gap:4px;"><strong>📄</strong> 紹介資料の作成</div>
+<div style="font-size:8px;color:#64748b;margin-bottom:4px;">含めるページを選択してください</div>
+☑ 物件概要書<br>
+☑ 所在地地図<br>
+☑ ストリートビュー<br>
+☑ 現場写真<br>
+☑ 交通アクセス（徒歩ルート）<br>
+☑ 添付資料一覧<br>
+<div style="margin-left:14px;font-size:9px;color:#64748b;">
+☑ 物件概要書.pdf<br>
+☑ 登記簿謄本.pdf
+</div>
+<div style="display:flex;gap:4px;margin-top:6px;">
+<span class="mock-btn-outline" style="flex:1;text-align:center;">キャンセル</span>
+<span class="mock-btn" style="flex:1;text-align:center;">📄 作成</span>
+</div>
+</div>
+</div>
+</div>
+<div style="flex:1.3;">
+<div style="border:2px solid #cbd5e1;border-radius:8px;overflow:hidden;">
+<div style="background:#1e3a5f;color:white;padding:4px 10px;font-size:9px;font-weight:600;">生成された紹介資料（プレビュー）</div>
+<div style="padding:10px;background:white;">
+<div style="display:flex;justify-content:space-between;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:6px;">
+<span style="font-size:9px;font-weight:700;">会社ロゴ</span>
+<span style="font-size:7px;color:#64748b;">出力日: 2026/06/25</span>
+</div>
+<div style="text-align:center;font-size:12px;font-weight:800;color:#1e3a5f;letter-spacing:3px;margin-bottom:4px;">物 件 概 要 書</div>
+<div style="text-align:center;background:#f0f4f8;padding:3px;font-size:9px;font-weight:600;margin-bottom:4px;">大田区久が原2丁目 事業用地</div>
+<div style="display:flex;gap:3px;margin-bottom:4px;">
+<div style="flex:1;border:1px solid #1e40af;border-radius:3px;padding:2px;text-align:center;background:#eff6ff;">
+<div style="font-size:7px;color:#64748b;">売出価格</div>
+<div style="color:#1e40af;font-weight:700;font-size:9px;">350,000,000円</div>
+</div>
+<div style="flex:1;border:1px solid #d0d7de;border-radius:3px;padding:2px;text-align:center;">
+<div style="font-size:7px;color:#64748b;">土地面積</div>
+<div style="font-weight:700;font-size:9px;">923.07㎡</div>
+</div>
+</div>
+<div style="font-size:7px;color:#94a3b8;text-align:center;">+ 地図・ストリートビュー・写真・ルートページ</div>
+</div>
+</div>
+</div>
+</div>
+<div class="annotation">
+<span class="step-label">1</span> 物件詳細の「<strong>紹介資料</strong>」ボタンをクリック → ページ選択ダイアログが表示<br>
+<span class="step-label">2</span> 含めるページをチェックして「<strong>作成</strong>」→ プレビューが表示される<br>
+<span class="step-label">3</span> 作成した資料は「<strong>ダウンロード資料</strong>」ページからいつでも再表示可能
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">利益シミュレーション</div>
+<div class="app">
+<div class="app-side">
+<div class="logo">PropFlow</div>
+<div class="sec-label">買いたい</div>
+<div class="menu-item active">≡ 物件一覧</div>
+</div>
+<div class="app-main">
+<div class="app-header">📊 利益シミュレーション</div>
+<div class="app-content">
+<div style="display:flex;gap:8px;">
+<div style="flex:1;">
+<div style="font-size:9px;font-weight:600;color:#1e3a5f;margin-bottom:3px;">原価明細</div>
+<table class="mock-table" style="font-size:8px;">
+<tr><td>土地代金</td><td style="text-align:right;">350,000,000</td></tr>
+<tr><td>建築費</td><td style="text-align:right;">0</td></tr>
+<tr><td>仲介手数料（買）</td><td style="text-align:right;background:#f0f4f8;">11,616,000</td></tr>
+<tr><td>仲介手数料（売）</td><td style="text-align:right;background:#f0f4f8;">14,000,000</td></tr>
+<tr><td>...</td><td></td></tr>
+<tr style="font-weight:700;"><td style="color:#2563eb;">原価合計</td><td style="text-align:right;color:#2563eb;">375,616,000</td></tr>
+</table>
+</div>
+<div style="flex:1;">
+<div style="font-size:9px;font-weight:600;color:#1e3a5f;margin-bottom:3px;">売買価格</div>
+<table class="mock-table" style="font-size:8px;">
+<tr><td>1坪あたり単価</td><td style="text-align:right;">4,500,000</td></tr>
+<tr><td>坪数</td><td style="text-align:right;">101.27</td></tr>
+<tr style="font-weight:700;"><td style="color:#2563eb;">売買価格</td><td style="text-align:right;color:#2563eb;">455,715,000</td></tr>
+</table>
+<div style="margin-top:6px;border:2px solid #2563eb;border-radius:4px;overflow:hidden;">
+<div style="background:#2563eb;color:white;padding:3px 6px;font-size:8px;font-weight:600;">シミュレーション結果</div>
+<div style="padding:4px 6px;font-size:8px;">
+<div style="display:flex;justify-content:space-between;"><span>利益</span><span style="color:#059669;font-weight:700;">+80,099,000 円</span></div>
+<div style="display:flex;justify-content:space-between;"><span>利益率</span><span style="color:#059669;font-weight:700;">17.6%</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="annotation">
+<strong>仲介手数料は自動計算</strong>（パラメータ変更可能）/ <strong>千円以下切り上げ</strong><br>
+<strong>参考坪単価</strong>：国土交通省のデータから近隣の相場を参照可能<br>
+<strong>PDF保存</strong>：結果を保存していつでもダウンロード資料から再確認
+</div>
+</div>
+<div class="footer">PropFlow - 不動産情報プラットフォーム | propflow.jp</div>
+</div>
+
+<!-- PAGE 8: DM・お知らせ・メリット -->
+<div class="page">
+<div class="page-title">使い方ガイド④</div>
+<div class="page-subtitle">コミュニケーション・その他機能</div>
+
+<div class="section">
+<div class="section-title">ダイレクトメッセージ（DM）</div>
+<div class="app">
+<div class="app-side">
+<div class="logo">PropFlow</div>
+<div class="sec-label">買いたい</div>
+<div class="menu-item">≡ 物件一覧</div>
+<div class="menu-item">◎ 希望条件</div>
+<div class="menu-item">♡ お気に入り</div>
+<div class="menu-item active">○ 質問や相談DM</div>
+</div>
+<div class="app-main">
+<div class="app-header" style="display:flex;justify-content:space-between;align-items:center;">ダイレクトメッセージ <span class="mock-btn">🏠 新しく物件の質問</span></div>
+<div class="app-content">
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:4px 8px;font-size:8px;color:#1e40af;margin-bottom:6px;">物件に関してのご質問・ご相談は、物件一覧 > 物件を選択 >「登録者にDM」ボタンからできます</div>
+<div class="mock-card">
+<div style="display:flex;align-items:center;gap:6px;">
+<div style="width:28px;height:28px;background:#dbeafe;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;">🏠</div>
+<div style="flex:1;">
+<div style="font-size:10px;font-weight:600;">大田区久が原2丁目 事業用地</div>
+<div style="font-size:8px;color:#64748b;">👤 田中太郎 (株式会社ABC不動産)</div>
+</div>
+<div style="text-align:right;font-size:8px;color:#64748b;">3件<br>06/25</div>
+</div>
+</div>
+<div class="mock-card">
+<div style="display:flex;align-items:center;gap:6px;">
+<div style="width:28px;height:28px;background:#dbeafe;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;">🏠</div>
+<div style="flex:1;">
+<div style="font-size:10px;font-weight:600;">千代田区神田和泉町 土地 <span class="mock-badge" style="background:#f97316;color:white;">新着</span></div>
+<div style="font-size:8px;color:#64748b;">👤 佐藤花子 (XYZ地所)</div>
+</div>
+<div style="text-align:right;font-size:8px;color:#64748b;">1件<br>06/24</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="annotation">
+物件詳細の「<strong>登録者にDM</strong>」ボタンからDMを開始 → この一覧に表示される<br>
+<strong>物件名がメイン表示</strong>されるので、どの物件の相談か一目で分かる
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">お知らせ配信（物件登録者向け）</div>
+<div class="app">
+<div class="app-side" style="padding:8px 0;">
+<div class="logo">PropFlow</div>
+<div class="sec-label">売りたい</div>
+<div class="menu-item">↑ 物件登録</div>
+<div class="menu-item">⊞ 自社物件一覧</div>
+<div class="menu-item active">🔔 お知らせ管理</div>
+</div>
+<div class="app-main">
+<div class="app-header">🔔 お知らせ - 大田区久が原2丁目 事業用地</div>
+<div class="app-content">
+<div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:6px;padding:8px;margin-bottom:8px;">
+<div style="font-size:9px;font-weight:600;color:#92400e;">🔔 お知らせを投稿</div>
+<div style="font-size:7px;color:#b45309;margin-bottom:3px;">この物件にDM中の全ユーザーに通知が届きます</div>
+<div style="display:flex;gap:3px;">
+<div class="mock-input" style="flex:1;">お知らせ内容を入力...</div>
+<span class="mock-btn-amber">➤</span>
+</div>
+</div>
+<div style="border:1px solid #fcd34d;border-radius:6px;overflow:hidden;">
+<div style="background:#fffbeb;padding:4px 8px;display:flex;align-items:center;gap:4px;font-size:8px;color:#92400e;font-weight:600;border-bottom:1px solid #fcd34d;">
+🔔 お知らせ <span style="margin-left:auto;font-weight:400;font-size:7px;">2026/06/25 10:30</span>
+</div>
+<div style="padding:6px 8px;font-size:9px;">価格を3億5000万円から3億2000万円に変更しました。</div>
+</div>
+</div>
+</div>
+</div>
+<div class="annotation">
+<strong>物件登録者専用</strong>：自分が登録した物件のお知らせを配信<br>
+DM中の全ユーザーに<strong>プッシュ通知</strong>が届く / 不要なお知らせは削除可能
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">その他の便利機能</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+<div class="mock-card"><strong style="font-size:11px;">📱 スマホ対応（PWA）</strong><br><span style="font-size:10px;color:#64748b;">ホーム画面に追加してアプリのように使える</span></div>
+<div class="mock-card"><strong style="font-size:11px;">📊 CSV出力</strong><br><span style="font-size:10px;color:#64748b;">物件一覧をCSVでダウンロード。メモも含まれる</span></div>
+<div class="mock-card"><strong style="font-size:11px;">📝 メモ機能</strong><br><span style="font-size:10px;color:#64748b;">自分専用メモ。他のユーザーには見えない</span></div>
+<div class="mock-card"><strong style="font-size:11px;">🔔 LINE通知</strong><br><span style="font-size:10px;color:#64748b;">物件登録時にLINE公式で一斉通知</span></div>
+</div>
+</div>
+
+<div class="cta-box">
+<h3>まずは無料でお試しください</h3>
+<p>現在ベータ版として無料でご利用いただけます</p>
+<a href="https://propflow.jp" class="cta-url">propflow.jp</a>
+</div>
+
+<div class="footer">PropFlow - 不動産情報プラットフォーム | propflow.jp</div>
+</div>
+
+</body>
+</html>

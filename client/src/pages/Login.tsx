@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Lock, Mail, Loader2, CheckCircle, Send } from "lucide-react";
+import { Lock, Mail, Loader2, CheckCircle, Send, FileText } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }) {
@@ -130,6 +130,17 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
         </Tabs>
         <p className="text-xs text-muted-foreground text-center mt-4">PropFlowは登録審査制です</p>
         <p className="text-[10px] text-muted-foreground/50 text-center mt-2">現在β版として無料でご利用いただけます。今後、一部機能の有料化を予定しています。</p>
+        <a href="/propflow-guide.html" target="_blank" rel="noopener noreferrer" className="block mt-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-shadow text-center">
+          <div className="flex items-center justify-center gap-2 text-lg font-bold">
+            <FileText className="w-5 h-5" />PropFlowのご案内資料
+          </div>
+          <p className="text-sm opacity-80 mt-1">初めての方はこちらをご覧ください</p>
+        </a>
+        <div className="flex items-center justify-center gap-4 mt-4">
+          <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">利用規約</a>
+          <span className="text-xs text-muted-foreground/30">|</span>
+          <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">個人情報保護方針</a>
+        </div>
       </div>
     </div>
   );
