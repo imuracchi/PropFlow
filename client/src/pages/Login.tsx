@@ -136,6 +136,16 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
           </div>
           <p className="text-sm opacity-80 mt-1">初めての方はこちらをご覧ください</p>
         </a>
+        <a href="https://lin.ee/Ueg4j5Q" target="_blank" rel="noopener noreferrer" className="block mt-3 bg-[#06C755] text-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow">
+          <div className="flex items-center gap-4">
+            <img src="/propflowQR.png" alt="LINE QR" className="w-20 h-20 rounded-lg bg-white p-1" />
+            <div>
+              <div className="font-bold text-lg">公式LINE 友だち追加</div>
+              <p className="text-xs opacity-80 mt-1">QRコードをスキャンまたは<br />タップして友だち追加できます</p>
+              <p className="text-xs opacity-80 mt-0.5">新着物件の通知を受け取れます</p>
+            </div>
+          </div>
+        </a>
         <div className="flex items-center justify-center gap-4 mt-4">
           <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">利用規約</a>
           <span className="text-xs text-muted-foreground/30">|</span>

@@ -189,7 +189,7 @@ export default function MyPage() {
             </div>
           </div>
           <a
-            href="https://lin.ee/RjYiSwy"
+            href="https://lin.ee/Ueg4j5Q"
             target="_blank"
             rel="noopener noreferrer"
             className="shrink-0"
