@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ChevronLeft, Heart, Share2, Pencil, MessageCircle, Bell, Camera,
+  ChevronLeft, Heart, Share2, Pencil, MessageCircle, Bell, Camera, Calculator,
   HelpCircle, MapPin, Map, Building2,
   ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, FileText, Upload, Download, StickyNote, UserCircle
 } from "lucide-react";
@@ -1106,6 +1106,9 @@ export default function PropertyDetail() {
             setShowPrintDialog(true);
           }}>
             <FileText className="w-4 h-4" />紹介資料
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/simulation/${property.id}`)}>
+            <Calculator className="w-4 h-4" />シミュレーション
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportPropertyCsv(property, details, createdDate)}>
             <Download className="w-4 h-4" />CSV
