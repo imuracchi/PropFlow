@@ -14,18 +14,17 @@ body { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
 .card {
   display: block;
   background: white;
-  border: 1px solid #e2e8f0;
+  border: 2px solid #e2e8f0;
   border-radius: 12px;
-  padding: 20px;
+  padding: 20px 24px;
   margin-bottom: 12px;
   text-decoration: none;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .card:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.1); }
-.card-icon { font-size: 28px; margin-bottom: 8px; }
-.card-title { font-size: 16px; font-weight: 700; color: #1e3a5f; margin-bottom: 4px; }
-.card-desc { font-size: 13px; color: #64748b; }
+.card-title { font-size: 18px; font-weight: 700; color: #1e3a5f; margin-bottom: 6px; }
+.card-desc { font-size: 14px; color: #64748b; line-height: 1.6; }
 .back { display: block; text-align: center; margin-top: 20px; color: #2563eb; text-decoration: none; font-size: 14px; }
 </style>
 </head>
@@ -37,19 +36,16 @@ body { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
   </div>
 
   <a href="https://propflow.jp/buyer-preference" class="card">
-    <div class="card-icon">🎯</div>
     <div class="card-title">希望条件</div>
     <div class="card-desc">希望エリア・予算・面積を登録すると、物件一覧にマッチ率が表示されます</div>
   </a>
 
   <a href="https://propflow.jp/documents" class="card">
-    <div class="card-icon">📥</div>
     <div class="card-title">ダウンロード資料</div>
     <div class="card-desc">作成した紹介資料・シミュレーション結果を確認・再表示できます</div>
   </a>
 
   <a href="https://propflow.jp/upload" class="card">
-    <div class="card-icon">📄</div>
     <div class="card-title">物件を出す</div>
     <div class="card-desc">PDF・画像をアップロードしてAIが自動で物件情報を読み取ります</div>
   </a>

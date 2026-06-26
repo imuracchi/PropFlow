@@ -14,29 +14,28 @@ body { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
 .card {
   display: block;
   background: white;
-  border: 1px solid #e2e8f0;
+  border: 2px solid #e2e8f0;
   border-radius: 12px;
-  padding: 20px;
+  padding: 20px 24px;
   margin-bottom: 12px;
   text-decoration: none;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .card:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.1); }
-.card-icon { font-size: 28px; margin-bottom: 8px; }
-.card-title { font-size: 16px; font-weight: 700; color: #1e3a5f; margin-bottom: 4px; }
-.card-desc { font-size: 13px; color: #64748b; }
+.card-title { font-size: 18px; font-weight: 700; color: #1e3a5f; margin-bottom: 6px; }
+.card-desc { font-size: 14px; color: #64748b; line-height: 1.6; }
 .chat-box {
   background: white;
   border: 2px solid #06C755;
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
   margin-bottom: 12px;
   text-align: center;
 }
-.chat-title { font-size: 16px; font-weight: 700; color: #1e3a5f; margin-bottom: 8px; }
-.chat-desc { font-size: 13px; color: #64748b; margin-bottom: 12px; }
-.chat-note { font-size: 12px; color: #06C755; font-weight: 600; }
+.chat-title { font-size: 18px; font-weight: 700; color: #1e3a5f; margin-bottom: 8px; }
+.chat-desc { font-size: 14px; color: #64748b; margin-bottom: 12px; line-height: 1.6; }
+.chat-note { font-size: 13px; color: #06C755; font-weight: 600; }
 .back { display: block; text-align: center; margin-top: 20px; color: #2563eb; text-decoration: none; font-size: 14px; }
 </style>
 </head>
@@ -48,19 +47,16 @@ body { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
   </div>
 
   <a href="https://propflow.jp/features" class="card">
-    <div class="card-icon">💡</div>
     <div class="card-title">できること</div>
     <div class="card-desc">PropFlowの全機能を確認できます</div>
   </a>
 
   <a href="https://propflow.jp/propflow-guide.html" class="card">
-    <div class="card-icon">📋</div>
     <div class="card-title">ご案内資料</div>
-    <div class="card-desc">PropFlowの使い方ガイド（画面付き）</div>
+    <div class="card-desc">PropFlowの使い方ガイド（画面付き説明）</div>
   </a>
 
   <div class="chat-box">
-    <div class="card-icon">💬</div>
     <div class="chat-title">LINEで質問する</div>
     <div class="chat-desc">このページを閉じて、LINEのチャットからお気軽にご質問ください</div>
     <div class="chat-note">↓ 下のチャット欄からメッセージを送信できます</div>
