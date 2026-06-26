@@ -51,6 +51,21 @@ body { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
     <div style="margin-top:8px;font-size:12px;color:#f59e0b;font-weight:600;">※ PCからのご利用をおススメします</div>
   </a>
 
+  <button onclick="shareToFriend()" class="card" style="width:100%;border-color:#06C755;cursor:pointer;text-align:left;">
+    <div class="card-title" style="color:#06C755;">お友達に紹介する</div>
+    <div class="card-desc">PropFlowを知り合いの不動産業者に紹介できます</div>
+  </button>
+
 </div>
+<script>
+function shareToFriend() {
+  const text = '不動産情報の共有をもっと便利に！PropFlowを使ってみませんか？\n\n公式LINE友だち追加はこちら\nhttps://lin.ee/Ueg4j5Q\n\nWebサイト\nhttps://propflow.jp';
+  if (navigator.share) {
+    navigator.share({ title: 'PropFlow', text: text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => { alert('紹介メッセージをコピーしました。LINEやメールに貼り付けて送信してください。'); });
+  }
+}
+</script>
 </body>
 </html>
