@@ -113,6 +113,9 @@ function AppContent() {
       <Route path="/register/:token">
         {() => <Register />}
       </Route>
+      <Route path="/features">
+        {() => <Features />}
+      </Route>
       <Route>
         {() => (
     <AuthGuard>
