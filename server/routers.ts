@@ -377,13 +377,10 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const prop = await db.getPropertyById(input.propertyId);
         if (!prop) return { success: false };
-        const { sendLineBroadcast } = await import("./_core/line");
+        const { sendLineBroadcast, buildPropertyFlexMessage } = await import("./_core/line");
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
-        const commentLine = prop.comment ? `\n💬 ${prop.comment}` : "";
         const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
-        await sendLineBroadcast(
-          `🏠 新着物件が登録されました\n\n📋 ${prop.name}\n📍 ${prop.address}\n💰 ${priceLine}\n🏷 ${prop.type}${commentLine}\n\n▼ 詳細はこちら\n${siteUrl}/property/${prop.id}`
-        );
+        await sendLineBroadcast(buildPropertyFlexMessage(prop));
         const { sendMail } = await import("./_core/mail");
         const emails = await db.getActiveUserEmailsForNotify("newProperty");
         const mailHtml = `
@@ -993,6 +990,41 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await db.updateUserPlan(input.id, input.plan);
         return { success: true };
+      }),
+
+    createUser: adminProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+        name: z.string().optional(),
+        company: z.string().optional(),
+        phone: z.string().optional(),
+        fax: z.string().optional(),
+        zipCode: z.string().optional(),
+        address: z.string().optional(),
+        url: z.string().optional(),
+        license: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const existing = await db.getUserByEmail(input.email);
+        if (existing) return { success: false, error: "このメールアドレスは既に登録されています" } as const;
+        const passwordHash = await hashPassword(input.password);
+        await db.createUser({
+          openId: nanoid(),
+          email: input.email,
+          passwordHash,
+          name: input.name ?? null,
+          company: input.company ?? null,
+          phone: input.phone ?? null,
+          fax: input.fax ?? null,
+          zipCode: input.zipCode ?? null,
+          address: input.address ?? null,
+          url: input.url ?? null,
+          license: input.license ?? null,
+          status: "active",
+        });
+        db.logActivity(ctx.user.id, "admin_create_user", `管理者がユーザー${input.email}を代理登録`).catch(() => {});
+        return { success: true } as const;
       }),
 
     loginAs: adminProcedure

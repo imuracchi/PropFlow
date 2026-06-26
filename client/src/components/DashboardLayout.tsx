@@ -31,15 +31,16 @@ type MenuItem = { icon: typeof List; label: string; path: string };
 type MenuSection = { title: string | null; items: MenuItem[] };
 
 const baseSections: MenuSection[] = [
-  { title: "買いたい", items: [
+  { title: "物件を探す", items: [
     { icon: List, label: "物件一覧", path: "/properties" },
     { icon: Target, label: "希望条件", path: "/buyer-preference" },
     { icon: Heart, label: "お気に入り", path: "/favorites" },
     { icon: MessageCircle, label: "質問や相談DM", path: "/dm-list" },
   ]},
-  { title: "売りたい", items: [
+  { title: "物件を出す", items: [
     { icon: Upload, label: "物件登録", path: "/upload" },
     { icon: Building2, label: "自社物件一覧", path: "/my-properties" },
+    { icon: MessageCircle, label: "問い合わせDM", path: "/dm-sell" },
     { icon: Bell, label: "お知らせ管理", path: "/chat-sell" },
     { icon: Users, label: "興味者リスト", path: "/interested" },
   ]},

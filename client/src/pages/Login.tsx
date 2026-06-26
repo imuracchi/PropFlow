@@ -14,6 +14,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
   const [regEmail, setRegEmail] = useState("");
   const [regError, setRegError] = useState("");
   const [regSent, setRegSent] = useState(false);
+  const [regMode, setRegMode] = useState<"self" | "proxy" | null>(null);
 
   const loginMutation = trpc.auth.login.useMutation();
   const sendRegMutation = trpc.auth.sendRegistrationEmail.useMutation();
@@ -102,10 +103,10 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
                   <span className="text-xs text-muted-foreground/60">有効期限: 72時間</span>
                 </p>
               </div>
-            ) : (
+            ) : regMode === "self" ? (
               <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
                 <div className="px-6 py-5 border-b border-border">
-                  <h2 className="text-xl font-bold text-foreground">新規登録</h2>
+                  <h2 className="text-xl font-bold text-foreground">自分で登録</h2>
                   <p className="text-sm text-muted-foreground mt-0.5">メールアドレスを入力すると、登録用リンクが届きます</p>
                 </div>
                 <div className="p-6 space-y-4">
@@ -123,6 +124,56 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
                     {sendRegMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                     登録用リンクを送信
                   </Button>
+                  <button className="w-full text-sm text-muted-foreground hover:text-primary" onClick={() => setRegMode(null)}>← 戻る</button>
+                </div>
+              </div>
+            ) : regMode === "proxy" ? (
+              <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                <div className="px-6 py-5 border-b border-border">
+                  <h2 className="text-xl font-bold text-foreground">代理登録を依頼</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">LINEで名刺写真を送るだけで登録できます</p>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <p className="text-sm text-green-800 font-medium mb-2">以下の手順で代理登録ができます</p>
+                    <ol className="text-sm text-green-700 text-left space-y-2 list-decimal list-inside">
+                      <li>下のボタンからPropFlow公式LINEを友だち追加</li>
+                      <li>LINEで「登録希望」とメッセージを送信</li>
+                      <li>名刺の写真を送信</li>
+                      <li>管理者が代理で登録し、ログイン情報をお伝えします</li>
+                    </ol>
+                  </div>
+                  <a href="https://lin.ee/Ueg4j5Q" target="_blank" rel="noopener noreferrer" className="block bg-[#06C755] text-white rounded-lg p-3 text-center font-bold shadow-md hover:shadow-lg transition-shadow">
+                    公式LINEで代理登録を依頼する
+                  </a>
+                  <button className="w-full text-sm text-muted-foreground hover:text-primary" onClick={() => setRegMode(null)}>← 戻る</button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                <div className="px-6 py-5 border-b border-border">
+                  <h2 className="text-xl font-bold text-foreground">新規登録</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">登録方法を選択してください</p>
+                </div>
+                <div className="p-6 space-y-3">
+                  <button className="w-full bg-card border-2 border-border rounded-xl p-5 text-left hover:border-primary/40 transition-colors" onClick={() => setRegMode("self")}>
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-6 h-6 text-primary shrink-0" />
+                      <div>
+                        <p className="font-bold text-foreground">自分で登録する</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">メールアドレスで登録手続きを行います</p>
+                      </div>
+                    </div>
+                  </button>
+                  <button className="w-full bg-card border-2 border-border rounded-xl p-5 text-left hover:border-[#06C755]/40 transition-colors" onClick={() => setRegMode("proxy")}>
+                    <div className="flex items-center gap-3">
+                      <Send className="w-6 h-6 text-[#06C755] shrink-0" />
+                      <div>
+                        <p className="font-bold text-foreground">代理登録を依頼する</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">LINEで名刺写真を送るだけで登録できます</p>
+                      </div>
+                    </div>
+                  </button>
                 </div>
               </div>
             )}

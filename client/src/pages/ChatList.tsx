@@ -138,7 +138,7 @@ function EmptyState({ icon: Icon, message }: { icon: typeof MessageCircle; messa
   );
 }
 
-export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" }) {
+export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" | "owner-dm" }) {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { data: myRooms, isLoading: myLoading } = trpc.chat.myRooms.useQuery();
@@ -146,7 +146,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
   const { data: dmThreads } = trpc.dm.threads.useQuery();
   const { data: exitedIds } = trpc.chat.exitedIds.useQuery();
   const { data: exitedDmKeys } = trpc.dm.exitedKeys.useQuery();
-  const { data: properties } = trpc.property.list.useQuery(undefined, { enabled: mode === "owner" });
+  const { data: properties } = trpc.property.list.useQuery(undefined, { enabled: mode === "owner" || mode === "owner-dm" });
   const dmExitMutation = trpc.dm.exit.useMutation();
   const utils = trpc.useUtils();
 
@@ -188,6 +188,25 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
         ) : (
           <div className="space-y-3">
             {ownerRooms.map(room => <RoomCard key={`room-${room.propertyId}`} room={room} />)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (mode === "owner-dm") {
+    const ownerDms = activeDmThreads.filter(t => t.propertyId && myPropertyIds!.has(t.propertyId));
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">問い合わせDM</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">自社物件への問い合わせメッセージ</p>
+        </div>
+        {ownerDms.length === 0 ? (
+          <EmptyState icon={MessageCircle} message="自社物件への問い合わせはまだありません" />
+        ) : (
+          <div className="space-y-3">
+            {ownerDms.map(thread => <DmCard key={`dm-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
           </div>
         )}
       </div>

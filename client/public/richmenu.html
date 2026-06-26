@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+body { margin: 0; padding: 40px; background: #e2e8f0; display: flex; justify-content: center; }
+.menu {
+  width: 2500px;
+  height: 1686px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  background: #1e3a5f;
+  font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+}
+.cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  border: 2px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.cell:hover { background: rgba(255,255,255,0.08); }
+.icon { font-size: 80px; }
+.label { color: white; font-size: 48px; font-weight: 700; letter-spacing: 2px; }
+.sublabel { color: rgba(255,255,255,0.6); font-size: 28px; }
+
+.cell-1 { background: linear-gradient(135deg, #2563eb, #1e40af); }
+.cell-2 { background: linear-gradient(135deg, #059669, #047857); }
+.cell-3 { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+.cell-4 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.cell-5 { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+.cell-6 { background: linear-gradient(135deg, #64748b, #475569); }
+</style>
+</head>
+<body>
+<div class="menu">
+  <div class="cell cell-1">
+    <div class="icon">🔍</div>
+    <div class="label">物件を探す</div>
+    <div class="sublabel">物件一覧・検索</div>
+  </div>
+  <div class="cell cell-2">
+    <div class="icon">📄</div>
+    <div class="label">物件を登録</div>
+    <div class="sublabel">PDF・画像からAI読取</div>
+  </div>
+  <div class="cell cell-3">
+    <div class="icon">👤</div>
+    <div class="label">マイページ</div>
+    <div class="sublabel">プロフィール・設定</div>
+  </div>
+  <div class="cell cell-4">
+    <div class="icon">📋</div>
+    <div class="label">ご案内資料</div>
+    <div class="sublabel">PropFlowの使い方</div>
+  </div>
+  <div class="cell cell-5">
+    <div class="icon">✨</div>
+    <div class="label">新規登録</div>
+    <div class="sublabel">無料でアカウント作成</div>
+  </div>
+  <div class="cell cell-6">
+    <div class="icon">💬</div>
+    <div class="label">お問い合わせ</div>
+    <div class="sublabel">LINEで質問・相談</div>
+  </div>
+</div>
+</body>
+</html>

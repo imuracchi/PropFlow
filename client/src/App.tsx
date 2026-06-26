@@ -151,6 +151,13 @@ function AppContent() {
             </DashboardLayout>
           )}
         </Route>
+        <Route path="/dm-sell">
+          {() => (
+            <DashboardLayout>
+              <ChatList mode="owner-dm" />
+            </DashboardLayout>
+          )}
+        </Route>
         <Route path="/chat-sell">
           {() => (
             <DashboardLayout>

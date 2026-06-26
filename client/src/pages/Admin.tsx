@@ -32,6 +32,7 @@ export default function Admin() {
   const [propSearch, setPropSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [showCreateUser, setShowCreateUser] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: stats, isLoading: statsLoading } = trpc.admin.stats.useQuery();
@@ -202,10 +203,17 @@ export default function Admin() {
 
         {/* 業者管理タブ */}
         <TabsContent value="users" className="mt-4 space-y-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="業者名・メールで検索..." className="pl-10 bg-card border-border" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="業者名・メールで検索..." className="pl-10 bg-card border-border" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
+            </div>
+            <Button size="sm" className="gap-1.5" onClick={() => setShowCreateUser(true)}>
+              <UserPlus className="w-3.5 h-3.5" />代理登録
+            </Button>
           </div>
+
+          {showCreateUser && <CreateUserForm onClose={() => setShowCreateUser(false)} onSuccess={() => { setShowCreateUser(false); utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); }} />}
           {usersLoading ? (
             <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
           ) : filteredUsers.length === 0 ? (
@@ -628,6 +636,108 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
             <p>登録日: {new Date(user.createdAt).toLocaleDateString("ja-JP")}</p>
             <p>最終ログイン: {new Date(user.lastSignedIn).toLocaleDateString("ja-JP")}</p>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
+  const [phone, setPhone] = useState("");
+  const [fax, setFax] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [address, setAddress] = useState("");
+  const [url, setUrl] = useState("");
+  const [license, setLicense] = useState("");
+  const [error, setError] = useState("");
+
+  const mutation = trpc.admin.createUser.useMutation();
+
+  const handleSubmit = async () => {
+    setError("");
+    if (!email || !password) { setError("メールアドレスとパスワードは必須です"); return; }
+    if (password.length < 6) { setError("パスワードは6文字以上にしてください"); return; }
+    const result = await mutation.mutateAsync({
+      email, password,
+      name: name || undefined,
+      company: company || undefined,
+      phone: phone || undefined,
+      fax: fax || undefined,
+      zipCode: zipCode || undefined,
+      address: address || undefined,
+      url: url || undefined,
+      license: license || undefined,
+    });
+    if (result.success) {
+      alert("ユーザーを登録しました");
+      onSuccess();
+    } else {
+      setError((result as any).error ?? "登録に失敗しました");
+    }
+  };
+
+  return (
+    <div className="bg-card border-2 border-primary rounded-lg overflow-hidden">
+      <div className="px-5 py-3 border-b border-border bg-primary/5 flex items-center justify-between">
+        <h3 className="font-semibold text-foreground flex items-center gap-2">
+          <UserPlus className="w-4 h-4 text-primary" />ユーザー代理登録
+        </h3>
+        <button className="text-muted-foreground hover:text-foreground" onClick={onClose}>✕</button>
+      </div>
+      <div className="p-5 space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground">メールアドレス <span className="text-red-500">*</span></label>
+            <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="example@company.com" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">パスワード <span className="text-red-500">*</span></label>
+            <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="6文字以上" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">氏名</label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">会社名</label>
+            <Input value={company} onChange={e => setCompany(e.target.value)} placeholder="株式会社○○不動産" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">電話番号</label>
+            <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="03-xxxx-xxxx" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">FAX</label>
+            <Input value={fax} onChange={e => setFax(e.target.value)} placeholder="03-xxxx-xxxx" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">郵便番号</label>
+            <Input value={zipCode} onChange={e => setZipCode(e.target.value)} placeholder="000-0000" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">住所</label>
+            <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="東京都○○区..." />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">URL</label>
+            <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">宅建番号</label>
+            <Input value={license} onChange={e => setLicense(e.target.value)} placeholder="東京都知事(1)第xxxxx号" />
+          </div>
+        </div>
+        {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>}
+        <div className="flex gap-3 pt-2">
+          <Button variant="outline" className="flex-1" onClick={onClose}>キャンセル</Button>
+          <Button className="flex-1 gap-2" onClick={handleSubmit} disabled={mutation.isPending}>
+            {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+            登録する
+          </Button>
         </div>
       </div>
     </div>
