@@ -173,14 +173,14 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
   };
   const allActiveRooms = (allRooms ?? []).filter(r => !r.propertyDeleted);
 
-  if (mode === "owner") {
-    const myProperties = (properties ?? []).filter(p => p.userId === user?.id);
-    const propIds = myProperties.map(p => p.id);
-    const { data: summaries } = trpc.chat.announceSummaries.useQuery(
-      { propertyIds: propIds },
-      { enabled: propIds.length > 0 }
-    );
+  const myProperties = (properties ?? []).filter(p => p.userId === user?.id);
+  const myPropIds = myProperties.map(p => p.id);
+  const { data: summaries } = trpc.chat.announceSummaries.useQuery(
+    { propertyIds: myPropIds },
+    { enabled: myPropIds.length > 0 && mode === "owner" }
+  );
 
+  if (mode === "owner") {
     return (
       <div className="space-y-5">
         <div>
