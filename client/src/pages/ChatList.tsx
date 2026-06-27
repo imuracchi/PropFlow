@@ -154,7 +154,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
 
-  const myPropertyIds = mode === "owner"
+  const myPropertyIds = (mode === "owner" || mode === "owner-dm")
     ? new Set((properties ?? []).filter(p => p.userId === user?.id).map(p => p.id))
     : null;
 
