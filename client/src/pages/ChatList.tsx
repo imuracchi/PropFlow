@@ -174,7 +174,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
   const allActiveRooms = (allRooms ?? []).filter(r => !r.propertyDeleted);
 
   if (mode === "owner") {
-    const ownerRooms = allActiveRooms.filter(r => myPropertyIds!.has(r.propertyId));
+    const ownerRooms = allActiveRooms.filter(r => myPropertyIds?.has(r.propertyId));
     return (
       <div className="space-y-5">
         <div>
@@ -195,7 +195,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
   }
 
   if (mode === "owner-dm") {
-    const ownerDms = activeDmThreads.filter(t => t.propertyId && myPropertyIds!.has(t.propertyId));
+    const ownerDms = activeDmThreads.filter(t => t.propertyId && myPropertyIds?.has(t.propertyId));
     return (
       <div className="space-y-5">
         <div>
