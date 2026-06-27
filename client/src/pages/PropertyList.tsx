@@ -138,7 +138,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     const target = onlySelected ? filtered.filter(p => selectedIds.has(p.id)) : filtered;
     if (target.length === 0) return;
     const memoMap = new Map((allMemos ?? []).map(m => [m.propertyId, m.content]));
-    const headers = ["物件名", "所在地", "地番", "交通", "物件種別", "価格（円）", "土地面積（㎡）", "坪数", "地目", "権利", "接道", "建物面積（㎡）", "建物坪数", "構造", "築年数", "用途地域", "防火指定", "高度地区", "その他制限", "価格交渉", "備考", "登録者", "登録日", "メモ"];
+    const headers = ["物件名", "所在地", "地番", "交通", "物件種別", "価格（円）", "土地面積（㎡）", "坪数", "地目", "権利", "接道", "建物面積（㎡）", "建物坪数", "構造", "築年数", "用途地域", "防火指定", "高度地区", "その他制限", "価格交渉", "備考", "登録日", "メモ"];
     const rows = target.map(p => [
       p.name,
       p.address,
@@ -161,7 +161,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       (p as any).otherRestrictions ?? "",
       p.negotiation,
       (p as any).remarks ?? "",
-      p.userCompany ?? "",
       new Date(p.createdAt).toLocaleDateString("ja-JP"),
       memoMap.get(p.id) ?? "",
     ]);
