@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageCircle, Home, Loader2, MapPin, EyeOff, Globe, User, Trash2 } from "lucide-react";
+import { MessageCircle, Home, Loader2, MapPin, EyeOff, Globe, User, Trash2, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -174,20 +174,36 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
   const allActiveRooms = (allRooms ?? []).filter(r => !r.propertyDeleted);
 
   if (mode === "owner") {
-    const ownerRooms = allActiveRooms.filter(r => myPropertyIds?.has(r.propertyId));
+    const myProperties = (properties ?? []).filter(p => p.userId === user?.id);
     return (
       <div className="space-y-5">
         <div>
           <h1 className="text-2xl font-bold text-foreground">お知らせ管理</h1>
           <p className="text-sm text-muted-foreground mt-0.5">自社物件のお知らせを管理・投稿できます</p>
         </div>
-        {allLoading ? (
-          <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-        ) : ownerRooms.length === 0 ? (
+        {myProperties.length === 0 ? (
           <EmptyState icon={MessageCircle} message="自社物件がまだありません" />
         ) : (
           <div className="space-y-3">
-            {ownerRooms.map(room => <RoomCard key={`room-${room.propertyId}`} room={room} />)}
+            {myProperties.map(prop => (
+              <div
+                key={prop.id}
+                className="bg-card border border-border rounded-lg p-4 hover:border-primary/40 transition-colors cursor-pointer"
+                onClick={() => setLocation(`/chat/${prop.id}`)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-amber-50">
+                    <Bell className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground text-sm truncate">{prop.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />{prop.address}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
