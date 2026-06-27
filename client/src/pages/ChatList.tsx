@@ -150,6 +150,13 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
   const dmExitMutation = trpc.dm.exit.useMutation();
   const utils = trpc.useUtils();
 
+  const myProperties = (properties ?? []).filter(p => p.userId === user?.id);
+  const myPropIds = myProperties.map(p => p.id);
+  const { data: summaries } = trpc.chat.announceSummaries.useQuery(
+    { propertyIds: myPropIds },
+    { enabled: myPropIds.length > 0 && mode === "owner" }
+  );
+
   const propertiesLoading = (mode === "owner" || mode === "owner-dm") && !properties;
 
   if (myLoading || propertiesLoading) {
@@ -157,7 +164,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
   }
 
   const myPropertyIds = (mode === "owner" || mode === "owner-dm")
-    ? new Set((properties ?? []).filter(p => p.userId === user?.id).map(p => p.id))
+    ? new Set(myPropIds)
     : null;
 
   const exitedSet = new Set(exitedIds ?? []);
@@ -174,13 +181,6 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
     utils.dm.exitedKeys.invalidate();
   };
   const allActiveRooms = (allRooms ?? []).filter(r => !r.propertyDeleted);
-
-  const myProperties = (properties ?? []).filter(p => p.userId === user?.id);
-  const myPropIds = myProperties.map(p => p.id);
-  const { data: summaries } = trpc.chat.announceSummaries.useQuery(
-    { propertyIds: myPropIds },
-    { enabled: myPropIds.length > 0 && mode === "owner" }
-  );
 
   if (mode === "owner") {
     return (
