@@ -150,7 +150,9 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
   const dmExitMutation = trpc.dm.exit.useMutation();
   const utils = trpc.useUtils();
 
-  if (myLoading) {
+  const propertiesLoading = (mode === "owner" || mode === "owner-dm") && !properties;
+
+  if (myLoading || propertiesLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
 
