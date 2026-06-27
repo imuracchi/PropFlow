@@ -643,6 +643,12 @@ export const appRouter = router({
         return db.getAnnouncementCount(input.propertyId);
       }),
 
+    announceSummaries: protectedProcedure
+      .input(z.object({ propertyIds: z.array(z.number()) }))
+      .query(async ({ input }) => {
+        return db.getAnnouncementSummaries(input.propertyIds);
+      }),
+
     exit: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {

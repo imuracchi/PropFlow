@@ -224,7 +224,7 @@ ${p.comment ? `<div class="cmt"><b>紹介コメント</b>${p.comment}</div>` : "
 <tr><th>用途地域</th><td>${v(p.zoning)}</td><th>防火指定</th><td>${v(p.fireProtection)}</td></tr>
 <tr><th>高度地区</th><td>${v(p.heightDistrict)}</td><th>その他制限</th><td>${v(p.otherRestrictions)}</td></tr>
 <tr><th>備考</th><td colspan="3">${v(p.remarks)}</td></tr>
-<tr><th>登録者</th><td>${p.userCompany || p.userName || "—"}</td><th>登録日</th><td>${createdDate}</td></tr>
+<tr><th>登録日</th><td colspan="3">${createdDate}</td></tr>
 </table>
 ${myUser ? `<div class="sec">お問い合わせ先</div><table class="ct">${contactRows}</table>` : ""}
 ${footer}
@@ -1041,7 +1041,6 @@ export default function PropertyDetail() {
     ["その他制限", property.otherRestrictions || "—"],
     ["価格交渉", property.negotiation],
     ["備考", property.remarks || "—"],
-    ["登録者", property.userCompany || property.userName || "—"],
     ["登録日", createdDate],
   ];
 
@@ -1063,7 +1062,7 @@ export default function PropertyDetail() {
           <MapPin className="w-5 h-5 shrink-0 mt-0.5" /><span>{property.address}</span>
         </div>
         <p className="text-base text-muted-foreground">
-          登録：{property.userCompany || property.userName || "—"} / {createdDate}
+          登録日：{createdDate}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" className={`gap-1.5 ${isFavorite ? "text-red-500 border-red-200 bg-red-50" : ""}`} onClick={toggleFavorite}>
@@ -1383,14 +1382,8 @@ export default function PropertyDetail() {
         <>
           {property.comment && (
             <div className="bg-card border border-border rounded-lg p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-sm font-bold text-amber-700">
-                  {(property.userCompany || property.userName || "?").charAt(0)}
-                </div>
-                <div>
-                  <p className="text-base font-semibold text-foreground">紹介コメント</p>
-                  <p className="text-sm text-muted-foreground">{property.userCompany || property.userName} / {createdDate}</p>
-                </div>
+              <div className="mb-3">
+                <p className="text-base font-semibold text-foreground">紹介コメント</p>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <p className="text-[15px] text-foreground leading-relaxed">{property.comment}</p>
@@ -1399,8 +1392,7 @@ export default function PropertyDetail() {
             </div>
           )}
 
-          {/* 登録者 */}
-          <IntroducerCard property={property} />
+          {/* 登録者情報は非表示 */}
 
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-card border border-border rounded-lg p-3 md:p-4">

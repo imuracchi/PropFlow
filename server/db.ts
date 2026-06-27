@@ -717,6 +717,35 @@ export async function getAnnouncementCount(propertyId: number): Promise<number> 
   return rows[0]?.cnt ?? 0;
 }
 
+export async function getAnnouncementSummaries(propertyIds: number[]): Promise<Record<number, { count: number; latestContent: string | null; latestDate: Date | null }>> {
+  const db = await getDb();
+  if (!db || propertyIds.length === 0) return {};
+  const rows = await db
+    .select({ propertyId: messages.propertyId, content: messages.content, createdAt: messages.createdAt })
+    .from(messages)
+    .where(and(
+      sql`${messages.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`,
+      eq(messages.type, "announcement")
+    ))
+    .orderBy(desc(messages.createdAt));
+
+  const result: Record<number, { count: number; latestContent: string | null; latestDate: Date | null }> = {};
+  for (const id of propertyIds) {
+    result[id] = { count: 0, latestContent: null, latestDate: null };
+  }
+  for (const row of rows) {
+    const entry = result[row.propertyId];
+    if (entry) {
+      entry.count++;
+      if (!entry.latestContent) {
+        entry.latestContent = row.content;
+        entry.latestDate = row.createdAt;
+      }
+    }
+  }
+  return result;
+}
+
 export async function getDmUserIdsForProperty(propertyId: number, excludeUserId: number): Promise<number[]> {
   const db = await getDb();
   if (!db) return [];
