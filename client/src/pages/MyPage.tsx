@@ -202,6 +202,9 @@ export default function MyPage() {
         </div>
       </div>
 
+      {/* 情報公開設定 */}
+      <VisibilitySettings />
+
       {/* メール通知設定 */}
       <NotifySettings />
 
@@ -400,6 +403,60 @@ function AdminContactForm({ userEmail, userName }: { userEmail: string; userName
             メールで送信
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function VisibilitySettings() {
+  const { data: settings, isLoading } = trpc.auth.getVisibilitySettings.useQuery();
+  const mutation = trpc.auth.updateVisibilitySettings.useMutation();
+  const utils = trpc.useUtils();
+
+  const [showCompany, setShowCompany] = useState(1);
+  const [showPhone, setShowPhone] = useState(1);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (settings && !loaded) {
+      setShowCompany(settings.showCompany);
+      setShowPhone(settings.showPhone);
+      setLoaded(true);
+    }
+  }, [settings]);
+
+  const save = async (sc: number, sp: number) => {
+    setShowCompany(sc);
+    setShowPhone(sp);
+    await mutation.mutateAsync({ showCompany: sc, showPhone: sp });
+    utils.auth.getVisibilitySettings.invalidate();
+  };
+
+  if (isLoading) return null;
+
+  return (
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="px-5 py-4 border-b border-border">
+        <h2 className="font-semibold text-foreground flex items-center gap-2">
+          👁 情報公開設定
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">他のユーザーに表示する情報を選択できます</p>
+      </div>
+      <div className="p-5 space-y-3">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" className="accent-primary w-4 h-4" checked={showCompany === 1} onChange={e => save(e.target.checked ? 1 : 0, showPhone)} />
+          <div>
+            <span className="text-sm font-medium">会社名を表示する</span>
+            <p className="text-xs text-muted-foreground">物件の登録者情報に会社名を表示します</p>
+          </div>
+        </label>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" className="accent-primary w-4 h-4" checked={showPhone === 1} onChange={e => save(showCompany, e.target.checked ? 1 : 0)} />
+          <div>
+            <span className="text-sm font-medium">電話番号を表示する</span>
+            <p className="text-xs text-muted-foreground">物件の登録者情報に電話番号を表示します</p>
+          </div>
+        </label>
       </div>
     </div>
   );

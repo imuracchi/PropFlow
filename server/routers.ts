@@ -193,6 +193,17 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    getVisibilitySettings: protectedProcedure.query(async ({ ctx }) => {
+      return db.getVisibilitySettings(ctx.user.id);
+    }),
+
+    updateVisibilitySettings: protectedProcedure
+      .input(z.object({ showCompany: z.number(), showPhone: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.updateVisibilitySettings(ctx.user.id, input);
+        return { success: true };
+      }),
+
     getNotifySettings: protectedProcedure.query(async ({ ctx }) => {
       return db.getNotifySettings(ctx.user.id);
     }),

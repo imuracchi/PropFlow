@@ -28,6 +28,8 @@ export const users = mysqlTable("users", {
   notifyNewProperty: int("notifyNewProperty").default(1).notNull(),
   notifyDm: int("notifyDm").default(1).notNull(),
   notifyAnnounce: int("notifyAnnounce").default(1).notNull(),
+  showCompany: int("showCompany").default(1).notNull(),
+  showPhone: int("showPhone").default(1).notNull(),
 });
 
 export type User = typeof users.$inferSelect;

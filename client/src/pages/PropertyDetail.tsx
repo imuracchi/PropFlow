@@ -224,7 +224,7 @@ ${p.comment ? `<div class="cmt"><b>紹介コメント</b>${p.comment}</div>` : "
 <tr><th>用途地域</th><td>${v(p.zoning)}</td><th>防火指定</th><td>${v(p.fireProtection)}</td></tr>
 <tr><th>高度地区</th><td>${v(p.heightDistrict)}</td><th>その他制限</th><td>${v(p.otherRestrictions)}</td></tr>
 <tr><th>備考</th><td colspan="3">${v(p.remarks)}</td></tr>
-<tr><th>登録日</th><td colspan="3">${createdDate}</td></tr>
+${p.userCompany ? `<tr><th>登録者</th><td>${p.userCompany}</td><th>登録日</th><td>${createdDate}</td></tr>` : `<tr><th>登録日</th><td colspan="3">${createdDate}</td></tr>`}
 </table>
 ${myUser ? `<div class="sec">お問い合わせ先</div><table class="ct">${contactRows}</table>` : ""}
 ${footer}
@@ -575,11 +575,13 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
 
 function IntroducerCard({ property }: { property: any }) {
   const [open, setOpen] = useState(false);
+  const showCompany = property.showCompany !== 0;
+  const showPhone = property.showPhone !== 0;
   const items = [
     { label: "登録者", value: property.userName },
     { label: "宅建番号", value: property.userLicense },
-    { label: "会社名", value: property.userCompany },
-    { label: "電話番号", value: property.userPhone },
+    ...(showCompany ? [{ label: "会社名", value: property.userCompany }] : []),
+    ...(showPhone ? [{ label: "電話番号", value: property.userPhone }] : []),
     { label: "FAX", value: property.userFax },
     { label: "URL", value: property.userUrl },
     { label: "メール", value: property.userEmail },
@@ -1062,7 +1064,7 @@ export default function PropertyDetail() {
           <MapPin className="w-5 h-5 shrink-0 mt-0.5" /><span>{property.address}</span>
         </div>
         <p className="text-base text-muted-foreground">
-          登録日：{createdDate}
+          {property.showCompany !== 0 && property.userCompany ? `登録：${property.userCompany} / ` : "登録日：" }{createdDate}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" className={`gap-1.5 ${isFavorite ? "text-red-500 border-red-200 bg-red-50" : ""}`} onClick={toggleFavorite}>
@@ -1384,6 +1386,9 @@ export default function PropertyDetail() {
             <div className="bg-card border border-border rounded-lg p-5">
               <div className="mb-3">
                 <p className="text-base font-semibold text-foreground">紹介コメント</p>
+                {property.showCompany !== 0 && property.userCompany && (
+                  <p className="text-sm text-muted-foreground">{property.userCompany}</p>
+                )}
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <p className="text-[15px] text-foreground leading-relaxed">{property.comment}</p>
@@ -1392,7 +1397,8 @@ export default function PropertyDetail() {
             </div>
           )}
 
-          {/* 登録者情報は非表示 */}
+          {/* 登録者情報 */}
+          <IntroducerCard property={property} />
 
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-card border border-border rounded-lg p-3 md:p-4">

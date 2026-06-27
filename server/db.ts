@@ -132,6 +132,19 @@ export async function updateNotifySettings(userId: number, settings: { notifyNew
   await db.update(users).set(settings).where(eq(users.id, userId));
 }
 
+export async function getVisibilitySettings(userId: number) {
+  const db = await getDb();
+  if (!db) return { showCompany: 1, showPhone: 1 };
+  const rows = await db.select({ showCompany: users.showCompany, showPhone: users.showPhone }).from(users).where(eq(users.id, userId)).limit(1);
+  return rows[0] ?? { showCompany: 1, showPhone: 1 };
+}
+
+export async function updateVisibilitySettings(userId: number, settings: { showCompany: number; showPhone: number }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set(settings).where(eq(users.id, userId));
+}
+
 export async function getNotifySettings(userId: number) {
   const db = await getDb();
   if (!db) return { notifyNewProperty: 1, notifyDm: 1, notifyAnnounce: 1 };
@@ -229,6 +242,8 @@ export async function getPropertyById(id: number) {
       userFax: users.fax,
       userUrl: users.url,
       userEmail: users.email,
+      showCompany: users.showCompany,
+      showPhone: users.showPhone,
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
