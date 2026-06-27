@@ -413,26 +413,31 @@ function VisibilitySettings() {
   const mutation = trpc.auth.updateVisibilitySettings.useMutation();
   const utils = trpc.useUtils();
 
-  const [showCompany, setShowCompany] = useState(1);
-  const [showPhone, setShowPhone] = useState(1);
+  const [vals, setVals] = useState({ showCompany: 1, showPhone: 1, showFax: 1, showUrl: 1 });
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (settings && !loaded) {
-      setShowCompany(settings.showCompany);
-      setShowPhone(settings.showPhone);
+      setVals({ showCompany: settings.showCompany, showPhone: settings.showPhone, showFax: settings.showFax, showUrl: settings.showUrl });
       setLoaded(true);
     }
   }, [settings]);
 
-  const save = async (sc: number, sp: number) => {
-    setShowCompany(sc);
-    setShowPhone(sp);
-    await mutation.mutateAsync({ showCompany: sc, showPhone: sp });
+  const save = async (key: string, value: number) => {
+    const updated = { ...vals, [key]: value };
+    setVals(updated);
+    await mutation.mutateAsync(updated);
     utils.auth.getVisibilitySettings.invalidate();
   };
 
   if (isLoading) return null;
+
+  const items = [
+    { key: "showCompany", label: "会社名" },
+    { key: "showPhone", label: "電話番号" },
+    { key: "showFax", label: "FAX番号" },
+    { key: "showUrl", label: "URL" },
+  ];
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -443,20 +448,13 @@ function VisibilitySettings() {
         <p className="text-xs text-muted-foreground mt-0.5">他のユーザーに表示する情報を選択できます</p>
       </div>
       <div className="p-5 space-y-3">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" className="accent-primary w-4 h-4" checked={showCompany === 1} onChange={e => save(e.target.checked ? 1 : 0, showPhone)} />
-          <div>
-            <span className="text-sm font-medium">会社名を表示する</span>
-            <p className="text-xs text-muted-foreground">物件の登録者情報に会社名を表示します</p>
-          </div>
-        </label>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" className="accent-primary w-4 h-4" checked={showPhone === 1} onChange={e => save(showCompany, e.target.checked ? 1 : 0)} />
-          <div>
-            <span className="text-sm font-medium">電話番号を表示する</span>
-            <p className="text-xs text-muted-foreground">物件の登録者情報に電話番号を表示します</p>
-          </div>
-        </label>
+        {items.map(item => (
+          <label key={item.key} className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" className="accent-primary w-4 h-4" checked={(vals as any)[item.key] === 1} onChange={e => save(item.key, e.target.checked ? 1 : 0)} />
+            <span className="text-sm font-medium">{item.label}を表示する</span>
+          </label>
+        ))}
+        <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border">※ 氏名とメールアドレスは公開必須です</p>
       </div>
     </div>
   );
@@ -628,7 +626,7 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
   const infoItems = [
     { icon: Building2, label: "会社名", value: user.company },
     { icon: Mail, label: "メール", value: user.email },
-    { icon: FileText, label: "宅建免許", value: user.license },
+    { icon: FileText, label: "資格", value: user.license },
     { icon: MapPin, label: "郵便番号", value: user.zipCode },
     { icon: MapPin, label: "住所", value: user.address },
     { icon: Phone, label: "電話番号", value: user.phone },
@@ -703,7 +701,7 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
       )}
 
       <div className="pt-4 border-t border-border">
-        <p className="text-xs text-muted-foreground">※ 会社名・メール・宅建免許の変更は下記「管理者への連絡」からお問い合わせください。</p>
+        <p className="text-xs text-muted-foreground">※ 会社名・メール・資格の変更は下記「管理者への連絡」からお問い合わせください。</p>
       </div>
     </div>
   );
@@ -770,7 +768,7 @@ function InterestedUsersSection() {
                         </div>
                         <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">電話番号</span><span className="text-foreground">{entry.userPhone || "—"}</span></div>
                         <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">FAX</span><span className="text-foreground">{entry.userFax || "—"}</span></div>
-                        <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">宅建番号</span><span className="text-foreground">{entry.userLicense || "—"}</span></div>
+                        <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">資格</span><span className="text-foreground">{entry.userLicense || "—"}</span></div>
                       </div>
                     )}
                   </div>

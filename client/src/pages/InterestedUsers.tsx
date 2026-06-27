@@ -6,7 +6,7 @@ import {
 import { trpc } from "@/lib/trpc";
 
 function exportInterestedCsv(propertyName: string, users: any[]) {
-  const headers = ["氏名", "会社名", "メールアドレス", "電話番号", "FAX", "宅建番号", "お気に入り", "メモ"];
+  const headers = ["氏名", "会社名", "メールアドレス", "電話番号", "FAX", "資格", "お気に入り", "メモ"];
   const rows = users.map(u => [
     u.userName ?? "",
     u.userCompany ?? "",
@@ -135,7 +135,7 @@ export default function InterestedUsers() {
                             </div>
                             <div className="flex items-center gap-2">
                               <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                              <span className="text-muted-foreground w-20 shrink-0">宅建番号</span>
+                              <span className="text-muted-foreground w-20 shrink-0">資格</span>
                               <span className="text-foreground">{entry.userLicense || "—"}</span>
                             </div>
                           </div>

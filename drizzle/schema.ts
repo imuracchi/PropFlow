@@ -30,6 +30,8 @@ export const users = mysqlTable("users", {
   notifyAnnounce: int("notifyAnnounce").default(1).notNull(),
   showCompany: int("showCompany").default(1).notNull(),
   showPhone: int("showPhone").default(1).notNull(),
+  showFax: int("showFax").default(1).notNull(),
+  showUrl: int("showUrl").default(1).notNull(),
 });
 
 export type User = typeof users.$inferSelect;
@@ -101,6 +103,14 @@ export const directMessages = mysqlTable("direct_messages", {
   propertyId: int("propertyId"),
   content: text("content").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const dmReadStatus = mysqlTable("dm_read_status", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  partnerId: int("partnerId").notNull(),
+  propertyId: int("propertyId"),
+  lastReadAt: timestamp("lastReadAt").defaultNow().notNull(),
 });
 
 export const registrationTokens = mysqlTable("registration_tokens", {

@@ -61,6 +61,35 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
+
+  // 毎日19時（JST）に未読DM通知メールを送信
+  const cron = await import("node-cron");
+  cron.schedule("0 10 * * *", async () => {
+    // UTC 10:00 = JST 19:00
+    console.log("[CRON] Checking unread DMs...");
+    try {
+      const db = await import("../db");
+      const { sendMail } = await import("./mail");
+      const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+      const unreadList = await db.getUnreadDmCounts();
+      for (const { email, unreadCount } of unreadList) {
+        await sendMail(email, `【PropFlow】未読メッセージが${unreadCount}件あります`, `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+            <h2 style="color:#1e3a5f;">💬 未読メッセージのお知らせ</h2>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">
+              <p style="font-size:18px;font-weight:700;color:#1e3a5f;margin:0;">返信できていないメッセージが ${unreadCount}件 あります</p>
+              <p style="margin:8px 0 0;color:#64748b;">確認して返信してください。</p>
+            </div>
+            <a href="${siteUrl}/dm-list" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">DMを確認する</a>
+            <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
+          </div>`);
+      }
+      console.log(`[CRON] Sent unread DM notifications to ${unreadList.length} users`);
+    } catch (e) {
+      console.error("[CRON] Error:", e);
+    }
+  });
+  console.log("[CRON] Unread DM check scheduled at 19:00 JST daily");
 }
 
 startServer().catch(console.error);

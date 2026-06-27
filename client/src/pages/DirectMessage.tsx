@@ -28,6 +28,7 @@ export default function DirectMessage() {
   const partnerThread = threads?.find(t => t.partnerId === partnerId);
 
   const sendMutation = trpc.dm.send.useMutation({ onSuccess: () => refetch() });
+  const markReadMutation = trpc.dm.markRead.useMutation();
 
   const [input, setInput] = useState("");
   const [initialSent, setInitialSent] = useState(false);
@@ -36,6 +37,12 @@ export default function DirectMessage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (partnerId) {
+      markReadMutation.mutate({ partnerId, propertyId: propertyId ?? null });
+    }
+  }, [partnerId, propertyId, messages?.length]);
 
   useEffect(() => {
     if (property && !initialSent && messages && messages.length === 0) {
@@ -48,6 +55,7 @@ export default function DirectMessage() {
     if (!input.trim() || !partnerId) return;
     await sendMutation.mutateAsync({ receiverId: partnerId, content: input.trim(), propertyId });
     setInput("");
+    localStorage.setItem(`chat-read-dm-${partnerId}-${propertyId ?? 0}`, String(Date.now()));
   };
 
   if (isLoading) {

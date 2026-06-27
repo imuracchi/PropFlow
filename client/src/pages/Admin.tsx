@@ -579,7 +579,7 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
     { icon: Users, label: "氏名", value: user.name },
     { icon: Building2, label: "会社名", value: user.company },
     { icon: Mail, label: "メール", value: user.email },
-    { icon: FileText, label: "宅建番号", value: user.license },
+    { icon: FileText, label: "資格", value: user.license },
     { icon: MapPin, label: "郵便番号", value: user.zipCode },
     { icon: MapPin, label: "住所", value: user.address },
     { icon: Phone, label: "電話番号", value: user.phone },
@@ -727,7 +727,7 @@ function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
             <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">宅建番号</label>
+            <label className="text-xs text-muted-foreground">資格</label>
             <Input value={license} onChange={e => setLicense(e.target.value)} placeholder="東京都知事(1)第xxxxx号" />
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { eq, desc, count, and, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments } from "../drizzle/schema";
+import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -134,12 +134,12 @@ export async function updateNotifySettings(userId: number, settings: { notifyNew
 
 export async function getVisibilitySettings(userId: number) {
   const db = await getDb();
-  if (!db) return { showCompany: 1, showPhone: 1 };
-  const rows = await db.select({ showCompany: users.showCompany, showPhone: users.showPhone }).from(users).where(eq(users.id, userId)).limit(1);
-  return rows[0] ?? { showCompany: 1, showPhone: 1 };
+  if (!db) return { showCompany: 1, showPhone: 1, showFax: 1, showUrl: 1 };
+  const rows = await db.select({ showCompany: users.showCompany, showPhone: users.showPhone, showFax: users.showFax, showUrl: users.showUrl }).from(users).where(eq(users.id, userId)).limit(1);
+  return rows[0] ?? { showCompany: 1, showPhone: 1, showFax: 1, showUrl: 1 };
 }
 
-export async function updateVisibilitySettings(userId: number, settings: { showCompany: number; showPhone: number }) {
+export async function updateVisibilitySettings(userId: number, settings: { showCompany: number; showPhone: number; showFax: number; showUrl: number }) {
   const db = await getDb();
   if (!db) return;
   await db.update(users).set(settings).where(eq(users.id, userId));
@@ -244,6 +244,8 @@ export async function getPropertyById(id: number) {
       userEmail: users.email,
       showCompany: users.showCompany,
       showPhone: users.showPhone,
+      showFax: users.showFax,
+      showUrl: users.showUrl,
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
@@ -1196,4 +1198,58 @@ export async function deleteGeneratedDocument(id: number, userId: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(generatedDocuments).where(and(eq(generatedDocuments.id, id), eq(generatedDocuments.userId, userId)));
+}
+
+// ---- DM Read Status ----
+
+export async function markDmAsRead(userId: number, partnerId: number, propertyId: number | null) {
+  const db = await getDb();
+  if (!db) return;
+  const propCond = propertyId
+    ? and(eq(dmReadStatus.userId, userId), eq(dmReadStatus.partnerId, partnerId), eq(dmReadStatus.propertyId, propertyId))
+    : and(eq(dmReadStatus.userId, userId), eq(dmReadStatus.partnerId, partnerId), sql`${dmReadStatus.propertyId} IS NULL`);
+  const existing = await db.select().from(dmReadStatus).where(propCond!).limit(1);
+  if (existing.length > 0) {
+    await db.update(dmReadStatus).set({ lastReadAt: new Date() }).where(propCond!);
+  } else {
+    await db.insert(dmReadStatus).values({ userId, partnerId, propertyId, lastReadAt: new Date() });
+  }
+}
+
+export async function getUnreadDmCounts(): Promise<{ userId: number; email: string; unreadCount: number }[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const activeUsers = await db.select({ id: users.id, email: users.email, notifyDm: users.notifyDm }).from(users).where(and(eq(users.status, "active"), eq(users.notifyDm, 1)));
+
+  const results: { userId: number; email: string; unreadCount: number }[] = [];
+
+  for (const u of activeUsers) {
+    const allDms = await db
+      .select({ senderId: directMessages.senderId, propertyId: directMessages.propertyId, createdAt: directMessages.createdAt })
+      .from(directMessages)
+      .where(eq(directMessages.receiverId, u.id))
+      .orderBy(desc(directMessages.createdAt));
+
+    const readStatuses = await db.select().from(dmReadStatus).where(eq(dmReadStatus.userId, u.id));
+    const readMap = new Map<string, Date>();
+    for (const r of readStatuses) {
+      readMap.set(`${r.partnerId}-${r.propertyId ?? 0}`, r.lastReadAt);
+    }
+
+    let unread = 0;
+    for (const dm of allDms) {
+      const key = `${dm.senderId}-${dm.propertyId ?? 0}`;
+      const lastRead = readMap.get(key);
+      if (!lastRead || dm.createdAt > lastRead) {
+        unread++;
+      }
+    }
+
+    if (unread > 0) {
+      results.push({ userId: u.id, email: u.email, unreadCount: unread });
+    }
+  }
+
+  return results;
 }

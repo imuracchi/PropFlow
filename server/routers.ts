@@ -198,7 +198,7 @@ export const appRouter = router({
     }),
 
     updateVisibilitySettings: protectedProcedure
-      .input(z.object({ showCompany: z.number(), showPhone: z.number() }))
+      .input(z.object({ showCompany: z.number(), showPhone: z.number(), showFax: z.number(), showUrl: z.number() }))
       .mutation(async ({ input, ctx }) => {
         await db.updateVisibilitySettings(ctx.user.id, input);
         return { success: true };
@@ -607,6 +607,13 @@ export const appRouter = router({
             </div>`;
           sendMail(receiverEmail, `【PropFlow】${senderName}さんからDMが届きました`, mailHtml).catch(() => {});
         }
+        return { success: true };
+      }),
+
+    markRead: protectedProcedure
+      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.markDmAsRead(ctx.user.id, input.partnerId, input.propertyId);
         return { success: true };
       }),
 

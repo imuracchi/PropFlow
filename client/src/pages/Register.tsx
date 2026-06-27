@@ -127,7 +127,7 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
-              <Label>宅建免許番号 <span className="text-red-500">*</span></Label>
+              <Label>資格 <span className="text-red-500">*</span></Label>
               <div className="flex gap-2">
                 <select className="border border-border rounded-md px-2 py-2 text-sm bg-background" value={licenseType} onChange={e => setLicenseType(e.target.value)}>
                   <option>国土交通大臣免許</option>

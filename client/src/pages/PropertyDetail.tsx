@@ -93,7 +93,7 @@ async function printProperty(
       : ``);
   const v = (s: string | null | undefined) => s || "—";
   const contactRows = myUser ? [
-    ["会社名", myUser.company], ["担当者", myUser.name], ["宅建番号", myUser.license],
+    ["会社名", myUser.company], ["担当者", myUser.name], ["資格", myUser.license],
     ["TEL", myUser.phone], ["FAX", myUser.fax], ["E-mail", myUser.email], ["URL", myUser.url],
   ].filter(([, val]) => val).map(([l, val]) => `<tr><th>${l}</th><td>${val}</td></tr>`).join("") : "";
   const footer = `<div class="ft">${myUser?.company || "PropFlow"} - 物件紹介資料</div>`;
@@ -575,16 +575,13 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
 
 function IntroducerCard({ property }: { property: any }) {
   const [open, setOpen] = useState(false);
-  const showCompany = property.showCompany !== 0;
-  const showPhone = property.showPhone !== 0;
   const items = [
-    { label: "登録者", value: property.userName },
-    { label: "宅建番号", value: property.userLicense },
-    ...(showCompany ? [{ label: "会社名", value: property.userCompany }] : []),
-    ...(showPhone ? [{ label: "電話番号", value: property.userPhone }] : []),
-    { label: "FAX", value: property.userFax },
-    { label: "URL", value: property.userUrl },
+    { label: "名前", value: property.userName },
+    { label: "会社名", value: property.showCompany !== 0 ? property.userCompany : null, hidden: property.showCompany === 0 },
     { label: "メール", value: property.userEmail },
+    { label: "電話番号", value: property.showPhone !== 0 ? property.userPhone : null, hidden: property.showPhone === 0 },
+    { label: "FAX", value: property.showFax !== 0 ? property.userFax : null, hidden: property.showFax === 0 },
+    { label: "URL", value: property.showUrl !== 0 ? property.userUrl : null, hidden: property.showUrl === 0 },
   ];
 
   return (
@@ -601,7 +598,9 @@ function IntroducerCard({ property }: { property: any }) {
           {items.map(item => (
             <div key={item.label} className="flex px-5 py-3.5">
               <span className="w-32 shrink-0 text-[15px] text-muted-foreground">{item.label}</span>
-              {item.label === "URL" && item.value ? (
+              {(item as any).hidden ? (
+                <span className="text-[15px] text-muted-foreground/40 italic">非公開</span>
+              ) : item.label === "URL" && item.value ? (
                 <a href={item.value.startsWith("http") ? item.value : `https://${item.value}`} target="_blank" rel="noopener noreferrer" className="text-[15px] text-primary hover:underline">{item.value}</a>
               ) : item.label === "メール" && item.value ? (
                 <a href={`mailto:${item.value}`} className="text-[15px] text-primary hover:underline">{item.value}</a>

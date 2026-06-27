@@ -37,6 +37,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const { user } = useAuth();
 
+  const isPropertyRead = (id: number) => !!localStorage.getItem(`propflow-property-read-${id}`);
+
   const { data: properties, isLoading } = trpc.property.list.useQuery();
   const { data: favoriteIds } = trpc.favorite.ids.useQuery();
   const { data: memoIds } = trpc.memo.ids.useQuery();
@@ -317,11 +319,12 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   const isFav = (favoriteIds ?? []).includes(property.id);
                   const hasMemo = (memoIds ?? []).includes(property.id);
                   const matchRate = matchRates.get(property.id);
+                  const isNew = property.userId !== user?.id && !isPropertyRead(property.id);
                   return (
                     <tr
                       key={property.id}
                       className="hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => setLocation(`/property/${property.id}`)}
+                      onClick={() => { localStorage.setItem(`propflow-property-read-${property.id}`, "1"); setLocation(`/property/${property.id}`); }}
                     >
                       <td className="w-10 px-3 py-4">
                         <input
@@ -338,6 +341,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                           <span className="text-xs font-medium px-2.5 py-0.5 rounded bg-muted text-muted-foreground">
                             {property.type}
                           </span>
+                          {isNew && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">新着</span>}
                         </div>
                         <p className="font-medium text-foreground text-[15px]">{property.name}</p>
                         <p className="md:hidden text-xs font-semibold text-primary mt-0.5">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
