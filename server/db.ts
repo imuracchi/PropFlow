@@ -955,12 +955,13 @@ export async function getInterestedUsersForMyProperties(userId: number) {
     .select({
       id: users.id, name: users.name, company: users.company,
       email: users.email, phone: users.phone, fax: users.fax, license: users.license,
+      showCompany: users.showCompany,
     })
     .from(users)
     .where(sql`${users.id} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`);
 
   // 物件ごと・ユーザーごとにグループ化
-  const result: { propertyId: number; propertyName: string; userId: number; userName: string | null; userCompany: string | null; userEmail: string; userPhone: string | null; userFax: string | null; userLicense: string | null; types: string[] }[] = [];
+  const result: { propertyId: number; propertyName: string; userId: number; userName: string | null; userCompany: string | null; userEmail: string; userPhone: string | null; userFax: string | null; userLicense: string | null; showCompany: number; types: string[] }[] = [];
 
   for (const entry of allEntries) {
     const u = userList.find(u => u.id === entry.userId);
@@ -981,6 +982,7 @@ export async function getInterestedUsersForMyProperties(userId: number) {
         userPhone: u.phone,
         userFax: u.fax,
         userLicense: u.license,
+        showCompany: u.showCompany,
         types: [entry.type],
       });
     }
