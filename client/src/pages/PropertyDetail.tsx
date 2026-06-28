@@ -208,7 +208,7 @@ ${hdr}
 <div class="pn">${p.name}</div>
 <div class="cards">
 <div class="cd pr"><div class="cd-l">売出価格</div><div class="cd-v">${priceText}</div></div>
-<div class="cd"><div class="cd-l">土地面積</div><div class="cd-v">${p.landArea.toFixed(2)}㎡</div></div>
+<div class="cd"><div class="cd-l">土地面積</div><div class="cd-v">${p.landArea ? p.landArea.toFixed(2) + "㎡" : "—"}</div></div>
 <div class="cd"><div class="cd-l">建物延床面積</div><div class="cd-v">${p.buildingArea ? p.buildingArea.toFixed(2) + "㎡" : "—"}</div></div>
 </div>
 ${p.comment ? `<div class="cmt"><b>紹介コメント</b>${p.comment}</div>` : ""}
@@ -217,8 +217,8 @@ ${p.comment ? `<div class="cmt"><b>紹介コメント</b>${p.comment}</div>` : "
 <tr><th>所在地</th><td colspan="3">${p.address}</td></tr>
 <tr><th>地番</th><td>${v(p.lotNumber)}</td><th>物件種別</th><td>${p.type}</td></tr>
 <tr><th>交通</th><td colspan="3">${v(p.transport)}</td></tr>
-<tr><th>売出価格</th><td>${priceText}</td><th>価格交渉</th><td>${p.negotiation}</td></tr>
-<tr><th>土地面積</th><td>${p.landArea.toFixed(2)}㎡（${toTsubo(p.landArea)}坪）</td><th>建物延床面積</th><td>${p.buildingArea ? p.buildingArea.toFixed(2) + "㎡（" + toTsubo(p.buildingArea) + "坪）" : "—"}</td></tr>
+<tr><th>売出価格</th><td colspan="3">${priceText}</td></tr>
+<tr><th>土地面積</th><td>${p.landArea ? p.landArea.toFixed(2) + "㎡（" + toTsubo(p.landArea) + "坪）" : "—"}</td><th>建物延床面積</th><td>${p.buildingArea ? p.buildingArea.toFixed(2) + "㎡（" + toTsubo(p.buildingArea) + "坪）" : "—"}</td></tr>
 <tr><th>地目</th><td>${v(p.landCategory)}</td><th>権利</th><td>${v(p.rights)}</td></tr>
 <tr><th>構造</th><td>${v(p.structure)}</td><th>築年数</th><td>${v(p.buildingAge)}</td></tr>
 <tr><th>接道</th><td colspan="3">${v(p.access)}</td></tr>
@@ -915,7 +915,7 @@ export default function PropertyDetail() {
   const saveEditing = async () => {
     setEditError("");
     const f = editForm;
-    if (!f.name || !f.address || !f.type || !f.landArea) {
+    if (!f.name || !f.address || !f.type) {
       setEditError("必須項目を入力してください");
       return;
     }
@@ -924,9 +924,9 @@ export default function PropertyDetail() {
       return;
     }
     const priceNum = f.price ? Number(f.price.replace(/,/g, "")) : null;
-    const landAreaNum = Number(f.landArea);
+    const landAreaNum = f.landArea ? Number(f.landArea) : null;
     if (priceNum !== null && (isNaN(priceNum) || priceNum <= 0)) { setEditError("価格を正しく入力してください"); return; }
-    if (isNaN(landAreaNum) || landAreaNum <= 0) { setEditError("土地面積を正しく入力してください"); return; }
+    if (landAreaNum !== null && (isNaN(landAreaNum) || landAreaNum <= 0)) { setEditError("土地面積を正しく入力してください"); return; }
 
     await updateMutation.mutateAsync({
       id: propertyId,
@@ -1030,7 +1030,7 @@ export default function PropertyDetail() {
     ["交通", property.transport || "—"],
     ["物件種別", property.type],
     ["売出価格", property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"],
-    ["土地面積", `${property.landArea.toFixed(2)}㎡（${toTsubo(property.landArea)}坪）`],
+    ["土地面積", property.landArea ? `${property.landArea.toFixed(2)}㎡（${toTsubo(property.landArea)}坪）` : "—"],
     ["地目", property.landCategory || "—"],
     ["権利", property.rights || "—"],
     ["接道", property.access || "—"],
@@ -1041,7 +1041,6 @@ export default function PropertyDetail() {
     ["防火指定", property.fireProtection || "—"],
     ["高度地区", property.heightDistrict || "—"],
     ["その他制限", property.otherRestrictions || "—"],
-    ["価格交渉", property.negotiation],
     ["備考", property.remarks || "—"],
     ["登録日", createdDate],
   ];
@@ -1341,16 +1340,7 @@ export default function PropertyDetail() {
                 <div className="space-y-2"><Label>接道</Label><Input value={editForm.access} onChange={e => setEditForm(p => ({ ...p, access: e.target.value }))} /></div>
               </div>
               <div className="space-y-2"><Label>その他制限</Label><Input value={editForm.otherRestrictions} onChange={e => setEditForm(p => ({ ...p, otherRestrictions: e.target.value }))} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>価格交渉</Label>
-                  <Select value={editForm.negotiation} onValueChange={v => setEditForm(p => ({ ...p, negotiation: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="固定">固定</SelectItem><SelectItem value="交渉可">交渉可</SelectItem></SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2"><Label>備考</Label><Input value={editForm.remarks} onChange={e => setEditForm(p => ({ ...p, remarks: e.target.value }))} /></div>
-              </div>
+              <div className="space-y-2"><Label>備考</Label><Input value={editForm.remarks} onChange={e => setEditForm(p => ({ ...p, remarks: e.target.value }))} /></div>
             </div>
           </div>
 
@@ -1407,7 +1397,7 @@ export default function PropertyDetail() {
             </div>
             <div className="bg-card border border-border rounded-lg p-3 md:p-4">
               <p className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">土地面積</p>
-              <p className="text-sm md:text-lg font-bold text-foreground">{property.landArea.toFixed(2)}㎡</p>
+              <p className="text-sm md:text-lg font-bold text-foreground">{property.landArea ? `${property.landArea.toFixed(2)}㎡` : "—"}</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-3 md:p-4">
               <p className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">建物延床面積</p>
@@ -1453,7 +1443,7 @@ export default function PropertyDetail() {
                         { label: "交通", key: "transport", aiTransport: true },
                         { label: "物件種別", key: "type", required: true, select: PROPERTY_TYPES },
                         { label: "売出価格", key: "price", priceField: true },
-                        { label: "土地面積（㎡）", key: "landArea", required: true },
+                        { label: "土地面積（㎡）", key: "landArea" },
                         { label: "地目", key: "landCategory" },
                         { label: "権利", key: "rights" },
                         { label: "接道", key: "access" },
@@ -1464,7 +1454,6 @@ export default function PropertyDetail() {
                         { label: "防火指定", key: "fireProtection" },
                         { label: "高度地区", key: "heightDistrict" },
                         { label: "その他制限", key: "otherRestrictions", textarea: true },
-                        { label: "価格交渉", key: "negotiation", select: ["固定", "交渉可"] },
                         { label: "備考", key: "remarks", textarea: true },
                       ].map(row => (
                         <div key={row.label} className="flex flex-col md:flex-row px-5 py-3 gap-1 md:gap-0">

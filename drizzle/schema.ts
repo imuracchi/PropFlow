@@ -48,7 +48,7 @@ export const properties = mysqlTable("properties", {
   price: bigint("price", { mode: "number" }),
   priceNegotiable: int("priceNegotiable").default(0).notNull(),
   estimatedYield: double("estimatedYield"),
-  landArea: double("landArea").notNull(),
+  landArea: double("landArea"),
   buildingArea: double("buildingArea"),
   transport: text("transport"),
   landCategory: varchar("landCategory", { length: 64 }),

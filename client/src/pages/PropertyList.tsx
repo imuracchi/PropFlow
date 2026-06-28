@@ -39,7 +39,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [maxLandArea, setMaxLandArea] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [filterNegotiation, setFilterNegotiation] = useState("all");
   const { user } = useAuth();
 
   const isPropertyRead = (id: number) => !!localStorage.getItem(`propflow-property-read-${id}`);
@@ -96,10 +95,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       if (maxP && price > maxP) return false;
       return true;
     })
-    .filter(p => {
-      if (filterNegotiation === "all") return true;
-      return p.negotiation === filterNegotiation;
-    });
+;
 
   const types = [...new Set(baseFiltered.map(p => p.type))];
 
@@ -203,7 +199,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     const target = onlySelected ? filtered.filter(p => selectedIds.has(p.id)) : filtered;
     if (target.length === 0) return;
     const memoMap = new Map((allMemos ?? []).map(m => [m.propertyId, m.content]));
-    const headers = ["物件名", "所在地", "地番", "交通", "物件種別", "価格（円）", "土地面積（㎡）", "坪数", "地目", "権利", "接道", "建物面積（㎡）", "建物坪数", "構造", "築年数", "用途地域", "防火指定", "高度地区", "その他制限", "価格交渉", "備考", "登録者", "登録日", "メモ"];
+    const headers = ["物件名", "所在地", "地番", "交通", "物件種別", "価格（円）", "土地面積（㎡）", "坪数", "地目", "権利", "接道", "建物面積（㎡）", "建物坪数", "構造", "築年数", "用途地域", "防火指定", "高度地区", "その他制限", "備考", "登録者", "登録日", "メモ"];
     const rows = target.map(p => [
       p.name,
       p.address,
@@ -224,7 +220,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       (p as any).fireProtection ?? "",
       (p as any).heightDistrict ?? "",
       (p as any).otherRestrictions ?? "",
-      p.negotiation,
       (p as any).remarks ?? "",
       p.userCompany ?? "",
       new Date(p.createdAt).toLocaleDateString("ja-JP"),
@@ -335,18 +330,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
           <span className="text-xs text-muted-foreground">〜</span>
           <Input className="w-28 bg-card border-border h-9 text-sm" placeholder="上限(円)" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
         </div>
-        <Select value={filterNegotiation} onValueChange={setFilterNegotiation}>
-          <SelectTrigger className="w-36 bg-card border-border">
-            <SelectValue placeholder="交渉：全て" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">交渉：全て</SelectItem>
-            <SelectItem value="交渉可">交渉可</SelectItem>
-            <SelectItem value="固定">固定</SelectItem>
-          </SelectContent>
-        </Select>
-        {(minLandArea || maxLandArea || minPrice || maxPrice || filterNegotiation !== "all" || filterType !== "all") && (
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-9" onClick={() => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterNegotiation("all"); setFilterType("all"); }}>
+        {(minLandArea || maxLandArea || minPrice || maxPrice || filterType !== "all") && (
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-9" onClick={() => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); }}>
             条件クリア
           </Button>
         )}
@@ -384,7 +369,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden lg:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("landArea")}>土地面積<SortIcon col="landArea" /></th>
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden lg:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("buildingArea")}>建物面積<SortIcon col="buildingArea" /></th>
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("price")}>価格<SortIcon col="price" /></th>
-                  <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden xl:table-cell">価格交渉</th>
                   <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("createdAt")}>登録日<SortIcon col="createdAt" /></th>
                   {buyerPref && (
                     <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("match")}>マッチ<SortIcon col="match" /></th>
@@ -431,8 +415,14 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                         {property.address}
                       </td>
                       <td className="px-4 py-4 text-right whitespace-nowrap hidden lg:table-cell">
-                        <p className="text-sm font-medium">{property.landArea.toFixed(2)}㎡</p>
-                        <p className="text-xs text-muted-foreground">（{toTsubo(property.landArea)}坪）</p>
+                        {property.landArea ? (
+                          <>
+                            <p className="text-sm font-medium">{property.landArea.toFixed(2)}㎡</p>
+                            <p className="text-xs text-muted-foreground">（{toTsubo(property.landArea)}坪）</p>
+                          </>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-right whitespace-nowrap hidden lg:table-cell">
                         {property.buildingArea ? (
@@ -446,11 +436,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       </td>
                       <td className="px-4 py-4 text-right whitespace-nowrap hidden md:table-cell">
                         <p className="text-[15px] font-semibold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
-                      </td>
-                      <td className="px-4 py-4 text-center whitespace-nowrap hidden xl:table-cell">
-                        <span className={`text-sm font-medium ${property.negotiation === "交渉可" ? "text-green-600 font-semibold" : "text-foreground"}`}>
-                          {property.negotiation}
-                        </span>
                       </td>
                       <td className="px-4 py-4 text-center text-xs text-muted-foreground whitespace-nowrap hidden md:table-cell">
                         {new Date(property.createdAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}

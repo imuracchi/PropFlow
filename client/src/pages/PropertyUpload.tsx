@@ -183,7 +183,7 @@ export default function PropertyUpload() {
 
   const handleSubmit = async () => {
     setError("");
-    if (!name || !address || !type || !landArea) {
+    if (!name || !address || !type) {
       setError("必須項目を入力してください");
       return;
     }
@@ -192,9 +192,9 @@ export default function PropertyUpload() {
       return;
     }
     const priceNum = price ? Number(String(price).replace(/,/g, "")) : null;
-    const landAreaNum = Number(landArea);
+    const landAreaNum = landArea ? Number(landArea) : null;
     if (priceNum !== null && (isNaN(priceNum) || priceNum <= 0)) { setError("価格を正しく入力してください"); return; }
-    if (isNaN(landAreaNum) || landAreaNum <= 0) { setError("土地面積を正しく入力してください"); return; }
+    if (landAreaNum !== null && (isNaN(landAreaNum) || landAreaNum <= 0)) { setError("土地面積を正しく入力してください"); return; }
 
     const buildingAreaNum = buildingArea ? Number(buildingArea) : null;
     const yieldNum = estimatedYield ? Number(estimatedYield) : null;
@@ -516,7 +516,7 @@ export default function PropertyUpload() {
                 </label>
               </div>
             )},
-            { label: "土地面積（㎡）", required: true, input: <Input value={landArea} onChange={e => setLandArea(e.target.value)} placeholder="例: 201.59" /> },
+            { label: "土地面積（㎡）", input: <Input value={landArea} onChange={e => setLandArea(e.target.value)} placeholder="例: 201.59" /> },
             { label: "地目", input: <Input value={landCategory} onChange={e => setLandCategory(e.target.value)} placeholder="例: 宅地" /> },
             { label: "権利", input: <Input value={rights} onChange={e => setRights(e.target.value)} placeholder="例: 所有権" /> },
             { label: "接道", input: <Input value={access} onChange={e => setAccess(e.target.value)} placeholder="例: 南側公道 幅員4.00m" /> },
@@ -527,12 +527,6 @@ export default function PropertyUpload() {
             { label: "防火指定", input: <Input value={fireProtection} onChange={e => setFireProtection(e.target.value)} placeholder="例: 準防火地域" /> },
             { label: "高度地区", input: <Input value={heightDistrict} onChange={e => setHeightDistrict(e.target.value)} placeholder="例: 17m第二種高度地区" /> },
             { label: "その他制限", input: <Textarea className="min-h-[2.5rem]" rows={2} value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} placeholder="例: 日影規制：3h-2h（測定面4m）" /> },
-            { label: "価格交渉", input: (
-              <Select value={negotiation} onValueChange={setNegotiation}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="固定">固定</SelectItem><SelectItem value="交渉可">交渉可</SelectItem></SelectContent>
-              </Select>
-            )},
             { label: "備考", input: <Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="その他の特記事項" rows={2} /> },
           ].map(row => (
             <div key={row.label} className="flex flex-col md:flex-row px-5 py-3 gap-1 md:gap-0">
@@ -553,7 +547,7 @@ export default function PropertyUpload() {
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs"
-            disabled={generatingComment || !name || !address || !type || !price || !landArea}
+            disabled={generatingComment || !name || !address || !type || !price}
             onClick={async () => {
               setGeneratingComment(true);
               try {
@@ -563,7 +557,7 @@ export default function PropertyUpload() {
                   type,
                   price: Number(String(price).replace(/,/g, "")),
                   estimatedYield: estimatedYield ? Number(estimatedYield) : null,
-                  landArea: Number(landArea),
+                  landArea: landArea ? Number(landArea) : null,
                   buildingArea: buildingArea ? Number(buildingArea) : null,
                   zoning: zoning || undefined,
                   access: access || undefined,
@@ -586,8 +580,8 @@ export default function PropertyUpload() {
             value={comment}
             onChange={e => setComment(e.target.value)}
           />
-          {!name || !address || !type || !price || !landArea ? (
-            <p className="text-xs text-muted-foreground mt-2">※ AI生成には基本情報（物件名・所在地・種別・価格・土地面積）の入力が必要です</p>
+          {!name || !address || !type || !price ? (
+            <p className="text-xs text-muted-foreground mt-2">※ AI生成には基本情報（物件名・所在地・種別・価格）の入力が必要です</p>
           ) : null}
         </div>
       </div>
