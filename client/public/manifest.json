@@ -1,7 +1,7 @@
 {
-  "name": "PropFlow - 不動産買取プラットフォーム",
+  "name": "PropFlow - 不動産情報プラットフォーム",
   "short_name": "PropFlow",
-  "description": "不動産買取プラットフォーム",
+  "description": "不動産情報プラットフォーム",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
