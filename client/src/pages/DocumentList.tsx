@@ -82,11 +82,11 @@ export default function DocumentList() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Download className="w-6 h-6 text-primary" />
+        <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Download className="w-5 h-5 text-primary" />
           ダウンロード資料
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">作成した紹介資料の一覧</p>
+        <p className="text-xs text-muted-foreground mt-0.5">作成した紹介資料の一覧</p>
       </div>
 
       {(docs ?? []).length === 0 ? (

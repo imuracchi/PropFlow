@@ -85,8 +85,8 @@ export default function Admin() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">管理画面</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">プラットフォーム全体の管理・監視</p>
+        <h1 className="text-lg font-semibold text-foreground">管理画面</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">プラットフォーム全体の管理・監視</p>
       </div>
 
       {/* サマリーカード */}

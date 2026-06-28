@@ -21,7 +21,7 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   Building2, LogOut, PanelLeft, Target, Bell, Download,
-  Upload, List, MessageCircle, ShieldCheck, ChevronRight, UserCircle, Heart, HelpCircle, Users
+  Upload, List, MessageCircle, ShieldCheck, UserCircle, Heart, HelpCircle, Users
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -141,13 +141,13 @@ function DashboardLayoutContent({
           <SidebarHeader className="border-b border-sidebar-border py-3">
             <div className="px-3 w-full space-y-2">
               {!isCollapsed && (
-                <img src="/logo2.png" alt="PropFlow" className="w-full px-2 object-contain" />
+                <img src="/logo2.png" alt="PropFlow" className="w-full px-2 object-contain brightness-0 invert" />
               )}
               <button
                 onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-colors focus:outline-none shrink-0"
+                className="h-8 w-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors focus:outline-none shrink-0"
               >
-                <PanelLeft className="h-4 w-4 text-sidebar-foreground/50" />
+                <PanelLeft className="h-4 w-4 text-white/60" />
               </button>
             </div>
           </SidebarHeader>
@@ -157,12 +157,12 @@ function DashboardLayoutContent({
             {sections.map((section, si) => (
               <div key={si}>
                 {!isCollapsed && section.title && (
-                  <p className="text-[11px] font-semibold text-sidebar-foreground/40 tracking-widest px-5 pb-0.5 pt-3">
+                  <p className="text-[11px] font-semibold text-white/40 tracking-widest px-5 pb-0.5 pt-3 uppercase">
                     {section.title}
                   </p>
                 )}
                 {isCollapsed && section.title && (
-                  <div className="mx-auto my-1 w-5 border-t border-sidebar-border" />
+                  <div className="mx-auto my-1 w-5 border-t border-white/15" />
                 )}
                 <SidebarMenu className="px-2 space-y-0">
                   {section.items.map(item => {
@@ -174,20 +174,14 @@ function DashboardLayoutContent({
                           isActive={isActive}
                           onClick={() => { setLocation(item.path); if (isMobile) toggleSidebar(); }}
                           tooltip={item.label}
-                          className={`h-9 rounded-lg transition-all font-normal group/item relative ${
+                          className={`h-9 rounded-lg transition-all font-normal group/item ${
                             isActive
-                              ? "bg-sidebar-accent text-sidebar-foreground font-medium"
-                              : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
+                              ? "bg-white/15 text-white font-medium"
+                              : "text-white/65 hover:text-white hover:bg-white/10"
                           }`}
                         >
-                          {isActive && (
-                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-sidebar-primary rounded-r-full" />
-                          )}
-                          <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-sidebar-primary" : ""}`} />
+                          <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : ""}`} />
                           <span className="text-[15px]">{item.label}</span>
-                          {isActive && !isCollapsed && (
-                            <ChevronRight className="ml-auto h-3 w-3 text-sidebar-foreground/30" />
-                          )}
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
@@ -198,20 +192,20 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           {/* フッター */}
-          <SidebarFooter className="p-3 border-t border-sidebar-border">
+          <SidebarFooter className="p-3 border-t border-white/15">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent/60 transition-colors w-full text-left focus:outline-none group-data-[collapsible=icon]:justify-center">
+                <button className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-white/10 transition-colors w-full text-left focus:outline-none group-data-[collapsible=icon]:justify-center">
                   <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarFallback className="text-xs font-bold bg-sidebar-primary text-sidebar-primary-foreground">
+                    <AvatarFallback className="text-xs font-bold bg-white/20 text-white">
                       {(user?.name ?? "?").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-xs font-semibold truncate leading-none text-sidebar-foreground">
+                    <p className="text-xs font-semibold truncate leading-none text-white">
                       {user?.name ?? "ユーザー"}
                     </p>
-                    <p className="text-[11px] text-sidebar-foreground/40 truncate mt-1">
+                    <p className="text-[11px] text-white/50 truncate mt-1">
                       {user?.email ?? ""}
                     </p>
                   </div>
@@ -228,7 +222,7 @@ function DashboardLayoutContent({
         </Sidebar>
 
         <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-sidebar-primary/30 transition-colors ${isCollapsed ? "hidden" : ""}`}
+          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-white/30 transition-colors ${isCollapsed ? "hidden" : ""}`}
           onMouseDown={() => { if (!isCollapsed) setIsResizing(true); }}
           style={{ zIndex: 50 }}
         />

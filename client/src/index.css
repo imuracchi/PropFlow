@@ -79,13 +79,13 @@
   --chart-4: oklch(0.65 0.12 210);
   --chart-5: oklch(0.45 0.12 250);
 
-  --sidebar: oklch(0.25 0.06 250);
-  --sidebar-foreground: oklch(0.92 0.01 250);
-  --sidebar-primary: oklch(0.70 0.15 250);
+  --sidebar: oklch(0.40 0.16 250);
+  --sidebar-foreground: oklch(0.96 0.005 250);
+  --sidebar-primary: oklch(0.82 0.08 250);
   --sidebar-primary-foreground: oklch(1.0 0 0);
-  --sidebar-accent: oklch(0.32 0.05 250);
-  --sidebar-accent-foreground: oklch(0.95 0.005 250);
-  --sidebar-border: oklch(0.32 0.05 250);
+  --sidebar-accent: oklch(0.48 0.14 250);
+  --sidebar-accent-foreground: oklch(0.98 0.005 250);
+  --sidebar-border: oklch(0.48 0.12 250);
   --sidebar-ring: oklch(0.55 0.20 260);
 }
 
@@ -177,11 +177,10 @@
 
   /* テーブル行ホバー強化 */
   tbody tr {
-    transition: background-color 0.15s, box-shadow 0.15s;
+    transition: background-color 0.15s;
   }
   tbody tr:hover {
     background-color: oklch(0.97 0.01 250);
-    box-shadow: inset 3px 0 0 oklch(0.55 0.20 260);
   }
 
   /* ページタイトル装飾 */

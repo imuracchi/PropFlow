@@ -82,50 +82,32 @@ function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
   const lastRead = getLastRead(dmKey);
   const hasNew = new Date(thread.lastMessageAt).getTime() > lastRead;
   return (
-    <div
-      className="bg-card border border-border rounded-lg p-4 hover:border-primary/40 transition-colors cursor-pointer"
+    <tr
+      className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border"
       onClick={() => {
         localStorage.setItem(`chat-read-${dmKey}`, String(Date.now()));
         setLocation(dmUrl);
       }}
     >
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-          <Home className="w-5 h-5 text-primary" />
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-foreground text-sm truncate">{thread.propertyName || "物件なし"}</span>
+          {hasNew && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-orange-500 text-white shrink-0">新着</span>}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {hasNew && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-orange-500 text-white shrink-0">新着</span>}
-          </div>
-          <p className="text-sm font-semibold text-foreground truncate">
-            {thread.propertyName || "物件なし"}
-          </p>
-          <p className="text-xs text-muted-foreground mt-0.5 truncate">
-            <User className="w-3 h-3 inline mr-1" />
-            {thread.partnerName}
-            {thread.partnerCompany && <span className="ml-1">({thread.partnerCompany})</span>}
-          </p>
-        </div>
-        <div className="text-right shrink-0 flex items-center gap-2">
-          <div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <MessageCircle className="w-3 h-3" />{thread.messageCount}件
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {new Date(thread.lastMessageAt).toLocaleDateString("ja-JP")}
-            </p>
-          </div>
-          {onHide && (
-            <button
-              className="p-1.5 rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-red-50 transition-colors"
-              onClick={e => { e.stopPropagation(); onHide(); }}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+      </td>
+      <td className="px-4 py-3 text-sm text-muted-foreground truncate hidden md:table-cell">
+        {thread.partnerName}{thread.partnerCompany ? ` (${thread.partnerCompany})` : ""}
+      </td>
+      <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden md:table-cell">{thread.messageCount}件</td>
+      <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(thread.lastMessageAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}</td>
+      <td className="px-2 py-3 text-center">
+        {onHide && (
+          <button className="p-1 rounded text-muted-foreground/30 hover:text-destructive hover:bg-red-50 transition-colors" onClick={e => { e.stopPropagation(); onHide(); }}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </td>
+    </tr>
   );
 }
 
@@ -186,48 +168,51 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">お知らせ管理</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">自社物件のお知らせを管理・投稿できます</p>
+          <h1 className="text-lg font-semibold text-foreground">お知らせ管理</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">自社物件のお知らせを管理・投稿できます</p>
         </div>
         {myProperties.length === 0 ? (
           <EmptyState icon={MessageCircle} message="自社物件がまだありません" />
         ) : (
-          <div className="space-y-3">
-            {myProperties.map(prop => {
-              const summary = summaries?.[prop.id];
-              return (
-                <div
-                  key={prop.id}
-                  className="bg-card border border-border rounded-lg p-4 hover:border-amber-300 transition-colors cursor-pointer"
-                  onClick={() => setLocation(`/chat/${prop.id}`)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-amber-50">
-                      <Bell className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-foreground text-sm truncate">{prop.name}</h3>
-                        {summary && summary.count > 0 && (
-                          <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 rounded-full shrink-0">{summary.count}件</span>
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead><tr className="border-b border-border bg-muted">
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">住所</th>
+                <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">お知らせ</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">最新のお知らせ</th>
+              </tr></thead>
+              <tbody>
+                {myProperties.map(prop => {
+                  const summary = summaries?.[prop.id];
+                  return (
+                    <tr key={prop.id} className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setLocation(`/chat/${prop.id}`)}>
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-foreground text-sm">{prop.name}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{prop.address}</td>
+                      <td className="px-4 py-3 text-center hidden md:table-cell">
+                        {summary && summary.count > 0 ? (
+                          <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{summary.count}件</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />{prop.address}
-                      </p>
-                      {summary?.latestContent && (
-                        <div className="mt-2 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">
-                          <p className="text-xs text-amber-800 truncate">{summary.latestContent}</p>
-                          <p className="text-[10px] text-amber-500 mt-0.5">
-                            {summary.latestDate ? new Date(summary.latestDate).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        {summary?.latestContent ? (
+                          <div>
+                            <p className="text-xs text-foreground truncate max-w-[200px]">{summary.latestContent}</p>
+                            <p className="text-[10px] text-muted-foreground">{summary.latestDate ? new Date(summary.latestDate).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -239,14 +224,22 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">問い合わせDM</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">自社物件への問い合わせメッセージ</p>
+          <h1 className="text-lg font-semibold text-foreground">問い合わせDM</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">自社物件への問い合わせメッセージ</p>
         </div>
         {ownerDms.length === 0 ? (
           <EmptyState icon={MessageCircle} message="自社物件への問い合わせはまだありません" />
         ) : (
-          <div className="space-y-3">
-            {ownerDms.map(thread => <DmCard key={`dm-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <table className="w-full"><thead><tr className="border-b border-border bg-muted">
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
+              <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
+              <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
+              <th className="w-8"></th>
+            </tr></thead><tbody>
+              {ownerDms.map(thread => <DmCard key={`dm-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
+            </tbody></table>
           </div>
         )}
       </div>
@@ -257,8 +250,8 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">ダイレクトメッセージ</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">物件登録者との1対1のやり取り</p>
+          <h1 className="text-lg font-semibold text-foreground">ダイレクトメッセージ</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">物件登録者との1対1のやり取り</p>
         </div>
         <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation("/properties")}>
           <Home className="w-4 h-4" />新しく物件の質問
@@ -290,8 +283,16 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
           {activeDmThreads.length === 0 ? (
             <EmptyState icon={MessageCircle} message="ダイレクトメッセージはありません" />
           ) : (
-            <div className="space-y-3">
-              {activeDmThreads.map(thread => <DmCard key={dmKey(thread)} thread={thread} onHide={() => handleDmHide(thread)} />)}
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <table className="w-full"><thead><tr className="border-b border-border bg-muted">
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
+                <th className="w-8"></th>
+              </tr></thead><tbody>
+                {activeDmThreads.map(thread => <DmCard key={dmKey(thread)} thread={thread} onHide={() => handleDmHide(thread)} />)}
+              </tbody></table>
             </div>
           )}
         </TabsContent>
@@ -300,8 +301,10 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
           {hiddenDmThreads.length === 0 ? (
             <EmptyState icon={EyeOff} message="非表示のDMはありません" />
           ) : (
-            <div className="space-y-3">
-              {hiddenDmThreads.map(thread => <DmCard key={`hidden-${dmKey(thread)}`} thread={thread} />)}
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <table className="w-full"><tbody>
+                {hiddenDmThreads.map(thread => <DmCard key={`hidden-${dmKey(thread)}`} thread={thread} />)}
+              </tbody></table>
             </div>
           )}
         </TabsContent>

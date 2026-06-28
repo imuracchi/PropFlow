@@ -3,17 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Search, SlidersHorizontal, Heart, Building2, Clock, Target,
-  Plus, Landmark, MapPin, Loader2, Download, StickyNote
+  Search, Heart, Building2,
+  Plus, MapPin, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  available: { label: "公開中", cls: "border border-blue-600 text-blue-600 bg-white" },
-  negotiating: { label: "商談中", cls: "bg-amber-500 text-white" },
-  sold: { label: "売却済", cls: "bg-gray-400 text-white" },
+  available: { label: "公開中", cls: "bg-blue-50 text-blue-700 border border-blue-200" },
+  negotiating: { label: "商談中", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
+  sold: { label: "売却済", cls: "bg-gray-100 text-gray-500 border border-gray-200" },
 };
 
 function toTsubo(sqm: number) {
@@ -35,6 +35,11 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [filterType, setFilterType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [minLandArea, setMinLandArea] = useState("");
+  const [maxLandArea, setMaxLandArea] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [filterNegotiation, setFilterNegotiation] = useState("all");
   const { user } = useAuth();
 
   const isPropertyRead = (id: number) => !!localStorage.getItem(`propflow-property-read-${id}`);
@@ -74,6 +79,26 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       return p.address.toLowerCase().includes(q)
         || p.name.toLowerCase().includes(q)
         || (p.userCompany ?? "").toLowerCase().includes(q);
+    })
+    .filter(p => {
+      const minLA = minLandArea ? Number(minLandArea) : null;
+      const maxLA = maxLandArea ? Number(maxLandArea) : null;
+      if (minLA && p.landArea < minLA) return false;
+      if (maxLA && p.landArea > maxLA) return false;
+      return true;
+    })
+    .filter(p => {
+      const minP = minPrice ? Number(minPrice) : null;
+      const maxP = maxPrice ? Number(maxPrice) : null;
+      if (p.priceNegotiable) return !minP && !maxP;
+      const price = p.price ?? 0;
+      if (minP && price < minP) return false;
+      if (maxP && price > maxP) return false;
+      return true;
+    })
+    .filter(p => {
+      if (filterNegotiation === "all") return true;
+      return p.negotiation === filterNegotiation;
     });
 
   const types = [...new Set(baseFiltered.map(p => p.type))];
@@ -112,10 +137,48 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const matchRates = new Map<number, number | null>();
   filtered.forEach(p => matchRates.set(p.id, calcMatch(p)));
 
-  const [sortByMatch, setSortByMatch] = useState(false);
-  const sortedFiltered = sortByMatch && buyerPref
-    ? [...filtered].sort((a, b) => (matchRates.get(b.id) ?? -1) - (matchRates.get(a.id) ?? -1))
-    : filtered;
+  type SortKey = "name" | "address" | "landArea" | "buildingArea" | "price" | "createdAt" | "match" | null;
+  const [sortKey, setSortKey] = useState<SortKey>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      if (sortDir === "desc") setSortDir("asc");
+      else { setSortKey(null); setSortDir("desc"); }
+    } else {
+      setSortKey(key);
+      setSortDir(key === "name" || key === "address" ? "asc" : "desc");
+    }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="w-3 h-3 text-muted-foreground/40 ml-1 inline" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="w-3 h-3 text-primary ml-1 inline" />
+      : <ArrowDown className="w-3 h-3 text-primary ml-1 inline" />;
+  };
+
+  const sortedFiltered = (() => {
+    let list = [...filtered];
+    if (sortKey) {
+      list.sort((a, b) => {
+        let va: any, vb: any;
+        switch (sortKey) {
+          case "name": va = a.name; vb = b.name; break;
+          case "address": va = a.address; vb = b.address; break;
+          case "landArea": va = a.landArea; vb = b.landArea; break;
+          case "buildingArea": va = a.buildingArea ?? 0; vb = b.buildingArea ?? 0; break;
+          case "price": va = a.priceNegotiable ? -1 : (a.price ?? 0); vb = b.priceNegotiable ? -1 : (b.price ?? 0); break;
+          case "createdAt": va = new Date(a.createdAt).getTime(); vb = new Date(b.createdAt).getTime(); break;
+          case "match": va = matchRates.get(a.id) ?? -1; vb = matchRates.get(b.id) ?? -1; break;
+          default: return 0;
+        }
+        if (typeof va === "string") return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+        return sortDir === "asc" ? va - vb : vb - va;
+      });
+    }
+    return list;
+  })();
 
   const STATUS_LABEL: Record<string, string> = { available: "公開中", negotiating: "商談中", sold: "売却済" };
 
@@ -190,11 +253,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     <div className="space-y-5">
       {!hideHeader && (
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{MODE_TITLE[mode]}</h1>
-            <p className="text-sm text-primary font-medium mt-0.5">
-              {filtered.length} 件の物件
-            </p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold text-foreground">{MODE_TITLE[mode]}</h1>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{filtered.length}件</span>
           </div>
           <div className="flex items-center gap-2">
             {selectedIds.size > 0 && (
@@ -221,7 +282,10 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       )}
       {hideHeader && (selectedIds.size > 0 || filtered.length > 0) && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-primary font-medium">{filtered.length} 件の物件</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">{MODE_TITLE[mode]}</span>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{filtered.length}件</span>
+          </div>
           <div className="flex items-center gap-2">
             {selectedIds.size > 0 && (
               <Button variant="outline" size="sm" className="gap-2" onClick={() => exportCsv(true)}>
@@ -247,27 +311,43 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-end gap-3">
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-44 bg-card border-border">
+          <SelectTrigger className="w-40 bg-card border-border">
             <SelectValue placeholder="物件種別：全て" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">物件種別：全て</SelectItem>
+            <SelectItem value="all">種別：全て</SelectItem>
             {types.map(t => (
               <SelectItem key={t} value={t}>{t}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {buyerPref && (
-          <Button
-            variant={sortByMatch ? "default" : "outline"}
-            size="sm"
-            className="gap-1.5 shrink-0"
-            onClick={() => setSortByMatch(!sortByMatch)}
-          >
-            <Target className="w-3.5 h-3.5" />
-            マッチ率順
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">土地面積</span>
+          <Input className="w-24 bg-card border-border h-9 text-sm" placeholder="下限㎡" value={minLandArea} onChange={e => setMinLandArea(e.target.value)} />
+          <span className="text-xs text-muted-foreground">〜</span>
+          <Input className="w-24 bg-card border-border h-9 text-sm" placeholder="上限㎡" value={maxLandArea} onChange={e => setMaxLandArea(e.target.value)} />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">価格</span>
+          <Input className="w-28 bg-card border-border h-9 text-sm" placeholder="下限(円)" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+          <span className="text-xs text-muted-foreground">〜</span>
+          <Input className="w-28 bg-card border-border h-9 text-sm" placeholder="上限(円)" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+        </div>
+        <Select value={filterNegotiation} onValueChange={setFilterNegotiation}>
+          <SelectTrigger className="w-36 bg-card border-border">
+            <SelectValue placeholder="交渉：全て" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">交渉：全て</SelectItem>
+            <SelectItem value="交渉可">交渉可</SelectItem>
+            <SelectItem value="固定">固定</SelectItem>
+          </SelectContent>
+        </Select>
+        {(minLandArea || maxLandArea || minPrice || maxPrice || filterNegotiation !== "all" || filterType !== "all") && (
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-9" onClick={() => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterNegotiation("all"); setFilterType("all"); }}>
+            条件クリア
           </Button>
         )}
       </div>
@@ -290,8 +370,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="w-10 px-3 py-3">
+                <tr className="border-b border-border bg-muted">
+                  <th className="w-10 px-3 py-2.5">
                     <input
                       type="checkbox"
                       className="accent-primary w-4 h-4"
@@ -299,16 +379,17 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap">タイトル</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">住所</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">土地面積</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">建物面積</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">価格</th>
-                  <th className="text-center px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap hidden xl:table-cell">価格交渉</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("name")}>タイトル<SortIcon col="name" /></th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("address")}>住所<SortIcon col="address" /></th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden lg:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("landArea")}>土地面積<SortIcon col="landArea" /></th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden lg:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("buildingArea")}>建物面積<SortIcon col="buildingArea" /></th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("price")}>価格<SortIcon col="price" /></th>
+                  <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden xl:table-cell">価格交渉</th>
+                  <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("createdAt")}>登録日<SortIcon col="createdAt" /></th>
                   {buyerPref && (
-                    <th className="text-center px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap">マッチ</th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("match")}>マッチ<SortIcon col="match" /></th>
                   )}
-                  <th className="text-center px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap">
+                  <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap">
                     <Heart className="w-3.5 h-3.5 mx-auto text-muted-foreground" />
                   </th>
                 </tr>
@@ -370,6 +451,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                         <span className={`text-sm font-medium ${property.negotiation === "交渉可" ? "text-green-600 font-semibold" : "text-foreground"}`}>
                           {property.negotiation}
                         </span>
+                      </td>
+                      <td className="px-4 py-4 text-center text-xs text-muted-foreground whitespace-nowrap hidden md:table-cell">
+                        {new Date(property.createdAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}
                       </td>
                       {buyerPref && (
                         <td className="text-center px-2 py-4 whitespace-nowrap">

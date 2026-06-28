@@ -20,9 +20,9 @@ const PLAN_MAP: Record<string, string> = {
 };
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  available: { label: "公開中", cls: "border border-blue-600 text-blue-600 bg-white" },
-  negotiating: { label: "商談中", cls: "bg-amber-500 text-white" },
-  sold: { label: "売却済", cls: "bg-gray-400 text-white" },
+  available: { label: "公開中", cls: "bg-blue-50 text-blue-700 border border-blue-200" },
+  negotiating: { label: "商談中", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
+  sold: { label: "売却済", cls: "bg-gray-100 text-gray-500 border border-gray-200" },
 };
 
 export default function MyPage() {
@@ -65,7 +65,7 @@ export default function MyPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-bold text-foreground">マイページ</h1>
+      <h1 className="text-lg font-semibold text-foreground">マイページ</h1>
 
       {/* PWAインストール案内（スマホのみ上部） */}
       {!isInstalled && (
@@ -178,13 +178,13 @@ export default function MyPage() {
 
       {/* LINE連携 */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-5 py-4 flex items-center justify-between">
+        <div className="px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#06C755] rounded-lg flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" className="w-6 h-6 text-white fill-current"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+            <div className="w-9 h-9 bg-[#06C755] rounded-lg flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 text-white fill-current"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground text-sm">LINE通知</h3>
+              <h3 className="text-sm font-semibold text-foreground">LINE通知</h3>
               <p className="text-xs text-muted-foreground">PropFlowの公式LINEを友だち追加すると、新しい物件が登録された際に通知が届きます</p>
             </div>
           </div>
@@ -361,9 +361,9 @@ function AdminContactForm({ userEmail, userName }: { userEmail: string; userName
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="px-5 py-4 border-b border-border">
-        <h2 className="font-semibold text-foreground flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-primary" />
+      <div className="px-5 py-3 border-b border-border bg-muted/40">
+        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-primary" />
           管理者への連絡
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">お問い合わせ内容はメールで管理者に送信されます</p>
@@ -441,8 +441,8 @@ function VisibilitySettings() {
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="px-5 py-4 border-b border-border">
-        <h2 className="font-semibold text-foreground flex items-center gap-2">
+      <div className="px-5 py-3 border-b border-border bg-muted/40">
+        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           👁 情報公開設定
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">他のユーザーに表示する情報を選択できます</p>
@@ -491,8 +491,8 @@ function NotifySettings() {
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="px-5 py-4 border-b border-border">
-        <h2 className="font-semibold text-foreground flex items-center gap-2">
+      <div className="px-5 py-3 border-b border-border bg-muted/40">
+        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           📩 メール通知設定
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">チェックを入れた項目のメール通知を受け取ります</p>
@@ -552,9 +552,9 @@ function ChangePasswordForm() {
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <button className="w-full px-5 py-4 flex items-center justify-between text-left" onClick={() => setOpen(!open)}>
-        <h2 className="font-semibold text-foreground flex items-center gap-2">
-          <Lock className="w-5 h-5 text-primary" />
+      <button className="w-full px-5 py-3 flex items-center justify-between text-left bg-muted/40" onClick={() => setOpen(!open)}>
+        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <Lock className="w-4 h-4 text-primary" />
           パスワード変更
         </h2>
         {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -645,7 +645,7 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
             <span className="text-xl md:text-2xl font-bold text-primary">{(user.name ?? "?").charAt(0)}</span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-foreground">{user.name}</h2>
+            <h2 className="text-lg font-semibold text-foreground">{user.name}</h2>
             <div className="flex items-center gap-3 mt-1">
               <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary">
                 {PLAN_MAP[user.plan] ?? "スタンダード"}
@@ -725,9 +725,9 @@ function InterestedUsersSection() {
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="px-5 py-4 border-b border-border">
-        <h2 className="font-semibold text-foreground flex items-center gap-2">
-          <Users className="w-5 h-5 text-primary" />
+      <div className="px-5 py-3 border-b border-border bg-muted/40">
+        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <Users className="w-4 h-4 text-primary" />
           あなたの物件に興味を持っているユーザー
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">お気に入り登録やメモを残しているユーザーの一覧です</p>

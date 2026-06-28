@@ -72,11 +72,11 @@ export default function BuyerPreference() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Target className="w-6 h-6 text-primary" />
+        <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Target className="w-5 h-5 text-primary" />
           希望条件
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">希望条件を登録すると、物件一覧にマッチ率が表示されます</p>
+        <p className="text-xs text-muted-foreground mt-0.5">希望条件を登録すると、物件一覧にマッチ率が表示されます</p>
       </div>
 
       <div className="bg-card border border-border rounded-lg p-6 space-y-5">

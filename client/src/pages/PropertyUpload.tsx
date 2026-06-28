@@ -309,8 +309,8 @@ export default function PropertyUpload() {
             <ChevronLeft className="w-4 h-4" />
             物件一覧に戻る
           </button>
-          <h1 className="text-2xl font-bold text-foreground">物件情報の登録</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">PDFをアップロードしてAIが自動で情報を整理します</p>
+          <h1 className="text-lg font-semibold text-foreground">物件情報の登録</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">PDFをアップロードしてAIが自動で情報を整理します</p>
         </div>
 
         {/* ステップインジケーター */}
@@ -431,8 +431,8 @@ export default function PropertyUpload() {
           <ChevronLeft className="w-4 h-4" />
           アップロードに戻る
         </button>
-        <h1 className="text-2xl font-bold text-foreground">物件情報の確認・編集</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
+        <h1 className="text-lg font-semibold text-foreground">物件情報の確認・編集</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">
           {pdfFiles.length > 0 ? "AIが抽出した情報を確認・修正してください" : "物件の基本情報を入力してください"}
         </p>
       </div>

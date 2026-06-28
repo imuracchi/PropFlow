@@ -214,11 +214,11 @@ ${COST_ITEMS.map(item => {
       </button>
 
       <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Calculator className="w-6 h-6 text-primary" />
+        <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Calculator className="w-5 h-5 text-primary" />
           利益シミュレーション
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">{property?.name} / {property?.address}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{property?.name} / {property?.address}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

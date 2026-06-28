@@ -139,10 +139,10 @@ ${hdr}
 ${p.transport ? `<div class="tb">🚃 ${p.transport}</div>` : ""}
 <div style="display:flex;gap:14px;margin-top:12px;">
 <div style="flex:1;font-size:11px;line-height:2;">
-${routeData.steps.map((s: any, i: number) => `<div style="padding:2px 0;border-bottom:1px solid #eee;"><span style="display:inline-block;width:18px;color:#1e40af;font-weight:700;">${i + 1}.</span>${s.instruction} <span style="color:#94a3b8;font-size:10px;">${s.distance}</span></div>`).join("")}
+${routeData.steps.map((s: any, i: number) => `<div style="padding:2px 0;border-bottom:1px solid #eee;"><span style="display:inline-block;width:18px;color:#2b5c94;font-weight:700;">${i + 1}.</span>${s.instruction} <span style="color:#94a3b8;font-size:10px;">${s.distance}</span></div>`).join("")}
 </div>
 <div style="flex:1.6;">
-<img src="https://maps.googleapis.com/maps/api/staticmap?size=640x480&scale=2&maptype=roadmap&path=color:0x4285F4ff%7Cweight:5%7Cenc:${encodeURIComponent(routeData.polyline)}&markers=color:green%7Clabel:S%7C${routeData.startLat},${routeData.startLng}&markers=color:red%7Clabel:G%7C${routeData.endLat},${routeData.endLng}&key=${key}" alt="ルート地図" style="width:100%;border:1px solid #d0d7de;" />
+<img src="https://maps.googleapis.com/maps/api/staticmap?size=640x480&scale=2&maptype=roadmap&path=color:0x4285F4ff%7Cweight:5%7Cenc:${encodeURIComponent(routeData.polyline)}&markers=color:green%7Clabel:S%7C${routeData.startLat},${routeData.startLng}&markers=color:red%7Clabel:G%7C${routeData.endLat},${routeData.endLng}&key=${key}" alt="ルート地図" style="width:100%;border:1px solid #c8d6e5;border-radius:4px;" />
 </div>
 </div>
 ${footer}
@@ -163,35 +163,36 @@ ${footer}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;color:#1a1a1a;font-size:11px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .page{page-break-after:always}.page:last-child{page-break-after:auto}
-.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3a5f;padding-bottom:10px;margin-bottom:14px}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #2b5c94;padding-bottom:10px;margin-bottom:14px}
 .hdr-r{text-align:right;font-size:10px;color:#64748b}
-.ttl{text-align:center;font-size:20px;font-weight:800;color:#1e3a5f;letter-spacing:6px;margin-bottom:12px}
-.pn{text-align:center;font-size:17px;font-weight:700;padding:8px 12px;background:#f0f4f8;border:1px solid #d0d7de;margin-bottom:10px}
+.ttl{text-align:center;font-size:18px;font-weight:700;color:#2b5c94;letter-spacing:4px;margin-bottom:12px}
+.pn{text-align:center;font-size:16px;font-weight:700;padding:8px 12px;background:#f0f5fa;border:1px solid #c8d6e5;margin-bottom:10px}
 .cards{display:flex;gap:8px;margin-bottom:12px}
-.cd{flex:1;border:2px solid #d0d7de;border-radius:6px;padding:6px 8px;text-align:center}
-.cd.pr{border-color:#1e40af;background:#eff6ff}
+.cd{flex:1;border:1px solid #c8d6e5;border-radius:4px;padding:6px 8px;text-align:center}
+.cd.pr{border-color:#2b5c94;background:#2b5c94;color:#fff}
 .cd-l{font-size:9px;color:#64748b;letter-spacing:1px}
 .cd-v{font-size:15px;font-weight:700;margin-top:1px}
-.cd.pr .cd-v{color:#1e40af}
-.cmt{background:#fffbeb;border:1px solid #f5d98a;padding:8px 10px;margin-bottom:12px;font-size:11px}
-.cmt b{display:block;margin-bottom:3px}
-.sec{font-size:12px;font-weight:700;color:#1e3a5f;border-left:4px solid #1e40af;padding-left:8px;margin:12px 0 6px}
-table.dt{width:100%;border-collapse:collapse;border:1px solid #94a3b8}
-table.dt th,table.dt td{border:1px solid #94a3b8;padding:4px 7px;font-size:11px;vertical-align:top}
-table.dt th{background:#e8edf2;color:#334155;font-weight:600;width:72px;white-space:nowrap}
-table.ct{width:100%;border-collapse:collapse;border:1px solid #94a3b8}
-table.ct th,table.ct td{border:1px solid #94a3b8;padding:3px 7px;font-size:11px}
-table.ct th{background:#e8edf2;color:#334155;font-weight:600;width:72px}
-.ft{text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #d0d7de;padding-top:6px;margin-top:16px}
-.mt{font-size:17px;font-weight:700;color:#1e3a5f;border-bottom:3px solid #1e3a5f;padding-bottom:8px;margin-bottom:14px}
+.cd.pr .cd-l{color:rgba(255,255,255,.7)}
+.cd.pr .cd-v{color:#fff}
+.cmt{background:#f8fafc;border:1px solid #c8d6e5;border-left:3px solid #2b5c94;padding:8px 10px;margin-bottom:12px;font-size:11px}
+.cmt b{display:block;margin-bottom:3px;color:#2b5c94}
+.sec{font-size:11px;font-weight:700;color:#2b5c94;background:#f0f5fa;padding:5px 8px;margin:12px 0 6px;border-radius:2px}
+table.dt{width:100%;border-collapse:collapse;border:1px solid #c8d6e5}
+table.dt th,table.dt td{border:1px solid #c8d6e5;padding:4px 7px;font-size:11px;vertical-align:top}
+table.dt th{background:#f0f5fa;color:#334155;font-weight:600;width:72px;white-space:nowrap}
+table.ct{width:100%;border-collapse:collapse;border:1px solid #c8d6e5}
+table.ct th,table.ct td{border:1px solid #c8d6e5;padding:3px 7px;font-size:11px}
+table.ct th{background:#f0f5fa;color:#334155;font-weight:600;width:72px}
+.ft{text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #c8d6e5;padding-top:6px;margin-top:16px}
+.mt{font-size:15px;font-weight:700;color:#2b5c94;border-bottom:2px solid #2b5c94;padding-bottom:6px;margin-bottom:14px}
 .ma{font-size:12px;color:#475569;margin-bottom:10px}
 .mi{text-align:center;margin:20px 0}
-.mi img{max-width:100%;border:1px solid #d0d7de}
-.tb{background:#f8fafc;border:1px solid #d0d7de;padding:10px 14px;margin-bottom:14px;font-size:12px}
-@media screen{body{background:#cbd5e1}.page{width:210mm;min-height:297mm;background:#fff;margin:20px auto;padding:12mm 15mm;box-shadow:0 2px 12px rgba(0,0,0,.18)}}
-.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:#1e3a5f;padding:10px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.toolbar button{background:#fff;color:#1e3a5f;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
-.toolbar button:hover{background:#e2e8f0}
+.mi img{max-width:100%;border:1px solid #c8d6e5;border-radius:4px}
+.tb{background:#f0f5fa;border:1px solid #c8d6e5;padding:10px 14px;margin-bottom:14px;font-size:12px}
+@media screen{body{background:#e2e8f0}.page{width:210mm;min-height:297mm;background:#fff;margin:20px auto;padding:12mm 15mm;box-shadow:0 2px 12px rgba(0,0,0,.12)}}
+.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:#2b5c94;padding:10px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.toolbar button{background:#fff;color:#2b5c94;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.toolbar button:hover{background:#f0f5fa}
 .toolbar .title{color:#fff;font-size:14px;font-weight:600;flex:1}
 @media print{.toolbar{display:none}body{background:#fff}}
 </style></head><body>
@@ -345,8 +346,8 @@ function PropertyPhotos({ isOwner, propertyId }: { isOwner: boolean; propertyId:
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-        <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Camera className="w-4 h-4 text-muted-foreground" />
           現場写真（{photos.length}枚）
         </h3>
@@ -497,8 +498,8 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-        <h3 className="font-semibold text-foreground flex items-center gap-2">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <FileText className="w-4 h-4 text-muted-foreground" />
           アップロード済みファイル
           <span className="text-xs text-muted-foreground">{currentFiles.length}件</span>
@@ -586,8 +587,8 @@ function IntroducerCard({ property }: { property: any }) {
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <button className="w-full px-5 py-3.5 flex items-center justify-between text-left" onClick={() => setOpen(!open)}>
-        <span className="font-semibold text-foreground text-sm flex items-center gap-2">
+      <button className="w-full px-5 py-3 flex items-center justify-between text-left bg-muted/40" onClick={() => setOpen(!open)}>
+        <span className="text-sm font-semibold text-foreground flex items-center gap-2">
           <UserCircle className="w-4 h-4 text-primary" />
           登録者情報
         </span>
@@ -596,16 +597,16 @@ function IntroducerCard({ property }: { property: any }) {
       {open && (
         <div className="border-t border-border divide-y divide-border">
           {items.map(item => (
-            <div key={item.label} className="flex px-5 py-3.5">
-              <span className="w-32 shrink-0 text-[15px] text-muted-foreground">{item.label}</span>
+            <div key={item.label} className="flex">
+              <span className="w-32 shrink-0 text-sm text-muted-foreground px-5 py-3 bg-muted/30">{item.label}</span>
               {(item as any).hidden ? (
-                <span className="text-[15px] text-muted-foreground/40 italic">非公開</span>
+                <span className="text-sm text-muted-foreground/40 italic px-5 py-3">非公開</span>
               ) : item.label === "URL" && item.value ? (
-                <a href={item.value.startsWith("http") ? item.value : `https://${item.value}`} target="_blank" rel="noopener noreferrer" className="text-[15px] text-primary hover:underline">{item.value}</a>
+                <a href={item.value.startsWith("http") ? item.value : `https://${item.value}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline px-5 py-3">{item.value}</a>
               ) : item.label === "メール" && item.value ? (
-                <a href={`mailto:${item.value}`} className="text-[15px] text-primary hover:underline">{item.value}</a>
+                <a href={`mailto:${item.value}`} className="text-sm text-primary hover:underline px-5 py-3">{item.value}</a>
               ) : (
-                <span className={`text-[15px] ${item.value ? "text-foreground" : "text-muted-foreground/40"}`}>{item.value || "未設定"}</span>
+                <span className={`text-sm px-5 py-3 ${item.value ? "text-foreground" : "text-muted-foreground/40"}`}>{item.value || "未設定"}</span>
               )}
             </div>
           ))}
@@ -643,8 +644,8 @@ function PropertyMemo({ propertyId }: { propertyId: number }) {
   };
 
   return (
-    <div className="bg-amber-50/50 border border-amber-200/60 rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-amber-200/60">
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-amber-50/80">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <StickyNote className="w-4 h-4 text-amber-500" />
           自分用メモ
@@ -1054,15 +1055,15 @@ export default function PropertyDetail() {
       {/* ヘッダー */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium px-3 py-1 rounded bg-muted text-muted-foreground flex items-center gap-1.5">
-            <Building2 className="w-4 h-4" />{property.type}
+          <span className="text-xs font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5" />{property.type}
           </span>
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">{property.name}</h1>
-        <div className="flex items-start gap-1.5 text-base text-muted-foreground">
-          <MapPin className="w-5 h-5 shrink-0 mt-0.5" /><span>{property.address}</span>
+        <h1 className="text-lg font-semibold text-foreground">{property.name}</h1>
+        <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
+          <MapPin className="w-4 h-4 shrink-0 mt-0.5" /><span>{property.address}</span>
         </div>
-        <p className="text-base text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {property.showCompany !== 0 && property.userCompany ? `登録：${property.userCompany} / ` : "登録日：" }{createdDate}
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -1382,17 +1383,17 @@ export default function PropertyDetail() {
       {(
         <>
           {property.comment && (
-            <div className="bg-card border border-border rounded-lg p-5">
-              <div className="mb-3">
-                <p className="text-base font-semibold text-foreground">紹介コメント</p>
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <div className="px-5 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">紹介コメント</p>
                 {property.showCompany !== 0 && property.userCompany && (
-                  <p className="text-sm text-muted-foreground">{property.userCompany}</p>
+                  <p className="text-xs text-muted-foreground">{property.userCompany}</p>
                 )}
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-[15px] text-foreground leading-relaxed">{property.comment}</p>
+              <div className="p-5">
+                <p className="text-sm text-foreground leading-relaxed">{property.comment}</p>
+                <p className="text-xs text-muted-foreground mt-3">※ このコメントは登録者が記入した内容です。</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">※ このコメントは登録者が記入した内容です。</p>
             </div>
           )}
 
@@ -1400,22 +1401,22 @@ export default function PropertyDetail() {
           <IntroducerCard property={property} />
 
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-card border border-border rounded-lg p-3 md:p-4">
-              <p className="text-[10px] md:text-xs text-primary mb-0.5">売出価格</p>
-              <p className="text-sm md:text-xl font-bold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
+            <div className="bg-primary rounded-lg p-3 md:p-4">
+              <p className="text-[10px] md:text-xs text-white/80 font-medium mb-0.5">売出価格</p>
+              <p className="text-sm md:text-xl font-bold text-white">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-3 md:p-4">
-              <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5">土地面積</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">土地面積</p>
               <p className="text-sm md:text-lg font-bold text-foreground">{property.landArea.toFixed(2)}㎡</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-3 md:p-4">
-              <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5">建物延床面積</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">建物延床面積</p>
               <p className="text-sm md:text-lg font-bold text-foreground">{property.buildingArea ? `${property.buildingArea.toFixed(2)}㎡` : "—"}</p>
             </div>
           </div>
 
           <Tabs defaultValue="overview">
-            <TabsList className="w-full grid grid-cols-4 bg-muted">
+            <TabsList className="w-full grid grid-cols-4 bg-muted/60 border border-border">
               <TabsTrigger value="overview">物件概要</TabsTrigger>
               <TabsTrigger value="files" className="gap-1.5"><FileText className="w-3.5 h-3.5" />資料</TabsTrigger>
               <TabsTrigger value="map" className="gap-1.5"><Map className="w-3.5 h-3.5" />地図と写真</TabsTrigger>
@@ -1424,8 +1425,8 @@ export default function PropertyDetail() {
 
             <TabsContent value="overview" className="mt-4">
               <div className="bg-card border border-border rounded-lg">
-                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                  <h3 className="font-semibold text-foreground">物件概要</h3>
+                <div className="px-5 py-3 border-b border-border flex items-center justify-between bg-muted/40">
+                  <h3 className="text-sm font-semibold text-foreground">物件概要</h3>
                   {isOwner && (
                     isEditing ? (
                       <div className="flex items-center gap-2">
@@ -1509,9 +1510,9 @@ export default function PropertyDetail() {
                     </>
                   ) : (
                     details.map(([label, value]) => (
-                      <div key={label} className="flex px-5 py-4">
-                        <span className="w-40 shrink-0 text-[15px] text-muted-foreground">{label}</span>
-                        <span className={`text-[15px] font-medium whitespace-pre-wrap ${label === "売出価格" ? "text-primary text-lg font-bold" : "text-foreground"}`}>{value}</span>
+                      <div key={label} className="flex">
+                        <span className="w-40 shrink-0 text-sm text-muted-foreground px-5 py-3 bg-muted/30">{label}</span>
+                        <span className={`text-sm font-medium whitespace-pre-wrap px-5 py-3 flex-1 ${label === "売出価格" ? "text-primary font-bold" : "text-foreground"}`}>{value}</span>
                       </div>
                     ))
                   )}
@@ -1575,10 +1576,10 @@ export default function PropertyDetail() {
 
             <TabsContent value="faq" className="mt-4">
               <div className="bg-card border border-border rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
                   <div className="flex items-center gap-3">
                     <HelpCircle className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-semibold text-foreground text-sm">よくある質問</span>
+                    <span className="text-sm font-semibold text-foreground">よくある質問</span>
                     <span className="text-xs text-muted-foreground">{currentFaqs.length}件</span>
                   </div>
                   {isOwner && (
@@ -1641,8 +1642,8 @@ export default function PropertyDetail() {
           {property.userId !== user?.id && (
             <div className="bg-card border border-border rounded-lg p-5 flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-foreground">この物件について問い合わせる</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">登録者にダイレクトメッセージで問い合わせできます</p>
+                <h3 className="text-sm font-semibold text-foreground">この物件について問い合わせる</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">登録者にダイレクトメッセージで問い合わせできます</p>
               </div>
               <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
                 <MessageCircle className="w-4 h-4" />登録者にDM

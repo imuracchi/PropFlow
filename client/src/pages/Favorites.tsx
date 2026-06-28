@@ -5,7 +5,7 @@ import PropertyList from "./PropertyList";
 export default function Favorites() {
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-foreground">お気に入り</h1>
+      <h1 className="text-lg font-semibold text-foreground">お気に入り</h1>
       <Tabs defaultValue="favorites">
         <TabsList className="bg-muted">
           <TabsTrigger value="favorites" className="gap-1.5">
