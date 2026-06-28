@@ -359,7 +359,10 @@ export async function getPropertyFileContent(fileId: number) {
 export async function addPropertyFile(data: { propertyId: number; name: string; size: number; contentBase64: string; category?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(propertyFiles).values(data);
+  await db.insert(propertyFiles).values({
+    ...data,
+    category: (data.category === "photo" ? "photo" : "document") as "document" | "photo",
+  });
 }
 
 export async function deletePropertyFile(fileId: number) {
