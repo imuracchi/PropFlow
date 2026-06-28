@@ -202,6 +202,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
           <span className="text-xs text-muted-foreground/30">|</span>
           <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">個人情報保護方針</a>
         </div>
+        <p className="text-[10px] text-muted-foreground/40 text-center mt-3">運営：G-Spec合同会社</p>
       </div>
     </div>
   );

@@ -219,6 +219,9 @@ function DashboardLayoutContent({
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarFooter>
+          <div className="px-4 py-2 text-[10px] text-white/30 text-center group-data-[collapsible=icon]:hidden">
+            運営：G-Spec合同会社
+          </div>
         </Sidebar>
 
         <div
