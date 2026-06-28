@@ -39,6 +39,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [maxLandArea, setMaxLandArea] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [showNewOnly, setShowNewOnly] = useState(false);
   const { user } = useAuth();
 
   const isPropertyRead = (id: number) => !!localStorage.getItem(`propflow-property-read-${id}`);
@@ -95,7 +96,10 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       if (maxP && price > maxP) return false;
       return true;
     })
-;
+    .filter(p => {
+      if (!showNewOnly) return true;
+      return p.userId !== user?.id && !isPropertyRead(p.id);
+    });
 
   const types = [...new Set(baseFiltered.map(p => p.type))];
 
@@ -330,8 +334,16 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
           <span className="text-xs text-muted-foreground">〜</span>
           <Input className="w-28 bg-card border-border h-9 text-sm" placeholder="上限(円)" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
         </div>
-        {(minLandArea || maxLandArea || minPrice || maxPrice || filterType !== "all") && (
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-9" onClick={() => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); }}>
+        <Button
+          variant={showNewOnly ? "default" : "outline"}
+          size="sm"
+          className={`h-9 gap-1.5 text-xs shrink-0 ${showNewOnly ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}`}
+          onClick={() => setShowNewOnly(!showNewOnly)}
+        >
+          新着のみ
+        </Button>
+        {(minLandArea || maxLandArea || minPrice || maxPrice || filterType !== "all" || showNewOnly) && (
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-9" onClick={() => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); setShowNewOnly(false); }}>
             条件クリア
           </Button>
         )}
