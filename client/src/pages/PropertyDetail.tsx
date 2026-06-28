@@ -886,7 +886,7 @@ export default function PropertyDetail() {
         price: property.price ? String(property.price) : "",
         priceNegotiable: property.priceNegotiable === 1,
         estimatedYield: property.estimatedYield ? String(property.estimatedYield) : "",
-        landArea: String(property.landArea),
+        landArea: property.landArea ? String(property.landArea) : "",
         buildingArea: property.buildingArea ? String(property.buildingArea) : "",
         transport: property.transport || "",
         landCategory: property.landCategory || "",
