@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChevronLeft, Plus, Trash2, HelpCircle, Loader2, CheckCircle2,
-  Upload, FileText, X, Sparkles, Bell, Camera, StickyNote
+  Upload, FileText, X, Sparkles, Bell, Camera, StickyNote, Eye, EyeOff
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -22,6 +22,7 @@ export default function PropertyUpload() {
   const [step, setStep] = useState<Step>("upload");
   const [dragOver, setDragOver] = useState(false);
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+  const [docVisibility, setDocVisibility] = useState<Record<string, boolean>>({});
   const [extracting, setExtracting] = useState(false);
   const [extractProgress, setExtractProgress] = useState("");
   const [extractError, setExtractError] = useState("");
@@ -235,11 +236,13 @@ export default function PropertyUpload() {
           uploaded++;
           setSubmitProgress(`資料をアップロード中... (${uploaded}/${totalFiles})`);
           const base64 = await fileToBase64(file);
+          const key = `${file.name}-${file.size}`;
           await uploadFileMutation.mutateAsync({
             propertyId: result.id,
             name: file.name,
             size: file.size,
             contentBase64: base64,
+            visible: docVisibility[key] ?? true,
           });
         }
         for (const photo of photoFiles) {
@@ -464,14 +467,28 @@ export default function PropertyUpload() {
             <span className="text-sm font-medium text-foreground">アップロード済みファイル</span>
             <span className="text-xs text-muted-foreground">{pdfFiles.length}件</span>
           </div>
+          <p className="px-5 pt-3 text-xs text-muted-foreground">他社のロゴ・会社情報が入った資料は「登録者のみ」に設定できます</p>
           <div className="divide-y divide-border">
-            {pdfFiles.map((file, i) => (
-              <div key={`${file.name}-${file.size}`} className="flex items-center gap-3 px-5 py-2.5">
-                <FileText className="w-4 h-4 text-red-500 shrink-0" />
-                <span className="text-sm text-foreground flex-1 truncate">{file.name}</span>
-                <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
-              </div>
-            ))}
+            {pdfFiles.map((file, i) => {
+              const key = `${file.name}-${file.size}`;
+              const visible = docVisibility[key] ?? true;
+              return (
+                <div key={key} className="flex items-center gap-3 px-5 py-2.5">
+                  <FileText className="w-4 h-4 text-red-500 shrink-0" />
+                  <span className="text-sm text-foreground flex-1 truncate">{file.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                  <button
+                    type="button"
+                    className={`text-xs font-medium px-2 py-1 rounded flex items-center gap-1 shrink-0 ${visible ? "text-muted-foreground hover:bg-muted" : "bg-amber-100 text-amber-700"}`}
+                    title={visible ? "全員に公開中（クリックで登録者のみに変更）" : "登録者のみ閲覧可（クリックで全員に公開）"}
+                    onClick={() => setDocVisibility(prev => ({ ...prev, [key]: !visible }))}
+                  >
+                    {visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    {visible ? "全員に公開" : "登録者のみ"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

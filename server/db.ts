@@ -39,6 +39,28 @@ export async function getUserByOpenId(openId: string) {
   return result[0] ?? undefined;
 }
 
+export async function upsertUser(data: { openId: string; name?: string | null; email?: string | null; loginMethod?: string | null; lastSignedIn?: Date }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await getUserByOpenId(data.openId);
+  if (existing) {
+    await db.update(users).set({
+      ...(data.name !== undefined ? { name: data.name } : {}),
+      ...(data.loginMethod !== undefined ? { loginMethod: data.loginMethod } : {}),
+      ...(data.lastSignedIn !== undefined ? { lastSignedIn: data.lastSignedIn } : {}),
+    }).where(eq(users.openId, data.openId));
+    return;
+  }
+  await db.insert(users).values({
+    openId: data.openId,
+    email: data.email || `${data.openId}@oauth.local`,
+    passwordHash: "",
+    name: data.name ?? null,
+    loginMethod: data.loginMethod ?? null,
+    lastSignedIn: data.lastSignedIn ?? new Date(),
+  });
+}
+
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
@@ -356,12 +378,14 @@ export async function getPropertyFileContent(fileId: number) {
   return result[0] ?? null;
 }
 
-export async function addPropertyFile(data: { propertyId: number; name: string; size: number; contentBase64: string; category?: string }) {
+export async function addPropertyFile(data: { propertyId: number; name: string; size: number; contentBase64: string; category?: string; visible?: boolean }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  const { visible, ...rest } = data;
   await db.insert(propertyFiles).values({
-    ...data,
+    ...rest,
     category: (data.category === "photo" ? "photo" : "document") as "document" | "photo",
+    visible: visible === false ? 0 : 1,
   });
 }
 

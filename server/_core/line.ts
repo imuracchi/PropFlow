@@ -37,13 +37,13 @@ export function buildPropertyFlexMessage(prop: {
   price: number | null;
   priceNegotiable: number;
   type: string;
-  landArea: number;
+  landArea: number | null;
   comment: string | null;
   id: number;
 }) {
   const siteUrl = process.env.SITE_URL || "https://propflow.jp";
   const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
-  const tsubo = (prop.landArea * 0.3025).toFixed(1);
+  const landAreaLine = prop.landArea ? `${prop.landArea.toFixed(2)}㎡（${(prop.landArea * 0.3025).toFixed(1)}坪）` : "—";
 
   return {
     type: "flex",
@@ -94,7 +94,7 @@ export function buildPropertyFlexMessage(prop: {
               {
                 type: "box", layout: "horizontal", contents: [
                   { type: "text", text: "📐 面積", size: "xs", color: "#8c8c8c", flex: 3 },
-                  { type: "text", text: `${prop.landArea.toFixed(2)}㎡（${tsubo}坪）`, size: "sm", color: "#333333", flex: 7 },
+                  { type: "text", text: landAreaLine, size: "sm", color: "#333333", flex: 7 },
                 ],
               },
             ],

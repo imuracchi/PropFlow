@@ -168,7 +168,7 @@ export async function generatePropertyComment(property: {
   type: string;
   price: number;
   estimatedYield?: number | null;
-  landArea: number;
+  landArea?: number | null;
   buildingArea?: number | null;
   zoning?: string;
   access?: string;
@@ -188,7 +188,7 @@ export async function generatePropertyComment(property: {
       `物件種別: ${property.type}`,
       `売出価格: ${property.price.toLocaleString()}円`,
       property.estimatedYield ? `想定利回り: ${property.estimatedYield}%` : null,
-      `土地面積: ${property.landArea}㎡`,
+      property.landArea ? `土地面積: ${property.landArea}㎡` : null,
       property.buildingArea ? `建物延床面積: ${property.buildingArea}㎡` : null,
       property.zoning ? `用途地域: ${property.zoning}` : null,
       property.access ? `接道条件: ${property.access}` : null,

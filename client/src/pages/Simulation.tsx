@@ -81,7 +81,7 @@ export default function Simulation() {
       if (property.price && !property.priceNegotiable) {
         setCosts(prev => ({ ...prev, landCost: String(property.price) }));
       }
-      setTsubo(toTsubo(property.landArea));
+      setTsubo(property.landArea ? toTsubo(property.landArea) : "");
     }
   }, [property]);
 

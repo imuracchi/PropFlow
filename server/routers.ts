@@ -252,6 +252,7 @@ export const appRouter = router({
         type: z.string().min(1),
         price: z.number().nullable().optional(),
         priceNegotiable: z.boolean().optional(),
+        estimatedYield: z.number().nullable().optional(),
         landArea: z.number().positive().nullable().optional(),
         buildingArea: z.number().nullable().optional(),
         transport: z.string().optional(),
@@ -315,7 +316,7 @@ export const appRouter = router({
         price: z.number().nullable().optional(),
         priceNegotiable: z.boolean().optional(),
         estimatedYield: z.number().nullable().optional(),
-        landArea: z.number().optional(),
+        landArea: z.number().nullable().optional(),
         buildingArea: z.number().nullable().optional(),
         transport: z.string().nullable().optional(),
         landCategory: z.string().nullable().optional(),
@@ -334,8 +335,11 @@ export const appRouter = router({
         files: z.array(z.object({ name: z.string(), size: z.number() })).nullable().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        return db.updateProperty(id, data);
+        const { id, priceNegotiable, ...rest } = input;
+        return db.updateProperty(id, {
+          ...rest,
+          ...(priceNegotiable !== undefined ? { priceNegotiable: priceNegotiable ? 1 : 0 } : {}),
+        });
       }),
 
     delete: protectedProcedure
@@ -366,9 +370,11 @@ export const appRouter = router({
         size: z.number(),
         contentBase64: z.string(),
         category: z.enum(["document", "photo"]).optional(),
+        visible: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
-        await db.addPropertyFile({ ...input, category: input.category ?? "document" });
+        const { visible, ...rest } = input;
+        await db.addPropertyFile({ ...rest, category: input.category ?? "document", visible: visible ?? true });
         return { success: true };
       }),
 

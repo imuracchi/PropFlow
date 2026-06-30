@@ -42,7 +42,7 @@ function loadGoogleMapsScript(): Promise<void> {
 }
 
 function exportPropertyCsv(
-  property: { name: string; price: number; landArea: number; buildingArea: number | null },
+  property: { name: string },
   details: [string, string][],
   createdDate: string
 ) {
@@ -63,7 +63,7 @@ async function printProperty(
   p: {
     name: string; address: string; type: string; status: string;
     price: number | null; priceNegotiable: number;
-    landArea: number; buildingArea: number | null;
+    landArea: number | null; buildingArea: number | null;
     comment: string | null; transport: string | null;
     lotNumber: string | null; landCategory: string | null;
     rights: string | null; structure: string | null;
@@ -860,7 +860,7 @@ export default function PropertyDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "", address: "", lotNumber: "", type: "", price: "", priceNegotiable: false,
-    landArea: "", buildingArea: "", transport: "", landCategory: "", rights: "",
+    estimatedYield: "", landArea: "", buildingArea: "", transport: "", landCategory: "", rights: "",
     structure: "", buildingAge: "", zoning: "", fireProtection: "", access: "", remarks: "",
     negotiation: "", comment: "", heightDistrict: "", otherRestrictions: "",
   });

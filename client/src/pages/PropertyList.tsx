@@ -83,8 +83,10 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     .filter(p => {
       const minLA = minLandArea ? Number(minLandArea) : null;
       const maxLA = maxLandArea ? Number(maxLandArea) : null;
-      if (minLA && p.landArea < minLA) return false;
-      if (maxLA && p.landArea > maxLA) return false;
+      if (!minLA && !maxLA) return true;
+      const landArea = p.landArea ?? 0;
+      if (minLA && landArea < minLA) return false;
+      if (maxLA && landArea > maxLA) return false;
       return true;
     })
     .filter(p => {
@@ -119,8 +121,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
         checks.push({ weight: 25, match: inRange });
       }
     }
-    if (buyerPref.minLandArea || buyerPref.maxLandArea) {
-      const inRange = (!buyerPref.minLandArea || p.landArea >= buyerPref.minLandArea) && (!buyerPref.maxLandArea || p.landArea <= buyerPref.maxLandArea);
+    if ((buyerPref.minLandArea || buyerPref.maxLandArea) && p.landArea) {
+      const landArea = p.landArea;
+      const inRange = (!buyerPref.minLandArea || landArea >= buyerPref.minLandArea) && (!buyerPref.maxLandArea || landArea <= buyerPref.maxLandArea);
       checks.push({ weight: 15, match: inRange });
     }
     if (buyerPref.stations) {
@@ -211,8 +214,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       (p as any).transport ?? "",
       p.type,
       p.priceNegotiable ? "応相談" : (p.price ?? ""),
-      p.landArea.toFixed(2),
-      toTsubo(p.landArea),
+      p.landArea ? p.landArea.toFixed(2) : "",
+      p.landArea ? toTsubo(p.landArea) : "",
       (p as any).landCategory ?? "",
       (p as any).rights ?? "",
       p.access ?? "",
