@@ -351,8 +351,12 @@ export const appRouter = router({
 
     listFiles: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
-      .query(async ({ input }) => {
-        return db.listPropertyFiles(input.propertyId);
+      .query(async ({ input, ctx }) => {
+        const files = await db.listPropertyFiles(input.propertyId);
+        const prop = await db.getPropertyById(input.propertyId);
+        const isOwner = !!prop && (prop.userId === ctx.user.id || ctx.user.role === "admin");
+        if (isOwner) return files;
+        return files.filter(f => f.visible !== 0);
       }),
 
     uploadFile: protectedProcedure
@@ -368,11 +372,29 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    setFileVisibility: protectedProcedure
+      .input(z.object({ fileId: z.number(), visible: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        const file = await db.getPropertyFileContent(input.fileId);
+        if (!file) return { success: false, error: "ファイルが見つかりません" };
+        const prop = await db.getPropertyById(file.propertyId);
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) {
+          return { success: false, error: "変更権限がありません" };
+        }
+        await db.setPropertyFileVisibility(input.fileId, input.visible);
+        return { success: true };
+      }),
+
     downloadFile: protectedProcedure
       .input(z.object({ fileId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const file = await db.getPropertyFileContent(input.fileId);
         if (!file) return null;
+        if (file.visible === 0) {
+          const prop = await db.getPropertyById(file.propertyId);
+          const isOwner = !!prop && (prop.userId === ctx.user.id || ctx.user.role === "admin");
+          if (!isOwner) return null;
+        }
         return { name: file.name, contentBase64: file.contentBase64 };
       }),
 

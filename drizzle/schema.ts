@@ -93,6 +93,7 @@ export const propertyFiles = mysqlTable("property_files", {
   size: int("size").notNull(),
   contentBase64: longtext("contentBase64").notNull(),
   category: mysqlEnum("category", ["document", "photo"]).default("document").notNull(),
+  visible: int("visible").default(1).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

@@ -343,7 +343,7 @@ export async function listPropertyFiles(propertyId: number) {
   const db = await getDb();
   if (!db) return [];
   return db
-    .select({ id: propertyFiles.id, name: propertyFiles.name, size: propertyFiles.size, category: propertyFiles.category, createdAt: propertyFiles.createdAt })
+    .select({ id: propertyFiles.id, name: propertyFiles.name, size: propertyFiles.size, category: propertyFiles.category, visible: propertyFiles.visible, createdAt: propertyFiles.createdAt })
     .from(propertyFiles)
     .where(eq(propertyFiles.propertyId, propertyId))
     .orderBy(propertyFiles.createdAt);
@@ -369,6 +369,12 @@ export async function deletePropertyFile(fileId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(propertyFiles).where(eq(propertyFiles.id, fileId));
+}
+
+export async function setPropertyFileVisibility(fileId: number, visible: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(propertyFiles).set({ visible: visible ? 1 : 0 }).where(eq(propertyFiles.id, fileId));
 }
 
 // ---- Property Memos ----

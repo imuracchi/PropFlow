@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft, Heart, Share2, Pencil, MessageCircle, Bell, Camera, Calculator,
   HelpCircle, MapPin, Map, Building2,
-  ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, FileText, Upload, Download, StickyNote, UserCircle
+  ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, Eye, FileText, Upload, Download, StickyNote, UserCircle
 } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -433,12 +433,18 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   const files = (allFiles ?? []).filter(f => (f as any).category !== "photo");
   const uploadMutation = trpc.property.uploadFile.useMutation();
   const deleteMutation = trpc.property.deleteFile.useMutation();
+  const visibilityMutation = trpc.property.setFileVisibility.useMutation();
   const utils = trpc.useUtils();
 
   const fileToBase64 = (file: File): Promise<string> =>
     file.arrayBuffer().then(buf =>
       btoa(new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), ""))
     );
+
+  const handleToggleVisibility = async (fileId: number, current: number) => {
+    await visibilityMutation.mutateAsync({ fileId, visible: current === 0 });
+    utils.property.listFiles.invalidate({ propertyId });
+  };
 
   const handleUpload = async (fileList: FileList) => {
     const pdfFiles = Array.from(fileList).filter(f => f.type === "application/pdf");
@@ -544,7 +550,20 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
             <div key={file.id} className="flex items-center gap-3 px-5 py-3.5">
               <FileText className="w-5 h-5 text-red-500 shrink-0" />
               <button className="text-sm text-primary hover:underline flex-1 text-left truncate" onClick={() => handlePreview(file.id)}>{file.name}</button>
+              {isOwner && (file as any).visible === 0 && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">登録者のみ</span>
+              )}
               <span className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+              {isOwner && (
+                <button
+                  className="text-muted-foreground hover:text-foreground p-1 shrink-0"
+                  title={(file as any).visible === 0 ? "登録者のみ閲覧可（クリックで全員に公開）" : "全員に公開中（クリックで登録者のみに変更）"}
+                  onClick={() => handleToggleVisibility(file.id, (file as any).visible)}
+                  disabled={visibilityMutation.isPending}
+                >
+                  {(file as any).visible === 0 ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              )}
               <button
                 className="text-primary hover:text-primary/70 p-1"
                 onClick={() => handleDownload(file.id)}
