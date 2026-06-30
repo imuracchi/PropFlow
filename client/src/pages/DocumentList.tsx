@@ -40,7 +40,19 @@ export default function DocumentList() {
     const url = URL.createObjectURL(blob);
     if (!w) return;
     w.document.open();
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${r.name ?? "資料"}</title><style>html,body{margin:0;height:100%;background:#525659;}iframe{border:0;width:100%;height:100%;}</style></head><body><iframe src="${url}"></iframe></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${r.name ?? "資料"}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#525659}
+.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:#2b5c94;padding:10px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.toolbar button{background:#fff;color:#2b5c94;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.toolbar .title{color:#fff;font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frame-wrap{position:absolute;top:48px;left:0;right:0;bottom:0}
+iframe{border:0;width:100%;height:100%}
+</style></head><body>
+<div class="toolbar"><button onclick="window.close()">← 閉じる</button><span class="title">${r.name ?? "資料"}</span></div>
+<div class="frame-wrap"><iframe src="${url}"></iframe></div>
+</body></html>`);
     w.document.close();
   };
 
