@@ -38,6 +38,7 @@ export default function DocumentList() {
     const mime = ext === "pdf" ? "application/pdf" : `image/${ext}`;
     const blob = new Blob([ab], { type: mime });
     const url = URL.createObjectURL(blob);
+    const frameSrc = mime === "application/pdf" ? `${url}#view=FitH` : url;
     if (!w) return;
     w.document.open();
     w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${r.name ?? "資料"}</title>
@@ -49,9 +50,10 @@ html,body{height:100%;background:#525659}
 .toolbar .title{color:#fff;font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .frame-wrap{position:absolute;top:48px;left:0;right:0;bottom:0}
 iframe{border:0;width:100%;height:100%}
+img.preview-img{display:block;width:100%;height:auto;margin:0 auto}
 </style></head><body>
 <div class="toolbar"><button onclick="window.close()">← 閉じる</button><span class="title">${r.name ?? "資料"}</span></div>
-<div class="frame-wrap"><iframe src="${url}"></iframe></div>
+<div class="frame-wrap">${mime.startsWith("image/") ? `<div style="width:100%;height:100%;overflow:auto;"><img class="preview-img" src="${url}" /></div>` : `<iframe src="${frameSrc}"></iframe>`}</div>
 </body></html>`);
     w.document.close();
   };
