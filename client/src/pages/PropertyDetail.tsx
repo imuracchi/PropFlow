@@ -13,6 +13,7 @@ import {
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { openFilePreview } from "@/lib/filePreview";
 
 type FaqItem = { q: string; a: string };
 
@@ -275,35 +276,6 @@ ${footer}
   return html;
 }
 
-function previewBase64File(name: string, base64: string, w: Window | null) {
-  if (!w) return;
-  const byteString = atob(base64);
-  const ab = new ArrayBuffer(byteString.length);
-  const ia = new Uint8Array(ab);
-  for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-  const ext = name.split(".").pop()?.toLowerCase() ?? "pdf";
-  const mime = ext === "pdf" ? "application/pdf" : `image/${ext}`;
-  const blob = new Blob([ab], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const frameSrc = mime === "application/pdf" ? `${url}#view=FitH` : url;
-  w.document.open();
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${name}</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;background:#525659}
-.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:#2b5c94;padding:10px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-.toolbar button{background:#fff;color:#2b5c94;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
-.toolbar .title{color:#fff;font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.frame-wrap{position:absolute;top:48px;left:0;right:0;bottom:0}
-iframe{border:0;width:100%;height:100%}
-img.preview-img{display:block;width:100%;height:auto;margin:0 auto}
-</style></head><body>
-<div class="toolbar"><button onclick="window.close()">← 閉じる</button><span class="title">${name}</span></div>
-<div class="frame-wrap">${mime.startsWith("image/") ? `<div style="width:100%;height:100%;overflow:auto;"><img class="preview-img" src="${url}" /></div>` : `<iframe src="${frameSrc}"></iframe>`}</div>
-</body></html>`);
-  w.document.close();
-}
-
 function downloadBase64File(name: string, base64: string) {
   const byteString = atob(base64);
   const ab = new ArrayBuffer(byteString.length);
@@ -491,7 +463,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   const handlePreview = async (fileId: number) => {
     const w = window.open("", "_blank");
     const result = await utils.property.downloadFile.fetch({ fileId });
-    if (result) previewBase64File(result.name, result.contentBase64, w);
+    if (result) openFilePreview(result.name, result.contentBase64, w);
     else w?.close();
   };
 
