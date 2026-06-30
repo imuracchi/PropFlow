@@ -26,8 +26,9 @@ export default function DocumentList() {
   };
 
   const handlePreviewFile = async (fileId: number) => {
+    const w = window.open("", "_blank");
     const result = await utils.property.downloadFile.fetch({ fileId });
-    if (!result) return;
+    if (!result) { w?.close(); return; }
     const r = result as any;
     const byteString = atob(r.contentBase64);
     const ab = new ArrayBuffer(byteString.length);
@@ -37,7 +38,10 @@ export default function DocumentList() {
     const mime = ext === "pdf" ? "application/pdf" : `image/${ext}`;
     const blob = new Blob([ab], { type: mime });
     const url = URL.createObjectURL(blob);
-    window.open(url, "_blank");
+    if (!w) return;
+    w.document.open();
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${r.name ?? "資料"}</title><style>html,body{margin:0;height:100%;background:#525659;}iframe{border:0;width:100%;height:100%;}</style></head><body><iframe src="${url}"></iframe></body></html>`);
+    w.document.close();
   };
 
   const handleDownloadFile = async (fileId: number) => {

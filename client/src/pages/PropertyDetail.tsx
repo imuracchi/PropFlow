@@ -275,7 +275,8 @@ ${footer}
   return html;
 }
 
-function previewBase64File(name: string, base64: string) {
+function previewBase64File(name: string, base64: string, w: Window | null) {
+  if (!w) return;
   const byteString = atob(base64);
   const ab = new ArrayBuffer(byteString.length);
   const ia = new Uint8Array(ab);
@@ -284,7 +285,9 @@ function previewBase64File(name: string, base64: string) {
   const mime = ext === "pdf" ? "application/pdf" : `image/${ext}`;
   const blob = new Blob([ab], { type: mime });
   const url = URL.createObjectURL(blob);
-  window.open(url, "_blank");
+  w.document.open();
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${name}</title><style>html,body{margin:0;height:100%;background:#525659;}iframe{border:0;width:100%;height:100%;}</style></head><body><iframe src="${url}"></iframe></body></html>`);
+  w.document.close();
 }
 
 function downloadBase64File(name: string, base64: string) {
@@ -472,8 +475,10 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   };
 
   const handlePreview = async (fileId: number) => {
+    const w = window.open("", "_blank");
     const result = await utils.property.downloadFile.fetch({ fileId });
-    if (result) previewBase64File(result.name, result.contentBase64);
+    if (result) previewBase64File(result.name, result.contentBase64, w);
+    else w?.close();
   };
 
   const handleDownload = async (fileId: number) => {
