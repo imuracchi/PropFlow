@@ -68,6 +68,37 @@ export const appRouter = router({
         return { success: true } as const;
       }),
 
+    readBusinessCard: publicProcedure
+      .input(z.object({ imageBase64: z.string(), mimeType: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const { parsed } = await import("dotenv").then(d => d.config());
+        const apiKey = parsed?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) return { success: false, data: null };
+        const Anthropic = (await import("@anthropic-ai/sdk")).default;
+        const client = new Anthropic({ apiKey });
+        const mediaType = (input.mimeType ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
+        const message = await client.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 512,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: input.imageBase64 } },
+              { type: "text", text: `この名刺画像から以下の情報をJSON形式で抽出してください。見つからない項目はnullにしてください。
+{"name":"氏名","company":"会社名","phone":"電話番号","fax":"FAX番号","url":"WebサイトURL","license":"宅地建物取引士の免許番号（例: 東京都知事(3)第12345号）"}
+JSONのみ返してください。` },
+            ],
+          }],
+        });
+        const text = message.content[0].type === "text" ? message.content[0].text : "";
+        try {
+          const data = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());
+          return { success: true, data };
+        } catch {
+          return { success: false, data: null };
+        }
+      }),
+
     register: publicProcedure
       .input(z.object({
         token: z.string(),
@@ -79,6 +110,7 @@ export const appRouter = router({
         mobile: z.string().optional(),
         fax: z.string().optional(),
         url: z.string().optional(),
+        businessCardBase64: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         const tokenData = await db.getRegistrationToken(input.token);
@@ -96,7 +128,7 @@ export const appRouter = router({
           return { success: false, error: "このメールアドレスは既に登録されています" } as const;
         }
         const hashed = await hashPassword(input.password);
-        await db.createUser({
+        const newUser = await db.createUser({
           openId: nanoid(),
           email: tokenData.email,
           passwordHash: hashed,
@@ -108,10 +140,13 @@ export const appRouter = router({
           url: input.url ?? null,
           loginMethod: "email",
           role: "user",
-          status: "pending",
+          status: "active",
         });
+        if (input.businessCardBase64 && newUser) {
+          await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
+        }
         await db.markTokenUsed(input.token);
-        return { success: true, message: "申請を受け付けました。管理者の承認をお待ちください" } as const;
+        return { success: true } as const;
       }),
 
     verifyToken: publicProcedure
@@ -128,6 +163,13 @@ export const appRouter = router({
       .input(z.object({ logoBase64: z.string().nullable() }))
       .mutation(async ({ input, ctx }) => {
         await db.updateUserLogo(ctx.user.id, input.logoBase64);
+        return { success: true };
+      }),
+
+    saveBusinessCard: protectedProcedure
+      .input(z.object({ businessCardBase64: z.string().nullable() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.updateUserBusinessCard(ctx.user.id, input.businessCardBase64);
         return { success: true };
       }),
 

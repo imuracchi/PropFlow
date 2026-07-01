@@ -18,6 +18,7 @@ export const users = mysqlTable("users", {
   license: varchar("license", { length: 128 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   logoBase64: longtext("logoBase64"),
+  businessCardBase64: longtext("businessCardBase64"),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   plan: mysqlEnum("plan", ["standard", "gold", "platinum"]).default("standard").notNull(),
   status: mysqlEnum("status", ["pending", "active", "suspended"]).default("pending").notNull(),

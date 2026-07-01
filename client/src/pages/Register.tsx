@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Lock, User, Phone, FileText, Globe, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Building2, Lock, User, Phone, Globe, Loader2, CheckCircle, AlertCircle, Camera, X } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -29,7 +29,52 @@ export default function Register() {
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
+  const [cardBase64, setCardBase64] = useState<string | null>(null);
+  const [cardMime, setCardMime] = useState("image/jpeg");
+  const [cardReading, setCardReading] = useState(false);
+  const [cardError, setCardError] = useState("");
+  const cardInputRef = useRef<HTMLInputElement>(null);
+
   const registerMutation = trpc.auth.register.useMutation();
+  const readCardMutation = trpc.auth.readBusinessCard.useMutation();
+
+  const toBase64 = (file: File): Promise<string> =>
+    file.arrayBuffer().then(buf =>
+      btoa(new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), ""))
+    );
+
+  const handleCardSelect = async (file: File) => {
+    setCardError("");
+    setCardReading(true);
+    try {
+      const b64 = await toBase64(file);
+      setCardBase64(b64);
+      setCardMime(file.type || "image/jpeg");
+      const result = await readCardMutation.mutateAsync({ imageBase64: b64, mimeType: file.type });
+      if (result.success && result.data) {
+        const d = result.data as any;
+        if (d.name) setName(d.name);
+        if (d.company) setCompany(d.company);
+        if (d.phone) setPhone(d.phone);
+        if (d.fax) setFax(d.fax);
+        if (d.url) setUrl(d.url);
+        if (d.license) {
+          // 免許番号から構成要素を推定してセット
+          const raw: string = d.license;
+          if (raw.includes("大臣")) setLicenseType("国土交通大臣免許");
+          const codeMatch = raw.match(/\((\d+)\)/);
+          if (codeMatch) setLicenseCode(codeMatch[1]);
+          const numMatch = raw.match(/第(\d+)号/);
+          if (numMatch) setLicenseNum(numMatch[1]);
+        }
+      } else {
+        setCardError("読み取れませんでした。手動で入力してください。");
+      }
+    } catch {
+      setCardError("読み取りに失敗しました。手動で入力してください。");
+    }
+    setCardReading(false);
+  };
 
   const handleSubmit = async () => {
     setError("");
@@ -52,11 +97,12 @@ export default function Register() {
       fax: fax || undefined,
       url: url || undefined,
       password,
+      businessCardBase64: cardBase64 ?? undefined,
     });
     if (result.success) {
       setSubmitted(true);
     } else {
-      setError(result.error ?? "登録に失敗しました");
+      setError((result as any).error ?? "登録に失敗しました");
     }
   };
 
@@ -86,9 +132,9 @@ export default function Register() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-md w-full bg-card border border-border rounded-xl p-8 text-center space-y-4">
           <CheckCircle className="w-12 h-12 mx-auto text-green-500" />
-          <h2 className="text-xl font-bold text-foreground">申請を受け付けました</h2>
-          <p className="text-sm text-muted-foreground">管理者の承認後、ログインが可能になります。<br />通常2〜3営業日以内にご連絡します。</p>
-          <Button onClick={() => setLocation("/")}>ログインページへ</Button>
+          <h2 className="text-xl font-bold text-foreground">登録が完了しました</h2>
+          <p className="text-sm text-muted-foreground">登録したメールアドレスとパスワードでログインできます。</p>
+          <Button onClick={() => setLocation("/")}>ログインする</Button>
         </div>
       </div>
     );
@@ -109,6 +155,62 @@ export default function Register() {
             </p>
           </div>
           <div className="p-6 space-y-4">
+
+            {/* 名刺読み取りセクション */}
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Camera className="w-4 h-4 text-primary" />
+                名刺から自動入力（任意）
+              </p>
+              {cardBase64 ? (
+                <div className="space-y-2">
+                  <div className="relative inline-block">
+                    <img
+                      src={`data:${cardMime};base64,${cardBase64}`}
+                      alt="名刺"
+                      className="max-h-28 rounded border border-border object-contain"
+                    />
+                    <button
+                      className="absolute -top-2 -right-2 bg-background border border-border rounded-full p-0.5 text-muted-foreground hover:text-foreground"
+                      onClick={() => { setCardBase64(null); setCardError(""); }}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {cardReading && (
+                    <p className="text-xs text-primary flex items-center gap-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />読み取り中...
+                    </p>
+                  )}
+                  {!cardReading && !cardError && (
+                    <p className="text-xs text-green-600">✓ 読み取り完了。内容を確認してください。</p>
+                  )}
+                  {cardError && <p className="text-xs text-amber-600">{cardError}</p>}
+                </div>
+              ) : (
+                <div>
+                  <input
+                    ref={cardInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleCardSelect(f); }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => cardInputRef.current?.click()}
+                  >
+                    <Camera className="w-4 h-4" />名刺を撮影 / 選択
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1.5">氏名・会社名・電話・FAX・URLを自動入力します</p>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>氏名 <span className="text-red-500">*</span></Label>
@@ -149,7 +251,10 @@ export default function Register() {
               </div>
               <div className="space-y-2">
                 <Label>電話番号</Label>
-                <Input placeholder="03-XXXX-XXXX" value={phone} onChange={e => setPhone(e.target.value)} />
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="03-XXXX-XXXX" className="pl-10" value={phone} onChange={e => setPhone(e.target.value)} />
+                </div>
               </div>
             </div>
 
@@ -183,13 +288,14 @@ export default function Register() {
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm"
               size="lg"
               onClick={handleSubmit}
-              disabled={registerMutation.isPending}
+              disabled={registerMutation.isPending || cardReading}
             >
               {registerMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              登録申請を送信
+              登録する
             </Button>
           </div>
         </div>
+        <p className="text-[10px] text-muted-foreground/40 text-center mt-3">運営：G-Spec合同会社</p>
       </div>
     </div>
   );

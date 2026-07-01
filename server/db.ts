@@ -354,6 +354,12 @@ export async function getDeletedPropertiesByUserId(userId: number) {
     .orderBy(desc(properties.updatedAt));
 }
 
+export async function updateUserBusinessCard(id: number, businessCardBase64: string | null) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ businessCardBase64 }).where(eq(users.id, id));
+}
+
 export async function updateUserLogo(id: number, logoBase64: string | null) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Building2, Mail, Phone, FileText, Shield, MapPin, EyeOff, RotateCcw, Loader2, Upload, Trash2, ImageIcon,
   Send, MessageSquare, Bug, Lightbulb, AlertTriangle, HelpCircle, UserX, UserCog, CheckCircle2, Smartphone, Download, Lock,
-  Globe, Clock, Pencil, Check, X, CalendarOff, ChevronDown, ChevronUp, Heart, StickyNote, Users
+  Globe, Clock, Pencil, Check, X, CalendarOff, ChevronDown, ChevronUp, Heart, StickyNote, Users, Camera
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,10 @@ export default function MyPage() {
   const logoMutation = trpc.auth.updateLogo.useMutation({
     onSuccess: () => { utils.auth.me.invalidate(); refresh(); },
   });
+  const cardMutation = trpc.auth.saveBusinessCard.useMutation({
+    onSuccess: () => { utils.auth.me.invalidate(); refresh(); },
+  });
+  const readCardMutation = trpc.auth.readBusinessCard.useMutation();
 
 
   if (!user) return null;
@@ -174,6 +178,43 @@ export default function MyPage() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-2">※ PDF出力時に会社ロゴとして使用されます（推奨: 横長PNG/JPG、2MB以下）</p>
+      </div>
+
+      {/* 名刺 */}
+      <div className="bg-card border border-border rounded-lg p-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              <Camera className="w-4 h-4 text-muted-foreground" />
+              名刺
+            </div>
+            {(user as any).businessCardBase64 ? (
+              <img src={`data:image/jpeg;base64,${(user as any).businessCardBase64}`} alt="名刺" className="h-16 max-w-[200px] object-contain rounded border border-border" />
+            ) : (
+              <span className="text-xs text-muted-foreground">未登録</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs border border-border rounded-md px-3 py-1.5 hover:border-primary hover:text-primary transition-colors">
+              <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const toBase64 = (f: File): Promise<string> =>
+                  f.arrayBuffer().then(buf => btoa(new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), "")));
+                const b64 = await toBase64(file);
+                cardMutation.mutate({ businessCardBase64: b64 });
+              }} />
+              {cardMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              {(user as any).businessCardBase64 ? "変更" : "アップロード"}
+            </label>
+            {(user as any).businessCardBase64 && (
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => cardMutation.mutate({ businessCardBase64: null })} disabled={cardMutation.isPending}>
+                <Trash2 className="w-3.5 h-3.5" />削除
+              </Button>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">※ 登録時にAIで読み取った名刺を保管します</p>
       </div>
 
       {/* LINE連携 */}
