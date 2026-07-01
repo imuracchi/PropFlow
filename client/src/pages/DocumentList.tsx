@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2, Loader2, Download, Eye, Building2, Calculator } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { FileViewerModal } from "@/components/FileViewerModal";
 
 export default function DocumentList() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [viewingFile, setViewingFile] = useState<{ id: number; name: string } | null>(null);
   const { data: docs, isLoading } = trpc.document.list.useQuery();
   const deleteMutation = trpc.document.delete.useMutation({
     onSuccess: () => utils.document.list.invalidate(),
@@ -25,8 +27,8 @@ export default function DocumentList() {
     }
   };
 
-  const handlePreviewFile = (fileId: number) => {
-    window.open(`/api/files/raw/${fileId}`, "_blank", "noopener");
+  const handlePreviewFile = (fileId: number, fileName: string) => {
+    setViewingFile({ id: fileId, name: fileName });
   };
 
   const handleDownloadFile = async (fileId: number) => {
@@ -152,7 +154,7 @@ export default function DocumentList() {
                           {((doc as any).attachmentNames ?? []).map((f: any) => (
                             <div key={f.id} className="flex items-center gap-2 text-xs">
                               <FileText className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <button className="flex-1 truncate text-left text-primary hover:underline" onClick={() => handlePreviewFile(f.id)}>{f.name}</button>
+                              <button className="flex-1 truncate text-left text-primary hover:underline" onClick={() => handlePreviewFile(f.id, f.name)}>{f.name}</button>
                               <button className="text-muted-foreground hover:text-primary flex items-center gap-0.5 shrink-0" onClick={() => handleDownloadFile(f.id)}>
                                 <Download className="w-3 h-3" />
                               </button>
@@ -168,6 +170,9 @@ export default function DocumentList() {
             </tbody>
           </table>
         </div>
+      )}
+      {viewingFile && (
+        <FileViewerModal fileId={viewingFile.id} name={viewingFile.name} onClose={() => setViewingFile(null)} />
       )}
     </div>
   );

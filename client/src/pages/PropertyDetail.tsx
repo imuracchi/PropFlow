@@ -13,6 +13,7 @@ import {
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { FileViewerModal } from "@/components/FileViewerModal";
 
 type FaqItem = { q: string; a: string };
 
@@ -427,6 +428,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   const [uploadProgress, setUploadProgress] = useState("");
   const [downloading, setDownloading] = useState<number | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [viewingFile, setViewingFile] = useState<{ id: number; name: string } | null>(null);
 
   const { data: allFiles, isLoading } = trpc.property.listFiles.useQuery({ propertyId });
   const files = (allFiles ?? []).filter(f => (f as any).category !== "photo");
@@ -465,8 +467,8 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
     utils.property.listFiles.invalidate({ propertyId });
   };
 
-  const handlePreview = (fileId: number) => {
-    window.open(`/api/files/raw/${fileId}`, "_blank", "noopener");
+  const handlePreview = (fileId: number, fileName: string) => {
+    setViewingFile({ id: fileId, name: fileName });
   };
 
   const handleDownload = async (fileId: number) => {
@@ -545,7 +547,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
           {currentFiles.map(file => (
             <div key={file.id} className="flex items-center gap-3 px-5 py-3.5">
               <FileText className="w-5 h-5 text-red-500 shrink-0" />
-              <button className="text-sm text-primary hover:underline flex-1 text-left truncate" onClick={() => handlePreview(file.id)}>{file.name}</button>
+              <button className="text-sm text-primary hover:underline flex-1 text-left truncate" onClick={() => handlePreview(file.id, file.name)}>{file.name}</button>
               {isOwner && (file as any).visible === 0 && (
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">登録者のみ</span>
               )}
@@ -575,6 +577,9 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
             </div>
           ))}
         </div>
+      )}
+      {viewingFile && (
+        <FileViewerModal fileId={viewingFile.id} name={viewingFile.name} onClose={() => setViewingFile(null)} />
       )}
     </div>
   );
@@ -877,6 +882,9 @@ export default function PropertyDetail() {
   const transportMutation = trpc.property.analyzeTransport.useMutation();
   const deleteMutation = trpc.property.delete.useMutation();
   const commentMutation = trpc.property.generateComment.useMutation();
+  const notifyLineMutation = trpc.property.notifyLine.useMutation({
+    onSuccess: () => utils.property.getById.invalidate({ id: propertyId }),
+  });
   const utils = trpc.useUtils();
 
   const isOwner = user && property && (user.id === property.userId || user.role === "admin");
@@ -1121,6 +1129,22 @@ export default function PropertyDetail() {
           </Button>
           {isOwner && !isEditing && (
             <>
+              <div className="w-px h-5 bg-border mx-1" />
+              {property.lineNotifiedAt ? (
+                <Button variant="outline" size="sm" className="gap-1.5 text-muted-foreground cursor-default" disabled>
+                  <Bell className="w-4 h-4" />LINE通知済み（{new Date(property.lineNotifiedAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}）
+                </Button>
+              ) : (
+                <Button
+                  variant="outline" size="sm"
+                  className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
+                  disabled={notifyLineMutation.isPending}
+                  onClick={() => notifyLineMutation.mutate({ propertyId })}
+                >
+                  <Bell className="w-4 h-4" />
+                  {notifyLineMutation.isPending ? "送信中..." : "LINE通知を送る"}
+                </Button>
+              )}
               <div className="w-px h-5 bg-border mx-1" />
               <Button variant="outline" size="sm" className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowDeleteConfirm(true)}>
                 <EyeOff className="w-4 h-4" />非表示

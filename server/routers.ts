@@ -419,7 +419,9 @@ export const appRouter = router({
         const { sendLineBroadcast, buildPropertyFlexMessage } = await import("./_core/line");
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
         const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
+        if (prop.lineNotifiedAt) return { success: false, alreadySent: true };
         await sendLineBroadcast(buildPropertyFlexMessage(prop));
+        await db.markPropertyLineNotified(input.propertyId);
         const { sendMail } = await import("./_core/mail");
         const emails = await db.getActiveUserEmailsForNotify("newProperty");
         const mailHtml = `

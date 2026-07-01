@@ -254,6 +254,7 @@ export async function getPropertyById(id: number) {
       faqs: properties.faqs,
       files: properties.files,
       deleted: properties.deleted,
+      lineNotifiedAt: properties.lineNotifiedAt,
       createdAt: properties.createdAt,
       updatedAt: properties.updatedAt,
       userName: users.name,
@@ -393,6 +394,12 @@ export async function deletePropertyFile(fileId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(propertyFiles).where(eq(propertyFiles.id, fileId));
+}
+
+export async function markPropertyLineNotified(propertyId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(properties).set({ lineNotifiedAt: new Date() }).where(eq(properties.id, propertyId));
 }
 
 export async function setPropertyFileVisibility(fileId: number, visible: boolean) {
