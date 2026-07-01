@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2, Loader2, Download, Eye, Building2, Calculator } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { openFilePreview } from "@/lib/filePreview";
 
 export default function DocumentList() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -26,12 +25,8 @@ export default function DocumentList() {
     }
   };
 
-  const handlePreviewFile = async (fileId: number) => {
-    const w = window.open("", "_blank");
-    const result = await utils.property.downloadFile.fetch({ fileId });
-    if (!result) { w?.close(); return; }
-    const r = result as any;
-    openFilePreview(r.name ?? "資料", r.contentBase64, w);
+  const handlePreviewFile = (fileId: number) => {
+    window.open(`/api/files/raw/${fileId}`, "_blank", "noopener");
   };
 
   const handleDownloadFile = async (fileId: number) => {

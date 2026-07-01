@@ -36,6 +36,48 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+
+  // Direct file serving endpoint — serves binary to let the native browser PDF viewer handle rendering
+  app.get("/api/files/raw/:fileId", async (req, res) => {
+    try {
+      const { getSessionCookie, verifySessionToken } = await import("./auth");
+      const { getUserById, getPropertyFileContent, getPropertyById } = await import("../db");
+
+      const cookie = getSessionCookie(req);
+      if (!cookie) { res.status(401).end(); return; }
+      const session = await verifySessionToken(cookie);
+      if (!session) { res.status(401).end(); return; }
+      const user = await getUserById(session.userId);
+      if (!user) { res.status(401).end(); return; }
+
+      const fileId = parseInt(req.params.fileId, 10);
+      if (isNaN(fileId)) { res.status(400).end(); return; }
+
+      const file = await getPropertyFileContent(fileId);
+      if (!file) { res.status(404).end(); return; }
+
+      if (file.visible === 0) {
+        const prop = await getPropertyById(file.propertyId);
+        if (!prop || (prop.userId !== user.id && user.role !== "admin")) {
+          res.status(403).end();
+          return;
+        }
+      }
+
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+      const contentType = ext === "pdf" ? "application/pdf" : `image/${ext === "jpg" ? "jpeg" : ext}`;
+      const binary = Buffer.from(file.contentBase64, "base64");
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`);
+      res.setHeader("Content-Length", binary.length);
+      res.setHeader("Cache-Control", "private, max-age=300");
+      res.send(binary);
+    } catch (e) {
+      console.error("[files/raw] error:", e);
+      res.status(500).end();
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

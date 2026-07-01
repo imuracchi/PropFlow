@@ -13,7 +13,6 @@ import {
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { openFilePreview } from "@/lib/filePreview";
 
 type FaqItem = { q: string; a: string };
 
@@ -466,11 +465,8 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
     utils.property.listFiles.invalidate({ propertyId });
   };
 
-  const handlePreview = async (fileId: number) => {
-    const w = window.open("", "_blank");
-    const result = await utils.property.downloadFile.fetch({ fileId });
-    if (result) openFilePreview(result.name, result.contentBase64, w);
-    else w?.close();
+  const handlePreview = (fileId: number) => {
+    window.open(`/api/files/raw/${fileId}`, "_blank", "noopener");
   };
 
   const handleDownload = async (fileId: number) => {
