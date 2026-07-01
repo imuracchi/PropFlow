@@ -68,6 +68,42 @@ export const appRouter = router({
         return { success: true } as const;
       }),
 
+    registerDirect: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(8),
+        name: z.string().min(1),
+        company: z.string().min(1),
+        license: z.string().optional(),
+        phone: z.string().optional(),
+        fax: z.string().optional(),
+        url: z.string().optional(),
+        businessCardBase64: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const existing = await db.getUserByEmail(input.email);
+        if (existing) return { success: false, error: "このメールアドレスは既に登録されています" } as const;
+        const hashed = await hashPassword(input.password);
+        const newUser = await db.createUser({
+          openId: nanoid(),
+          email: input.email,
+          passwordHash: hashed,
+          name: input.name,
+          company: input.company,
+          license: input.license ?? "",
+          phone: input.phone ?? null,
+          fax: input.fax ?? null,
+          url: input.url ?? null,
+          loginMethod: "email",
+          role: "user",
+          status: "active",
+        });
+        if (input.businessCardBase64 && newUser) {
+          await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
+        }
+        return { success: true } as const;
+      }),
+
     readBusinessCard: publicProcedure
       .input(z.object({ imageBase64: z.string(), mimeType: z.string().optional() }))
       .mutation(async ({ input }) => {
