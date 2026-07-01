@@ -95,6 +95,7 @@ export async function listActiveUsers() {
       id: users.id, name: users.name, email: users.email, company: users.company,
       phone: users.phone, license: users.license, role: users.role, plan: users.plan,
       status: users.status, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn,
+      loginMethod: users.loginMethod, termsAgreedAt: users.termsAgreedAt,
     })
     .from(users)
     .where(sql`${users.status} != 'pending'`)

@@ -226,7 +226,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["業者名", "メール", "プラン", "ステータス", "最終ログイン", "規約同意", "操作"].map(h => (
+                    {["業者名", "メール", "登録方法", "プラン", "ステータス", "最終ログイン", "規約同意", "操作"].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -248,6 +248,13 @@ export default function Admin() {
                           </button>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{user.email}</td>
+                        <td className="px-4 py-3">
+                          {user.loginMethod === "email" ? (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-teal-50 text-teal-700">自己登録</span>
+                          ) : (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">代理登録</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <Select
                             value={user.plan}
@@ -276,7 +283,7 @@ export default function Admin() {
                           {new Date(user.lastSignedIn).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                         </td>
                         <td className="px-4 py-3">
-                          {(user as any).termsAgreedAt ? (
+                          {user.termsAgreedAt ? (
                             <span className="text-xs text-green-600 font-medium">済</span>
                           ) : (
                             <span className="text-xs text-red-500 font-medium">未</span>
