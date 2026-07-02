@@ -190,7 +190,7 @@ export async function listProperties(viewerUserId?: number) {
   const baseWhere = eq(properties.deleted, 0);
   const visibilityFilter = viewerUserId
     ? sql`(
-        (${properties.published} = 1 OR ${properties.userId} = ${viewerUserId})
+        ${properties.published} = 1
         AND (${properties.userId} = ${viewerUserId} OR NOT EXISTS (
           SELECT 1 FROM property_exclusions pe
           WHERE pe.propertyId = ${properties.id} AND pe.userId = ${viewerUserId}
@@ -391,6 +391,26 @@ export async function listAllPropertiesAdmin() {
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
+    .orderBy(desc(properties.createdAt));
+}
+
+export async function getMyProperties(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: properties.id,
+      name: properties.name,
+      address: properties.address,
+      type: properties.type,
+      status: properties.status,
+      price: properties.price,
+      priceNegotiable: properties.priceNegotiable,
+      published: properties.published,
+      createdAt: properties.createdAt,
+    })
+    .from(properties)
+    .where(and(eq(properties.userId, userId), eq(properties.deleted, 0)))
     .orderBy(desc(properties.createdAt));
 }
 

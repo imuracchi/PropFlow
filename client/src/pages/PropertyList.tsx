@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search, Heart, Building2,
-  Plus, MapPin, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown
+  Plus, MapPin, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -45,6 +45,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const isPropertyRead = (id: number) => !!localStorage.getItem(`propflow-property-read-${id}`);
 
   const { data: properties, isLoading } = trpc.property.list.useQuery();
+  const { data: myProperties, isLoading: myLoading } = trpc.mypage.myProperties.useQuery(undefined, { enabled: mode === "mine" });
   const { data: favoriteIds } = trpc.favorite.ids.useQuery();
   const { data: memoIds } = trpc.memo.ids.useQuery();
   const { data: chatPropertyIds } = trpc.mypage.chatProperties.useQuery(undefined, { enabled: mode === "chat" });
@@ -63,8 +64,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
 
   const chatIds = (chatPropertyIds ?? []).map(c => c.id);
 
-  const baseFiltered = (properties ?? []).filter(p => {
-    if (mode === "mine") return p.userId === user?.id;
+  const sourceList = mode === "mine" ? (myProperties ?? []) as any[] : (properties ?? []);
+
+  const baseFiltered = sourceList.filter((p: any) => {
     if (mode === "favorites") return (favoriteIds ?? []).includes(p.id);
     if (mode === "memo") return (memoIds ?? []).includes(p.id);
     if (mode === "chat") return chatIds.includes(p.id);
@@ -243,7 +245,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     URL.revokeObjectURL(url);
   };
 
-  if (isLoading) {
+  if (isLoading || (mode === "mine" && myLoading)) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -422,8 +424,24 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                             {property.type}
                           </span>
                           {isNew && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">新着</span>}
+                          {mode === "mine" && (
+                            (property as any).published === 0 ? (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-300">
+                                <EyeOff className="w-2.5 h-2.5" />下書き
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-300">
+                                <Eye className="w-2.5 h-2.5" />公開中
+                              </span>
+                            )
+                          )}
                         </div>
                         <p className="font-medium text-foreground text-[15px]">{property.name}</p>
+                        {mode === "mine" && (property as any).published === 0 && (
+                          <p className="md:hidden inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-300 mt-0.5">
+                            <EyeOff className="w-2.5 h-2.5" />下書き
+                          </p>
+                        )}
                         <p className="md:hidden text-xs font-semibold text-primary mt-0.5">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
                       </td>
                       <td className="px-4 py-4 text-sm text-muted-foreground max-w-[250px] hidden md:table-cell">

@@ -716,6 +716,10 @@ JSONのみ返してください。` },
   }),
 
   mypage: router({
+    myProperties: protectedProcedure.query(async ({ ctx }) => {
+      return db.getMyProperties(ctx.user.id);
+    }),
+
     interestedUsers: protectedProcedure.query(async ({ ctx }) => {
       return db.getInterestedUsersForMyProperties(ctx.user.id);
     }),
