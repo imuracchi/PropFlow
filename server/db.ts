@@ -400,12 +400,15 @@ export async function getMyProperties(userId: number) {
   return db
     .select({
       id: properties.id,
+      userId: properties.userId,
       name: properties.name,
       address: properties.address,
       type: properties.type,
       status: properties.status,
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,
+      landArea: properties.landArea,
+      buildingArea: properties.buildingArea,
       published: properties.published,
       createdAt: properties.createdAt,
     })
