@@ -256,30 +256,28 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   return (
     <div className="space-y-5">
       {!hideHeader && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2 justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold text-foreground">{MODE_TITLE[mode]}</h1>
+            <h1 className="text-lg font-semibold text-foreground whitespace-nowrap">{MODE_TITLE[mode]}</h1>
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{filtered.length}件</span>
           </div>
           <div className="flex items-center gap-2">
             {selectedIds.size > 0 && (
-              <Button variant="outline" className="gap-2" onClick={() => exportCsv(true)}>
-                <Download className="w-4 h-4" />
-                選択({selectedIds.size}件)CSV
+              <Button variant="outline" size="sm" className="gap-1.5 hidden sm:flex" onClick={() => exportCsv(true)}>
+                <Download className="w-4 h-4" />選択({selectedIds.size}件)CSV
               </Button>
             )}
             {filtered.length > 0 && (
-              <Button variant="outline" className="gap-2" onClick={() => exportCsv()}>
-                <Download className="w-4 h-4" />
-                全件CSV
+              <Button variant="outline" size="sm" className="gap-1.5 hidden sm:flex" onClick={() => exportCsv()}>
+                <Download className="w-4 h-4" />全件CSV
               </Button>
             )}
             <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shadow-sm"
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-sm"
               onClick={() => setLocation("/upload")}
             >
-              <Plus className="w-4 h-4" />
-              物件を登録
+              <Plus className="w-4 h-4" />物件を登録
             </Button>
           </div>
         </div>
@@ -437,7 +435,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                           )}
                         </div>
                         <p className="font-medium text-foreground text-sm md:text-[15px] leading-snug">{property.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px] md:hidden">{property.address}</p>
                         <p className="text-xs font-semibold text-primary mt-0.5 md:hidden">{property.priceNegotiable ? "応相談" : (property.price ? `${property.price.toLocaleString()}円` : "—")}</p>
                       </td>
                       <td className="px-4 py-4 text-sm text-muted-foreground max-w-[250px] hidden md:table-cell">
