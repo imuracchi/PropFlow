@@ -388,7 +388,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("price")}>価格<SortIcon col="price" /></th>
                   <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("createdAt")}>登録日<SortIcon col="createdAt" /></th>
                   {buyerPref && (
-                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("match")}>マッチ<SortIcon col="match" /></th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors hidden md:table-cell" onClick={() => toggleSort("match")}>マッチ<SortIcon col="match" /></th>
                   )}
                   <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap">
                     <Heart className="w-3.5 h-3.5 mx-auto text-muted-foreground" />
@@ -417,10 +417,10 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                           readOnly
                         />
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="hidden md:flex items-center gap-2 mb-1">
-                          <span className="text-[10px] text-muted-foreground/60">#{property.id}</span>
-                          <span className="text-xs font-medium px-2.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      <td className="px-3 py-3 md:px-4 md:py-4">
+                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                          <span className="text-[10px] text-muted-foreground/60 hidden md:inline">#{property.id}</span>
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                             {property.type}
                           </span>
                           {isNew && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">新着</span>}
@@ -436,13 +436,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                             )
                           )}
                         </div>
-                        <p className="font-medium text-foreground text-[15px]">{property.name}</p>
-                        {mode === "mine" && (property as any).published === 0 && (
-                          <p className="md:hidden inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-300 mt-0.5">
-                            <EyeOff className="w-2.5 h-2.5" />下書き
-                          </p>
-                        )}
-                        <p className="md:hidden text-xs font-semibold text-primary mt-0.5">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
+                        <p className="font-medium text-foreground text-sm md:text-[15px] leading-snug">{property.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px] md:hidden">{property.address}</p>
+                        <p className="text-xs font-semibold text-primary mt-0.5 md:hidden">{property.priceNegotiable ? "応相談" : (property.price ? `${property.price.toLocaleString()}円` : "—")}</p>
                       </td>
                       <td className="px-4 py-4 text-sm text-muted-foreground max-w-[250px] hidden md:table-cell">
                         {property.address}
@@ -474,7 +470,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                         {new Date(property.createdAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}
                       </td>
                       {buyerPref && (
-                        <td className="text-center px-2 py-4 whitespace-nowrap">
+                        <td className="text-center px-2 py-4 whitespace-nowrap hidden md:table-cell">
                           {matchRate !== null && matchRate !== undefined ? (
                             <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                               matchRate >= 80 ? "bg-green-100 text-green-700" :
