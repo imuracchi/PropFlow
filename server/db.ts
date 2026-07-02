@@ -1,4 +1,4 @@
-import { eq, desc, count, and, or, sql, notInArray } from "drizzle-orm";
+import { eq, desc, count, and, or, sql, notInArray, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions } from "../drizzle/schema";
 
@@ -1328,6 +1328,14 @@ export async function deleteGeneratedDocument(id: number, userId: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(generatedDocuments).where(and(eq(generatedDocuments.id, id), eq(generatedDocuments.userId, userId)));
+}
+
+export async function deleteExpiredDocuments() {
+  const db = await getDb();
+  if (!db) return 0;
+  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const result = await db.delete(generatedDocuments).where(lt(generatedDocuments.createdAt, cutoff));
+  return (result[0] as any).affectedRows ?? 0;
 }
 
 // ---- DM Read Status ----

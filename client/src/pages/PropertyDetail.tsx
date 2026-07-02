@@ -1233,7 +1233,7 @@ export default function PropertyDetail() {
               setPrintAttachments(new Set(docs.map((f: any) => f.id)));
               setShowPrintDialog(true);
             }}>
-              <FileText className="w-4 h-4" />紹介資料
+              <FileText className="w-4 h-4" />紹介資料作成
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/simulation/${property.id}`)}>
               <Calculator className="w-4 h-4" />シミュレーション
@@ -1723,7 +1723,7 @@ export default function PropertyDetail() {
           <Tabs defaultValue="overview">
             <TabsList className="w-full grid grid-cols-4 bg-muted/60 border border-border">
               <TabsTrigger value="overview">物件概要</TabsTrigger>
-              <TabsTrigger value="files" className="gap-1.5"><FileText className="w-3.5 h-3.5" />資料</TabsTrigger>
+              <TabsTrigger value="files" className="gap-1.5"><FileText className="w-3.5 h-3.5" />アップロード資料</TabsTrigger>
               <TabsTrigger value="map" className="gap-1.5"><Map className="w-3.5 h-3.5" />地図と写真</TabsTrigger>
               <TabsTrigger value="faq" className="gap-1.5"><HelpCircle className="w-3.5 h-3.5" />よくある質問</TabsTrigger>
             </TabsList>

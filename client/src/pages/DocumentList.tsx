@@ -1,29 +1,122 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FileText, Trash2, Loader2, Download, Eye, Building2, Calculator } from "lucide-react";
+import { FileText, Trash2, Loader2, Download, Eye, Building2, X, AlertTriangle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { FileViewerModal } from "@/components/FileViewerModal";
+
+const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174";
+const DOC_EXPIRE_DAYS = 3;
+
+function expiresAt(createdAt: string | Date) {
+  return new Date(new Date(createdAt).getTime() + DOC_EXPIRE_DAYS * 24 * 60 * 60 * 1000);
+}
+
+function HtmlViewerModal({ html, title, onClose }: { html: string; title: string; onClose: () => void }) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
+
+  React.useEffect(() => {
+    let cancelled = false;
+    async function loadPdfJs(): Promise<any> {
+      const lib = (window as any).pdfjsLib;
+      if (lib) return lib;
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = `${PDFJS_CDN}/pdf.min.js`;
+        s.onload = () => resolve((window as any).pdfjsLib);
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    async function load() {
+      try {
+        const res = await fetch("/api/generate-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ html }),
+        });
+        if (!res.ok) throw new Error(`PDF generation failed: ${res.status}`);
+        const pdfBlob = await res.blob();
+        const pdfjsLib = await loadPdfJs();
+        if (cancelled) return;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.js`;
+        const objectUrl = URL.createObjectURL(pdfBlob);
+        const pdf = await pdfjsLib.getDocument(objectUrl).promise;
+        if (cancelled) { URL.revokeObjectURL(objectUrl); return; }
+        const container = containerRef.current!;
+        const containerWidth = Math.max(container.clientWidth - 16, 200);
+        const dpr = window.devicePixelRatio || 1;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          if (cancelled) break;
+          const page = await pdf.getPage(i);
+          const baseViewport = page.getViewport({ scale: 1 });
+          const cssScale = containerWidth / baseViewport.width;
+          const viewport = page.getViewport({ scale: cssScale * dpr });
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.cssText = `width:${Math.round(viewport.width / dpr)}px;height:${Math.round(viewport.height / dpr)}px;display:block;margin:6px auto;background:#fff;border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.3);`;
+          container.appendChild(canvas);
+          await page.render({ canvasContext: canvas.getContext("2d")!, viewport }).promise;
+        }
+        if (!cancelled) setStatus("done");
+      } catch {
+        if (!cancelled) setStatus("error");
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [html]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "#525659" }}>
+      <div className="flex items-center gap-3 px-4 shrink-0"
+        style={{ background: "#2b5c94", minHeight: 48, paddingTop: 10, paddingBottom: 10 }}>
+        <button onClick={onClose} className="flex items-center gap-1.5 bg-white rounded-md font-semibold"
+          style={{ color: "#2b5c94", fontSize: 13, padding: "6px 14px", border: "none", cursor: "pointer" }}>
+          <X style={{ width: 14, height: 14, display: "inline" }} /> 閉じる
+        </button>
+        <span className="text-white truncate flex-1" style={{ fontSize: 13, fontWeight: 600 }}>{title}</span>
+      </div>
+      <div className="flex-1 overflow-auto relative">
+        {status === "loading" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
+            <Loader2 className="w-8 h-8 animate-spin" />
+            <p className="text-sm opacity-80">PDFを生成中...</p>
+          </div>
+        )}
+        {status === "error" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
+            <AlertTriangle className="w-10 h-10 opacity-60" />
+            <p className="text-sm opacity-80">PDFの生成に失敗しました</p>
+          </div>
+        )}
+        <div ref={containerRef} style={{ padding: "8px 4px" }} />
+      </div>
+    </div>
+  );
+}
 
 export default function DocumentList() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [viewingFile, setViewingFile] = useState<{ id: number; name: string } | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<{ html: string; title: string } | null>(null);
+  const [loadingDocId, setLoadingDocId] = useState<number | null>(null);
   const { data: docs, isLoading } = trpc.document.list.useQuery();
   const deleteMutation = trpc.document.delete.useMutation({
     onSuccess: () => utils.document.list.invalidate(),
   });
   const utils = trpc.useUtils();
 
-  const handleView = async (docId: number) => {
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<html><head><title>読み込み中</title></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666;"><p>読み込み中...</p></body></html>`);
-    const html = await utils.document.getHtml.fetch({ id: docId });
-    if (html) {
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-    } else {
-      w.document.body.innerHTML = `<p style="color:red;text-align:center;margin-top:40vh;">資料の読み込みに失敗しました</p>`;
+  const handleView = async (docId: number, title: string) => {
+    setLoadingDocId(docId);
+    try {
+      const html = await utils.document.getHtml.fetch({ id: docId });
+      if (html) setViewingDoc({ html, title });
+      else alert("資料の読み込みに失敗しました");
+    } finally {
+      setLoadingDocId(null);
     }
   };
 
@@ -50,22 +143,6 @@ export default function DocumentList() {
     URL.revokeObjectURL(url);
   };
 
-  const handleDownloadAll = async (docId: number, title: string, attachIds: number[]) => {
-    const html = await utils.document.getHtml.fetch({ id: docId });
-    if (html) {
-      const blob = new Blob([html], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${title}物件概要.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-    for (const fid of attachIds) {
-      await handleDownloadFile(fid);
-    }
-  };
-
   if (isLoading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
@@ -77,14 +154,14 @@ export default function DocumentList() {
           <Download className="w-5 h-5 text-primary" />
           ダウンロード資料
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">作成した紹介資料の一覧</p>
+        <p className="text-xs text-muted-foreground mt-0.5">作成後{DOC_EXPIRE_DAYS}日間保存されます</p>
       </div>
 
       {(docs ?? []).length === 0 ? (
         <div className="bg-card border border-border rounded-lg py-16 text-center">
           <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-muted-foreground">作成した資料はまだありません</p>
-          <p className="text-xs text-muted-foreground mt-1">物件詳細の「紹介資料」ボタンから作成できます</p>
+          <p className="text-xs text-muted-foreground mt-1">物件詳細の「紹介資料作成」ボタンから作成できます</p>
         </div>
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -93,14 +170,16 @@ export default function DocumentList() {
               <tr className="border-b border-border bg-muted/50">
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">資料名</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">物件名</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">添付</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">作成日</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground text-red-500">削除日</th>
                 <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {(docs ?? []).map((doc: any) => {
                 const attachIds = (doc.attachmentIds ?? []) as number[];
+                const deleteDate = expiresAt(doc.createdAt);
+                const isExpiringSoon = deleteDate.getTime() - Date.now() < 24 * 60 * 60 * 1000;
                 return (
                   <React.Fragment key={doc.id}>
                   <tr className="hover:bg-muted/30 transition-colors">
@@ -114,31 +193,37 @@ export default function DocumentList() {
                         <p className="font-medium text-foreground text-sm">{doc.title}</p>
                       </div>
                       <p className="md:hidden text-xs text-muted-foreground mt-0.5">{doc.propertyName ?? `物件#${doc.propertyId}`}</p>
+                      <p className="md:hidden text-xs mt-0.5">
+                        <span className={isExpiringSoon ? "text-red-500 font-medium" : "text-muted-foreground"}>
+                          削除: {deleteDate.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}
+                        </span>
+                      </p>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
                       <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{doc.propertyName ?? `#${doc.propertyId}`}</span>
                     </td>
-                    <td className="px-4 py-3 text-center hidden md:table-cell">
-                      {attachIds.length > 0 ? (
-                        <button className="text-xs text-amber-600 font-medium hover:underline" onClick={() => setExpandedId(expandedId === doc.id ? null : doc.id)}>
-                          {attachIds.length}件
-                        </button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
                       {new Date(doc.createdAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                    <td className="px-4 py-3 text-xs hidden md:table-cell">
+                      <span className={isExpiringSoon ? "text-red-500 font-semibold" : "text-muted-foreground"}>
+                        {deleteDate.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}
+                        {isExpiringSoon && " ⚠"}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1.5">
                         <Button size="sm" className="gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground h-7 px-2.5"
-                          onClick={() => handleView(doc.id)}
-                        ><Eye className="w-3 h-3" />表示</Button>
+                          onClick={() => handleView(doc.id, doc.title)}
+                          disabled={loadingDocId === doc.id}
+                        >
+                          {loadingDocId === doc.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
+                          表示
+                        </Button>
                         {attachIds.length > 0 && (
                           <Button variant="outline" size="sm" className="gap-1 text-xs h-7 px-2.5"
-                            onClick={() => handleDownloadAll(doc.id, doc.title, attachIds)}
-                          ><Download className="w-3 h-3" />一括</Button>
+                            onClick={() => setExpandedId(expandedId === doc.id ? null : doc.id)}
+                          ><FileText className="w-3 h-3" />{attachIds.length}件</Button>
                         )}
                         <Button variant="outline" size="sm" className="gap-1 text-xs text-red-600 border-red-200 hover:bg-red-50 h-7 px-2"
                           onClick={() => { if (confirm("この資料を削除しますか？")) deleteMutation.mutate({ id: doc.id }); }}
@@ -173,6 +258,9 @@ export default function DocumentList() {
       )}
       {viewingFile && (
         <FileViewerModal fileId={viewingFile.id} name={viewingFile.name} onClose={() => setViewingFile(null)} />
+      )}
+      {viewingDoc && (
+        <HtmlViewerModal html={viewingDoc.html} title={viewingDoc.title} onClose={() => setViewingDoc(null)} />
       )}
     </div>
   );

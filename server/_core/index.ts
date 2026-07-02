@@ -168,6 +168,19 @@ async function startServer() {
     }
   });
   console.log("[CRON] Unread DM check scheduled at 19:00 JST daily");
+
+  // 毎日深夜0時（JST）にダウンロード資料（3日超）を自動削除
+  cron.schedule("0 15 * * *", async () => {
+    // UTC 15:00 = JST 0:00
+    try {
+      const db = await import("../db");
+      const deleted = await db.deleteExpiredDocuments();
+      console.log(`[CRON] Deleted ${deleted} expired documents`);
+    } catch (e) {
+      console.error("[CRON] deleteExpiredDocuments error:", e);
+    }
+  });
+  console.log("[CRON] Expired document cleanup scheduled at 0:00 JST daily");
 }
 
 startServer().catch(console.error);
