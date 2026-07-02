@@ -165,6 +165,7 @@ export default function DocumentList() {
         </div>
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
@@ -172,7 +173,7 @@ export default function DocumentList() {
                 <th className="text-left px-3 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">物件名</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">作成日</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-red-500 hidden md:table-cell">削除日</th>
-                <th className="text-center px-3 py-3 text-xs font-medium text-muted-foreground w-px whitespace-nowrap">操作</th>
+                <th className="text-center px-2 py-3 text-xs font-medium text-muted-foreground w-28">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -214,7 +215,7 @@ export default function DocumentList() {
                         {isExpiringSoon && " ⚠"}
                       </span>
                     </td>
-                    <td className="px-2 py-3 w-px whitespace-nowrap">
+                    <td className="px-2 py-3 w-28">
                       <div className="flex items-center justify-center gap-1">
                         <Button size="sm" className="gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-2.5"
                           onClick={() => handleView(doc.id, doc.title)}
@@ -257,6 +258,7 @@ export default function DocumentList() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
       {viewingFile && (
