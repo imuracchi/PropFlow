@@ -103,7 +103,7 @@ async function startServer() {
         const pdf = await page.pdf({ format: "A4", printBackground: true });
         await browser.close();
         res.setHeader("Content-Type", "application/pdf");
-        res.send(pdf);
+        res.send(Buffer.from(pdf));
       } catch (e) {
         await browser.close().catch(() => {});
         throw e;
