@@ -355,7 +355,8 @@ export default function Admin() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredProperties.map(prop => {
-                    const isHidden = prop.deleted === 1;
+                    const isHidden = (prop as any).deleted === 1;
+                    const isDraft = !isHidden && (prop as any).published === 0;
                     return (
                       <tr key={prop.id} className={`hover:bg-muted/30 transition-colors ${isHidden ? "opacity-50" : ""}`}>
                         <td className="px-4 py-3 text-xs text-muted-foreground">#{prop.id}</td>
@@ -367,9 +368,13 @@ export default function Admin() {
                             <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground flex items-center gap-1 w-fit">
                               <EyeOff className="w-3 h-3" />非表示
                             </span>
+                          ) : isDraft ? (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-700 flex items-center gap-1 w-fit">
+                              <EyeOff className="w-3 h-3" />下書き
+                            </span>
                           ) : (
                             <span className="text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700 flex items-center gap-1 w-fit">
-                              <Eye className="w-3 h-3" />表示中
+                              <Eye className="w-3 h-3" />公開中
                             </span>
                           )}
                         </td>

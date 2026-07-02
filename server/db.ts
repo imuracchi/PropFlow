@@ -384,6 +384,7 @@ export async function listAllPropertiesAdmin() {
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,
       deleted: properties.deleted,
+      published: properties.published,
       createdAt: properties.createdAt,
       userName: users.name,
       userCompany: users.company,
