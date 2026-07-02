@@ -1724,10 +1724,25 @@ export default function PropertyDetail() {
 
           <Tabs defaultValue="overview">
             <TabsList className="w-full grid grid-cols-4 bg-muted/60 border border-border">
-              <TabsTrigger value="overview">物件概要</TabsTrigger>
-              <TabsTrigger value="files" className="gap-1.5"><FileText className="w-3.5 h-3.5" />アップロード資料</TabsTrigger>
-              <TabsTrigger value="map" className="gap-1.5"><Map className="w-3.5 h-3.5" />地図と写真</TabsTrigger>
-              <TabsTrigger value="faq" className="gap-1.5"><HelpCircle className="w-3.5 h-3.5" />よくある質問</TabsTrigger>
+              <TabsTrigger value="overview" className="text-xs sm:text-sm px-1 sm:px-3">
+                <span className="sm:hidden">概要</span>
+                <span className="hidden sm:inline">物件概要</span>
+              </TabsTrigger>
+              <TabsTrigger value="files" className="gap-1 text-xs sm:text-sm px-1 sm:px-3">
+                <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="sm:hidden">資料</span>
+                <span className="hidden sm:inline">アップロード資料</span>
+              </TabsTrigger>
+              <TabsTrigger value="map" className="gap-1 text-xs sm:text-sm px-1 sm:px-3">
+                <Map className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="sm:hidden">地図</span>
+                <span className="hidden sm:inline">地図と写真</span>
+              </TabsTrigger>
+              <TabsTrigger value="faq" className="gap-1 text-xs sm:text-sm px-1 sm:px-3">
+                <HelpCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="sm:hidden">FAQ</span>
+                <span className="hidden sm:inline">よくある質問</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-4">

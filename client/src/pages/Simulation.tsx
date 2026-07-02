@@ -75,6 +75,8 @@ export default function Simulation() {
   const [buyFixed, setBuyFixed] = useState("60000");
   const [buyTaxRate, setBuyTaxRate] = useState("10");
   const [sellRate, setSellRate] = useState("3");
+  const [sellFixed, setSellFixed] = useState("0");
+  const [sellTaxRate, setSellTaxRate] = useState("10");
 
   useEffect(() => {
     if (property) {
@@ -101,10 +103,11 @@ export default function Simulation() {
       setCosts(prev => ({ ...prev, brokerageBuy: String(buyTotal) }));
     }
     if (sales > 0) {
-      const sellTotal = ceil1000(sales * (numVal(sellRate) / 100));
+      const sellBase = sales * (numVal(sellRate) / 100) + numVal(sellFixed);
+      const sellTotal = ceil1000(sellBase * (1 + numVal(sellTaxRate) / 100));
       setCosts(prev => ({ ...prev, brokerageSell: String(sellTotal) }));
     }
-  }, [costs.landCost, pricePerTsubo, tsubo, buyRate, buyFixed, buyTaxRate, sellRate]);
+  }, [costs.landCost, pricePerTsubo, tsubo, buyRate, buyFixed, buyTaxRate, sellRate, sellFixed, sellTaxRate]);
 
   const fmtNum = (s: string) => {
     const raw = s.replace(/,/g, "");
@@ -163,7 +166,7 @@ td.num{text-align:right;font-family:monospace;font-size:14px}
 <table>
 ${COST_ITEMS.map(item => {
   const val = numVal(costs[item.key]);
-  const note = item.key === "brokerageBuy" ? `<br><span style="font-size:11px;color:#64748b;">（土地代金×${buyRate}%+${numVal(buyFixed).toLocaleString()}円）×税${buyTaxRate}%</span>` : item.key === "brokerageSell" ? `<br><span style="font-size:11px;color:#64748b;">売買価格×${sellRate}%</span>` : "";
+  const note = item.key === "brokerageBuy" ? `<br><span style="font-size:11px;color:#64748b;">（土地代金×${buyRate}%+${numVal(buyFixed).toLocaleString()}円）×税${buyTaxRate}%</span>` : item.key === "brokerageSell" ? `<br><span style="font-size:11px;color:#64748b;">（売買価格×${sellRate}%+${numVal(sellFixed).toLocaleString()}円）×税${sellTaxRate}%</span>` : "";
   return `<tr><th>${item.label}${note}</th><td class="num">${val > 0 ? val.toLocaleString() + " 円" : "—"}</td></tr>`;
 }).join("\n")}
 <tr style="background:#f0f4f8;font-weight:700"><th>原価合計</th><td class="num" style="color:#1e40af;font-size:15px">${totalCost.toLocaleString()} 円</td></tr>
@@ -231,8 +234,8 @@ ${COST_ITEMS.map(item => {
             {COST_ITEMS.map(item => (
               <div key={item.key}>
                 <div className="flex items-center gap-3">
-                  <Label className="w-40 shrink-0 text-sm">{item.label}</Label>
-                  <div className="flex-1 relative">
+                  <Label className="w-32 sm:w-40 shrink-0 text-sm">{item.label}</Label>
+                  <div className="flex-1 relative min-w-0">
                     <Input
                       type="text"
                       value={fmtNum(costs[item.key])}
@@ -245,7 +248,7 @@ ${COST_ITEMS.map(item => {
                   </div>
                 </div>
                 {item.key === "brokerageBuy" && (
-                  <div className="ml-40 pl-3 mt-2 mb-1 bg-muted/40 rounded-lg p-2.5 text-xs text-muted-foreground">
+                  <div className="ml-0 sm:ml-32 md:ml-40 mt-2 mb-1 bg-muted/40 rounded-lg p-2.5 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="shrink-0">( 土地代金 ×</span>
                       <input type="text" value={buyRate} onChange={e => setBuyRate(e.target.value)} className="w-14 text-center border border-border rounded px-1.5 py-1 bg-white" />
@@ -258,10 +261,14 @@ ${COST_ITEMS.map(item => {
                   </div>
                 )}
                 {item.key === "brokerageSell" && (
-                  <div className="ml-40 pl-3 mt-2 mb-1 bg-muted/40 rounded-lg p-2.5 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <span className="shrink-0">売買価格 ×</span>
+                  <div className="ml-0 sm:ml-32 md:ml-40 mt-2 mb-1 bg-muted/40 rounded-lg p-2.5 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="shrink-0">( 売買価格 ×</span>
                       <input type="text" value={sellRate} onChange={e => setSellRate(e.target.value)} className="w-14 text-center border border-border rounded px-1.5 py-1 bg-white" />
+                      <span className="shrink-0">% +</span>
+                      <input type="text" value={sellFixed} onChange={e => setSellFixed(e.target.value)} className="w-20 text-center border border-border rounded px-1.5 py-1 bg-white" />
+                      <span className="shrink-0">円 ) × 税率</span>
+                      <input type="text" value={sellTaxRate} onChange={e => setSellTaxRate(e.target.value)} className="w-14 text-center border border-border rounded px-1.5 py-1 bg-white" />
                       <span>%</span>
                     </div>
                   </div>
@@ -269,8 +276,8 @@ ${COST_ITEMS.map(item => {
               </div>
             ))}
             <div className="flex items-center gap-3 pt-3 border-t border-border">
-              <span className="w-40 shrink-0 font-semibold text-primary">原価合計</span>
-              <span className="flex-1 text-right text-lg font-bold text-primary">{totalCost.toLocaleString()} 円</span>
+              <span className="w-32 sm:w-40 shrink-0 font-semibold text-primary">原価合計</span>
+              <span className="flex-1 text-right text-base sm:text-lg font-bold text-primary break-all">{totalCost.toLocaleString()} 円</span>
             </div>
           </div>
         </div>
@@ -309,8 +316,8 @@ ${COST_ITEMS.map(item => {
                 </div>
               </div>
               <div className="flex items-center gap-3 pt-3 border-t border-border">
-                <span className="w-40 shrink-0 font-semibold text-primary">売買価格</span>
-                <span className="flex-1 text-right text-lg font-bold text-primary">{salesPrice.toLocaleString()} 円</span>
+                <span className="w-32 sm:w-40 shrink-0 font-semibold text-primary">売買価格</span>
+                <span className="flex-1 text-right text-base sm:text-lg font-bold text-primary break-all">{salesPrice.toLocaleString()} 円</span>
               </div>
             </div>
           </div>
@@ -324,24 +331,24 @@ ${COST_ITEMS.map(item => {
               <h2 className="font-semibold">シミュレーション結果</h2>
             </div>
             <div className="p-5 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">原価合計</span>
-                <span className="font-bold text-lg">{totalCost.toLocaleString()} 円</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-muted-foreground shrink-0">原価合計</span>
+                <span className="font-bold text-base sm:text-lg text-right break-all">{totalCost.toLocaleString()} 円</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">売買価格</span>
-                <span className="font-bold text-lg">{salesPrice.toLocaleString()} 円</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-muted-foreground shrink-0">売買価格</span>
+                <span className="font-bold text-base sm:text-lg text-right break-all">{salesPrice.toLocaleString()} 円</span>
               </div>
               <div className="border-t-2 border-border pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-lg">利益</span>
-                  <span className={`font-bold text-xl ${profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="font-semibold text-base sm:text-lg shrink-0">利益</span>
+                  <span className={`font-bold text-lg sm:text-xl text-right break-all ${profit >= 0 ? "text-green-600" : "text-red-600"}`}>
                     {profit >= 0 ? "+" : ""}{profit.toLocaleString()} 円
                   </span>
                 </div>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="font-semibold text-lg">利益率</span>
-                  <span className={`font-bold text-xl ${profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                <div className="flex justify-between items-center gap-2 mt-2">
+                  <span className="font-semibold text-base sm:text-lg shrink-0">利益率</span>
+                  <span className={`font-bold text-lg sm:text-xl ${profit >= 0 ? "text-green-600" : "text-red-600"}`}>
                     {profitRate.toFixed(1)}%
                   </span>
                 </div>
