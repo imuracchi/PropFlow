@@ -4,7 +4,9 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
+    "dev": "NODE_ENV=development DATABASE_URL=mysql://root:testpass@localhost:3306/propflow_test JWT_SECRET=propflow-jwt-secret-key-test SITE_URL=http://localhost:3000 tsx watch server/_core/index.ts",
+    "dev:prod": "NODE_ENV=development tsx watch server/_core/index.ts",
+    "db:push:test": "DATABASE_URL=mysql://root:testpass@localhost:3306/propflow_test drizzle-kit push",
     "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",

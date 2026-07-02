@@ -1,4 +1,4 @@
-import { eq, desc, count, and, or, sql } from "drizzle-orm";
+import { eq, desc, count, and, or, sql, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions } from "../drizzle/schema";
 
@@ -133,11 +133,13 @@ export async function getAdminStats() {
   };
 }
 
-export async function getActiveUserEmailsForNotify(type: "newProperty" | "dm" | "announce"): Promise<string[]> {
+export async function getActiveUserEmailsForNotify(type: "newProperty" | "dm" | "announce", excludeUserIds?: number[]): Promise<string[]> {
   const db = await getDb();
   if (!db) return [];
   const col = type === "newProperty" ? users.notifyNewProperty : type === "dm" ? users.notifyDm : users.notifyAnnounce;
-  const rows = await db.select({ email: users.email }).from(users).where(and(eq(users.status, "active"), eq(col, 1)));
+  const conditions = [eq(users.status, "active"), eq(col, 1)];
+  if (excludeUserIds && excludeUserIds.length > 0) conditions.push(notInArray(users.id, excludeUserIds));
+  const rows = await db.select({ email: users.email }).from(users).where(and(...conditions));
   return rows.map(r => r.email);
 }
 
@@ -187,11 +189,14 @@ export async function listProperties(viewerUserId?: number) {
     .as("fav_count");
   const baseWhere = eq(properties.deleted, 0);
   const visibilityFilter = viewerUserId
-    ? sql`(${properties.userId} = ${viewerUserId} OR NOT EXISTS (
-        SELECT 1 FROM property_exclusions pe
-        WHERE pe.propertyId = ${properties.id} AND pe.userId = ${viewerUserId}
-      ))`
-    : undefined;
+    ? sql`(
+        (${properties.published} = 1 OR ${properties.userId} = ${viewerUserId})
+        AND (${properties.userId} = ${viewerUserId} OR NOT EXISTS (
+          SELECT 1 FROM property_exclusions pe
+          WHERE pe.propertyId = ${properties.id} AND pe.userId = ${viewerUserId}
+        ))
+      )`
+    : sql`${properties.published} = 1`;
   return db
     .select({
       id: properties.id,
@@ -300,6 +305,7 @@ export async function getPropertyById(id: number) {
       faqs: properties.faqs,
       files: properties.files,
       deleted: properties.deleted,
+      published: properties.published,
       lineNotifiedAt: properties.lineNotifiedAt,
       createdAt: properties.createdAt,
       updatedAt: properties.updatedAt,
@@ -329,6 +335,12 @@ export async function createProperty(data: Omit<InsertProperty, "id" | "createdA
   const result = await db.insert(properties).values(data);
   const insertId = result[0].insertId;
   return getPropertyById(insertId);
+}
+
+export async function setPropertyPublished(id: number, published: 0 | 1) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(properties).set({ published }).where(eq(properties.id, id));
 }
 
 export async function updateProperty(id: number, data: Partial<InsertProperty>) {

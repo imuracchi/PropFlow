@@ -548,18 +548,20 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
             <div key={file.id} className="flex items-center gap-3 px-5 py-3.5">
               <FileText className="w-5 h-5 text-red-500 shrink-0" />
               <button className="text-sm text-primary hover:underline flex-1 text-left truncate" onClick={() => handlePreview(file.id, file.name)}>{file.name}</button>
-              {isOwner && (file as any).visible === 0 && (
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">登録者のみ</span>
-              )}
-              <span className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+              <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
               {isOwner && (
                 <button
-                  className="text-muted-foreground hover:text-foreground p-1 shrink-0"
-                  title={(file as any).visible === 0 ? "登録者のみ閲覧可（クリックで全員に公開）" : "全員に公開中（クリックで登録者のみに変更）"}
+                  className="shrink-0 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border transition-colors"
+                  style={(file as any).visible === 0
+                    ? { background: "#fef3c7", color: "#92400e", borderColor: "#fcd34d" }
+                    : { background: "#f0fdf4", color: "#166534", borderColor: "#86efac" }}
+                  title={(file as any).visible === 0 ? "クリックで全員に公開" : "クリックで登録者のみに変更"}
                   onClick={() => handleToggleVisibility(file.id, (file as any).visible)}
                   disabled={visibilityMutation.isPending}
                 >
-                  {(file as any).visible === 0 ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {(file as any).visible === 0
+                    ? <><EyeOff className="w-3 h-3" />非公開中</>
+                    : <><Eye className="w-3 h-3" />公開中</>}
                 </button>
               )}
               <button
@@ -868,7 +870,6 @@ export default function PropertyDetail() {
   const [editError, setEditError] = useState("");
   const [generatingComment, setGeneratingComment] = useState(false);
   const [analyzingTransport, setAnalyzingTransport] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printPages, setPrintPages] = useState({ summary: true, map: true, streetview: true, photos: true, route: true, attachments: true });
   const [printAttachments, setPrintAttachments] = useState<Set<number>>(new Set());
@@ -880,15 +881,19 @@ export default function PropertyDetail() {
     onSuccess: () => { utils.document.list.invalidate(); alert("ダウンロード資料に保存されました"); },
   });
   const transportMutation = trpc.property.analyzeTransport.useMutation();
-  const deleteMutation = trpc.property.delete.useMutation();
   const commentMutation = trpc.property.generateComment.useMutation();
   const notifyLineMutation = trpc.property.notifyLine.useMutation({
     onSuccess: () => utils.property.getById.invalidate({ id: propertyId }),
   });
+  const setPublishedMutation = trpc.property.setPublished.useMutation({
+    onSuccess: () => utils.property.getById.invalidate({ id: propertyId }),
+  });
   const utils = trpc.useUtils();
+  const [showNotifyConfirm, setShowNotifyConfirm] = useState(false);
 
   const [showExclusions, setShowExclusions] = useState(false);
   const [excludePicker, setExcludePicker] = useState(false);
+  const [excludeSearch, setExcludeSearch] = useState("");
   const { data: exclusions, refetch: refetchExclusions } = trpc.property.getExclusions.useQuery(
     { propertyId },
     { enabled: !!(user && property) }
@@ -1093,77 +1098,110 @@ export default function PropertyDetail() {
         <p className="text-sm text-muted-foreground">
           {property.showCompany !== 0 && property.userCompany ? `登録：${property.userCompany} / ` : "登録日：" }{createdDate}
         </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" className={`gap-1.5 ${isFavorite ? "text-red-500 border-red-200 bg-red-50" : ""}`} onClick={toggleFavorite}>
-            <Heart className={`w-4 h-4 ${isFavorite ? "fill-red-500" : ""}`} />お気に入り
-          </Button>
-          {property.userId !== user?.id && (
-            <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
-              <MessageCircle className="w-4 h-4" />登録者にDM
+        <div className="flex flex-col gap-2">
+          {/* 閲覧者向けアクション */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" className={`gap-1.5 ${isFavorite ? "text-red-500 border-red-200 bg-red-50" : ""}`} onClick={toggleFavorite}>
+              <Heart className={`w-4 h-4 ${isFavorite ? "fill-red-500" : ""}`} />お気に入り
             </Button>
-          )}
-          {property.userId === user?.id ? (
-            <Button variant="outline" size="sm" className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setLocation(`/chat/${property.id}`)}>
-              <Bell className="w-4 h-4" />お知らせを投稿
-            </Button>
-          ) : (
+            {property.userId !== user?.id && (
+              <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
+                <MessageCircle className="w-4 h-4" />登録者にDM
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/chat/${property.id}`)}>
               <Bell className="w-4 h-4" />お知らせ
               {(announceCount ?? 0) > 0 && (
                 <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 rounded-full">{announceCount}</span>
               )}
             </Button>
-          )}
-          <Button
-            variant="outline" size="sm" className="gap-1.5"
-            onClick={async () => {
-              const url = window.location.href;
-              if (navigator.share) {
-                await navigator.share({ title: property.name, url });
-              } else {
-                await navigator.clipboard.writeText(url);
-                alert("URLをコピーしました");
-              }
-            }}
-          ><Share2 className="w-4 h-4" />共有</Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={async () => {
-            const files = await utils.property.listFiles.fetch({ propertyId: property.id });
-            const docs = (files ?? []).filter((f: any) => f.category !== "photo" && /\.pdf$/i.test(f.name));
-            setPrintDocFiles(docs.map((f: any) => ({ id: f.id, name: f.name })));
-            setPrintAttachments(new Set(docs.map((f: any) => f.id)));
-            setShowPrintDialog(true);
-          }}>
-            <FileText className="w-4 h-4" />紹介資料
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/simulation/${property.id}`)}>
-            <Calculator className="w-4 h-4" />シミュレーション
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportPropertyCsv(property, details, createdDate)}>
-            <Download className="w-4 h-4" />CSV
-          </Button>
+            <Button
+              variant="outline" size="sm" className="gap-1.5"
+              onClick={async () => {
+                const url = window.location.href;
+                if (navigator.share) {
+                  await navigator.share({ title: property.name, url });
+                } else {
+                  await navigator.clipboard.writeText(url);
+                  alert("URLをコピーしました");
+                }
+              }}
+            ><Share2 className="w-4 h-4" />共有</Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={async () => {
+              const files = await utils.property.listFiles.fetch({ propertyId: property.id });
+              const docs = (files ?? []).filter((f: any) => f.category !== "photo" && /\.pdf$/i.test(f.name));
+              setPrintDocFiles(docs.map((f: any) => ({ id: f.id, name: f.name })));
+              setPrintAttachments(new Set(docs.map((f: any) => f.id)));
+              setShowPrintDialog(true);
+            }}>
+              <FileText className="w-4 h-4" />紹介資料
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/simulation/${property.id}`)}>
+              <Calculator className="w-4 h-4" />シミュレーション
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportPropertyCsv(property, details, createdDate)}>
+              <Download className="w-4 h-4" />CSV
+            </Button>
+          </div>
+
+          {/* 登録者向け管理エリア */}
           {isOwner && !isEditing && (
-            <>
-              <div className="w-px h-5 bg-border mx-1" />
-              {property.lineNotifiedAt ? (
-                <Button variant="outline" size="sm" className="gap-1.5 text-muted-foreground cursor-default" disabled>
-                  <Bell className="w-4 h-4" />LINE通知済み（{new Date(property.lineNotifiedAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}）
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
+              <span className="text-xs text-muted-foreground font-medium">管理：</span>
+              {/* 公開状態バッジ */}
+              {(property as any).published === 0 ? (
+                <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300">
+                  <EyeOff className="w-3 h-3" />下書き
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-300">
+                  <Eye className="w-3 h-3" />公開中
+                </span>
+              )}
+              {/* 公開/非公開切替ボタン */}
+              {(property as any).published === 0 ? (
+                <Button
+                  variant="outline" size="sm"
+                  className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
+                  disabled={setPublishedMutation.isPending}
+                  onClick={() => setPublishedMutation.mutate({ propertyId, published: true })}
+                >
+                  <Eye className="w-4 h-4" />
+                  {setPublishedMutation.isPending ? "公開中..." : "公開する"}
                 </Button>
               ) : (
                 <Button
                   variant="outline" size="sm"
-                  className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
-                  disabled={notifyLineMutation.isPending}
-                  onClick={() => notifyLineMutation.mutate({ propertyId })}
+                  className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
+                  disabled={setPublishedMutation.isPending}
+                  onClick={() => setPublishedMutation.mutate({ propertyId, published: false })}
                 >
-                  <Bell className="w-4 h-4" />
-                  {notifyLineMutation.isPending ? "送信中..." : "LINE通知を送る"}
+                  <EyeOff className="w-4 h-4" />
+                  {setPublishedMutation.isPending ? "変更中..." : "非公開にする"}
                 </Button>
               )}
               <div className="w-px h-5 bg-border mx-1" />
-              <Button variant="outline" size="sm" className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowDeleteConfirm(true)}>
-                <EyeOff className="w-4 h-4" />非表示
+              {/* 通知・お知らせ（公開中のみ） */}
+              {(property as any).published === 1 && (
+                property.lineNotifiedAt ? (
+                  <Button variant="outline" size="sm" className="gap-1.5 text-muted-foreground cursor-default" disabled>
+                    <Bell className="w-4 h-4" />新着通知済み（{new Date(property.lineNotifiedAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}）
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline" size="sm"
+                    className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
+                    onClick={() => setShowNotifyConfirm(true)}
+                  >
+                    <Bell className="w-4 h-4" />新着として通知する
+                  </Button>
+                )
+              )}
+              <Button variant="outline" size="sm" className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setLocation(`/chat/${property.id}`)}>
+                <Bell className="w-4 h-4" />お知らせを投稿
               </Button>
-            </>
+              <div className="w-px h-5 bg-border mx-1" />
+            </div>
           )}
         </div>
       </div>
@@ -1288,33 +1326,48 @@ export default function PropertyDetail() {
         </div>
       )}
 
-      {/* 削除確認ダイアログ */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-card border border-border rounded-xl shadow-lg p-6 max-w-sm w-full mx-4 space-y-4">
+      {/* 新着通知確認ダイアログ */}
+      {showNotifyConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-xl shadow-lg p-6 max-w-sm w-full space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
-                <EyeOff className="w-5 h-5 text-amber-600" />
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                <Bell className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">物件を非表示にしますか？</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">非表示にした物件はマイページの「非表示」タブから復元できます。</p>
+                <h3 className="font-semibold text-foreground">新着として通知する</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">以下の内容で通知を送信します</p>
               </div>
             </div>
-            <p className="text-sm text-foreground bg-muted rounded-lg px-3 py-2">{property.name}</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                <span className="text-green-600 mt-0.5">✓</span>
+                <span>新着メール：{(exclusions?.length ?? 0) > 0 ? "閲覧制限者を除く全員へ送信" : "全員へ送信"}</span>
+              </div>
+              <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                <span className="text-green-600 mt-0.5">✓</span>
+                <span>プッシュ通知：{(exclusions?.length ?? 0) > 0 ? "閲覧制限者を除く全員へ送信" : "全員へ送信"}</span>
+              </div>
+              <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                {(exclusions?.length ?? 0) > 0 ? (
+                  <><span className="text-muted-foreground mt-0.5">—</span><span className="text-muted-foreground">LINE通知：閲覧制限があるため送信しません</span></>
+                ) : (
+                  <><span className="text-green-600 mt-0.5">✓</span><span>LINE通知：全員へ送信</span></>
+                )}
+              </div>
+            </div>
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setShowDeleteConfirm(false)}>キャンセル</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setShowNotifyConfirm(false)}>キャンセル</Button>
               <Button
-                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
-                disabled={deleteMutation.isPending}
-                onClick={async () => {
-                  await deleteMutation.mutateAsync({ id: propertyId });
-                  utils.property.list.invalidate();
-                  setLocation("/properties");
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2"
+                disabled={notifyLineMutation.isPending}
+                onClick={() => {
+                  notifyLineMutation.mutate({ propertyId }, {
+                    onSuccess: () => setShowNotifyConfirm(false),
+                  });
                 }}
               >
-                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <EyeOff className="w-4 h-4 mr-1" />}
-                非表示にする
+                {notifyLineMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" />送信中...</> : <>OK・送信する</>}
               </Button>
             </div>
           </div>
@@ -1323,16 +1376,18 @@ export default function PropertyDetail() {
 
       {/* 閲覧制限パネル */}
       {isOwner && (
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="bg-card border border-border rounded-lg">
           <button
-            className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-muted/30 transition-colors"
+            className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-muted/30 transition-colors rounded-lg"
             onClick={() => setShowExclusions(v => !v)}
           >
-            <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <UserX className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-semibold text-red-600 flex items-center gap-2">
+              <UserX className="w-4 h-4 text-red-500" />
               閲覧制限
-              {(exclusions?.length ?? 0) > 0 && (
-                <span className="text-xs font-normal text-muted-foreground">（{exclusions!.length}名に非表示）</span>
+              {(exclusions?.length ?? 0) > 0 ? (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">{exclusions!.length}名</span>
+              ) : (
+                <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">なし</span>
               )}
             </span>
             {showExclusions ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -1360,37 +1415,63 @@ export default function PropertyDetail() {
                   ))}
                 </div>
               )}
-              <div className="relative">
+              {!excludePicker ? (
                 <Button
                   variant="outline" size="sm" className="gap-1.5 text-xs"
-                  onClick={() => setExcludePicker(v => !v)}
+                  onClick={() => { setExcludePicker(true); setExcludeSearch(""); }}
                 >
                   <Plus className="w-3.5 h-3.5" />ユーザーを追加
                 </Button>
-                {excludePicker && (
-                  <div className="absolute left-0 top-9 z-20 bg-card border border-border rounded-lg shadow-lg min-w-56 max-h-60 overflow-y-auto">
-                    {(allUsers ?? [])
-                      .filter(u => !(exclusions ?? []).some(ex => ex.userId === u.id))
-                      .map(u => (
-                        <button
-                          key={u.id}
-                          className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors"
-                          onClick={() => {
-                            addExclusionMutation.mutate({ propertyId, userId: u.id });
-                            setExcludePicker(false);
-                          }}
-                        >
-                          {u.name ?? "—"}
-                          {u.company && <span className="text-xs text-muted-foreground ml-1.5">({u.company})</span>}
-                        </button>
-                      ))
-                    }
-                    {(allUsers ?? []).filter(u => !(exclusions ?? []).some(ex => ex.userId === u.id)).length === 0 && (
-                      <p className="px-4 py-3 text-sm text-muted-foreground">追加できるユーザーがいません</p>
-                    )}
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      autoFocus
+                      placeholder="名前・会社名で検索..."
+                      className="h-8 text-sm max-w-64"
+                      value={excludeSearch}
+                      onChange={e => setExcludeSearch(e.target.value)}
+                    />
+                    <button className="text-muted-foreground hover:text-foreground" onClick={() => setExcludePicker(false)}>
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                )}
-              </div>
+                  {excludeSearch.trim() && (
+                    <div className="bg-card border border-border rounded-lg shadow-md max-h-48 overflow-y-auto">
+                      {(allUsers ?? [])
+                        .filter(u => {
+                          const q = excludeSearch.toLowerCase();
+                          return (
+                            !(exclusions ?? []).some(ex => ex.userId === u.id) &&
+                            ((u.name ?? "").toLowerCase().includes(q) || (u.company ?? "").toLowerCase().includes(q))
+                          );
+                        })
+                        .map(u => (
+                          <button
+                            key={u.id}
+                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors border-b border-border last:border-0"
+                            onClick={() => {
+                              addExclusionMutation.mutate({ propertyId, userId: u.id });
+                              setExcludePicker(false);
+                              setExcludeSearch("");
+                            }}
+                          >
+                            {u.name ?? "—"}
+                            {u.company && <span className="text-xs text-muted-foreground ml-1.5">({u.company})</span>}
+                          </button>
+                        ))
+                      }
+                      {(allUsers ?? []).filter(u => {
+                        const q = excludeSearch.toLowerCase();
+                        return !(exclusions ?? []).some(ex => ex.userId === u.id) &&
+                          ((u.name ?? "").toLowerCase().includes(q) || (u.company ?? "").toLowerCase().includes(q));
+                      }).length === 0 && (
+                        <p className="px-4 py-3 text-sm text-muted-foreground">該当するユーザーがいません</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

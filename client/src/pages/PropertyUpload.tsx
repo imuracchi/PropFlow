@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChevronLeft, Plus, Trash2, HelpCircle, Loader2, CheckCircle2,
-  Upload, FileText, X, Sparkles, Bell, Camera, StickyNote, Eye, EyeOff
+  Upload, FileText, X, Sparkles, Bell, Camera, StickyNote, Eye, EyeOff, UserX
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -67,8 +67,10 @@ export default function PropertyUpload() {
 
   const [generatingComment, setGeneratingComment] = useState(false);
   const [analyzingTransport, setAnalyzingTransport] = useState(false);
-  const [showLineConfirm, setShowLineConfirm] = useState(false);
-  const [createdPropertyId, setCreatedPropertyId] = useState<number | null>(null);
+  const [publishMode, setPublishMode] = useState<"publish" | "draft">("publish");
+  const [excludedUsers, setExcludedUsers] = useState<{ id: number; name: string | null; company: string | null }[]>([]);
+  const [excludeSearch, setExcludeSearch] = useState("");
+  const [excludePicker, setExcludePicker] = useState(false);
 
   const createMutation = trpc.property.create.useMutation();
   const uploadFileMutation = trpc.property.uploadFile.useMutation();
@@ -76,7 +78,8 @@ export default function PropertyUpload() {
   const extractMutation = trpc.property.extractFromPdf.useMutation();
   const commentMutation = trpc.property.generateComment.useMutation();
   const transportMutation = trpc.property.analyzeTransport.useMutation();
-  const notifyLineMutation = trpc.property.notifyLine.useMutation();
+  const addExclusionMutation = trpc.property.addExclusion.useMutation();
+  const { data: allUsers } = trpc.user.list.useQuery();
 
   const fillFormFromData = (data: Record<string, unknown>) => {
     if (data.name) setName(String(data.name));
@@ -226,6 +229,7 @@ export default function PropertyUpload() {
         heightDistrict: heightDistrict || undefined,
         otherRestrictions: otherRestrictions || undefined,
         faqs: validFaqs.length > 0 ? validFaqs : undefined,
+        published: publishMode === "publish",
         files: pdfFiles.length > 0 ? pdfFiles.map(f => ({ name: f.name, size: f.size })) : undefined,
       });
 
@@ -261,9 +265,11 @@ export default function PropertyUpload() {
           setSubmitProgress("メモを保存中...");
           await saveMemoMutation.mutateAsync({ propertyId: result.id, content: memo.trim() });
         }
+        for (const u of excludedUsers) {
+          await addExclusionMutation.mutateAsync({ propertyId: result.id, userId: u.id }).catch(() => {});
+        }
         setSubmitting(false);
-        setCreatedPropertyId(result.id);
-        setShowLineConfirm(true);
+        setLocation(`/property/${result.id}`);
       } else {
         setSubmitting(false);
       }
@@ -734,6 +740,111 @@ export default function PropertyUpload() {
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>
       )}
 
+      {/* 閲覧制限 */}
+      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+        <p className="text-sm font-semibold text-red-600 flex items-center gap-2">
+          <UserX className="w-4 h-4" />閲覧制限
+          <span className="text-xs font-normal text-muted-foreground">（設定したユーザーには非表示になります）</span>
+        </p>
+        {excludedUsers.length > 0 && (
+          <div className="space-y-1.5">
+            {excludedUsers.map(u => (
+              <div key={u.id} className="flex items-center justify-between py-1.5 px-3 bg-muted/40 rounded-lg">
+                <span className="text-sm">
+                  {u.name ?? "—"}
+                  {u.company && <span className="text-xs text-muted-foreground ml-1.5">({u.company})</span>}
+                </span>
+                <button className="text-muted-foreground hover:text-red-500" onClick={() => setExcludedUsers(v => v.filter(x => x.id !== u.id))}>
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {!excludePicker ? (
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => { setExcludePicker(true); setExcludeSearch(""); }}>
+            <Plus className="w-3.5 h-3.5" />ユーザーを追加
+          </Button>
+        ) : (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Input
+                autoFocus
+                placeholder="名前・会社名で検索..."
+                className="h-8 text-sm max-w-64"
+                value={excludeSearch}
+                onChange={e => setExcludeSearch(e.target.value)}
+              />
+              <button className="text-muted-foreground hover:text-foreground" onClick={() => setExcludePicker(false)}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {excludeSearch.trim() && (
+              <div className="bg-card border border-border rounded-lg shadow-md max-h-48 overflow-y-auto">
+                {(allUsers ?? [])
+                  .filter(u => {
+                    const q = excludeSearch.toLowerCase();
+                    return !excludedUsers.some(x => x.id === u.id) &&
+                      ((u.name ?? "").toLowerCase().includes(q) || (u.company ?? "").toLowerCase().includes(q));
+                  })
+                  .map(u => (
+                    <button
+                      key={u.id}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors border-b border-border last:border-0"
+                      onClick={() => { setExcludedUsers(v => [...v, u]); setExcludePicker(false); setExcludeSearch(""); }}
+                    >
+                      {u.name ?? "—"}
+                      {u.company && <span className="text-xs text-muted-foreground ml-1.5">({u.company})</span>}
+                    </button>
+                  ))
+                }
+                {(allUsers ?? []).filter(u => {
+                  const q = excludeSearch.toLowerCase();
+                  return !excludedUsers.some(x => x.id === u.id) &&
+                    ((u.name ?? "").toLowerCase().includes(q) || (u.company ?? "").toLowerCase().includes(q));
+                }).length === 0 && (
+                  <p className="px-4 py-3 text-sm text-muted-foreground">該当するユーザーがいません</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 公開 / 下書き 選択 */}
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={() => setPublishMode("publish")}
+          className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+            publishMode === "publish"
+              ? "border-primary bg-primary/5 text-primary"
+              : "border-border text-muted-foreground hover:bg-muted/50"
+          }`}
+        >
+          <Eye className="w-4 h-4 shrink-0" />
+          <div className="text-left">
+            <div>今すぐ公開する</div>
+            <div className="text-xs font-normal opacity-70">登録後すぐに全員が閲覧可能</div>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setPublishMode("draft")}
+          className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+            publishMode === "draft"
+              ? "border-amber-500 bg-amber-50 text-amber-700"
+              : "border-border text-muted-foreground hover:bg-muted/50"
+          }`}
+        >
+          <EyeOff className="w-4 h-4 shrink-0" />
+          <div className="text-left">
+            <div>一時保存（非公開）</div>
+            <div className="text-xs font-normal opacity-70">物件詳細から後で公開できます</div>
+          </div>
+        </button>
+      </div>
+
       <div className="flex gap-4">
         <Button variant="outline" className="h-11 px-8" onClick={() => setStep("upload")}>戻る</Button>
         <Button
@@ -742,55 +853,9 @@ export default function PropertyUpload() {
           disabled={createMutation.isPending}
         >
           {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-          物件を登録する
+          {publishMode === "publish" ? "今すぐ公開する" : "下書き保存する"}
         </Button>
       </div>
-
-      {/* LINE通知確認ダイアログ */}
-      {showLineConfirm && createdPropertyId && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-card border border-border rounded-xl shadow-lg p-6 max-w-sm w-full mx-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground">物件を登録しました</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">PropFlowの公式LINEで新着通知を送信しますか？</p>
-              </div>
-            </div>
-            <div className="bg-muted rounded-lg px-3 py-2 text-sm text-foreground flex items-center gap-2">
-              <Bell className="w-4 h-4 text-green-600 shrink-0" />
-              友だち登録している全ユーザーに通知されます
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setLocation(`/property/${createdPropertyId}`)}
-              >
-                通知しない
-              </Button>
-              <Button
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2"
-                disabled={notifyLineMutation.isPending || notifyLineMutation.isSuccess}
-                onClick={async () => {
-                  await notifyLineMutation.mutateAsync({ propertyId: createdPropertyId });
-                  setTimeout(() => setLocation(`/property/${createdPropertyId}`), 1500);
-                }}
-              >
-                {notifyLineMutation.isSuccess ? (
-                  <><CheckCircle2 className="w-4 h-4" />通知しました</>
-                ) : notifyLineMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" />送信中...</>
-                ) : (
-                  <><Bell className="w-4 h-4" />LINE通知する</>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

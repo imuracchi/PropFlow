@@ -380,10 +380,12 @@ JSONのみ返してください。` },
         otherRestrictions: z.string().optional(),
         faqs: z.array(z.object({ q: z.string(), a: z.string() })).optional(),
         files: z.array(z.object({ name: z.string(), size: z.number() })).optional(),
+        published: z.boolean().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const result = await db.createProperty({
           userId: ctx.user.id,
+          published: input.published === false ? 0 : 1,
           name: input.name,
           address: input.address,
           lotNumber: input.lotNumber ?? null,
@@ -526,14 +528,23 @@ JSONのみ返してください。` },
       .mutation(async ({ input }) => {
         const prop = await db.getPropertyById(input.propertyId);
         if (!prop) return { success: false };
-        const { sendLineBroadcast, buildPropertyFlexMessage } = await import("./_core/line");
+        if (prop.lineNotifiedAt) return { success: false, alreadySent: true };
+
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
         const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
-        if (prop.lineNotifiedAt) return { success: false, alreadySent: true };
-        await sendLineBroadcast(buildPropertyFlexMessage(prop));
+        const excludedIds = await db.getPropertyExcludedUserIds(input.propertyId);
+        const hasExclusions = excludedIds.length > 0;
+
+        // LINE（閲覧制限なしの場合のみ）
+        if (!hasExclusions) {
+          const { sendLineBroadcast, buildPropertyFlexMessage } = await import("./_core/line");
+          await sendLineBroadcast(buildPropertyFlexMessage(prop)).catch(() => {});
+        }
         await db.markPropertyLineNotified(input.propertyId);
+
+        // メール（閲覧制限者を除外）
         const { sendMail } = await import("./_core/mail");
-        const emails = await db.getActiveUserEmailsForNotify("newProperty");
+        const emails = await db.getActiveUserEmailsForNotify("newProperty", excludedIds);
         const mailHtml = `
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
             <h2 style="color:#1e3a5f;">🏠 新着物件のお知らせ</h2>
@@ -550,6 +561,32 @@ JSONのみ返してください。` },
         for (const email of emails) {
           sendMail(email, `【PropFlow】新着物件: ${prop.name}`, mailHtml).catch(() => {});
         }
+
+        // プッシュ通知（閲覧制限者・物件オーナーを除外）
+        const { sendPushToUsers } = await import("./_core/webpush");
+        const activeUsers = await db.listActiveUsers();
+        const excludedSet = new Set(excludedIds);
+        const pushTargetIds = activeUsers
+          .filter(u => u.id !== prop.userId && !excludedSet.has(u.id))
+          .map(u => u.id);
+        if (pushTargetIds.length > 0) {
+          sendPushToUsers(
+            pushTargetIds,
+            `🏠 新着物件: ${prop.name}`,
+            `${prop.address}｜${priceLine}`,
+            `/property/${prop.id}`
+          ).catch(() => {});
+        }
+
+        return { success: true, hasExclusions };
+      }),
+
+    setPublished: protectedProcedure
+      .input(z.object({ propertyId: z.number(), published: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.propertyId);
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) return { success: false };
+        await db.setPropertyPublished(input.propertyId, input.published ? 1 : 0);
         return { success: true };
       }),
 
@@ -900,7 +937,7 @@ JSONのみ返してください。` },
           ).catch(() => {});
           const { sendMail } = await import("./_core/mail");
           const siteUrl = process.env.SITE_URL || "https://propflow.jp";
-          for (const uid of interestedIds) {
+          for (const uid of notifiableIds) {
             const email = await db.getUserEmailIfNotify(uid, "announce");
             if (email) {
               sendMail(email, `【PropFlow】${prop.name} お知らせ`, `
