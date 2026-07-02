@@ -78,6 +78,42 @@ async function startServer() {
     }
   });
 
+  // PDF generation from HTML
+  app.post("/api/generate-pdf", async (req, res) => {
+    try {
+      const { getSessionCookie, verifySessionToken } = await import("./auth");
+      const { getUserById } = await import("../db");
+      const cookie = getSessionCookie(req);
+      if (!cookie) { res.status(401).end(); return; }
+      const session = await verifySessionToken(cookie);
+      if (!session) { res.status(401).end(); return; }
+      const user = await getUserById(session.userId);
+      if (!user) { res.status(401).end(); return; }
+
+      const { html } = req.body as { html?: string };
+      if (!html || typeof html !== "string") { res.status(400).json({ error: "html required" }); return; }
+
+      const { default: puppeteer } = await import("puppeteer");
+      const browser = await puppeteer.launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+      });
+      try {
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
+        const pdf = await page.pdf({ format: "A4", printBackground: true });
+        await browser.close();
+        res.setHeader("Content-Type", "application/pdf");
+        res.send(pdf);
+      } catch (e) {
+        await browser.close().catch(() => {});
+        throw e;
+      }
+    } catch (e) {
+      console.error("[generate-pdf] error:", e);
+      res.status(500).json({ error: "PDF generation failed" });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
