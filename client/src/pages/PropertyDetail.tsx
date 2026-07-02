@@ -77,7 +77,6 @@ async function printProperty(
   myLogo: string | null | undefined,
   myUser: { name: string | null; company: string | null; email: string; phone: string | null; fax: string | null; url: string | null; license: string | null } | null,
   photoDataUrls?: string[],
-  w?: Window | null,
   pages?: { summary: boolean; map: boolean; streetview: boolean; photos: boolean; route: boolean; attachments: boolean },
   attachmentNames?: string[]
 ) {
@@ -101,10 +100,6 @@ async function printProperty(
   const hdr = `<div class="hdr"><div>${logoHtml}</div><div class="hdr-r">出力日: ${new Date().toLocaleDateString("ja-JP")}</div></div>`;
 
   const pg = pages ?? { summary: true, map: true, streetview: true, photos: true, route: true, attachments: true };
-  if (!w) {
-    w = window.open("", "_blank");
-    if (!w) return;
-  }
 
   let routeData: { polyline: string; duration: string; distance: string; startLat: number; startLng: number; endLat: number; endLng: number; steps: { instruction: string; distance: string }[] } | null = null;
   const quoteMatch = p.transport?.match(/「([^」]+)」駅/);
@@ -196,7 +191,9 @@ table.ct th{background:#f0f5fa;color:#334155;font-weight:600;width:72px}
 .toolbar button:hover{background:#f0f5fa}
 .toolbar .title{color:#fff;font-size:14px;font-weight:600;flex:1}
 @media print{.toolbar{display:none}body{background:#fff}}
-</style></head><body>
+</style>
+<script>document.addEventListener('DOMContentLoaded',function(){if(window.self!==window.top){var t=document.querySelector('.toolbar');var s=t&&t.nextElementSibling;if(t)t.style.display='none';if(s&&s.style&&s.style.height==='52px')s.style.display='none';}});</script>
+</head><body>
 <div class="toolbar">
 <span class="title">紹介資料プレビュー</span>
 <button onclick="window.print()">🖨 印刷 / PDF保存</button>
@@ -270,10 +267,44 @@ ${footer}
 </div>` : ""}
 
 </body></html>`;
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  w.location.href = url;
   return html;
+}
+
+function IntroDocModal({ html, title, onClose }: { html: string; title: string; onClose: () => void }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "#525659" }}>
+      <div
+        className="flex items-center gap-3 px-4 shrink-0"
+        style={{ background: "#2b5c94", minHeight: 48, paddingTop: 10, paddingBottom: 10 }}
+      >
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1.5 bg-white rounded-md font-semibold"
+          style={{ color: "#2b5c94", fontSize: 13, padding: "6px 14px", border: "none", cursor: "pointer" }}
+        >
+          <X style={{ width: 14, height: 14, display: "inline" }} /> 閉じる
+        </button>
+        <span className="text-white truncate flex-1" style={{ fontSize: 13, fontWeight: 600 }}>
+          {title} - 紹介資料
+        </span>
+        <button
+          onClick={() => iframeRef.current?.contentWindow?.print()}
+          className="flex items-center gap-1 bg-white rounded-md font-semibold shrink-0"
+          style={{ color: "#2b5c94", fontSize: 13, padding: "6px 14px", border: "none", cursor: "pointer" }}
+        >
+          🖨 印刷/PDF
+        </button>
+      </div>
+      <iframe
+        ref={iframeRef}
+        srcDoc={html}
+        style={{ flex: 1, border: "none", width: "100%", height: "100%" }}
+        title="紹介資料"
+        sandbox="allow-scripts allow-same-origin allow-modals"
+      />
+    </div>
+  );
 }
 
 function downloadBase64File(name: string, base64: string) {
@@ -875,6 +906,8 @@ export default function PropertyDetail() {
   const [printAttachments, setPrintAttachments] = useState<Set<number>>(new Set());
   const [printDocFiles, setPrintDocFiles] = useState<{ id: number; name: string }[]>([]);
   const [printGenerating, setPrintGenerating] = useState(false);
+  const [introDocHtml, setIntroDocHtml] = useState<string | null>(null);
+  const [introDocTitle, setIntroDocTitle] = useState("");
 
   const updateMutation = trpc.property.update.useMutation();
   const saveDocMutation = trpc.document.save.useMutation({
@@ -1278,11 +1311,6 @@ export default function PropertyDetail() {
                 disabled={printGenerating || !Object.values(printPages).some(v => v)}
                 onClick={() => {
                   setPrintGenerating(true);
-                  const w = window.open("about:blank", "_blank");
-                  if (!w) { setPrintGenerating(false); return; }
-                  w.document.open();
-                  w.document.write(`<!DOCTYPE html><html><head><title>作成中</title><meta charset="UTF-8"></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666;"><p>紹介資料を作成中...</p></body></html>`);
-                  w.document.close();
                   (async () => {
                     try {
                       let photoUrls: string[] = [];
@@ -1302,8 +1330,10 @@ export default function PropertyDetail() {
                       const selectedAttachNames = printPages.attachments
                         ? printDocFiles.filter(f => printAttachments.has(f.id)).map(f => f.name)
                         : [];
-                      const html = await printProperty(property, createdDate, user?.logoBase64, user ? { name: user.name, company: user.company, email: user.email, phone: user.phone, fax: user.fax, url: user.url, license: user.license } : null, photoUrls, w, printPages, selectedAttachNames);
+                      const html = await printProperty(property, createdDate, user?.logoBase64, user ? { name: user.name, company: user.company, email: user.email, phone: user.phone, fax: user.fax, url: user.url, license: user.license } : null, photoUrls, printPages, selectedAttachNames);
                       if (html) {
+                        setIntroDocTitle(property.name);
+                        setIntroDocHtml(html);
                         saveDocMutation.mutate({
                           propertyId: property.id,
                           title: `${property.name} - ${new Date().toLocaleDateString("ja-JP")}`,
@@ -1313,7 +1343,7 @@ export default function PropertyDetail() {
                       }
                     } catch (e) {
                       console.error("紹介資料エラー:", e);
-                      w.document.body.innerHTML = `<p style="color:red;">紹介資料の作成に失敗しました</p>`;
+                      alert("紹介資料の作成に失敗しました");
                     }
                     setPrintGenerating(false);
                     setShowPrintDialog(false);
@@ -1326,6 +1356,15 @@ export default function PropertyDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 紹介資料モーダル */}
+      {introDocHtml && (
+        <IntroDocModal
+          html={introDocHtml}
+          title={introDocTitle}
+          onClose={() => setIntroDocHtml(null)}
+        />
       )}
 
       {/* 新着通知確認ダイアログ */}
