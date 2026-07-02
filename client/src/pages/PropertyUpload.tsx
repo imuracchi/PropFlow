@@ -265,8 +265,14 @@ export default function PropertyUpload() {
           setSubmitProgress("メモを保存中...");
           await saveMemoMutation.mutateAsync({ propertyId: result.id, content: memo.trim() });
         }
-        for (const u of excludedUsers) {
-          await addExclusionMutation.mutateAsync({ propertyId: result.id, userId: u.id }).catch(() => {});
+        if (excludedUsers.length > 0) {
+          setSubmitProgress("閲覧制限を設定中...");
+          for (const u of excludedUsers) {
+            const res = await addExclusionMutation.mutateAsync({ propertyId: result.id, userId: u.id });
+            if (!res.success) {
+              console.warn(`閲覧制限の設定に失敗: propertyId=${result.id} userId=${u.id}`);
+            }
+          }
         }
         setSubmitting(false);
         setLocation(`/property/${result.id}`);

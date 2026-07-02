@@ -340,7 +340,14 @@ JSONのみ返してください。` },
       .input(z.object({ propertyId: z.number(), userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.propertyId);
-        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) return { success: false };
+        if (!prop) {
+          console.warn(`[addExclusion] property not found: ${input.propertyId}`);
+          return { success: false };
+        }
+        if (prop.userId !== ctx.user.id && ctx.user.role !== "admin") {
+          console.warn(`[addExclusion] ownership mismatch: prop.userId=${prop.userId} ctx.user.id=${ctx.user.id}`);
+          return { success: false };
+        }
         await db.addPropertyExclusion(input.propertyId, input.userId);
         return { success: true };
       }),
