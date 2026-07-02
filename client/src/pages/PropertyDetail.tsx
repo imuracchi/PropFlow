@@ -270,9 +270,9 @@ ${footer}
 </div>` : ""}
 
 </body></html>`;
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  w.location.href = url;
   return html;
 }
 
@@ -1278,9 +1278,11 @@ export default function PropertyDetail() {
                 disabled={printGenerating || !Object.values(printPages).some(v => v)}
                 onClick={() => {
                   setPrintGenerating(true);
-                  const w = window.open("", "_blank");
+                  const w = window.open("about:blank", "_blank");
                   if (!w) { setPrintGenerating(false); return; }
-                  w.document.write(`<html><head><title>作成中</title></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666;"><p>紹介資料を作成中...</p></body></html>`);
+                  w.document.open();
+                  w.document.write(`<!DOCTYPE html><html><head><title>作成中</title><meta charset="UTF-8"></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666;"><p>紹介資料を作成中...</p></body></html>`);
+                  w.document.close();
                   (async () => {
                     try {
                       let photoUrls: string[] = [];
