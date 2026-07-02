@@ -152,7 +152,7 @@ ${footer}
 </div>`;
 
   const html = `<!DOCTYPE html>
-<html lang="ja"><head><meta charset="UTF-8">
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${p.name}物件概要</title>
 <style>
 @page{size:A4 portrait;margin:12mm 15mm}
@@ -185,7 +185,7 @@ table.ct th{background:#f0f5fa;color:#334155;font-weight:600;width:72px}
 .mi{text-align:center;margin:20px 0}
 .mi img{max-width:100%;border:1px solid #c8d6e5;border-radius:4px}
 .tb{background:#f0f5fa;border:1px solid #c8d6e5;padding:10px 14px;margin-bottom:14px;font-size:12px}
-@media screen{body{background:#e2e8f0}.page{width:210mm;min-height:297mm;background:#fff;margin:20px auto;padding:12mm 15mm;box-shadow:0 2px 12px rgba(0,0,0,.12)}}
+@media screen{body{background:#e2e8f0}.page{width:100%;max-width:210mm;min-height:297mm;background:#fff;margin:20px auto;padding:12mm 15mm;box-shadow:0 2px 12px rgba(0,0,0,.12)}}
 .toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:#2b5c94;padding:10px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .toolbar button{background:#fff;color:#2b5c94;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
 .toolbar button:hover{background:#f0f5fa}
