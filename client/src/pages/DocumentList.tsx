@@ -168,11 +168,11 @@ export default function DocumentList() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">資料名</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">物件名</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">作成日</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground text-red-500">削除日</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground">操作</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-muted-foreground">資料名</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">物件名</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">作成日</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-red-500 hidden md:table-cell">削除日</th>
+                <th className="text-center px-3 py-3 text-xs font-medium text-muted-foreground">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -183,51 +183,54 @@ export default function DocumentList() {
                 return (
                   <React.Fragment key={doc.id}>
                   <tr className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                    <td className="px-3 py-3">
+                      <div className="flex items-start gap-1.5">
                         {doc.title.includes("シミュレーション") ? (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700 shrink-0">試算</span>
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700 shrink-0 mt-0.5">試算</span>
                         ) : (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 shrink-0">資料</span>
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 shrink-0 mt-0.5">資料</span>
                         )}
-                        <p className="font-medium text-foreground text-sm">{doc.title}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground text-sm leading-snug">{doc.title}</p>
+                          <p className="md:hidden text-xs text-muted-foreground mt-0.5 truncate">{doc.propertyName ?? `物件#${doc.propertyId}`}</p>
+                          <p className="md:hidden text-xs mt-0.5">
+                            <span className={isExpiringSoon ? "text-red-500 font-medium" : "text-muted-foreground"}>
+                              削除: {deleteDate.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}
+                              {isExpiringSoon && " ⚠"}
+                            </span>
+                          </p>
+                        </div>
                       </div>
-                      <p className="md:hidden text-xs text-muted-foreground mt-0.5">{doc.propertyName ?? `物件#${doc.propertyId}`}</p>
-                      <p className="md:hidden text-xs mt-0.5">
-                        <span className={isExpiringSoon ? "text-red-500 font-medium" : "text-muted-foreground"}>
-                          削除: {deleteDate.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}
-                        </span>
-                      </p>
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
+                    <td className="px-3 py-3 text-xs text-muted-foreground hidden md:table-cell">
                       <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{doc.propertyName ?? `#${doc.propertyId}`}</span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
+                    <td className="px-3 py-3 text-xs text-muted-foreground hidden md:table-cell">
                       {new Date(doc.createdAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                     </td>
-                    <td className="px-4 py-3 text-xs hidden md:table-cell">
+                    <td className="px-3 py-3 text-xs hidden md:table-cell">
                       <span className={isExpiringSoon ? "text-red-500 font-semibold" : "text-muted-foreground"}>
                         {deleteDate.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}
                         {isExpiringSoon && " ⚠"}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Button size="sm" className="gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground h-7 px-2.5"
+                    <td className="px-2 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="sm" className="gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-2.5"
                           onClick={() => handleView(doc.id, doc.title)}
                           disabled={loadingDocId === doc.id}
                         >
                           {loadingDocId === doc.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
-                          表示
+                          <span className="hidden sm:inline">表示</span>
                         </Button>
                         {attachIds.length > 0 && (
-                          <Button variant="outline" size="sm" className="gap-1 text-xs h-7 px-2.5"
+                          <Button variant="outline" size="sm" className="gap-1 text-xs h-8 px-2"
                             onClick={() => setExpandedId(expandedId === doc.id ? null : doc.id)}
-                          ><FileText className="w-3 h-3" />{attachIds.length}件</Button>
+                          ><FileText className="w-3 h-3" /><span className="hidden sm:inline">{attachIds.length}件</span><span className="sm:hidden">{attachIds.length}</span></Button>
                         )}
-                        <Button variant="outline" size="sm" className="gap-1 text-xs text-red-600 border-red-200 hover:bg-red-50 h-7 px-2"
+                        <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 h-8 w-8 p-0"
                           onClick={() => { if (confirm("この資料を削除しますか？")) deleteMutation.mutate({ id: doc.id }); }}
-                        ><Trash2 className="w-3 h-3" /></Button>
+                        ><Trash2 className="w-3.5 h-3.5" /></Button>
                       </div>
                     </td>
                   </tr>
