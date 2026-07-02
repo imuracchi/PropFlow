@@ -191,3 +191,10 @@ export const favorites = mysqlTable("favorites", {
   propertyId: int("propertyId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export const propertyExclusions = mysqlTable("property_exclusions", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull(),
+  userId: int("userId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});

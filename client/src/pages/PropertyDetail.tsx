@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft, Heart, Share2, Pencil, MessageCircle, Bell, Camera, Calculator,
   HelpCircle, MapPin, Map, Building2,
-  ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, Eye, FileText, Upload, Download, StickyNote, UserCircle
+  ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, Eye, FileText, Upload, Download, StickyNote, UserCircle, UserX
 } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -887,6 +887,20 @@ export default function PropertyDetail() {
   });
   const utils = trpc.useUtils();
 
+  const [showExclusions, setShowExclusions] = useState(false);
+  const [excludePicker, setExcludePicker] = useState(false);
+  const { data: exclusions, refetch: refetchExclusions } = trpc.property.getExclusions.useQuery(
+    { propertyId },
+    { enabled: !!(user && property) }
+  );
+  const { data: allUsers } = trpc.user.list.useQuery(undefined, { enabled: showExclusions });
+  const addExclusionMutation = trpc.property.addExclusion.useMutation({
+    onSuccess: () => refetchExclusions(),
+  });
+  const removeExclusionMutation = trpc.property.removeExclusion.useMutation({
+    onSuccess: () => refetchExclusions(),
+  });
+
   const isOwner = user && property && (user.id === property.userId || user.role === "admin");
   const currentFaqs = faqs ?? (property?.faqs as FaqItem[] | null) ?? [];
 
@@ -1304,6 +1318,81 @@ export default function PropertyDetail() {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 閲覧制限パネル */}
+      {isOwner && (
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <button
+            className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-muted/30 transition-colors"
+            onClick={() => setShowExclusions(v => !v)}
+          >
+            <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <UserX className="w-4 h-4 text-muted-foreground" />
+              閲覧制限
+              {(exclusions?.length ?? 0) > 0 && (
+                <span className="text-xs font-normal text-muted-foreground">（{exclusions!.length}名に非表示）</span>
+              )}
+            </span>
+            {showExclusions ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </button>
+          {showExclusions && (
+            <div className="border-t border-border px-5 py-4 space-y-3">
+              <p className="text-xs text-muted-foreground">設定したユーザーにはこの物件が一覧・詳細ともに表示されません。</p>
+              {(exclusions ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground/60">制限中のユーザーはいません</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {exclusions!.map(ex => (
+                    <div key={ex.id} className="flex items-center justify-between py-1.5 px-3 bg-muted/40 rounded-lg">
+                      <span className="text-sm text-foreground">
+                        {ex.userName ?? "—"}
+                        {ex.userCompany && <span className="text-xs text-muted-foreground ml-1.5">({ex.userCompany})</span>}
+                      </span>
+                      <button
+                        className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                        onClick={() => removeExclusionMutation.mutate({ propertyId, userId: ex.userId })}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="relative">
+                <Button
+                  variant="outline" size="sm" className="gap-1.5 text-xs"
+                  onClick={() => setExcludePicker(v => !v)}
+                >
+                  <Plus className="w-3.5 h-3.5" />ユーザーを追加
+                </Button>
+                {excludePicker && (
+                  <div className="absolute left-0 top-9 z-20 bg-card border border-border rounded-lg shadow-lg min-w-56 max-h-60 overflow-y-auto">
+                    {(allUsers ?? [])
+                      .filter(u => !(exclusions ?? []).some(ex => ex.userId === u.id))
+                      .map(u => (
+                        <button
+                          key={u.id}
+                          className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors"
+                          onClick={() => {
+                            addExclusionMutation.mutate({ propertyId, userId: u.id });
+                            setExcludePicker(false);
+                          }}
+                        >
+                          {u.name ?? "—"}
+                          {u.company && <span className="text-xs text-muted-foreground ml-1.5">({u.company})</span>}
+                        </button>
+                      ))
+                    }
+                    {(allUsers ?? []).filter(u => !(exclusions ?? []).some(ex => ex.userId === u.id)).length === 0 && (
+                      <p className="px-4 py-3 text-sm text-muted-foreground">追加できるユーザーがいません</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

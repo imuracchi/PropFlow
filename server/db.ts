@@ -1,6 +1,6 @@
 import { eq, desc, count, and, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus } from "../drizzle/schema";
+import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -177,7 +177,7 @@ export async function getNotifySettings(userId: number) {
 
 // ---- Properties ----
 
-export async function listProperties() {
+export async function listProperties(viewerUserId?: number) {
   const db = await getDb();
   if (!db) return [];
   const favCountSub = db
@@ -185,6 +185,13 @@ export async function listProperties() {
     .from(favorites)
     .groupBy(favorites.propertyId)
     .as("fav_count");
+  const baseWhere = eq(properties.deleted, 0);
+  const visibilityFilter = viewerUserId
+    ? sql`(${properties.userId} = ${viewerUserId} OR NOT EXISTS (
+        SELECT 1 FROM property_exclusions pe
+        WHERE pe.propertyId = ${properties.id} AND pe.userId = ${viewerUserId}
+      ))`
+    : undefined;
   return db
     .select({
       id: properties.id,
@@ -218,8 +225,46 @@ export async function listProperties() {
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
     .leftJoin(favCountSub, eq(properties.id, favCountSub.propertyId))
-    .where(eq(properties.deleted, 0))
+    .where(visibilityFilter ? and(baseWhere, visibilityFilter) : baseWhere)
     .orderBy(desc(properties.createdAt));
+}
+
+export async function getPropertyExclusions(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({ id: propertyExclusions.id, userId: propertyExclusions.userId, userName: users.name, userCompany: users.company })
+    .from(propertyExclusions)
+    .leftJoin(users, eq(propertyExclusions.userId, users.id))
+    .where(eq(propertyExclusions.propertyId, propertyId));
+}
+
+export async function addPropertyExclusion(propertyId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select({ id: propertyExclusions.id })
+    .from(propertyExclusions)
+    .where(and(eq(propertyExclusions.propertyId, propertyId), eq(propertyExclusions.userId, userId)))
+    .limit(1);
+  if (existing.length === 0) {
+    await db.insert(propertyExclusions).values({ propertyId, userId });
+  }
+}
+
+export async function removePropertyExclusion(propertyId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(propertyExclusions)
+    .where(and(eq(propertyExclusions.propertyId, propertyId), eq(propertyExclusions.userId, userId)));
+}
+
+export async function getPropertyExcludedUserIds(propertyId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ userId: propertyExclusions.userId })
+    .from(propertyExclusions)
+    .where(eq(propertyExclusions.propertyId, propertyId));
+  return rows.map(r => r.userId);
 }
 
 export async function getPropertyById(id: number) {

@@ -312,14 +312,46 @@ JSONのみ返してください。` },
   }),
 
   property: router({
-    list: protectedProcedure.query(async () => {
-      return db.listProperties();
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return db.listProperties(ctx.user.id);
     }),
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return db.getPropertyById(input.id);
+      .query(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.id);
+        if (!prop) return null;
+        if (prop.userId !== ctx.user.id && ctx.user.role !== "admin") {
+          const exclusions = await db.getPropertyExclusions(input.id);
+          if (exclusions.some(e => e.userId === ctx.user.id)) return null;
+        }
+        return prop;
+      }),
+
+    getExclusions: protectedProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.propertyId);
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) return [];
+        return db.getPropertyExclusions(input.propertyId);
+      }),
+
+    addExclusion: protectedProcedure
+      .input(z.object({ propertyId: z.number(), userId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.propertyId);
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) return { success: false };
+        await db.addPropertyExclusion(input.propertyId, input.userId);
+        return { success: true };
+      }),
+
+    removeExclusion: protectedProcedure
+      .input(z.object({ propertyId: z.number(), userId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.propertyId);
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) return { success: false };
+        await db.removePropertyExclusion(input.propertyId, input.userId);
+        return { success: true };
       }),
 
     create: protectedProcedure
@@ -590,6 +622,15 @@ JSONのみ返してください。` },
       }),
   }),
 
+  user: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const all = await db.listActiveUsers();
+      return all
+        .filter(u => u.id !== ctx.user.id && u.role !== "admin")
+        .map(u => ({ id: u.id, name: u.name, company: u.company }));
+    }),
+  }),
+
   memo: router({
     get: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
@@ -847,10 +888,12 @@ JSONのみ返してください。` },
         });
         db.logActivity(ctx.user.id, "announce", `お知らせ投稿 (物件ID:${input.propertyId})`).catch(() => {});
         const interestedIds = await db.getInterestedUserIdsForProperty(input.propertyId, ctx.user.id);
-        if (interestedIds.length > 0) {
+        const excludedIds = new Set(await db.getPropertyExcludedUserIds(input.propertyId));
+        const notifiableIds = interestedIds.filter(id => !excludedIds.has(id));
+        if (notifiableIds.length > 0) {
           const { sendPushToUsers } = await import("./_core/webpush");
           sendPushToUsers(
-            interestedIds,
+            notifiableIds,
             `📢 ${prop.name}`,
             `お知らせ: ${input.content.slice(0, 100)}`,
             `/chat/${input.propertyId}`
