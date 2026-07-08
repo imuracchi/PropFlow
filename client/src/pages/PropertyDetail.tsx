@@ -976,6 +976,8 @@ export default function PropertyDetail() {
   const [printGenerating, setPrintGenerating] = useState(false);
   const [introDocPdf, setIntroDocPdf] = useState<Blob | null>(null);
   const [introDocTitle, setIntroDocTitle] = useState("");
+  const [isEditingComment, setIsEditingComment] = useState(false);
+  const [commentDraft, setCommentDraft] = useState("");
 
   const updateMutation = trpc.property.update.useMutation();
   const saveDocMutation = trpc.document.save.useMutation({
@@ -1109,6 +1111,38 @@ export default function PropertyDetail() {
         access: f.access || undefined,
       });
       if (result.comment) setEditForm(prev => ({ ...prev, comment: result.comment! }));
+    } catch { /* ignore */ }
+    setGeneratingComment(false);
+  };
+
+  const startEditingComment = () => {
+    setCommentDraft(property?.comment || "");
+    setIsEditingComment(true);
+  };
+  const handleSaveComment = async () => {
+    if (!property) return;
+    try {
+      await updateMutation.mutateAsync({ id: propertyId, comment: commentDraft || null });
+      utils.property.getById.invalidate({ id: propertyId });
+      setIsEditingComment(false);
+    } catch { /* ignore */ }
+  };
+  const handleGenerateCommentDirect = async () => {
+    if (!property) return;
+    setGeneratingComment(true);
+    try {
+      const result = await commentMutation.mutateAsync({
+        name: property.name,
+        address: property.address,
+        type: property.type,
+        price: property.price || 0,
+        estimatedYield: null,
+        landArea: property.landArea || 0,
+        buildingArea: property.buildingArea || null,
+        zoning: property.zoning || undefined,
+        access: property.access || undefined,
+      });
+      if (result.comment) setCommentDraft(result.comment);
     } catch { /* ignore */ }
     setGeneratingComment(false);
   };
@@ -1689,17 +1723,49 @@ export default function PropertyDetail() {
       {/* コンテンツ */}
       {(
         <>
-          {property.comment && (
+          {(property.comment || isOwner) && (
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <div className="px-5 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
                 <p className="text-sm font-semibold text-foreground">紹介コメント</p>
-                {property.showCompany !== 0 && property.userCompany && (
-                  <p className="text-xs text-muted-foreground">{property.userCompany}</p>
-                )}
+                <div className="flex items-center gap-2">
+                  {property.showCompany !== 0 && property.userCompany && !isEditingComment && (
+                    <p className="text-xs text-muted-foreground">{property.userCompany}</p>
+                  )}
+                  {isOwner && (
+                    isEditingComment ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => setIsEditingComment(false)}>
+                          <X className="w-3.5 h-3.5" />キャンセル
+                        </Button>
+                        <Button size="sm" className="gap-1 text-xs h-7 bg-primary text-primary-foreground" onClick={handleSaveComment} disabled={updateMutation.isPending}>
+                          {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}保存
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={startEditingComment}>
+                        <Pencil className="w-3.5 h-3.5" />編集
+                      </Button>
+                    )
+                  )}
+                </div>
               </div>
               <div className="p-5">
-                <p className="text-sm text-foreground leading-relaxed">{property.comment}</p>
-                <p className="text-xs text-muted-foreground mt-3">※ このコメントは登録者が記入した内容です。</p>
+                {isEditingComment ? (
+                  <>
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs mb-3" disabled={generatingComment} onClick={handleGenerateCommentDirect}>
+                      {generatingComment ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />生成中...</> : <><Sparkles className="w-3.5 h-3.5" />AIが紹介コメントを作成</>}
+                    </Button>
+                    <Textarea rows={4} placeholder="物件の特徴・アピールポイントなどを記入してください" value={commentDraft} onChange={e => setCommentDraft(e.target.value)} />
+                  </>
+                ) : (
+                  <>
+                    {property.comment
+                      ? <p className="text-sm text-foreground leading-relaxed">{property.comment}</p>
+                      : <p className="text-sm text-muted-foreground">まだ紹介コメントがありません。「編集」から追加できます。</p>
+                    }
+                    {property.comment && <p className="text-xs text-muted-foreground mt-3">※ このコメントは登録者が記入した内容です。</p>}
+                  </>
+                )}
               </div>
             </div>
           )}
