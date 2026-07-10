@@ -96,6 +96,7 @@ export async function listActiveUsers() {
       phone: users.phone, license: users.license, role: users.role, plan: users.plan,
       status: users.status, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn,
       loginMethod: users.loginMethod, termsAgreedAt: users.termsAgreedAt,
+      hasBusinessCard: sql<number>`CASE WHEN ${users.businessCardBase64} IS NOT NULL THEN 1 ELSE 0 END`,
     })
     .from(users)
     .where(sql`${users.status} != 'pending'`)

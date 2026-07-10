@@ -107,17 +107,8 @@ export default function Admin() {
       </div>
 
       {/* タブ */}
-      <Tabs defaultValue="pending">
+      <Tabs defaultValue="users">
         <TabsList className="bg-muted">
-          <TabsTrigger value="pending" className="gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
-            承認待ち
-            {pendingCount > 0 && (
-              <span className="bg-amber-500 text-white text-xs h-5 px-1.5 rounded-full ml-0.5 leading-5 inline-flex items-center">
-                {pendingCount}
-              </span>
-            )}
-          </TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5">
             <Users className="w-3.5 h-3.5" />
             業者管理
@@ -139,67 +130,6 @@ export default function Admin() {
             操作ログ
           </TabsTrigger>
         </TabsList>
-
-        {/* 承認待ちタブ */}
-        <TabsContent value="pending" className="mt-4 space-y-4">
-          {pendingLoading ? (
-            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-          ) : pendingCount === 0 ? (
-            <div className="bg-card border border-border rounded-lg py-12 text-center">
-              <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-500" />
-              <p className="text-muted-foreground">承認待ちのユーザーはいません</p>
-            </div>
-          ) : (
-            pendingUsers!.map(user => (
-              <div key={user.id} className="bg-card border border-border rounded-lg p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <Avatar className="w-12 h-12 shrink-0">
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                      {(user.name ?? "?").charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-foreground">{user.name}</span>
-                      {user.company && <span className="text-sm text-muted-foreground">{user.company}</span>}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 text-xs text-muted-foreground">
-                      <span>{user.email}</span>
-                      {user.phone && <span>{user.phone}</span>}
-                      {user.license && (
-                        <span className="flex items-center gap-1">
-                          <FileText className="w-3 h-3" />
-                          {user.license}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground/60">
-                      申請日時: {new Date(user.createdAt).toLocaleString("ja-JP")}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button
-                      variant="outline" size="sm"
-                      className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={() => rejectMutation.mutate({ id: user.id })}
-                      disabled={rejectMutation.isPending}
-                    >
-                      <XCircle className="w-4 h-4" />却下
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="gap-1 bg-green-600 hover:bg-green-700 text-white shadow-sm"
-                      onClick={() => approveMutation.mutate({ id: user.id })}
-                      disabled={approveMutation.isPending}
-                    >
-                      <CheckCircle2 className="w-4 h-4" />承認
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </TabsContent>
 
         {/* 業者管理タブ */}
         <TabsContent value="users" className="mt-4 space-y-4">
@@ -226,7 +156,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["業者名", "メール", "登録方法", "プラン", "ステータス", "最終ログイン", "規約同意", "操作"].map(h => (
+                    {["業者名", "メール", "登録方法", "プラン", "ステータス", "登録日", "名刺", "規約同意", "操作"].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -279,8 +209,15 @@ export default function Admin() {
                             {user.status === "active" ? "有効" : "停止中"}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs">
-                          {new Date(user.lastSignedIn).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                          {new Date(user.createdAt).toLocaleDateString("ja-JP", { year: "2-digit", month: "2-digit", day: "2-digit" })}
+                        </td>
+                        <td className="px-4 py-3">
+                          {(user as any).hasBusinessCard ? (
+                            <span className="text-xs text-green-600 font-medium">あり</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground/50">なし</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {user.termsAgreedAt ? (
@@ -638,10 +575,20 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
               )}
             </div>
           ))}
-          {user.logoBase64 && (
-            <div className="pt-3 border-t border-border">
-              <p className="text-xs text-muted-foreground mb-2">会社ロゴ</p>
-              <img src={user.logoBase64} alt="ロゴ" className="h-12 object-contain" />
+          {(user.logoBase64 || user.businessCardBase64) && (
+            <div className="pt-3 border-t border-border space-y-4">
+              {user.logoBase64 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">会社ロゴ</p>
+                  <img src={user.logoBase64} alt="ロゴ" className="h-12 object-contain" />
+                </div>
+              )}
+              {user.businessCardBase64 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">名刺</p>
+                  <img src={user.businessCardBase64} alt="名刺" className="max-w-full max-h-48 object-contain rounded border border-border" />
+                </div>
+              )}
             </div>
           )}
           <div className="pt-3 border-t border-border text-xs text-muted-foreground space-y-1">
