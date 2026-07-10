@@ -157,58 +157,63 @@ export default function Register() {
           <div className="p-6 space-y-4">
 
             {/* 名刺読み取りセクション */}
-            <div className="bg-primary/5 border border-primary/30 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Camera className="w-4 h-4 text-primary" />
-                名刺から自動入力（推奨）
-              </p>
-              {cardBase64 ? (
-                <div className="space-y-2">
-                  <div className="relative inline-block">
-                    <img
-                      src={`data:${cardMime};base64,${cardBase64}`}
-                      alt="名刺"
-                      className="max-h-28 rounded border border-border object-contain"
-                    />
-                    <button
-                      className="absolute -top-2 -right-2 bg-background border border-border rounded-full p-0.5 text-muted-foreground hover:text-foreground"
-                      onClick={() => { setCardBase64(null); setCardError(""); }}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+            <div className="border-2 border-primary/40 rounded-lg overflow-hidden">
+              <div className="bg-primary px-4 py-2.5 flex items-center gap-2">
+                <Camera className="w-4 h-4 text-white shrink-0" />
+                <p className="text-sm font-semibold text-white">名刺を登録して信頼度アップ</p>
+              </div>
+              <div className="bg-primary/5 px-4 py-3 space-y-2.5">
+                <ul className="text-xs text-foreground space-y-1">
+                  <li className="flex items-start gap-1.5"><span className="text-primary font-bold mt-0.5">✓</span>氏名・会社名・電話・FAX・URLを<span className="font-semibold">自動入力</span></li>
+                  <li className="flex items-start gap-1.5"><span className="text-primary font-bold mt-0.5">✓</span>管理者が本人確認に使用し、<span className="font-semibold">承認がスムーズ</span>になります</li>
+                  <li className="flex items-start gap-1.5"><span className="text-primary font-bold mt-0.5">✓</span>他の業者から見た際の<span className="font-semibold">信頼度・安心感</span>が高まります</li>
+                </ul>
+                {cardBase64 ? (
+                  <div className="space-y-2">
+                    <div className="relative inline-block">
+                      <img
+                        src={`data:${cardMime};base64,${cardBase64}`}
+                        alt="名刺"
+                        className="max-h-28 rounded border border-border object-contain"
+                      />
+                      <button
+                        className="absolute -top-2 -right-2 bg-background border border-border rounded-full p-0.5 text-muted-foreground hover:text-foreground"
+                        onClick={() => { setCardBase64(null); setCardError(""); }}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {cardReading && (
+                      <p className="text-xs text-primary flex items-center gap-1.5">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />読み取り中...
+                      </p>
+                    )}
+                    {!cardReading && !cardError && (
+                      <p className="text-xs text-green-600">✓ 読み取り完了。内容を確認してください。</p>
+                    )}
+                    {cardError && <p className="text-xs text-amber-600">{cardError}</p>}
                   </div>
-                  {cardReading && (
-                    <p className="text-xs text-primary flex items-center gap-1.5">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />読み取り中...
-                    </p>
-                  )}
-                  {!cardReading && !cardError && (
-                    <p className="text-xs text-green-600">✓ 読み取り完了。内容を確認してください。</p>
-                  )}
-                  {cardError && <p className="text-xs text-amber-600">{cardError}</p>}
-                </div>
-              ) : (
-                <div>
-                  <input
-                    ref={cardInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) handleCardSelect(f); }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => cardInputRef.current?.click()}
-                  >
-                    <Camera className="w-4 h-4" />名刺を撮影 / 選択
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-1.5">名刺を撮影すると氏名・会社名・電話・FAX・URLを自動入力します。管理者にも共有されます。</p>
-                </div>
-              )}
+                ) : (
+                  <div>
+                    <input
+                      ref={cardInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleCardSelect(f); }}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="gap-2 bg-primary hover:bg-primary/90 text-white"
+                      onClick={() => cardInputRef.current?.click()}
+                    >
+                      <Camera className="w-4 h-4" />名刺を撮影 / 選択する
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
