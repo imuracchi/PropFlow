@@ -157,10 +157,10 @@ export default function Register() {
           <div className="p-6 space-y-4">
 
             {/* 名刺読み取りセクション */}
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-medium text-foreground flex items-center gap-2">
+            <div className="bg-primary/5 border border-primary/30 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Camera className="w-4 h-4 text-primary" />
-                名刺から自動入力（任意）
+                名刺から自動入力（推奨）
               </p>
               {cardBase64 ? (
                 <div className="space-y-2">
@@ -206,7 +206,7 @@ export default function Register() {
                   >
                     <Camera className="w-4 h-4" />名刺を撮影 / 選択
                   </Button>
-                  <p className="text-xs text-muted-foreground mt-1.5">氏名・会社名・電話・FAX・URLを自動入力します</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">名刺を撮影すると氏名・会社名・電話・FAX・URLを自動入力します。管理者にも共有されます。</p>
                 </div>
               )}
             </div>
