@@ -156,7 +156,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["業者名", "メール", "登録方法", "プラン", "ステータス", "登録日", "名刺", "規約同意", "操作"].map(h => (
+                    {["業者名", "メール", "登録方法", "プラン", "ステータス", "登録日", "最終ログイン", "名刺", "規約同意", "操作"].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -211,6 +211,9 @@ export default function Admin() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                           {new Date(user.createdAt).toLocaleDateString("ja-JP", { year: "2-digit", month: "2-digit", day: "2-digit" })}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                          {new Date(user.lastSignedIn).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                         </td>
                         <td className="px-4 py-3">
                           {(user as any).hasBusinessCard ? (
