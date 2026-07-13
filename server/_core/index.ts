@@ -34,6 +34,11 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Run DB migrations for columns added without migration files
+  const { runStartupMigrations } = await import("../db");
+  await runStartupMigrations().catch(e => console.warn("[migration] Failed:", e));
+
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 

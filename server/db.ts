@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _migrationsDone = false;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -14,6 +15,39 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+export async function runStartupMigrations() {
+  const db = await getDb();
+  if (!db || _migrationsDone) return;
+  _migrationsDone = true;
+
+  const stmts = [
+    // properties: columns added without migrations
+    "ALTER TABLE `properties` ADD COLUMN `published` int NOT NULL DEFAULT 1",
+    "ALTER TABLE `properties` ADD COLUMN `lineNotifiedAt` timestamp NULL",
+    // landArea was made nullable without a migration
+    "ALTER TABLE `properties` MODIFY COLUMN `landArea` double NULL",
+    // users: columns added without migrations
+    "ALTER TABLE `users` ADD COLUMN `showCompany` int NOT NULL DEFAULT 1",
+    "ALTER TABLE `users` ADD COLUMN `showPhone` int NOT NULL DEFAULT 1",
+    "ALTER TABLE `users` ADD COLUMN `showFax` int NOT NULL DEFAULT 1",
+    "ALTER TABLE `users` ADD COLUMN `showUrl` int NOT NULL DEFAULT 1",
+    "ALTER TABLE `users` ADD COLUMN `businessCardBase64` longtext NULL",
+    // property_files: column added without migration
+    "ALTER TABLE `property_files` ADD COLUMN `visible` int NOT NULL DEFAULT 1",
+  ];
+
+  for (const stmt of stmts) {
+    try {
+      await db.execute(sql.raw(stmt));
+    } catch (e: any) {
+      if (e.errno !== 1060 && e.errno !== 1061) { // 1060=Duplicate column, 1061=Duplicate key
+        console.warn("[migration] Warning:", stmt, "->", e.message);
+      }
+    }
+  }
+  console.log("[migration] Startup migrations completed");
 }
 
 // ---- Users ----
@@ -333,9 +367,15 @@ export async function getPropertyById(id: number) {
 export async function createProperty(data: Omit<InsertProperty, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(properties).values(data);
-  const insertId = result[0].insertId;
-  return getPropertyById(insertId);
+  try {
+    const result = await db.insert(properties).values(data);
+    const insertId = result[0].insertId;
+    return getPropertyById(insertId);
+  } catch (e: any) {
+    console.error("[createProperty] MySQL error:", e?.message ?? e);
+    console.error("[createProperty] data keys:", Object.keys(data));
+    throw e;
+  }
 }
 
 export async function setPropertyPublished(id: number, published: 0 | 1) {
