@@ -1296,6 +1296,69 @@ JSONのみ返してください。` },
         await db.adminDeleteMessage(input.messageId);
         return { success: true };
       }),
+
+    broadcast: adminProcedure
+      .input(z.object({
+        subject: z.string().min(1),
+        message: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        const { sendMail } = await import("./_core/mail");
+        const { sendLineBroadcast } = await import("./_core/line");
+        const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+
+        // メール送信
+        const emails = await db.getActiveUserEmailsForNotify("announce");
+        let emailSent = 0;
+        const emailHtml = `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+            <div style="background:#1e3a5f;padding:20px 24px">
+              <img src="${siteUrl}/logo1.png" alt="PropFlow" style="height:32px;object-fit:contain" />
+            </div>
+            <div style="padding:24px">
+              <h2 style="margin:0 0 16px;font-size:18px;color:#1e3a5f">${input.subject}</h2>
+              <div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap">${input.message}</div>
+            </div>
+            <div style="background:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb">
+              <p style="margin:0;font-size:12px;color:#6b7280">PropFlow | <a href="${siteUrl}" style="color:#2563eb">${siteUrl}</a></p>
+              <p style="margin:4px 0 0;font-size:11px;color:#9ca3af">メール通知の設定はマイページから変更できます</p>
+            </div>
+          </div>`;
+        for (const email of emails) {
+          const ok = await sendMail(email, `【PropFlow】${input.subject}`, emailHtml);
+          if (ok) emailSent++;
+        }
+
+        // LINE broadcast
+        const lineMsg = {
+          type: "flex",
+          altText: input.subject,
+          contents: {
+            type: "bubble",
+            header: {
+              type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
+              contents: [{ type: "text", text: "📢 " + input.subject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }],
+            },
+            body: {
+              type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
+              contents: [
+                { type: "text", text: input.message, size: "sm", color: "#374151", wrap: true },
+              ],
+            },
+            footer: {
+              type: "box", layout: "vertical", paddingAll: "12px",
+              contents: [{
+                type: "button",
+                action: { type: "uri", label: "PropFlowを開く", uri: siteUrl },
+                style: "primary", color: "#2563eb", height: "sm",
+              }],
+            },
+          },
+        };
+        const lineSent = await sendLineBroadcast(lineMsg);
+
+        return { emailSent, emailTotal: emails.length, lineSent };
+      }),
   }),
 });
 

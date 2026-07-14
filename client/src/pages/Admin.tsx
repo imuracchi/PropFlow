@@ -7,7 +7,7 @@ import {
   Users, Building2, CheckCircle2, XCircle, Clock,
   Search, MessageCircle, Bell, ScrollText, Shield,
   MoreHorizontal, ArrowUpRight, Loader2, UserPlus, FileText, Ban, UserCheck,
-  Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin
+  Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin, Send
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -55,6 +55,11 @@ export default function Admin() {
   const deleteDmMutation = trpc.admin.deleteDm.useMutation({ onSuccess: () => { utils.admin.allDmMessages.invalidate(); } });
   const loginAsMutation = trpc.admin.loginAs.useMutation();
   const deleteAnnounceMutation = trpc.admin.deleteAnnouncement.useMutation({ onSuccess: () => { utils.admin.allAnnouncements.invalidate(); } });
+  const broadcastMutation = trpc.admin.broadcast.useMutation();
+
+  const [broadcastSubject, setBroadcastSubject] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastResult, setBroadcastResult] = useState<{ emailSent: number; emailTotal: number; lineSent: boolean } | null>(null);
 
   const pendingCount = pendingUsers?.length ?? 0;
 
@@ -128,6 +133,10 @@ export default function Admin() {
           <TabsTrigger value="logs" className="gap-1.5">
             <ScrollText className="w-3.5 h-3.5" />
             操作ログ
+          </TabsTrigger>
+          <TabsTrigger value="broadcast" className="gap-1.5">
+            <Send className="w-3.5 h-3.5" />
+            一斉配信
           </TabsTrigger>
         </TabsList>
 
@@ -472,6 +481,70 @@ export default function Admin() {
               </div>
             </div>
           )}
+        </TabsContent>
+
+        {/* 一斉配信タブ */}
+        <TabsContent value="broadcast" className="mt-4">
+          <div className="max-w-2xl space-y-4">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <Send className="w-4 h-4 text-primary" />
+                <h2 className="font-semibold text-foreground">一斉配信</h2>
+                <span className="text-xs text-muted-foreground ml-1">LINE + メール同時送信</span>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">件名（メールの件名 / LINEのヘッダー）</label>
+                <input
+                  type="text"
+                  className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="例：PropFlowの使い方 — 物件検索のコツ"
+                  value={broadcastSubject}
+                  onChange={e => { setBroadcastSubject(e.target.value); setBroadcastResult(null); }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">本文</label>
+                <textarea
+                  className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                  rows={8}
+                  placeholder={"例：\nいつもPropFlowをご利用いただきありがとうございます。\n\n今回は物件検索のコツをご紹介します。\n\n■ フィルター機能を活用しよう\n種別・価格帯で絞り込むと効率的に探せます。\n\n■ お気に入り登録でまとめて管理\n気になる物件はハートボタンでお気に入りに追加できます。"}
+                  value={broadcastMessage}
+                  onChange={e => { setBroadcastMessage(e.target.value); setBroadcastResult(null); }}
+                />
+              </div>
+
+              {broadcastResult && (
+                <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 space-y-1">
+                  <p className="text-sm font-medium text-green-800">送信完了</p>
+                  <p className="text-xs text-green-700">
+                    メール: {broadcastResult.emailSent}/{broadcastResult.emailTotal}件送信
+                    　LINE: {broadcastResult.lineSent ? "送信成功" : "送信失敗（トークン未設定？）"}
+                  </p>
+                </div>
+              )}
+
+              {broadcastMutation.error && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {broadcastMutation.error.message}
+                </p>
+              )}
+
+              <Button
+                className="gap-2 bg-primary hover:bg-primary/90"
+                disabled={!broadcastSubject.trim() || !broadcastMessage.trim() || broadcastMutation.isPending}
+                onClick={async () => {
+                  if (!confirm(`全ユーザーにLINE＋メールを送信します。よろしいですか？\n\n件名: ${broadcastSubject}`)) return;
+                  const result = await broadcastMutation.mutateAsync({ subject: broadcastSubject, message: broadcastMessage });
+                  setBroadcastResult(result);
+                }}
+              >
+                {broadcastMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {broadcastMutation.isPending ? "送信中..." : "LINE + メール一斉送信"}
+              </Button>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
