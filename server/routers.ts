@@ -1301,6 +1301,7 @@ JSONのみ返してください。` },
       .input(z.object({
         subject: z.string().min(1),
         message: z.string().min(1),
+        imageUrl: z.string().url().optional(),
       }))
       .mutation(async ({ input }) => {
         const { sendMail } = await import("./_core/mail");
@@ -1310,6 +1311,9 @@ JSONのみ返してください。` },
         // メール送信
         const emails = await db.getActiveUserEmailsForNotify("announce");
         let emailSent = 0;
+        const imageBlock = input.imageUrl
+          ? `<img src="${input.imageUrl}" alt="" style="width:100%;display:block;border-radius:4px;margin-bottom:16px" />`
+          : "";
         const emailHtml = `
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
             <div style="background:#1e3a5f;padding:20px 24px">
@@ -1317,6 +1321,7 @@ JSONのみ返してください。` },
             </div>
             <div style="padding:24px">
               <h2 style="margin:0 0 16px;font-size:18px;color:#1e3a5f">${input.subject}</h2>
+              ${imageBlock}
               <div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap">${input.message}</div>
             </div>
             <div style="background:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb">
@@ -1330,32 +1335,34 @@ JSONのみ返してください。` },
         }
 
         // LINE broadcast
-        const lineMsg = {
-          type: "flex",
-          altText: input.subject,
-          contents: {
-            type: "bubble",
-            header: {
-              type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
-              contents: [{ type: "text", text: "📢 " + input.subject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }],
+        const bubbleContents: any = {
+          type: "bubble",
+          ...(input.imageUrl ? {
+            hero: {
+              type: "image", url: input.imageUrl, size: "full",
+              aspectRatio: "20:13", aspectMode: "cover",
             },
-            body: {
-              type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
-              contents: [
-                { type: "text", text: input.message, size: "sm", color: "#374151", wrap: true },
-              ],
-            },
-            footer: {
-              type: "box", layout: "vertical", paddingAll: "12px",
-              contents: [{
-                type: "button",
-                action: { type: "uri", label: "PropFlowを開く", uri: siteUrl },
-                style: "primary", color: "#2563eb", height: "sm",
-              }],
-            },
+          } : {}),
+          header: {
+            type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
+            contents: [{ type: "text", text: "📢 " + input.subject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }],
+          },
+          body: {
+            type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
+            contents: [
+              { type: "text", text: input.message, size: "sm", color: "#374151", wrap: true },
+            ],
+          },
+          footer: {
+            type: "box", layout: "vertical", paddingAll: "12px",
+            contents: [{
+              type: "button",
+              action: { type: "uri", label: "PropFlowを開く", uri: siteUrl },
+              style: "primary", color: "#2563eb", height: "sm",
+            }],
           },
         };
-        const lineSent = await sendLineBroadcast(lineMsg);
+        const lineSent = await sendLineBroadcast({ type: "flex", altText: input.subject, contents: bubbleContents });
 
         return { emailSent, emailTotal: emails.length, lineSent };
       }),

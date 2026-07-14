@@ -59,6 +59,7 @@ export default function Admin() {
 
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastImageUrl, setBroadcastImageUrl] = useState("");
   const [broadcastResult, setBroadcastResult] = useState<{ emailSent: number; emailTotal: number; lineSent: boolean } | null>(null);
 
   const pendingCount = pendingUsers?.length ?? 0;
@@ -505,6 +506,20 @@ export default function Admin() {
               </div>
 
               <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">画像URL（任意）</label>
+                <input
+                  type="url"
+                  className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="https://example.com/image.jpg"
+                  value={broadcastImageUrl}
+                  onChange={e => { setBroadcastImageUrl(e.target.value); setBroadcastResult(null); }}
+                />
+                {broadcastImageUrl && (
+                  <img src={broadcastImageUrl} alt="プレビュー" className="mt-1 max-h-40 rounded border border-border object-contain" onError={e => (e.currentTarget.style.display = "none")} />
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">本文</label>
                 <textarea
                   className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
@@ -536,7 +551,7 @@ export default function Admin() {
                 disabled={!broadcastSubject.trim() || !broadcastMessage.trim() || broadcastMutation.isPending}
                 onClick={async () => {
                   if (!confirm(`全ユーザーにLINE＋メールを送信します。よろしいですか？\n\n件名: ${broadcastSubject}`)) return;
-                  const result = await broadcastMutation.mutateAsync({ subject: broadcastSubject, message: broadcastMessage });
+                  const result = await broadcastMutation.mutateAsync({ subject: broadcastSubject, message: broadcastMessage, imageUrl: broadcastImageUrl || undefined });
                   setBroadcastResult(result);
                 }}
               >
