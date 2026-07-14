@@ -1,5 +1,6 @@
 import { eq, desc, count, and, or, sql, notInArray, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -18,36 +19,40 @@ export async function getDb() {
 }
 
 export async function runStartupMigrations() {
-  const db = await getDb();
-  if (!db || _migrationsDone) return;
+  if (_migrationsDone || !process.env.DATABASE_URL) return;
   _migrationsDone = true;
 
   const stmts = [
-    // properties: columns added without migrations
     "ALTER TABLE `properties` ADD COLUMN `published` int NOT NULL DEFAULT 1",
     "ALTER TABLE `properties` ADD COLUMN `lineNotifiedAt` timestamp NULL",
-    // landArea was made nullable without a migration
     "ALTER TABLE `properties` MODIFY COLUMN `landArea` double NULL",
-    // users: columns added without migrations
     "ALTER TABLE `users` ADD COLUMN `showCompany` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `showPhone` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `showFax` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `showUrl` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `businessCardBase64` longtext NULL",
-    // property_files: column added without migration
     "ALTER TABLE `property_files` ADD COLUMN `visible` int NOT NULL DEFAULT 1",
   ];
 
-  for (const stmt of stmts) {
-    try {
-      await db.execute(sql.raw(stmt));
-    } catch (e: any) {
-      if (e.errno !== 1060 && e.errno !== 1061) { // 1060=Duplicate column, 1061=Duplicate key
-        console.warn("[migration] Warning:", stmt, "->", e.message);
+  let conn: mysql.Connection | null = null;
+  try {
+    conn = await mysql.createConnection(process.env.DATABASE_URL);
+    for (const stmt of stmts) {
+      try {
+        await conn.execute(stmt);
+        console.log("[migration] OK:", stmt.split(" ").slice(0, 6).join(" "));
+      } catch (e: any) {
+        if (e.errno !== 1060) { // 1060 = Duplicate column name (already exists)
+          console.warn("[migration] Warning:", e.message);
+        }
       }
     }
+    console.log("[migration] Startup migrations completed");
+  } catch (e: any) {
+    console.error("[migration] Connection failed:", e.message);
+  } finally {
+    await conn?.end();
   }
-  console.log("[migration] Startup migrations completed");
 }
 
 // ---- Users ----
