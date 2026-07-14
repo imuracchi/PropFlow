@@ -377,9 +377,11 @@ export async function createProperty(data: Omit<InsertProperty, "id" | "createdA
     const insertId = result[0].insertId;
     return getPropertyById(insertId);
   } catch (e: any) {
-    console.error("[createProperty] MySQL error:", e?.message ?? e);
-    console.error("[createProperty] data keys:", Object.keys(data));
-    throw e;
+    // drizzle wraps the error — actual MySQL error is in e.cause
+    const mysqlMsg = e?.cause?.message ?? e?.cause?.sqlMessage ?? e?.message ?? String(e);
+    const mysqlCode = e?.cause?.code ?? e?.cause?.errno ?? "";
+    console.error(`[createProperty] MySQL error [${mysqlCode}]: ${mysqlMsg}`);
+    throw new Error(`物件登録失敗 [${mysqlCode}]: ${mysqlMsg}`);
   }
 }
 

@@ -1,6 +1,7 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken } from "./_core/auth";
 import { parsePropertyFromPdfs } from "./_core/pdfParser";
 import * as db from "./db";
@@ -390,38 +391,46 @@ JSONのみ返してください。` },
         published: z.boolean().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const result = await db.createProperty({
-          userId: ctx.user.id,
-          published: input.published === false ? 0 : 1,
-          name: input.name,
-          address: input.address,
-          lotNumber: input.lotNumber ?? null,
-          type: input.type,
-          price: input.price ?? null,
-          priceNegotiable: input.priceNegotiable ? 1 : 0,
-          estimatedYield: input.estimatedYield ?? null,
-          landArea: input.landArea ?? null,
-          buildingArea: input.buildingArea ?? null,
-          transport: input.transport ?? null,
-          landCategory: input.landCategory ?? null,
-          rights: input.rights ?? null,
-          structure: input.structure ?? null,
-          buildingAge: input.buildingAge ?? null,
-          zoning: input.zoning ?? null,
-          fireProtection: input.fireProtection ?? null,
-          access: input.access ?? null,
-          remarks: input.remarks ?? null,
-          negotiation: input.negotiation ?? "固定",
-          comment: input.comment ?? null,
-          heightDistrict: input.heightDistrict ?? null,
-          otherRestrictions: input.otherRestrictions ?? null,
-          faqs: input.faqs ?? null,
-          files: input.files ?? null,
-        });
-        if (result) {
-          db.logActivity(ctx.user.id, "property_create", `物件「${input.name}」を登録`).catch(() => {});
+        try {
+          const result = await db.createProperty({
+            userId: ctx.user.id,
+            published: input.published === false ? 0 : 1,
+            name: input.name,
+            address: input.address,
+            lotNumber: input.lotNumber ?? null,
+            type: input.type,
+            price: input.price ?? null,
+            priceNegotiable: input.priceNegotiable ? 1 : 0,
+            estimatedYield: input.estimatedYield ?? null,
+            landArea: input.landArea ?? null,
+            buildingArea: input.buildingArea ?? null,
+            transport: input.transport ?? null,
+            landCategory: input.landCategory ?? null,
+            rights: input.rights ?? null,
+            structure: input.structure ?? null,
+            buildingAge: input.buildingAge ?? null,
+            zoning: input.zoning ?? null,
+            fireProtection: input.fireProtection ?? null,
+            access: input.access ?? null,
+            remarks: input.remarks ?? null,
+            negotiation: input.negotiation ?? "固定",
+            comment: input.comment ?? null,
+            heightDistrict: input.heightDistrict ?? null,
+            otherRestrictions: input.otherRestrictions ?? null,
+            faqs: input.faqs ?? null,
+            files: input.files ?? null,
+          });
+          if (result) {
+            db.logActivity(ctx.user.id, "property_create", `物件「${input.name}」を登録`).catch(() => {});
+          }
+          return result;
+        } catch (e: any) {
+          // Surface actual MySQL error to client for diagnosis
+          const cause = e?.cause ?? e;
+          const code = cause?.code ?? cause?.errno ?? "unknown";
+          const msg = cause?.sqlMessage ?? cause?.message ?? String(e);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `[${code}] ${msg}` });
         }
-        return result;
       }),
 
     update: protectedProcedure
