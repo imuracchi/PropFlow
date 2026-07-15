@@ -711,7 +711,7 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
               {user.businessCardBase64 && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">名刺</p>
-                  <img src={user.businessCardBase64} alt="名刺" className="max-w-full max-h-48 object-contain rounded border border-border" />
+                  <img src={`data:image/jpeg;base64,${user.businessCardBase64}`} alt="名刺" className="max-w-full max-h-48 object-contain rounded border border-border" />
                 </div>
               )}
             </div>
