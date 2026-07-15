@@ -199,3 +199,14 @@ export const propertyExclusions = mysqlTable("property_exclusions", {
   userId: int("userId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export const broadcastLogs = mysqlTable("broadcast_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  message: text("message").notNull(),
+  imageUrl: varchar("imageUrl", { length: 500 }),
+  emailSent: int("emailSent").notNull().default(0),
+  emailTotal: int("emailTotal").notNull().default(0),
+  lineSent: int("lineSent").notNull().default(0),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+});

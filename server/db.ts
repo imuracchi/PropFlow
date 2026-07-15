@@ -1,7 +1,7 @@
 import { eq, desc, count, and, or, sql, notInArray, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions } from "../drizzle/schema";
+import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions, broadcastLogs } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _migrationsDone = false;
@@ -32,6 +32,16 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` ADD COLUMN `showUrl` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `businessCardBase64` longtext NULL",
     "ALTER TABLE `property_files` ADD COLUMN `visible` int NOT NULL DEFAULT 1",
+    `CREATE TABLE IF NOT EXISTS \`broadcast_logs\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`subject\` varchar(500) NOT NULL,
+      \`message\` text NOT NULL,
+      \`imageUrl\` varchar(500) NULL,
+      \`emailSent\` int NOT NULL DEFAULT 0,
+      \`emailTotal\` int NOT NULL DEFAULT 0,
+      \`lineSent\` int NOT NULL DEFAULT 0,
+      \`sentAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
   ];
 
   let conn: mysql.Connection | null = null;
@@ -1438,4 +1448,31 @@ export async function getUnreadDmCounts(): Promise<{ userId: number; email: stri
   }
 
   return results;
+}
+
+
+export async function saveBroadcastLog(data: {
+  subject: string;
+  message: string;
+  imageUrl?: string;
+  emailSent: number;
+  emailTotal: number;
+  lineSent: boolean;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(broadcastLogs).values({
+    subject: data.subject,
+    message: data.message,
+    imageUrl: data.imageUrl ?? null,
+    emailSent: data.emailSent,
+    emailTotal: data.emailTotal,
+    lineSent: data.lineSent ? 1 : 0,
+  });
+}
+
+export async function getBroadcastLogs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(broadcastLogs).orderBy(desc(broadcastLogs.sentAt)).limit(50);
 }

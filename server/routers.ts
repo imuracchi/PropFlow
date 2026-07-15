@@ -1297,6 +1297,11 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
+    broadcastLogs: adminProcedure
+      .query(async () => {
+        return db.getBroadcastLogs();
+      }),
+
     broadcast: adminProcedure
       .input(z.object({
         subject: z.string().min(1),
@@ -1363,6 +1368,15 @@ JSONのみ返してください。` },
           },
         };
         const lineSent = await sendLineBroadcast({ type: "flex", altText: input.subject, contents: bubbleContents });
+
+        await db.saveBroadcastLog({
+          subject: input.subject,
+          message: input.message,
+          imageUrl: input.imageUrl,
+          emailSent,
+          emailTotal: emails.length,
+          lineSent,
+        });
 
         return { emailSent, emailTotal: emails.length, lineSent };
       }),

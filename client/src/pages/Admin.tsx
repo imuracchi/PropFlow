@@ -55,7 +55,8 @@ export default function Admin() {
   const deleteDmMutation = trpc.admin.deleteDm.useMutation({ onSuccess: () => { utils.admin.allDmMessages.invalidate(); } });
   const loginAsMutation = trpc.admin.loginAs.useMutation();
   const deleteAnnounceMutation = trpc.admin.deleteAnnouncement.useMutation({ onSuccess: () => { utils.admin.allAnnouncements.invalidate(); } });
-  const broadcastMutation = trpc.admin.broadcast.useMutation();
+  const broadcastMutation = trpc.admin.broadcast.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); } });
+  const broadcastLogsQuery = trpc.admin.broadcastLogs.useQuery();
 
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
@@ -558,6 +559,39 @@ export default function Admin() {
                 {broadcastMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {broadcastMutation.isPending ? "送信中..." : "LINE + メール一斉送信"}
               </Button>
+            </div>
+
+            {/* 送信履歴 */}
+            <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+              <h3 className="font-semibold text-foreground">送信履歴</h3>
+              {broadcastLogsQuery.data && broadcastLogsQuery.data.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground text-left">
+                        <th className="pb-2 pr-4 whitespace-nowrap">送信日時</th>
+                        <th className="pb-2 pr-4">件名</th>
+                        <th className="pb-2 pr-4 whitespace-nowrap">メール</th>
+                        <th className="pb-2 whitespace-nowrap">LINE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {broadcastLogsQuery.data.map(log => (
+                        <tr key={log.id} className="border-b border-border/50 last:border-0">
+                          <td className="py-2 pr-4 whitespace-nowrap text-muted-foreground text-xs">
+                            {new Date(log.sentAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          </td>
+                          <td className="py-2 pr-4 max-w-[200px] truncate">{log.subject}</td>
+                          <td className="py-2 pr-4 whitespace-nowrap">{log.emailSent}/{log.emailTotal}件</td>
+                          <td className="py-2 whitespace-nowrap">{log.lineSent ? "✓" : "✗"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">送信履歴はありません</p>
+              )}
             </div>
           </div>
         </TabsContent>
