@@ -17,6 +17,7 @@ import MyPage from "./pages/MyPage";
 import Admin from "./pages/Admin";
 import InterestedUsers from "./pages/InterestedUsers";
 import Features from "./pages/Features";
+import AnnounceArchive from "./pages/AnnounceArchive";
 import BuyerPreference from "./pages/BuyerPreference";
 import DocumentList from "./pages/DocumentList";
 import Simulation from "./pages/Simulation";
@@ -198,6 +199,9 @@ function AppContent() {
         </Route>
         <Route path="/features">
           {() => (<DashboardLayout><Features /></DashboardLayout>)}
+        </Route>
+        <Route path="/announce-archive">
+          {() => (<DashboardLayout><AnnounceArchive /></DashboardLayout>)}
         </Route>
         <Route path="/admin">
           {() => <AdminRoute />}

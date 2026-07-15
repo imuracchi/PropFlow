@@ -21,7 +21,7 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   Building2, LogOut, PanelLeft, Target, Bell, Download,
-  Upload, List, MessageCircle, ShieldCheck, UserCircle, Heart, HelpCircle, Users, CalendarDays
+  Upload, List, MessageCircle, ShieldCheck, UserCircle, Heart, HelpCircle, Users, CalendarDays, Archive
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -47,6 +47,7 @@ const baseSections: MenuSection[] = [
   { title: "マイページ", items: [
     { icon: Download, label: "ダウンロード資料", path: "/documents" },
     { icon: UserCircle, label: "マイページ", path: "/mypage" },
+    { icon: Archive, label: "お知らせアーカイブ", path: "/announce-archive" },
     { icon: HelpCircle, label: "できること", path: "/features", href: "https://claude.ai/code/artifact/05e7c472-05a9-4497-81ae-8e4ecf01e2c1" },
   ]},
 ];

@@ -1131,6 +1131,13 @@ JSONのみ返してください。` },
       }),
   }),
 
+  announce: router({
+    archive: protectedProcedure.query(async () => {
+      const logs = await db.getBroadcastLogs();
+      return logs.map(({ id, subject, message, imageUrl, sentAt }) => ({ id, subject, message, imageUrl, sentAt }));
+    }),
+  }),
+
   admin: router({
     stats: adminProcedure.query(async () => {
       return db.getAdminStats();
