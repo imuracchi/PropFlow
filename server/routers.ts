@@ -1367,7 +1367,6 @@ JSONのみ返してください。` },
               <p style="margin:4px 0 0;font-size:11px;color:#9ca3af">メール通知の設定は<a href="${siteUrl}/mypage" style="color:#9ca3af">マイページ</a>から変更できます</p>
             </div>
           </div>`;
-        const cleanSubject = input.subject.replace(/^【PropFlow】\s*/, "");
         for (const email of emails) {
           const ok = await sendMail(email, `【PropFlow】${cleanSubject}`, emailHtml);
           if (ok) emailSent++;
