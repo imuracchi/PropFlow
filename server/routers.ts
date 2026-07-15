@@ -1152,6 +1152,10 @@ JSONのみ返してください。` },
       return db.listActiveUsers();
     }),
 
+    missedBroadcastUsers: adminProcedure.query(async () => {
+      return db.listMissedBroadcastUsers();
+    }),
+
     approveUser: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {

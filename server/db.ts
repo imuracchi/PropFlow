@@ -1,4 +1,4 @@
-import { eq, desc, count, and, or, sql, notInArray, lt } from "drizzle-orm";
+import { eq, desc, count, and, or, sql, notInArray, lt, isNull, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions, broadcastLogs } from "../drizzle/schema";
@@ -148,10 +148,20 @@ export async function listActiveUsers() {
       status: users.status, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn,
       loginMethod: users.loginMethod, termsAgreedAt: users.termsAgreedAt,
       hasBusinessCard: sql<number>`CASE WHEN ${users.businessCardBase64} IS NOT NULL THEN 1 ELSE 0 END`,
+      notifyAnnounce: users.notifyAnnounce,
     })
     .from(users)
     .where(sql`${users.status} != 'pending'`)
     .orderBy(desc(users.createdAt));
+}
+
+export async function listMissedBroadcastUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({ id: users.id, name: users.name, email: users.email, company: users.company, notifyAnnounce: users.notifyAnnounce })
+    .from(users)
+    .where(and(eq(users.status, "active"), or(isNull(users.notifyAnnounce), ne(users.notifyAnnounce, 1))));
 }
 
 export async function updateUserStatus(id: number, status: "active" | "suspended") {
