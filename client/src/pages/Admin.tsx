@@ -57,7 +57,6 @@ export default function Admin() {
   const deleteAnnounceMutation = trpc.admin.deleteAnnouncement.useMutation({ onSuccess: () => { utils.admin.allAnnouncements.invalidate(); } });
   const broadcastMutation = trpc.admin.broadcast.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); } });
   const broadcastLogsQuery = trpc.admin.broadcastLogs.useQuery();
-  const missedUsersQuery = trpc.admin.missedBroadcastUsers.useQuery();
   const addBroadcastLogMutation = trpc.admin.addBroadcastLog.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); setShowManualAdd(false); setManualSubject(""); setManualMessage(""); setManualSentAt(""); } });
 
   const [broadcastSubject, setBroadcastSubject] = useState("");
@@ -575,40 +574,7 @@ export default function Admin() {
               </Button>
             </div>
 
-            {/* 届いていない可能性があるユーザー */}
-            {missedUsersQuery.data && (
-              <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-                <h3 className="font-semibold text-foreground text-sm">
-                  お知らせ通知OFFのユーザー
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">（一斉送信メールが届かない）</span>
-                  {missedUsersQuery.data.length > 0 && (
-                    <span className="ml-2 text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">{missedUsersQuery.data.length}件</span>
-                  )}
-                </h3>
-                {missedUsersQuery.data.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">全ユーザーがお知らせ通知ONです</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead><tr className="text-left text-xs text-muted-foreground border-b border-border">
-                        <th className="pb-2 pr-4">会社名</th>
-                        <th className="pb-2 pr-4">名前</th>
-                        <th className="pb-2">メールアドレス</th>
-                      </tr></thead>
-                      <tbody>
-                        {missedUsersQuery.data.map(u => (
-                          <tr key={u.id} className="border-b border-border/50 last:border-0">
-                            <td className="py-1.5 pr-4 text-xs text-muted-foreground">{u.company ?? "—"}</td>
-                            <td className="py-1.5 pr-4">{u.name}</td>
-                            <td className="py-1.5 font-mono text-xs">{u.email}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
+
 
             {/* 送信履歴 */}
             <div className="bg-card border border-border rounded-xl p-4 space-y-3">

@@ -1152,9 +1152,6 @@ JSONのみ返してください。` },
       return db.listActiveUsers();
     }),
 
-    missedBroadcastUsers: adminProcedure.query(async () => {
-      return db.listMissedBroadcastUsers();
-    }),
 
     approveUser: adminProcedure
       .input(z.object({ id: z.number() }))
@@ -1346,8 +1343,8 @@ JSONのみ返してください。` },
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
         const cleanSubject = input.subject.replace(/^【PropFlow】\s*/, "");
 
-        // メール送信
-        const emails = await db.getActiveUserEmailsForNotify("announce");
+        // メール送信（全アクティブユーザー対象）
+        const emails = await db.getAllActiveUserEmails();
         let emailSent = 0;
         const imageBlock = input.imageUrl
           ? `<img src="${input.imageUrl}" alt="" style="width:100%;display:block;border-radius:4px;margin-bottom:16px" />`

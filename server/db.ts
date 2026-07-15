@@ -195,6 +195,13 @@ export async function getAdminStats() {
   };
 }
 
+export async function getAllActiveUserEmails(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ email: users.email }).from(users).where(eq(users.status, "active"));
+  return rows.map(r => r.email);
+}
+
 export async function getActiveUserEmailsForNotify(type: "newProperty" | "dm" | "announce", excludeUserIds?: number[]): Promise<string[]> {
   const db = await getDb();
   if (!db) return [];
