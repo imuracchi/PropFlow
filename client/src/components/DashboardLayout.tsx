@@ -27,7 +27,7 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 
-type MenuItem = { icon: typeof List; label: string; path: string };
+type MenuItem = { icon: typeof List; label: string; path: string; href?: string };
 type MenuSection = { title: string | null; items: MenuItem[] };
 
 const baseSections: MenuSection[] = [
@@ -47,7 +47,7 @@ const baseSections: MenuSection[] = [
   { title: "マイページ", items: [
     { icon: Download, label: "ダウンロード資料", path: "/documents" },
     { icon: UserCircle, label: "マイページ", path: "/mypage" },
-    { icon: HelpCircle, label: "できること", path: "/features" },
+    { icon: HelpCircle, label: "できること", path: "/features", href: "https://claude.ai/code/artifact/05e7c472-05a9-4497-81ae-8e4ecf01e2c1" },
   ]},
 ];
 
@@ -172,7 +172,7 @@ function DashboardLayoutContent({
                       <SidebarMenuItem key={item.path}>
                         <SidebarMenuButton
                           isActive={isActive}
-                          onClick={() => { setLocation(item.path); if (isMobile) toggleSidebar(); }}
+                          onClick={() => { if (item.href) { window.open(item.href, "_blank"); } else { setLocation(item.path); } if (isMobile) toggleSidebar(); }}
                           tooltip={item.label}
                           className={`h-9 rounded-lg transition-all font-normal group/item ${
                             isActive
