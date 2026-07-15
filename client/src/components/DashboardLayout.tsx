@@ -47,14 +47,14 @@ const baseSections: MenuSection[] = [
   { title: "マイページ", items: [
     { icon: Download, label: "ダウンロード資料", path: "/documents" },
     { icon: UserCircle, label: "マイページ", path: "/mypage" },
-    { icon: Archive, label: "お知らせアーカイブ", path: "/announce-archive", href: "/announce-archive" },
-    { icon: HelpCircle, label: "できること", path: "/features", href: "https://claude.ai/code/artifact/05e7c472-05a9-4497-81ae-8e4ecf01e2c1" },
+    { icon: Archive, label: "お知らせアーカイブ", path: "/announce-archive-ext", href: "/announce-archive" },
+    { icon: HelpCircle, label: "できること", path: "/features-ext", href: "https://claude.ai/code/artifact/05e7c472-05a9-4497-81ae-8e4ecf01e2c1" },
   ]},
 ];
 
 const adminSection: MenuSection = { title: null, items: [
   { icon: ShieldCheck, label: "管理画面", path: "/admin" },
-  { icon: CalendarDays, label: "配信計画", path: "/admin", href: "https://claude.ai/code/artifact/2aedae0a-6629-460c-991c-0157fc2c94ab" },
+  { icon: CalendarDays, label: "配信計画", path: "/broadcast-plan", href: "https://claude.ai/code/artifact/f588c3ad-6dcc-43d7-a1f0-4b65044981d4" },
 ] };
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
