@@ -57,11 +57,16 @@ export default function Admin() {
   const deleteAnnounceMutation = trpc.admin.deleteAnnouncement.useMutation({ onSuccess: () => { utils.admin.allAnnouncements.invalidate(); } });
   const broadcastMutation = trpc.admin.broadcast.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); } });
   const broadcastLogsQuery = trpc.admin.broadcastLogs.useQuery();
+  const addBroadcastLogMutation = trpc.admin.addBroadcastLog.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); setShowManualAdd(false); setManualSubject(""); setManualMessage(""); setManualSentAt(""); } });
 
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastImageUrl, setBroadcastImageUrl] = useState("");
   const [broadcastResult, setBroadcastResult] = useState<{ emailSent: number; emailTotal: number; lineSent: boolean } | null>(null);
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  const [manualSubject, setManualSubject] = useState("");
+  const [manualMessage, setManualMessage] = useState("");
+  const [manualSentAt, setManualSentAt] = useState("");
 
   const pendingCount = pendingUsers?.length ?? 0;
 
@@ -563,7 +568,26 @@ export default function Admin() {
 
             {/* 送信履歴 */}
             <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-              <h3 className="font-semibold text-foreground">送信履歴</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-foreground">送信履歴</h3>
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => setShowManualAdd(v => !v)}>
+                  {showManualAdd ? "キャンセル" : "+ 手動追加"}
+                </Button>
+              </div>
+              {showManualAdd && (
+                <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/30">
+                  <p className="text-xs text-muted-foreground">過去に送信した配信をアーカイブに追加します</p>
+                  <input className="w-full border border-border rounded-md px-3 py-1.5 text-sm bg-background" placeholder="件名" value={manualSubject} onChange={e => setManualSubject(e.target.value)} />
+                  <textarea className="w-full border border-border rounded-md px-3 py-1.5 text-sm bg-background resize-none" rows={4} placeholder="本文" value={manualMessage} onChange={e => setManualMessage(e.target.value)} />
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-muted-foreground whitespace-nowrap">送信日時</label>
+                    <input type="datetime-local" className="border border-border rounded-md px-2 py-1 text-sm bg-background" value={manualSentAt} onChange={e => setManualSentAt(e.target.value)} />
+                  </div>
+                  <Button size="sm" disabled={!manualSubject.trim() || !manualMessage.trim() || !manualSentAt || addBroadcastLogMutation.isPending} onClick={() => addBroadcastLogMutation.mutate({ subject: manualSubject, message: manualMessage, sentAt: new Date(manualSentAt).toISOString() })}>
+                    {addBroadcastLogMutation.isPending ? "追加中..." : "アーカイブに追加"}
+                  </Button>
+                </div>
+              )}
               {broadcastLogsQuery.data && broadcastLogsQuery.data.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">

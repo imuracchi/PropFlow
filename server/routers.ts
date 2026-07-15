@@ -1309,6 +1309,26 @@ JSONのみ返してください。` },
         return db.getBroadcastLogs();
       }),
 
+    addBroadcastLog: adminProcedure
+      .input(z.object({
+        subject: z.string().min(1),
+        message: z.string().min(1),
+        imageUrl: z.string().url().optional(),
+        sentAt: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.saveBroadcastLog({
+          subject: input.subject,
+          message: input.message,
+          imageUrl: input.imageUrl,
+          emailSent: 0,
+          emailTotal: 0,
+          lineSent: true,
+          sentAt: new Date(input.sentAt),
+        });
+        return { success: true };
+      }),
+
     broadcast: adminProcedure
       .input(z.object({
         subject: z.string().min(1),

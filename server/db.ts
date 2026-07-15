@@ -1458,6 +1458,7 @@ export async function saveBroadcastLog(data: {
   emailSent: number;
   emailTotal: number;
   lineSent: boolean;
+  sentAt?: Date;
 }) {
   const db = await getDb();
   if (!db) return;
@@ -1468,6 +1469,7 @@ export async function saveBroadcastLog(data: {
     emailSent: data.emailSent,
     emailTotal: data.emailTotal,
     lineSent: data.lineSent ? 1 : 0,
+    ...(data.sentAt ? { sentAt: data.sentAt } : {}),
   });
 }
 
