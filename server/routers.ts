@@ -1339,6 +1339,7 @@ JSONのみ返してください。` },
         const { sendMail } = await import("./_core/mail");
         const { sendLineBroadcast } = await import("./_core/line");
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+        const cleanSubject = input.subject.replace(/^【PropFlow】\s*/, "");
 
         // メール送信
         const emails = await db.getActiveUserEmailsForNotify("announce");
@@ -1352,17 +1353,18 @@ JSONのみ返してください。` },
               <img src="${siteUrl}/logo1.png" alt="PropFlow" style="height:32px;object-fit:contain" />
             </div>
             <div style="padding:24px">
-              <h2 style="margin:0 0 16px;font-size:18px;color:#1e3a5f">${input.subject}</h2>
+              <h2 style="margin:0 0 16px;font-size:18px;color:#1e3a5f">${cleanSubject}</h2>
               ${imageBlock}
               <div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap">${input.message}</div>
             </div>
             <div style="background:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb">
               <p style="margin:0;font-size:12px;color:#6b7280">PropFlow | <a href="${siteUrl}" style="color:#2563eb">${siteUrl}</a></p>
-              <p style="margin:4px 0 0;font-size:11px;color:#9ca3af">メール通知の設定はマイページから変更できます</p>
+              <p style="margin:4px 0 0;font-size:11px;color:#9ca3af">メール通知の設定は<a href="${siteUrl}/mypage" style="color:#9ca3af">マイページ</a>から変更できます</p>
             </div>
           </div>`;
+        const cleanSubject = input.subject.replace(/^【PropFlow】\s*/, "");
         for (const email of emails) {
-          const ok = await sendMail(email, `【PropFlow】${input.subject}`, emailHtml);
+          const ok = await sendMail(email, `【PropFlow】${cleanSubject}`, emailHtml);
           if (ok) emailSent++;
         }
 
