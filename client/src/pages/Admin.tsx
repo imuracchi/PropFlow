@@ -62,6 +62,7 @@ export default function Admin() {
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastImageUrl, setBroadcastImageUrl] = useState("");
+  const [broadcastSkipLine, setBroadcastSkipLine] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<{ emailSent: number; emailTotal: number; lineSent: boolean } | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [manualSubject, setManualSubject] = useState("");
@@ -494,10 +495,16 @@ export default function Admin() {
         <TabsContent value="broadcast" className="mt-4">
           <div className="max-w-2xl space-y-4">
             <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-border">
-                <Send className="w-4 h-4 text-primary" />
-                <h2 className="font-semibold text-foreground">一斉配信</h2>
-                <span className="text-xs text-muted-foreground ml-1">LINE + メール同時送信</span>
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Send className="w-4 h-4 text-primary" />
+                  <h2 className="font-semibold text-foreground">一斉配信</h2>
+                  <span className="text-xs text-muted-foreground ml-1">{broadcastSkipLine ? "メールのみ" : "LINE + メール同時送信"}</span>
+                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground">
+                  <input type="checkbox" className="w-3.5 h-3.5 accent-primary" checked={broadcastSkipLine} onChange={e => setBroadcastSkipLine(e.target.checked)} />
+                  LINE通知をOFFにする
+                </label>
               </div>
 
               <div className="space-y-2">
@@ -556,13 +563,14 @@ export default function Admin() {
                 className="gap-2 bg-primary hover:bg-primary/90"
                 disabled={!broadcastSubject.trim() || !broadcastMessage.trim() || broadcastMutation.isPending}
                 onClick={async () => {
-                  if (!confirm(`全ユーザーにLINE＋メールを送信します。よろしいですか？\n\n件名: ${broadcastSubject}`)) return;
-                  const result = await broadcastMutation.mutateAsync({ subject: broadcastSubject, message: broadcastMessage, imageUrl: broadcastImageUrl || undefined });
+                  const mode = broadcastSkipLine ? "メールのみ" : "LINE＋メール";
+                  if (!confirm(`全ユーザーに${mode}を送信します。よろしいですか？\n\n件名: ${broadcastSubject}`)) return;
+                  const result = await broadcastMutation.mutateAsync({ subject: broadcastSubject, message: broadcastMessage, imageUrl: broadcastImageUrl || undefined, skipLine: broadcastSkipLine });
                   setBroadcastResult(result);
                 }}
               >
                 {broadcastMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {broadcastMutation.isPending ? "送信中..." : "LINE + メール一斉送信"}
+                {broadcastMutation.isPending ? "送信中..." : broadcastSkipLine ? "メールのみ一斉送信" : "LINE + メール一斉送信"}
               </Button>
             </div>
 

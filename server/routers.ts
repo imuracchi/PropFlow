@@ -1334,6 +1334,7 @@ JSONのみ返してください。` },
         subject: z.string().min(1),
         message: z.string().min(1),
         imageUrl: z.string().url().optional(),
+        skipLine: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
         const { sendMail } = await import("./_core/mail");
@@ -1369,34 +1370,37 @@ JSONのみ返してください。` },
         }
 
         // LINE broadcast
-        const bubbleContents: any = {
-          type: "bubble",
-          ...(input.imageUrl ? {
-            hero: {
-              type: "image", url: input.imageUrl, size: "full",
-              aspectRatio: "20:13", aspectMode: "cover",
+        let lineSent = false;
+        if (!input.skipLine) {
+          const bubbleContents: any = {
+            type: "bubble",
+            ...(input.imageUrl ? {
+              hero: {
+                type: "image", url: input.imageUrl, size: "full",
+                aspectRatio: "20:13", aspectMode: "cover",
+              },
+            } : {}),
+            header: {
+              type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
+              contents: [{ type: "text", text: "📢 " + cleanSubject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }],
             },
-          } : {}),
-          header: {
-            type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
-            contents: [{ type: "text", text: "📢 " + input.subject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }],
-          },
-          body: {
-            type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
-            contents: [
-              { type: "text", text: input.message, size: "sm", color: "#374151", wrap: true },
-            ],
-          },
-          footer: {
-            type: "box", layout: "vertical", paddingAll: "12px",
-            contents: [{
-              type: "button",
-              action: { type: "uri", label: "PropFlowを開く", uri: siteUrl },
-              style: "primary", color: "#2563eb", height: "sm",
-            }],
-          },
-        };
-        const lineSent = await sendLineBroadcast({ type: "flex", altText: input.subject, contents: bubbleContents });
+            body: {
+              type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
+              contents: [
+                { type: "text", text: input.message, size: "sm", color: "#374151", wrap: true },
+              ],
+            },
+            footer: {
+              type: "box", layout: "vertical", paddingAll: "12px",
+              contents: [{
+                type: "button",
+                action: { type: "uri", label: "PropFlowを開く", uri: siteUrl },
+                style: "primary", color: "#2563eb", height: "sm",
+              }],
+            },
+          };
+          lineSent = await sendLineBroadcast({ type: "flex", altText: cleanSubject, contents: bubbleContents });
+        }
 
         await db.saveBroadcastLog({
           subject: input.subject,
