@@ -21,7 +21,7 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   Building2, LogOut, PanelLeft, Target, Bell, Download,
-  Upload, List, MessageCircle, ShieldCheck, UserCircle, Heart, HelpCircle, Users
+  Upload, List, MessageCircle, ShieldCheck, UserCircle, Heart, HelpCircle, Users, CalendarDays
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -53,6 +53,7 @@ const baseSections: MenuSection[] = [
 
 const adminSection: MenuSection = { title: null, items: [
   { icon: ShieldCheck, label: "管理画面", path: "/admin" },
+  { icon: CalendarDays, label: "配信計画", path: "/admin", href: "https://claude.ai/code/artifact/2aedae0a-6629-460c-991c-0157fc2c94ab" },
 ] };
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
