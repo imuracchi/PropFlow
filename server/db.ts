@@ -31,6 +31,8 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` ADD COLUMN `showFax` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `showUrl` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `businessCardBase64` longtext NULL",
+    "ALTER TABLE `users` ADD COLUMN `notifyAnnounce` int NOT NULL DEFAULT 1",
+    "UPDATE `users` SET `notifyAnnounce` = 1 WHERE `notifyAnnounce` IS NULL",
     "ALTER TABLE `property_files` ADD COLUMN `visible` int NOT NULL DEFAULT 1",
     `CREATE TABLE IF NOT EXISTS \`broadcast_logs\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
