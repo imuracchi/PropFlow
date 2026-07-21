@@ -78,7 +78,7 @@ export default function Register() {
 
   const handleSubmit = async () => {
     setError("");
-    if (!name || !company || !licenseNum || !password) {
+    if (!name || !company || !password) {
       setError("必須項目を入力してください");
       return;
     }
@@ -86,12 +86,12 @@ export default function Register() {
       setError("パスワードは8文字以上で入力してください");
       return;
     }
-    const license = `${licenseType} (${licenseCode}) 第${licenseNum}号`;
+    const license = licenseNum ? `${licenseType} (${licenseCode}) 第${licenseNum}号` : undefined;
     const result = await registerMutation.mutateAsync({
       token,
       name,
       company,
-      license,
+      license: license || undefined,
       mobile: mobile || undefined,
       phone: phone || undefined,
       fax: fax || undefined,
@@ -234,7 +234,7 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
-              <Label>資格 <span className="text-red-500">*</span></Label>
+              <Label>資格 <span className="text-xs text-muted-foreground font-normal">（任意）</span></Label>
               <div className="flex gap-2">
                 <select className="border border-border rounded-md px-2 py-2 text-sm bg-background" value={licenseType} onChange={e => setLicenseType(e.target.value)}>
                   <option>国土交通大臣免許</option>
