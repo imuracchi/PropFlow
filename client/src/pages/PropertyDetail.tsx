@@ -225,7 +225,6 @@ ${p.comment ? `<div class="cmt"><b>紹介コメント</b>${p.comment}</div>` : "
 <tr><th>用途地域</th><td>${v(p.zoning)}</td><th>防火指定</th><td>${v(p.fireProtection)}</td></tr>
 <tr><th>高度地区</th><td>${v(p.heightDistrict)}</td><th>その他制限</th><td>${v(p.otherRestrictions)}</td></tr>
 <tr><th>備考</th><td colspan="3">${v(p.remarks)}</td></tr>
-${p.userCompany ? `<tr><th>登録者</th><td>${p.userCompany}</td><th>登録日</th><td>${createdDate}</td></tr>` : `<tr><th>登録日</th><td colspan="3">${createdDate}</td></tr>`}
 </table>
 ${myUser ? `<div class="sec">お問い合わせ先</div><table class="ct">${contactRows}</table>` : ""}
 ${footer}
