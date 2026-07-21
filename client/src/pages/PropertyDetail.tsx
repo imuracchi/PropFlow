@@ -964,7 +964,7 @@ export default function PropertyDetail() {
     name: "", address: "", lotNumber: "", type: "", price: "", priceNegotiable: false,
     estimatedYield: "", landArea: "", buildingArea: "", transport: "", landCategory: "", rights: "",
     structure: "", buildingAge: "", zoning: "", fireProtection: "", access: "", remarks: "",
-    negotiation: "", comment: "", heightDistrict: "", otherRestrictions: "",
+    transactionFlow: "", negotiation: "", comment: "", heightDistrict: "", otherRestrictions: "",
   });
   const [editError, setEditError] = useState("");
   const [generatingComment, setGeneratingComment] = useState(false);
@@ -1033,6 +1033,7 @@ export default function PropertyDetail() {
         fireProtection: property.fireProtection || "",
         access: property.access || "",
         remarks: property.remarks || "",
+        transactionFlow: property.transactionFlow || "",
         negotiation: property.negotiation,
         comment: property.comment || "",
         heightDistrict: property.heightDistrict || "",
@@ -1209,6 +1210,7 @@ export default function PropertyDetail() {
     ["防火指定", property.fireProtection || "—"],
     ["高度地区", property.heightDistrict || "—"],
     ["その他制限", property.otherRestrictions || "—"],
+    ["商流", property.transactionFlow || "—"],
     ["備考", property.remarks || "—"],
     ["登録日", createdDate],
   ];
@@ -1691,6 +1693,7 @@ export default function PropertyDetail() {
                 <div className="space-y-2"><Label>接道</Label><Input value={editForm.access} onChange={e => setEditForm(p => ({ ...p, access: e.target.value }))} /></div>
               </div>
               <div className="space-y-2"><Label>その他制限</Label><Input value={editForm.otherRestrictions} onChange={e => setEditForm(p => ({ ...p, otherRestrictions: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>商流</Label><Input value={editForm.transactionFlow} onChange={e => setEditForm(p => ({ ...p, transactionFlow: e.target.value }))} placeholder="例：売主→大手仲介→弊社" /></div>
               <div className="space-y-2"><Label>備考</Label><Input value={editForm.remarks} onChange={e => setEditForm(p => ({ ...p, remarks: e.target.value }))} /></div>
             </div>
           </div>

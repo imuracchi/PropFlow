@@ -34,6 +34,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` ADD COLUMN `notifyAnnounce` int NOT NULL DEFAULT 1",
     "UPDATE `users` SET `notifyAnnounce` = 1 WHERE `notifyAnnounce` IS NULL",
     "ALTER TABLE `property_files` ADD COLUMN `visible` int NOT NULL DEFAULT 1",
+    "ALTER TABLE `properties` ADD COLUMN `transactionFlow` text NULL",
     `CREATE TABLE IF NOT EXISTS \`broadcast_logs\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`subject\` varchar(500) NOT NULL,
@@ -367,6 +368,7 @@ export async function getPropertyById(id: number) {
       fireProtection: properties.fireProtection,
       access: properties.access,
       remarks: properties.remarks,
+      transactionFlow: properties.transactionFlow,
       negotiation: properties.negotiation,
       comment: properties.comment,
       heightDistrict: properties.heightDistrict,

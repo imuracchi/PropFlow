@@ -60,6 +60,7 @@ export const properties = mysqlTable("properties", {
   fireProtection: varchar("fireProtection", { length: 128 }),
   access: text("access"),
   remarks: text("remarks"),
+  transactionFlow: text("transactionFlow"),
   negotiation: varchar("negotiation", { length: 32 }).default("固定").notNull(),
   comment: text("comment"),
   heightDistrict: text("heightDistrict"),

@@ -55,6 +55,7 @@ export default function PropertyUpload() {
   const [fireProtection, setFireProtection] = useState("");
   const [access, setAccess] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [transactionFlow, setTransactionFlow] = useState("");
   const [negotiation, setNegotiation] = useState("固定");
   const [comment, setComment] = useState("");
   const [heightDistrict, setHeightDistrict] = useState("");
@@ -102,6 +103,7 @@ export default function PropertyUpload() {
     if (data.fireProtection) setFireProtection(String(data.fireProtection));
     if (data.access) setAccess(String(data.access));
     if (data.remarks) setRemarks(String(data.remarks));
+    if (data.transactionFlow) setTransactionFlow(String(data.transactionFlow));
     if (data.negotiation) setNegotiation(String(data.negotiation) === "交渉可" ? "交渉可" : "固定");
     if (data.comment) setComment(String(data.comment));
     if (data.heightDistrict) setHeightDistrict(String(data.heightDistrict));
@@ -224,6 +226,7 @@ export default function PropertyUpload() {
         fireProtection: fireProtection || undefined,
         access: access || undefined,
         remarks: remarks || undefined,
+        transactionFlow: transactionFlow || undefined,
         negotiation,
         comment: comment || undefined,
         heightDistrict: heightDistrict || undefined,
@@ -556,6 +559,7 @@ export default function PropertyUpload() {
             { label: "防火指定", input: <Input value={fireProtection} onChange={e => setFireProtection(e.target.value)} placeholder="例: 準防火地域" /> },
             { label: "高度地区", input: <Input value={heightDistrict} onChange={e => setHeightDistrict(e.target.value)} placeholder="例: 17m第二種高度地区" /> },
             { label: "その他制限", input: <Textarea className="min-h-[2.5rem]" rows={2} value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} placeholder="例: 日影規制：3h-2h（測定面4m）" /> },
+            { label: "商流", input: <Input value={transactionFlow} onChange={e => setTransactionFlow(e.target.value)} placeholder="例：売主→大手仲介→弊社" /> },
             { label: "備考", input: <Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="その他の特記事項" rows={2} /> },
           ].map(row => (
             <div key={row.label} className="flex flex-col md:flex-row px-5 py-3 gap-1 md:gap-0">
