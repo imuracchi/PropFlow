@@ -977,6 +977,8 @@ export default function PropertyDetail() {
   const [introDocTitle, setIntroDocTitle] = useState("");
   const [isEditingComment, setIsEditingComment] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
+  const [isEditingTransactionFlow, setIsEditingTransactionFlow] = useState(false);
+  const [transactionFlowDraft, setTransactionFlowDraft] = useState("");
 
   const updateMutation = trpc.property.update.useMutation();
   const saveDocMutation = trpc.document.save.useMutation({
@@ -1084,6 +1086,7 @@ export default function PropertyDetail() {
       fireProtection: f.fireProtection || null,
       access: f.access || null,
       remarks: f.remarks || null,
+      transactionFlow: f.transactionFlow || null,
       negotiation: f.negotiation,
       comment: f.comment || null,
       heightDistrict: f.heightDistrict || null,
@@ -1127,6 +1130,17 @@ export default function PropertyDetail() {
       setIsEditingComment(false);
     } catch { /* ignore */ }
   };
+  const startEditingTransactionFlow = () => {
+    setTransactionFlowDraft(property?.transactionFlow || "");
+    setIsEditingTransactionFlow(true);
+  };
+  const handleSaveTransactionFlow = async () => {
+    if (!property) return;
+    await updateMutation.mutateAsync({ id: propertyId, transactionFlow: transactionFlowDraft || null });
+    utils.property.getById.invalidate({ id: propertyId });
+    setIsEditingTransactionFlow(false);
+  };
+
   const handleGenerateCommentDirect = async () => {
     if (!property) return;
     setGeneratingComment(true);
@@ -2038,14 +2052,38 @@ export default function PropertyDetail() {
           {/* 商流 */}
           {!isEditing && (
             <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <div className="px-5 py-3 border-b border-border bg-muted/40">
+              <div className="px-5 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
                 <p className="text-sm font-semibold text-foreground">商流</p>
+                {isOwner && (
+                  isEditingTransactionFlow ? (
+                    <div className="flex items-center gap-1.5">
+                      <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => setIsEditingTransactionFlow(false)}>
+                        <X className="w-3.5 h-3.5" />キャンセル
+                      </Button>
+                      <Button size="sm" className="gap-1 text-xs h-7 bg-primary text-primary-foreground" onClick={handleSaveTransactionFlow} disabled={updateMutation.isPending}>
+                        {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}保存
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={startEditingTransactionFlow}>
+                      <Pencil className="w-3.5 h-3.5" />編集
+                    </Button>
+                  )
+                )}
               </div>
               <div className="px-5 py-4">
-                {property.transactionFlow
-                  ? <p className="text-sm text-foreground">{property.transactionFlow}</p>
-                  : <p className="text-sm text-muted-foreground italic">未設定</p>
-                }
+                {isEditingTransactionFlow ? (
+                  <Input
+                    value={transactionFlowDraft}
+                    onChange={e => setTransactionFlowDraft(e.target.value)}
+                    placeholder="例：売主→大手仲介→弊社"
+                    autoFocus
+                  />
+                ) : property.transactionFlow ? (
+                  <p className="text-sm text-foreground">{property.transactionFlow}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">未設定</p>
+                )}
               </div>
             </div>
           )}
