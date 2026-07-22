@@ -244,24 +244,40 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
 
   if (mode === "owner-dm") {
     const ownerDms = activeDmThreads.filter(t => t.propertyId && myPropertyIds?.has(t.propertyId));
+    const ownerFlaggedCount = ownerDms.filter(t => t.flagged).length;
+    const displayedOwnerDms = showFlaggedOnly ? ownerDms.filter(t => t.flagged) : ownerDms;
     return (
       <div className="space-y-5">
         <div>
           <h1 className="text-lg font-semibold text-foreground">問い合わせDM</h1>
           <p className="text-xs text-muted-foreground mt-0.5">自社物件への問い合わせメッセージ</p>
         </div>
-        {ownerDms.length === 0 ? (
-          <EmptyState icon={MessageCircle} message="自社物件への問い合わせはまだありません" />
+        {ownerFlaggedCount > 0 && (
+          <button
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              showFlaggedOnly
+                ? "bg-amber-100 text-amber-700 border-amber-300"
+                : "bg-card text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
+            }`}
+            onClick={() => setShowFlaggedOnly(v => !v)}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${showFlaggedOnly ? "fill-amber-400" : ""}`} />
+            要返信のみ表示
+            <span className={`px-1.5 rounded-full ${showFlaggedOnly ? "bg-amber-200 text-amber-800" : "bg-muted text-muted-foreground"}`}>{ownerFlaggedCount}</span>
+          </button>
+        )}
+        {displayedOwnerDms.length === 0 ? (
+          <EmptyState icon={MessageCircle} message={showFlaggedOnly ? "要返信のDMはありません" : "自社物件への問い合わせはまだありません"} />
         ) : (
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <table className="w-full"><thead><tr className="border-b border-border bg-muted">
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibond text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
               <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
               <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
-              <th className="w-8"></th>
+              <th className="w-16"></th>
             </tr></thead><tbody>
-              {ownerDms.map(thread => <DmCard key={`dm-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
+              {displayedOwnerDms.map(thread => <DmCard key={`dm-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
             </tbody></table>
           </div>
         )}
