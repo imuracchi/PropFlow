@@ -1731,21 +1731,6 @@ export default function PropertyDetail() {
         </div>
       )}
 
-      {/* 商流 */}
-      {(property.transactionFlow || isOwner) && !isEditing && (
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="px-5 py-3 border-b border-border bg-muted/40">
-            <p className="text-sm font-semibold text-foreground">商流</p>
-          </div>
-          <div className="px-5 py-4">
-            {property.transactionFlow
-              ? <p className="text-sm text-foreground">{property.transactionFlow}</p>
-              : <p className="text-sm text-muted-foreground italic">未設定</p>
-            }
-          </div>
-        </div>
-      )}
-
       {/* コンテンツ */}
       {(
         <>
@@ -2049,6 +2034,21 @@ export default function PropertyDetail() {
               </div>
             </TabsContent>
           </Tabs>
+
+          {/* 商流 */}
+          {!isEditing && (
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <div className="px-5 py-3 border-b border-border bg-muted/40">
+                <p className="text-sm font-semibold text-foreground">商流</p>
+              </div>
+              <div className="px-5 py-4">
+                {property.transactionFlow
+                  ? <p className="text-sm text-foreground">{property.transactionFlow}</p>
+                  : <p className="text-sm text-muted-foreground italic">未設定</p>
+                }
+              </div>
+            </div>
+          )}
 
           <PropertyMemo propertyId={propertyId} />
 
