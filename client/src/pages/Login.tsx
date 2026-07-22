@@ -120,6 +120,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
       <div className="w-full max-w-md relative z-10">
         <div className="flex flex-col items-center mb-5">
           <img src="/logo1.png" alt="PropFlow" className="w-64 object-contain" />
+          <p className="text-xs text-muted-foreground mt-1 tracking-widest">不動産情報プラットフォーム</p>
         </div>
 
         <div className="text-center mb-5 space-y-1.5">
