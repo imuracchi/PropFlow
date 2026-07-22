@@ -144,6 +144,7 @@ function EmptyState({ icon: Icon, message }: { icon: typeof MessageCircle; messa
 
 export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" | "owner-dm" }) {
   const [, setLocation] = useLocation();
+  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
   const { user } = useAuth();
   const { data: myRooms, isLoading: myLoading } = trpc.chat.myRooms.useQuery();
   const { data: allRooms, isLoading: allLoading } = trpc.chat.allRooms.useQuery();
@@ -268,7 +269,6 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
     );
   }
 
-  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
   const flaggedCount = activeDmThreads.filter(t => t.flagged).length;
   const displayedDmThreads = showFlaggedOnly ? activeDmThreads.filter(t => t.flagged) : activeDmThreads;
 
