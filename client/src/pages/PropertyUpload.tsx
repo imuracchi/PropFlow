@@ -559,7 +559,6 @@ export default function PropertyUpload() {
             { label: "防火指定", input: <Input value={fireProtection} onChange={e => setFireProtection(e.target.value)} placeholder="例: 準防火地域" /> },
             { label: "高度地区", input: <Input value={heightDistrict} onChange={e => setHeightDistrict(e.target.value)} placeholder="例: 17m第二種高度地区" /> },
             { label: "その他制限", input: <Textarea className="min-h-[2.5rem]" rows={2} value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} placeholder="例: 日影規制：3h-2h（測定面4m）" /> },
-            { label: "商流", input: <Input value={transactionFlow} onChange={e => setTransactionFlow(e.target.value)} placeholder="例：売主→大手仲介→弊社" /> },
             { label: "備考", input: <Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="その他の特記事項" rows={2} /> },
           ].map(row => (
             <div key={row.label} className="flex flex-col md:flex-row px-5 py-3 gap-1 md:gap-0">
@@ -569,6 +568,17 @@ export default function PropertyUpload() {
               <div className="flex-1">{row.input}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* 商流 */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">商流</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">売買の流れを記載しておくことで、チャットでのやり取りを減らせます</p>
+        </div>
+        <div className="px-5 py-4">
+          <Input value={transactionFlow} onChange={e => setTransactionFlow(e.target.value)} placeholder="例：売主→大手仲介→弊社" />
         </div>
       </div>
 

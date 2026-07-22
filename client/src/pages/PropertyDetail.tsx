@@ -1209,7 +1209,6 @@ export default function PropertyDetail() {
     ["防火指定", property.fireProtection || "—"],
     ["高度地区", property.heightDistrict || "—"],
     ["その他制限", property.otherRestrictions || "—"],
-    ["商流", property.transactionFlow || "—"],
     ["備考", property.remarks || "—"],
     ["登録日", createdDate],
   ];
@@ -1692,8 +1691,18 @@ export default function PropertyDetail() {
                 <div className="space-y-2"><Label>接道</Label><Input value={editForm.access} onChange={e => setEditForm(p => ({ ...p, access: e.target.value }))} /></div>
               </div>
               <div className="space-y-2"><Label>その他制限</Label><Input value={editForm.otherRestrictions} onChange={e => setEditForm(p => ({ ...p, otherRestrictions: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>商流</Label><Input value={editForm.transactionFlow} onChange={e => setEditForm(p => ({ ...p, transactionFlow: e.target.value }))} placeholder="例：売主→大手仲介→弊社" /></div>
               <div className="space-y-2"><Label>備考</Label><Input value={editForm.remarks} onChange={e => setEditForm(p => ({ ...p, remarks: e.target.value }))} /></div>
+            </div>
+          </div>
+
+          {/* 商流 */}
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">商流</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">売買の流れを記載しておくことで、チャットでのやり取りを減らせます</p>
+            </div>
+            <div className="px-5 py-4">
+              <Input value={editForm.transactionFlow} onChange={e => setEditForm(p => ({ ...p, transactionFlow: e.target.value }))} placeholder="例：売主→大手仲介→弊社" />
             </div>
           </div>
 
@@ -1718,6 +1727,21 @@ export default function PropertyDetail() {
               {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               保存する
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 商流 */}
+      {(property.transactionFlow || isOwner) && !isEditing && (
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="px-5 py-3 border-b border-border bg-muted/40">
+            <p className="text-sm font-semibold text-foreground">商流</p>
+          </div>
+          <div className="px-5 py-4">
+            {property.transactionFlow
+              ? <p className="text-sm text-foreground">{property.transactionFlow}</p>
+              : <p className="text-sm text-muted-foreground italic">未設定</p>
+            }
           </div>
         </div>
       )}
