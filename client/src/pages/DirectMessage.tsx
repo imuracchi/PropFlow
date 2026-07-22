@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, Send, Loader2, User, Home } from "lucide-react";
+import { ChevronLeft, Send, Loader2, User, Home, Bookmark } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -24,11 +24,16 @@ export default function DirectMessage() {
     { enabled: !!partnerId, refetchInterval: 5000 }
   );
 
+  const utils = trpc.useUtils();
   const { data: threads } = trpc.dm.threads.useQuery();
-  const partnerThread = threads?.find(t => t.partnerId === partnerId);
+  const partnerThread = threads?.find(t => t.partnerId === partnerId && t.propertyId === (propertyId ?? null));
+  const isFlagged = partnerThread?.flagged ?? false;
 
   const sendMutation = trpc.dm.send.useMutation({ onSuccess: () => refetch() });
   const markReadMutation = trpc.dm.markRead.useMutation();
+  const flagMutation = trpc.dm.setFlag.useMutation({
+    onSuccess: () => utils.dm.threads.invalidate(),
+  });
 
   const [input, setInput] = useState("");
   const [initialSent, setInitialSent] = useState(false);
@@ -80,6 +85,18 @@ export default function DirectMessage() {
             )}
           </div>
         </div>
+        <button
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            isFlagged
+              ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
+              : "text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
+          }`}
+          onClick={() => flagMutation.mutate({ partnerId, propertyId: propertyId ?? null, flagged: !isFlagged })}
+          disabled={flagMutation.isPending}
+        >
+          <Bookmark className={`w-3.5 h-3.5 ${isFlagged ? "fill-amber-400" : ""}`} />
+          {isFlagged ? "要返信中" : "要返信"}
+        </button>
       </div>
 
       {/* 物件情報バナー */}
