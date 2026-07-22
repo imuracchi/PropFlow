@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useState } from "react";
 
 
 type Room = {
@@ -144,7 +143,6 @@ function EmptyState({ icon: Icon, message }: { icon: typeof MessageCircle; messa
 
 export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" | "owner-dm" }) {
   const [, setLocation] = useLocation();
-  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
   const { user } = useAuth();
   const { data: myRooms, isLoading: myLoading } = trpc.chat.myRooms.useQuery();
   const { data: allRooms, isLoading: allLoading } = trpc.chat.allRooms.useQuery();
@@ -244,47 +242,76 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
 
   if (mode === "owner-dm") {
     const ownerDms = activeDmThreads.filter(t => t.propertyId && myPropertyIds?.has(t.propertyId));
-    const ownerFlaggedCount = ownerDms.filter(t => t.flagged).length;
-    const displayedOwnerDms = showFlaggedOnly ? ownerDms.filter(t => t.flagged) : ownerDms;
+    const ownerFlaggedDms = ownerDms.filter(t => t.flagged);
     return (
       <div className="space-y-5">
         <div>
           <h1 className="text-lg font-semibold text-foreground">問い合わせDM</h1>
           <p className="text-xs text-muted-foreground mt-0.5">自社物件への問い合わせメッセージ</p>
         </div>
-        <button
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-            showFlaggedOnly
-              ? "bg-amber-100 text-amber-700 border-amber-300"
-              : "bg-card text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
-          }`}
-          onClick={() => ownerFlaggedCount > 0 && setShowFlaggedOnly(v => !v)}
-        >
-          <Bookmark className={`w-3.5 h-3.5 ${showFlaggedOnly ? "fill-amber-400" : ""}`} />
-          要返信のみ表示
-          <span className={`px-1.5 rounded-full ${showFlaggedOnly ? "bg-amber-200 text-amber-800" : "bg-muted text-muted-foreground"}`}>{ownerFlaggedCount}</span>
-        </button>
-        {displayedOwnerDms.length === 0 ? (
-          <EmptyState icon={MessageCircle} message={showFlaggedOnly ? "要返信のDMはありません" : "自社物件への問い合わせはまだありません"} />
-        ) : (
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <table className="w-full"><thead><tr className="border-b border-border bg-muted">
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
-              <th className="text-left px-4 py-2.5 text-xs font-semibond text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
-              <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
-              <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
-              <th className="w-16"></th>
-            </tr></thead><tbody>
-              {displayedOwnerDms.map(thread => <DmCard key={`dm-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
-            </tbody></table>
-          </div>
-        )}
+        <Tabs defaultValue="active">
+          <TabsList className="bg-muted">
+            <TabsTrigger value="active" className="gap-1.5">
+              <MessageCircle className="w-3.5 h-3.5" />
+              DM
+              {ownerDms.length > 0 && <span className="text-xs bg-primary/10 text-primary px-1.5 rounded-full ml-0.5">{ownerDms.length}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="hidden" className="gap-1.5">
+              <EyeOff className="w-3.5 h-3.5" />
+              非表示
+              {hiddenDmThreads.length > 0 && <span className="text-xs bg-muted text-muted-foreground px-1.5 rounded-full ml-0.5">{hiddenDmThreads.length}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="flagged" className="gap-1.5">
+              <Bookmark className="w-3.5 h-3.5" />
+              要返信
+              {ownerFlaggedDms.length > 0 && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 rounded-full ml-0.5">{ownerFlaggedDms.length}</span>}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="active" className="mt-4">
+            {ownerDms.length === 0 ? <EmptyState icon={MessageCircle} message="自社物件への問い合わせはまだありません" /> : (
+              <div className="bg-card border border-border rounded-lg overflow-hidden">
+                <table className="w-full"><thead><tr className="border-b border-border bg-muted">
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
+                  <th className="w-16"></th>
+                </tr></thead><tbody>
+                  {ownerDms.map(thread => <DmCard key={`dm-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
+                </tbody></table>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="hidden" className="mt-4">
+            {hiddenDmThreads.length === 0 ? <EmptyState icon={EyeOff} message="非表示のDMはありません" /> : (
+              <div className="bg-card border border-border rounded-lg overflow-hidden">
+                <table className="w-full"><tbody>
+                  {hiddenDmThreads.map(thread => <DmCard key={`hidden-${dmKey(thread)}`} thread={thread} />)}
+                </tbody></table>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="flagged" className="mt-4">
+            {ownerFlaggedDms.length === 0 ? <EmptyState icon={Bookmark} message="要返信のDMはありません" /> : (
+              <div className="bg-card border border-border rounded-lg overflow-hidden">
+                <table className="w-full"><thead><tr className="border-b border-border bg-muted">
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
+                  <th className="w-16"></th>
+                </tr></thead><tbody>
+                  {ownerFlaggedDms.map(thread => <DmCard key={`flagged-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
+                </tbody></table>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
 
-  const flaggedCount = activeDmThreads.filter(t => t.flagged).length;
-  const displayedDmThreads = showFlaggedOnly ? activeDmThreads.filter(t => t.flagged) : activeDmThreads;
+  const flaggedDmThreads = activeDmThreads.filter(t => t.flagged);
 
   return (
     <div className="space-y-5">
@@ -317,23 +344,18 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
               <span className="text-xs bg-muted text-muted-foreground px-1.5 rounded-full ml-0.5">{hiddenDmThreads.length}</span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="flagged" className="gap-1.5">
+            <Bookmark className="w-3.5 h-3.5" />
+            要返信
+            {flaggedDmThreads.length > 0 && (
+              <span className="text-xs bg-amber-100 text-amber-700 px-1.5 rounded-full ml-0.5">{flaggedDmThreads.length}</span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="mt-4 space-y-3">
-          <button
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-              showFlaggedOnly
-                ? "bg-amber-100 text-amber-700 border-amber-300"
-                : "bg-card text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
-            }`}
-            onClick={() => flaggedCount > 0 && setShowFlaggedOnly(v => !v)}
-          >
-            <Bookmark className={`w-3.5 h-3.5 ${showFlaggedOnly ? "fill-amber-400" : ""}`} />
-            要返信のみ表示
-            <span className={`px-1.5 rounded-full ${showFlaggedOnly ? "bg-amber-200 text-amber-800" : "bg-muted text-muted-foreground"}`}>{flaggedCount}</span>
-          </button>
-          {displayedDmThreads.length === 0 ? (
-            <EmptyState icon={MessageCircle} message={showFlaggedOnly ? "要返信のDMはありません" : "ダイレクトメッセージはありません"} />
+        <TabsContent value="active" className="mt-4">
+          {activeDmThreads.length === 0 ? (
+            <EmptyState icon={MessageCircle} message="ダイレクトメッセージはありません" />
           ) : (
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <table className="w-full"><thead><tr className="border-b border-border bg-muted">
@@ -343,7 +365,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
                 <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
                 <th className="w-16"></th>
               </tr></thead><tbody>
-                {displayedDmThreads.map(thread => <DmCard key={dmKey(thread)} thread={thread} onHide={() => handleDmHide(thread)} />)}
+                {activeDmThreads.map(thread => <DmCard key={dmKey(thread)} thread={thread} onHide={() => handleDmHide(thread)} />)}
               </tbody></table>
             </div>
           )}
@@ -356,6 +378,24 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <table className="w-full"><tbody>
                 {hiddenDmThreads.map(thread => <DmCard key={`hidden-${dmKey(thread)}`} thread={thread} />)}
+              </tbody></table>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="flagged" className="mt-4">
+          {flaggedDmThreads.length === 0 ? (
+            <EmptyState icon={Bookmark} message="要返信のDMはありません" />
+          ) : (
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <table className="w-full"><thead><tr className="border-b border-border bg-muted">
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
+                <th className="w-16"></th>
+              </tr></thead><tbody>
+                {flaggedDmThreads.map(thread => <DmCard key={`flagged-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
               </tbody></table>
             </div>
           )}
