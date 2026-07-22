@@ -837,6 +837,13 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
+    setFlag: protectedProcedure
+      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable(), flagged: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.setDmFlag(ctx.user.id, input.partnerId, input.propertyId, input.flagged);
+        return { success: true };
+      }),
+
     canDm: protectedProcedure
       .input(z.object({ userId: z.number() }))
       .query(async ({ input }) => {

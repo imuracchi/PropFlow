@@ -35,6 +35,7 @@ export async function runStartupMigrations() {
     "UPDATE `users` SET `notifyAnnounce` = 1 WHERE `notifyAnnounce` IS NULL",
     "ALTER TABLE `property_files` ADD COLUMN `visible` int NOT NULL DEFAULT 1",
     "ALTER TABLE `properties` ADD COLUMN `transactionFlow` text NULL",
+    "ALTER TABLE `dm_read_status` ADD COLUMN `flagged` int NOT NULL DEFAULT 0",
     `CREATE TABLE IF NOT EXISTS \`broadcast_logs\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`subject\` varchar(500) NOT NULL,
@@ -1049,6 +1050,15 @@ export async function getDirectMessageThreads(userId: number) {
     .from(properties)
     .where(sql`${properties.id} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`) : [];
 
+  const readStatuses = await db
+    .select({ partnerId: dmReadStatus.partnerId, propertyId: dmReadStatus.propertyId, flagged: dmReadStatus.flagged })
+    .from(dmReadStatus)
+    .where(eq(dmReadStatus.userId, userId));
+  const flagMap = new Map<string, boolean>();
+  for (const rs of readStatuses) {
+    flagMap.set(`${rs.partnerId}-${rs.propertyId ?? 0}`, rs.flagged === 1);
+  }
+
   return Array.from(threadMap.values())
     .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
     .map(thread => {
@@ -1062,8 +1072,23 @@ export async function getDirectMessageThreads(userId: number) {
         propertyName: prop?.name ?? null,
         messageCount: thread.count,
         lastMessageAt: thread.lastAt,
+        flagged: flagMap.get(`${thread.partnerId}-${thread.propertyId ?? 0}`) ?? false,
       };
     });
+}
+
+export async function setDmFlag(userId: number, partnerId: number, propertyId: number | null, flagged: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  const propCond = propertyId !== null
+    ? and(eq(dmReadStatus.userId, userId), eq(dmReadStatus.partnerId, partnerId), eq(dmReadStatus.propertyId, propertyId))
+    : and(eq(dmReadStatus.userId, userId), eq(dmReadStatus.partnerId, partnerId), sql`${dmReadStatus.propertyId} IS NULL`);
+  const existing = await db.select().from(dmReadStatus).where(propCond!).limit(1);
+  if (existing.length > 0) {
+    await db.update(dmReadStatus).set({ flagged: flagged ? 1 : 0 }).where(propCond!);
+  } else {
+    await db.insert(dmReadStatus).values({ userId, partnerId, propertyId, lastReadAt: new Date(), flagged: flagged ? 1 : 0 });
+  }
 }
 
 // ---- Push Subscriptions ----

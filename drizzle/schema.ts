@@ -116,6 +116,7 @@ export const dmReadStatus = mysqlTable("dm_read_status", {
   partnerId: int("partnerId").notNull(),
   propertyId: int("propertyId"),
   lastReadAt: timestamp("lastReadAt").defaultNow().notNull(),
+  flagged: int("flagged").default(0).notNull(),
 });
 
 export const registrationTokens = mysqlTable("registration_tokens", {

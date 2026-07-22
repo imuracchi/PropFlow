@@ -1,9 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageCircle, Home, Loader2, MapPin, EyeOff, Globe, User, Trash2, Bell } from "lucide-react";
+import { MessageCircle, Home, Loader2, MapPin, EyeOff, Globe, User, Trash2, Bell, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useState } from "react";
 
 
 type Room = {
@@ -71,16 +72,27 @@ type DmThread = {
   propertyName: string | null;
   messageCount: number;
   lastMessageAt: string | Date;
+  flagged?: boolean;
 };
 
 function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
   const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
+  const flagMutation = trpc.dm.setFlag.useMutation({
+    onSuccess: () => utils.dm.threads.invalidate(),
+  });
   const dmUrl = thread.propertyId
     ? `/dm/${thread.partnerId}/${thread.propertyId}`
     : `/dm/${thread.partnerId}`;
   const dmKey = `dm-${thread.partnerId}-${thread.propertyId ?? 0}`;
   const lastRead = getLastRead(dmKey);
   const hasNew = new Date(thread.lastMessageAt).getTime() > lastRead;
+
+  const handleToggleFlag = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    flagMutation.mutate({ partnerId: thread.partnerId, propertyId: thread.propertyId ?? null, flagged: !thread.flagged });
+  };
+
   return (
     <tr
       className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border"
@@ -93,6 +105,7 @@ function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
         <div className="flex items-center gap-2">
           <span className="font-medium text-foreground text-sm truncate">{thread.propertyName || "物件なし"}</span>
           {hasNew && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-orange-500 text-white shrink-0">新着</span>}
+          {thread.flagged && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-300 shrink-0">要返信</span>}
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground truncate hidden md:table-cell">
@@ -101,11 +114,20 @@ function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
       <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden md:table-cell">{thread.messageCount}件</td>
       <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(thread.lastMessageAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}</td>
       <td className="px-2 py-3 text-center">
-        {onHide && (
-          <button className="p-1 rounded text-muted-foreground/30 hover:text-destructive hover:bg-red-50 transition-colors" onClick={e => { e.stopPropagation(); onHide(); }}>
-            <Trash2 className="w-3.5 h-3.5" />
+        <div className="flex items-center justify-center gap-1">
+          <button
+            className={`p-1 rounded transition-colors ${thread.flagged ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground/30 hover:text-amber-400"}`}
+            title={thread.flagged ? "要返信を解除" : "要返信にする"}
+            onClick={handleToggleFlag}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${thread.flagged ? "fill-amber-400" : ""}`} />
           </button>
-        )}
+          {onHide && (
+            <button className="p-1 rounded text-muted-foreground/30 hover:text-destructive hover:bg-red-50 transition-colors" onClick={e => { e.stopPropagation(); onHide(); }}>
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -246,6 +268,10 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
     );
   }
 
+  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
+  const flaggedCount = activeDmThreads.filter(t => t.flagged).length;
+  const displayedDmThreads = showFlaggedOnly ? activeDmThreads.filter(t => t.flagged) : activeDmThreads;
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -279,9 +305,23 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="mt-4">
-          {activeDmThreads.length === 0 ? (
-            <EmptyState icon={MessageCircle} message="ダイレクトメッセージはありません" />
+        <TabsContent value="active" className="mt-4 space-y-3">
+          {flaggedCount > 0 && (
+            <button
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                showFlaggedOnly
+                  ? "bg-amber-100 text-amber-700 border-amber-300"
+                  : "bg-card text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
+              }`}
+              onClick={() => setShowFlaggedOnly(v => !v)}
+            >
+              <Bookmark className={`w-3.5 h-3.5 ${showFlaggedOnly ? "fill-amber-400" : ""}`} />
+              要返信のみ表示
+              <span className={`px-1.5 rounded-full ${showFlaggedOnly ? "bg-amber-200 text-amber-800" : "bg-muted text-muted-foreground"}`}>{flaggedCount}</span>
+            </button>
+          )}
+          {displayedDmThreads.length === 0 ? (
+            <EmptyState icon={MessageCircle} message={showFlaggedOnly ? "要返信のDMはありません" : "ダイレクトメッセージはありません"} />
           ) : (
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <table className="w-full"><thead><tr className="border-b border-border bg-muted">
@@ -289,9 +329,9 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
-                <th className="w-8"></th>
+                <th className="w-16"></th>
               </tr></thead><tbody>
-                {activeDmThreads.map(thread => <DmCard key={dmKey(thread)} thread={thread} onHide={() => handleDmHide(thread)} />)}
+                {displayedDmThreads.map(thread => <DmCard key={dmKey(thread)} thread={thread} onHide={() => handleDmHide(thread)} />)}
               </tbody></table>
             </div>
           )}
