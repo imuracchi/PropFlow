@@ -118,14 +118,23 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        <div className="flex flex-col items-center mb-6">
+        <div className="flex flex-col items-center mb-5">
           <img src="/logo1.png" alt="PropFlow" className="w-64 object-contain" />
+        </div>
+
+        <div className="text-center mb-5 space-y-1.5">
+          <p className="text-sm font-semibold text-foreground">業者間だけで流通する、表に出ない物件情報も。</p>
+          <p className="text-sm text-muted-foreground">気になったら直接DM。</p>
+          <p className="text-xs font-medium text-primary">現在、利用無料。</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-5 bg-muted border border-border">
             <TabsTrigger value="login">ログイン</TabsTrigger>
-            <TabsTrigger value="register">新規登録</TabsTrigger>
+            <TabsTrigger value="register" className="gap-1.5 data-[state=inactive]:text-primary data-[state=inactive]:font-bold">
+              新規登録
+              <span className="text-[10px] bg-primary text-primary-foreground rounded px-1 py-0.5 font-bold leading-none">無料</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">

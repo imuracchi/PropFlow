@@ -7,7 +7,8 @@ import {
   Users, Building2, CheckCircle2, XCircle, Clock,
   Search, MessageCircle, Bell, ScrollText, Shield,
   MoreHorizontal, ArrowUpRight, Loader2, UserPlus, FileText, Ban, UserCheck,
-  Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin, Send
+  Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin, Send,
+  Sparkles, BarChart2
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -57,6 +58,7 @@ export default function Admin() {
   const deleteAnnounceMutation = trpc.admin.deleteAnnouncement.useMutation({ onSuccess: () => { utils.admin.allAnnouncements.invalidate(); } });
   const broadcastMutation = trpc.admin.broadcast.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); } });
   const broadcastLogsQuery = trpc.admin.broadcastLogs.useQuery();
+  const analyzeDmsMutation = trpc.admin.analyzeDms.useMutation({ onSuccess: (data) => setAnalysisResult(data) });
   const addBroadcastLogMutation = trpc.admin.addBroadcastLog.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); setShowManualAdd(false); setManualSubject(""); setManualMessage(""); setManualSentAt(""); } });
 
   const [broadcastSubject, setBroadcastSubject] = useState("");
@@ -68,6 +70,12 @@ export default function Admin() {
   const [manualSubject, setManualSubject] = useState("");
   const [manualMessage, setManualMessage] = useState("");
   const [manualSentAt, setManualSentAt] = useState("");
+  const [analysisResult, setAnalysisResult] = useState<{
+    categories: Array<{ name: string; count: number; percentage: number; description: string; examples: string[] }>;
+    summary: string;
+    totalAnalyzed: number;
+    totalMessages: number;
+  } | null>(null);
 
   const pendingCount = pendingUsers?.length ?? 0;
 
@@ -145,6 +153,10 @@ export default function Admin() {
           <TabsTrigger value="broadcast" className="gap-1.5">
             <Send className="w-3.5 h-3.5" />
             一斉配信
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            AI分析
           </TabsTrigger>
         </TabsList>
 
@@ -414,6 +426,115 @@ export default function Admin() {
               </div>
             </div>
           )}
+        </TabsContent>
+
+        {/* AI分析タブ */}
+        <TabsContent value="ai" className="mt-4 space-y-4">
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  DMコンテンツ AI分析
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">AIがDMメッセージを分析し、質問カテゴリと傾向をまとめます</p>
+              </div>
+              <Button
+                className="gap-2"
+                disabled={analyzeDmsMutation.isPending}
+                onClick={() => { setAnalysisResult(null); analyzeDmsMutation.mutate(); }}
+              >
+                {analyzeDmsMutation.isPending
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />分析中...</>
+                  : <><Sparkles className="w-4 h-4" />分析実行</>
+                }
+              </Button>
+            </div>
+
+            {analyzeDmsMutation.isPending && (
+              <div className="border border-primary/20 bg-primary/5 rounded-lg px-4 py-6 text-center space-y-2">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+                <p className="text-sm text-primary font-medium">AIが分析中です...</p>
+                <p className="text-xs text-muted-foreground">DMメッセージをカテゴリ分類・要約しています（30秒〜1分かかる場合があります）</p>
+              </div>
+            )}
+
+            {analyzeDmsMutation.error && (
+              <div className="border border-red-200 bg-red-50 rounded-lg px-4 py-3 text-sm text-red-700">
+                分析に失敗しました: {analyzeDmsMutation.error.message}
+              </div>
+            )}
+
+            {analysisResult && !analyzeDmsMutation.isPending && (
+              <div className="space-y-4">
+                {/* 概要バナー */}
+                <div className="border border-primary/20 bg-primary/5 rounded-lg px-4 py-3 space-y-1">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    分析対象: {analysisResult.totalAnalyzed}件 / 全{analysisResult.totalMessages}件
+                  </div>
+                  <p className="text-sm text-foreground">{analysisResult.summary}</p>
+                </div>
+
+                {/* カテゴリテーブル */}
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">カテゴリ</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden sm:table-cell">説明</th>
+                        <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground w-16">件数</th>
+                        <th className="px-4 py-3 text-xs font-medium text-muted-foreground w-32">割合</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {analysisResult.categories.map((cat, i) => (
+                        <tr key={i} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-medium text-foreground text-sm">{cat.name}</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">{cat.description}</td>
+                          <td className="px-4 py-3 text-right font-mono text-sm tabular-nums">{cat.count}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                                <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${cat.percentage}%` }} />
+                              </div>
+                              <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">{cat.percentage}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 代表メッセージ例 */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-foreground">代表的なメッセージ例</h4>
+                  {analysisResult.categories.map((cat, i) =>
+                    cat.examples && cat.examples.length > 0 ? (
+                      <div key={i} className="border border-border rounded-lg overflow-hidden">
+                        <div className="bg-muted/50 px-3 py-2 border-b border-border">
+                          <span className="text-xs font-medium text-foreground">{cat.name}</span>
+                        </div>
+                        <div className="divide-y divide-border/50">
+                          {cat.examples.map((ex, j) => (
+                            <p key={j} className="px-3 py-2 text-xs text-muted-foreground">「{ex}」</p>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!analysisResult && !analyzeDmsMutation.isPending && !analyzeDmsMutation.error && (
+              <div className="border border-dashed border-border rounded-lg py-10 text-center text-muted-foreground">
+                <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">「分析実行」ボタンを押すとAIが自動分析します</p>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {/* お知らせ管理タブ */}

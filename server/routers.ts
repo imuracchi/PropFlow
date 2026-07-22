@@ -1423,6 +1423,80 @@ JSONのみ返してください。` },
 
         return { emailSent, emailTotal: emails.length, lineSent };
       }),
+
+    analyzeDms: adminProcedure
+      .mutation(async () => {
+        const Anthropic = (await import("@anthropic-ai/sdk")).default;
+        const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+        const allMessages = await db.getAllDmMessagesAdmin();
+
+        if (allMessages.length === 0) {
+          return { categories: [], summary: "分析するDMメッセージがありません。", totalMessages: 0, totalAnalyzed: 0 };
+        }
+
+        const messages = (allMessages as any[]).slice(0, 300);
+        const messageTexts = messages
+          .filter((m: any) => m.content && m.content.trim().length > 2)
+          .map((m: any, i: number) => `${i + 1}. [${m.propertyName || "物件不明"}] ${m.content}`)
+          .join("\n");
+
+        const prompt = `あなたは不動産プラットフォームのデータアナリストです。
+以下は不動産取引プラットフォームPropFlowのDMメッセージ一覧です。
+これらを分析し、どのような話題・質問が多いかをカテゴリ別に集計・要約してください。
+
+## DMメッセージ一覧
+${messageTexts}
+
+## 出力形式
+以下のJSON形式のみで回答してください（JSON以外のテキストは絶対に含めないこと）：
+{
+  "categories": [
+    {
+      "name": "カテゴリ名（日本語、簡潔に）",
+      "count": 件数（整数）,
+      "percentage": パーセンテージ（整数）,
+      "description": "このカテゴリの説明（1文、日本語）",
+      "examples": ["代表的なメッセージ原文1", "代表的なメッセージ原文2"]
+    }
+  ],
+  "summary": "全体のトレンドと特徴の要約（2〜3文、日本語）",
+  "totalAnalyzed": 分析したメッセージの総数（整数）
+}
+
+注意事項：
+- カテゴリは内容から自動判断し、4〜7個程度に分類すること
+- 価格・条件交渉、内見・訪問依頼、物件詳細の確認、書類・資料請求、購入申込・契約、その他 などを参考に
+- examplesは実際のメッセージから選んでください（個人名・連絡先は省略すること）
+- percentageの合計は100になるよう調整すること`;
+
+        const stream = client.messages.stream({
+          model: "claude-opus-4-8",
+          max_tokens: 4000,
+          thinking: { type: "adaptive" },
+          messages: [{ role: "user", content: prompt }],
+        });
+
+        const finalMessage = await stream.finalMessage();
+
+        const textContent = finalMessage.content.find((c: any) => c.type === "text");
+        if (!textContent || textContent.type !== "text") {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Claude APIからの応答が不正です" });
+        }
+
+        const jsonMatch = (textContent as any).text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "分析結果が不正な形式です" });
+        }
+
+        const result = JSON.parse(jsonMatch[0]);
+        return {
+          categories: result.categories ?? [],
+          summary: result.summary ?? "",
+          totalAnalyzed: result.totalAnalyzed ?? messages.length,
+          totalMessages: allMessages.length,
+        };
+      }),
   }),
 });
 
