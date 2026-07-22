@@ -74,7 +74,15 @@ export async function runStartupMigrations() {
 export async function createUser(user: InsertUser) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(users).values(user);
+  try {
+    await db.insert(users).values(user);
+  } catch (err: any) {
+    // MySQLのユニーク制約違反（ER_DUP_ENTRY）
+    if (err?.code === "ER_DUP_ENTRY" || err?.message?.includes("Duplicate entry")) {
+      throw new Error("このメールアドレスは既に登録されています");
+    }
+    throw err;
+  }
   return getUserByEmail(user.email!);
 }
 
@@ -1123,6 +1131,8 @@ export async function getPushSubscriptionsByUserIds(userIds: number[]) {
 export async function createRegistrationToken(email: string, token: string, expiresAt: Date) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // 同じメールの既存トークンを全て削除してから新規作成（古いリンクを無効化）
+  await db.delete(registrationTokens).where(eq(registrationTokens.email, email));
   await db.insert(registrationTokens).values({ email, token, expiresAt });
 }
 

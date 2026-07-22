@@ -85,24 +85,28 @@ export const appRouter = router({
         const existing = await db.getUserByEmail(input.email);
         if (existing) return { success: false, error: "このメールアドレスは既に登録されています" } as const;
         const hashed = await hashPassword(input.password);
-        const newUser = await db.createUser({
-          openId: nanoid(),
-          email: input.email,
-          passwordHash: hashed,
-          name: input.name,
-          company: input.company,
-          license: input.license ?? "",
-          phone: input.phone ?? null,
-          fax: input.fax ?? null,
-          url: input.url ?? null,
-          loginMethod: "email",
-          role: "user",
-          status: "active",
-        });
-        if (input.businessCardBase64 && newUser) {
-          await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
+        try {
+          const newUser = await db.createUser({
+            openId: nanoid(),
+            email: input.email,
+            passwordHash: hashed,
+            name: input.name,
+            company: input.company,
+            license: input.license ?? "",
+            phone: input.phone ?? null,
+            fax: input.fax ?? null,
+            url: input.url ?? null,
+            loginMethod: "email",
+            role: "user",
+            status: "active",
+          });
+          if (input.businessCardBase64 && newUser) {
+            await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
+          }
+          return { success: true } as const;
+        } catch (err: any) {
+          return { success: false, error: err.message ?? "登録に失敗しました" } as const;
         }
-        return { success: true } as const;
       }),
 
     readBusinessCard: publicProcedure
@@ -165,22 +169,26 @@ JSONのみ返してください。` },
           return { success: false, error: "このメールアドレスは既に登録されています" } as const;
         }
         const hashed = await hashPassword(input.password);
-        const newUser = await db.createUser({
-          openId: nanoid(),
-          email: tokenData.email,
-          passwordHash: hashed,
-          name: input.name,
-          company: input.company,
-          license: input.license,
-          phone: input.phone ?? null,
-          fax: input.fax ?? null,
-          url: input.url ?? null,
-          loginMethod: "email",
-          role: "user",
-          status: "active",
-        });
-        if (input.businessCardBase64 && newUser) {
-          await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
+        try {
+          const newUser = await db.createUser({
+            openId: nanoid(),
+            email: tokenData.email,
+            passwordHash: hashed,
+            name: input.name,
+            company: input.company,
+            license: input.license,
+            phone: input.phone ?? null,
+            fax: input.fax ?? null,
+            url: input.url ?? null,
+            loginMethod: "email",
+            role: "user",
+            status: "active",
+          });
+          if (input.businessCardBase64 && newUser) {
+            await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
+          }
+        } catch (err: any) {
+          return { success: false, error: err.message ?? "登録に失敗しました" } as const;
         }
         await db.markTokenUsed(input.token);
         return { success: true } as const;
