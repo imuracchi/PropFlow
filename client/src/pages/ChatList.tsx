@@ -252,20 +252,18 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
           <h1 className="text-lg font-semibold text-foreground">問い合わせDM</h1>
           <p className="text-xs text-muted-foreground mt-0.5">自社物件への問い合わせメッセージ</p>
         </div>
-        {ownerFlaggedCount > 0 && (
-          <button
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-              showFlaggedOnly
-                ? "bg-amber-100 text-amber-700 border-amber-300"
-                : "bg-card text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
-            }`}
-            onClick={() => setShowFlaggedOnly(v => !v)}
-          >
-            <Bookmark className={`w-3.5 h-3.5 ${showFlaggedOnly ? "fill-amber-400" : ""}`} />
-            要返信のみ表示
-            <span className={`px-1.5 rounded-full ${showFlaggedOnly ? "bg-amber-200 text-amber-800" : "bg-muted text-muted-foreground"}`}>{ownerFlaggedCount}</span>
-          </button>
-        )}
+        <button
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            showFlaggedOnly
+              ? "bg-amber-100 text-amber-700 border-amber-300"
+              : "bg-card text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
+          }`}
+          onClick={() => ownerFlaggedCount > 0 && setShowFlaggedOnly(v => !v)}
+        >
+          <Bookmark className={`w-3.5 h-3.5 ${showFlaggedOnly ? "fill-amber-400" : ""}`} />
+          要返信のみ表示
+          <span className={`px-1.5 rounded-full ${showFlaggedOnly ? "bg-amber-200 text-amber-800" : "bg-muted text-muted-foreground"}`}>{ownerFlaggedCount}</span>
+        </button>
         {displayedOwnerDms.length === 0 ? (
           <EmptyState icon={MessageCircle} message={showFlaggedOnly ? "要返信のDMはありません" : "自社物件への問い合わせはまだありません"} />
         ) : (
@@ -322,20 +320,18 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
         </TabsList>
 
         <TabsContent value="active" className="mt-4 space-y-3">
-          {flaggedCount > 0 && (
-            <button
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                showFlaggedOnly
-                  ? "bg-amber-100 text-amber-700 border-amber-300"
-                  : "bg-card text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
-              }`}
-              onClick={() => setShowFlaggedOnly(v => !v)}
-            >
-              <Bookmark className={`w-3.5 h-3.5 ${showFlaggedOnly ? "fill-amber-400" : ""}`} />
-              要返信のみ表示
-              <span className={`px-1.5 rounded-full ${showFlaggedOnly ? "bg-amber-200 text-amber-800" : "bg-muted text-muted-foreground"}`}>{flaggedCount}</span>
-            </button>
-          )}
+          <button
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              showFlaggedOnly
+                ? "bg-amber-100 text-amber-700 border-amber-300"
+                : "bg-card text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
+            }`}
+            onClick={() => flaggedCount > 0 && setShowFlaggedOnly(v => !v)}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${showFlaggedOnly ? "fill-amber-400" : ""}`} />
+            要返信のみ表示
+            <span className={`px-1.5 rounded-full ${showFlaggedOnly ? "bg-amber-200 text-amber-800" : "bg-muted text-muted-foreground"}`}>{flaggedCount}</span>
+          </button>
           {displayedDmThreads.length === 0 ? (
             <EmptyState icon={MessageCircle} message={showFlaggedOnly ? "要返信のDMはありません" : "ダイレクトメッセージはありません"} />
           ) : (
