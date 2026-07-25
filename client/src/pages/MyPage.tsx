@@ -221,7 +221,7 @@ export default function MyPage() {
         ) : (user as any).businessCardBase64 ? (
           <p className="text-xs text-muted-foreground mt-2">名刺を確認後、管理者が認証マークを付与します</p>
         ) : (
-          <p className="text-xs text-amber-600 mt-2">💡 名刺を登録すると、物件一覧に「認証マーク」が表示されます</p>
+          <p className="text-xs text-amber-600 mt-2">💡 名刺を登録し、管理側が確認できますと、物件一覧に「認証マーク」が表示されます</p>
         )}
       </div>
 
