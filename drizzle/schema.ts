@@ -33,6 +33,7 @@ export const users = mysqlTable("users", {
   showPhone: int("showPhone").default(1).notNull(),
   showFax: int("showFax").default(1).notNull(),
   showUrl: int("showUrl").default(1).notNull(),
+  verified: int("verified").default(0).notNull(),
 });
 
 export type User = typeof users.$inferSelect;

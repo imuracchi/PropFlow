@@ -36,6 +36,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `property_files` ADD COLUMN `visible` int NOT NULL DEFAULT 1",
     "ALTER TABLE `properties` ADD COLUMN `transactionFlow` text NULL",
     "ALTER TABLE `dm_read_status` ADD COLUMN `flagged` int NOT NULL DEFAULT 0",
+    "ALTER TABLE `users` ADD COLUMN `verified` int NOT NULL DEFAULT 0",
     `CREATE TABLE IF NOT EXISTS \`broadcast_logs\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`subject\` varchar(500) NOT NULL,
@@ -304,6 +305,7 @@ export async function listProperties(viewerUserId?: number) {
       createdAt: properties.createdAt,
       userName: users.name,
       userCompany: users.company,
+      userVerified: users.verified,
       favoriteCount: sql<number>`COALESCE(${favCountSub.cnt}, 0)`.as("favoriteCount"),
     })
     .from(properties)
@@ -397,6 +399,7 @@ export async function getPropertyById(id: number) {
       userFax: users.fax,
       userUrl: users.url,
       userEmail: users.email,
+      userVerified: users.verified,
       showCompany: users.showCompany,
       showPhone: users.showPhone,
       showFax: users.showFax,
@@ -522,6 +525,12 @@ export async function getDeletedPropertiesByUserId(userId: number) {
     .from(properties)
     .where(and(eq(properties.userId, userId), eq(properties.deleted, 1)))
     .orderBy(desc(properties.updatedAt));
+}
+
+export async function setUserVerified(id: number, verified: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ verified: verified ? 1 : 0 }).where(eq(users.id, id));
 }
 
 export async function updateUserBusinessCard(id: number, businessCardBase64: string | null) {

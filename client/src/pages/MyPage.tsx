@@ -214,7 +214,15 @@ export default function MyPage() {
             )}
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">※ 登録時にAIで読み取った名刺を保管します</p>
+        {(user as any).verified ? (
+          <p className="text-xs text-primary font-medium mt-2 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />認証済み業者として表示されています
+          </p>
+        ) : (user as any).businessCardBase64 ? (
+          <p className="text-xs text-muted-foreground mt-2">名刺を確認後、管理者が認証マークを付与します</p>
+        ) : (
+          <p className="text-xs text-amber-600 mt-2">💡 名刺を登録すると、物件一覧に「認証マーク」が表示されます</p>
+        )}
       </div>
 
       {/* LINE連携 */}

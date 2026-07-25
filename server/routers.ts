@@ -1037,6 +1037,13 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
+    verifyUser: adminProcedure
+      .input(z.object({ id: z.number(), verified: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await db.setUserVerified(input.id, input.verified);
+        return { success: true };
+      }),
+
     rejectUser: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {

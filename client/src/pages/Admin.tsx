@@ -49,6 +49,7 @@ export default function Admin() {
   const activateMutation = trpc.admin.activateUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
   const deleteUserMutation = trpc.admin.deleteUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const updatePlanMutation = trpc.admin.updatePlan.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
+  const verifyUserMutation = trpc.admin.verifyUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
   const hidePropMutation = trpc.admin.hideProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const restorePropMutation = trpc.admin.restoreProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const hardDeleteMutation = trpc.admin.hardDeleteProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); setDeleteTarget(null); } });
@@ -179,7 +180,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["業者名", "メール", "登録方法", "プラン", "ステータス", "登録日", "最終ログイン", "名刺", "規約同意", "操作"].map(h => (
+                    {["業者名", "メール", "登録方法", "プラン", "ステータス", "登録日", "最終ログイン", "名刺/認証", "規約同意", "操作"].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -240,7 +241,21 @@ export default function Admin() {
                         </td>
                         <td className="px-4 py-3">
                           {(user as any).hasBusinessCard ? (
-                            <span className="text-xs text-green-600 font-medium">あり</span>
+                            <div className="flex flex-col gap-1">
+                              {(user as any).verified ? (
+                                <span className="text-xs font-medium text-primary flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />認証済み
+                                </span>
+                              ) : (
+                                <span className="text-xs text-green-600 font-medium">名刺あり</span>
+                              )}
+                              <button
+                                className={`text-[10px] underline ${(user as any).verified ? "text-muted-foreground" : "text-primary"}`}
+                                onClick={() => verifyUserMutation.mutate({ id: user.id, verified: !(user as any).verified })}
+                              >
+                                {(user as any).verified ? "取消" : "認証する"}
+                              </button>
+                            </div>
                           ) : (
                             <span className="text-xs text-muted-foreground/50">なし</span>
                           )}

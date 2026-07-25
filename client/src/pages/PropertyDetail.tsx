@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft, Heart, Share2, Pencil, MessageCircle, Bell, Camera, Calculator,
-  HelpCircle, MapPin, Map, Building2,
+  HelpCircle, MapPin, Map, Building2, CheckCircle2,
   ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, Eye, FileText, Upload, Download, StickyNote, UserCircle, UserX
 } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
@@ -1243,8 +1243,13 @@ export default function PropertyDetail() {
         <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
           <MapPin className="w-4 h-4 shrink-0 mt-0.5" /><span>{property.address}</span>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground flex items-center gap-1.5 flex-wrap">
           {property.showCompany !== 0 && property.userCompany ? `登録：${property.userCompany} / ` : "登録日：" }{createdDate}
+          {(property as any).userVerified === 1 && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+              <CheckCircle2 className="w-3 h-3" />認証済み
+            </span>
+          )}
         </p>
         <div className="flex flex-col gap-2">
           {/* 閲覧者向けアクション */}
