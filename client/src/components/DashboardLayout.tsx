@@ -36,6 +36,7 @@ const baseSections: MenuSection[] = [
     { icon: Target, label: "希望条件", path: "/buyer-preference" },
     { icon: Heart, label: "お気に入り", path: "/favorites" },
     { icon: MessageCircle, label: "質問中の一覧", path: "/dm-list" },
+    { icon: Download, label: "ダウンロード資料", path: "/documents" },
   ]},
   { title: "物件を出す", items: [
     { icon: Upload, label: "物件登録", path: "/upload" },
@@ -44,7 +45,6 @@ const baseSections: MenuSection[] = [
     { icon: Users, label: "興味者リスト", path: "/interested" },
   ]},
   { title: "マイページ", items: [
-    { icon: Download, label: "ダウンロード資料", path: "/documents" },
     { icon: UserCircle, label: "マイページ", path: "/mypage" },
     { icon: Archive, label: "お知らせアーカイブ", path: "/announce-archive-ext", href: "/announce-archive" },
     { icon: HelpCircle, label: "できること", path: "/features-ext", href: "https://claude.ai/code/artifact/05e7c472-05a9-4497-81ae-8e4ecf01e2c1" },

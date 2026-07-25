@@ -154,7 +154,7 @@ export default function DocumentList() {
           <Download className="w-5 h-5 text-primary" />
           ダウンロード資料
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">作成後{DOC_EXPIRE_DAYS}日間保存されます</p>
+        <p className="text-xs text-muted-foreground mt-0.5">各物件の詳細から、御社用の資料として作成できます。作成後{DOC_EXPIRE_DAYS}日間保存されます。</p>
       </div>
 
       {(docs ?? []).length === 0 ? (
