@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Search, Heart, Building2, CheckCircle2,
+  Search, Heart, Building2,
   Plus, MapPin, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff
 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -436,16 +436,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                         </div>
                         <p className="font-medium text-foreground text-sm md:text-[15px] leading-snug">{property.name}</p>
                         <p className="text-xs font-semibold text-primary mt-0.5 md:hidden">{property.priceNegotiable ? "応相談" : (property.price ? `${property.price.toLocaleString()}円` : "—")}</p>
-                        {property.userCompany && (
-                          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                            {property.userCompany}
-                            {(property as any).userVerified === 1 && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                                <CheckCircle2 className="w-2.5 h-2.5" />認証
-                              </span>
-                            )}
-                          </p>
-                        )}
                       </td>
                       <td className="px-4 py-4 text-sm text-muted-foreground max-w-[250px] hidden md:table-cell">
                         {property.address}
