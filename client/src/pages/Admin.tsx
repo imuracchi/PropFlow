@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Users, Building2, CheckCircle2, XCircle, Clock,
-  Search, MessageCircle, Bell, ScrollText, Shield,
+  Search, MessageCircle, ScrollText, Shield,
   MoreHorizontal, ArrowUpRight, Loader2, UserPlus, FileText, Ban, UserCheck,
   Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin, Send,
   Sparkles, BarChart2
@@ -42,7 +42,6 @@ export default function Admin() {
   const { data: adminProperties } = trpc.admin.allProperties.useQuery();
   const { data: activityLogs } = trpc.admin.activityLogs.useQuery();
   const { data: adminDmMessages } = trpc.admin.allDmMessages.useQuery();
-  const { data: adminAnnouncements } = trpc.admin.allAnnouncements.useQuery();
 
   const approveMutation = trpc.admin.approveUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const rejectMutation = trpc.admin.rejectUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.stats.invalidate(); } });
@@ -55,7 +54,6 @@ export default function Admin() {
   const hardDeleteMutation = trpc.admin.hardDeleteProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); setDeleteTarget(null); } });
   const deleteDmMutation = trpc.admin.deleteDm.useMutation({ onSuccess: () => { utils.admin.allDmMessages.invalidate(); } });
   const loginAsMutation = trpc.admin.loginAs.useMutation();
-  const deleteAnnounceMutation = trpc.admin.deleteAnnouncement.useMutation({ onSuccess: () => { utils.admin.allAnnouncements.invalidate(); } });
   const broadcastMutation = trpc.admin.broadcast.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); } });
   const broadcastLogsQuery = trpc.admin.broadcastLogs.useQuery();
   const analyzeDmsMutation = trpc.admin.analyzeDms.useMutation({ onSuccess: (data) => setAnalysisResult(data) });
@@ -141,10 +139,6 @@ export default function Admin() {
           <TabsTrigger value="dm" className="gap-1.5">
             <MessageCircle className="w-3.5 h-3.5" />
             DM管理
-          </TabsTrigger>
-          <TabsTrigger value="announce" className="gap-1.5">
-            <Bell className="w-3.5 h-3.5" />
-            お知らせ管理
           </TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5">
             <ScrollText className="w-3.5 h-3.5" />
@@ -537,32 +531,6 @@ export default function Admin() {
           </div>
         </TabsContent>
 
-        {/* お知らせ管理タブ */}
-        <TabsContent value="announce" className="mt-4 space-y-4">
-          {(adminAnnouncements ?? []).length === 0 ? (
-            <div className="bg-card border border-border rounded-lg py-12 text-center text-muted-foreground">お知らせはありません</div>
-          ) : (
-            <div className="space-y-3">
-              {(adminAnnouncements ?? []).map((a: any) => (
-                <div key={a.id} className="bg-card border border-amber-200 rounded-lg overflow-hidden">
-                  <div className="bg-amber-50 px-4 py-2 flex items-center gap-2 border-b border-amber-200">
-                    <Bell className="w-3.5 h-3.5 text-amber-500" />
-                    <span className="text-xs font-semibold text-amber-800">{a.propertyName || `物件#${a.propertyId}`}</span>
-                    <span className="text-[10px] text-amber-400">#{a.id}</span>
-                    <span className="text-xs text-amber-500 ml-auto">{new Date(a.createdAt).toLocaleString("ja-JP")}</span>
-                    <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1 h-6 px-2"
-                      onClick={() => { if (confirm("このお知らせを削除しますか？")) deleteAnnounceMutation.mutate({ messageId: a.id }); }}
-                    ><Trash2 className="w-3 h-3" />削除</Button>
-                  </div>
-                  <div className="px-4 py-2.5">
-                    <p className="text-sm">{a.content}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{a.userName}{a.userCompany ? `（${a.userCompany}）` : ""}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
 
         {/* 操作ログタブ */}
         <TabsContent value="logs" className="mt-4 space-y-4">

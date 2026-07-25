@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
-  Building2, LogOut, PanelLeft, Target, Bell, Download,
+  Building2, LogOut, PanelLeft, Target, Download,
   Upload, List, MessageCircle, ShieldCheck, UserCircle, Heart, HelpCircle, Users, CalendarDays, Archive
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -41,7 +41,6 @@ const baseSections: MenuSection[] = [
     { icon: Upload, label: "物件登録", path: "/upload" },
     { icon: Building2, label: "自社物件一覧", path: "/my-properties" },
     { icon: MessageCircle, label: "対応中のメッセージ", path: "/dm-sell" },
-    { icon: Bell, label: "お知らせ管理", path: "/chat-sell" },
     { icon: Users, label: "興味者リスト", path: "/interested" },
   ]},
   { title: "マイページ", items: [

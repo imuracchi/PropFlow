@@ -10,7 +10,6 @@ import PropertyList from "./pages/PropertyList";
 import PropertyDetail from "./pages/PropertyDetail";
 import PropertyUpload from "./pages/PropertyUpload";
 import ChatList from "./pages/ChatList";
-import ChatRoom from "./pages/ChatRoom";
 import DirectMessage from "./pages/DirectMessage";
 import Favorites from "./pages/Favorites";
 import MyPage from "./pages/MyPage";
@@ -148,24 +147,10 @@ function AppContent() {
         <Route path="/dm/:id">
           {() => (<DashboardLayout><DirectMessage /></DashboardLayout>)}
         </Route>
-        <Route path="/chat/:id">
-          {() => (
-            <DashboardLayout>
-              <ChatRoom />
-            </DashboardLayout>
-          )}
-        </Route>
         <Route path="/dm-sell">
           {() => (
             <DashboardLayout>
               <ChatList mode="owner-dm" />
-            </DashboardLayout>
-          )}
-        </Route>
-        <Route path="/chat-sell">
-          {() => (
-            <DashboardLayout>
-              <ChatList mode="owner" />
             </DashboardLayout>
           )}
         </Route>

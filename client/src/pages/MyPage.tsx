@@ -553,13 +553,6 @@ function NotifySettings() {
             <p className="text-xs text-muted-foreground">ダイレクトメッセージを受信した時にメールでお知らせ</p>
           </div>
         </label>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" className="accent-primary w-4 h-4" checked={notifyAnnounce === 1} onChange={e => save(notifyNewProperty, notifyDm, e.target.checked ? 1 : 0)} />
-          <div>
-            <span className="text-sm font-medium">お気に入り物件でのお知らせ</span>
-            <p className="text-xs text-muted-foreground">お気に入り登録またはDM中の物件でお知らせが投稿された時にメールで通知</p>
-          </div>
-        </label>
       </div>
     </div>
   );

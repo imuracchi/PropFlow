@@ -940,7 +940,6 @@ export default function PropertyDetail() {
   );
 
   const { data: favoriteIds } = trpc.favorite.ids.useQuery();
-  const { data: announceCount } = trpc.chat.announceCount.useQuery({ propertyId }, { enabled: !!propertyId });
   const toggleFavMutation = trpc.favorite.toggle.useMutation();
   const isFavorite = (favoriteIds ?? []).includes(propertyId);
 
@@ -1258,12 +1257,6 @@ export default function PropertyDetail() {
                 <MessageCircle className="w-4 h-4" />質問する
               </Button>
             )}
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/chat/${property.id}`)}>
-              <Bell className="w-4 h-4" />お知らせ
-              {(announceCount ?? 0) > 0 && (
-                <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 rounded-full">{announceCount}</span>
-              )}
-            </Button>
             <Button
               variant="outline" size="sm" className="gap-1.5"
               onClick={async () => {
@@ -1349,9 +1342,6 @@ export default function PropertyDetail() {
                   </Button>
                 )
               )}
-              <Button variant="outline" size="sm" className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setLocation(`/chat/${property.id}`)}>
-                <Bell className="w-4 h-4" />お知らせを投稿
-              </Button>
               <div className="w-px h-5 bg-border mx-1" />
             </div>
           )}
