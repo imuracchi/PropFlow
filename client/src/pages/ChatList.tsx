@@ -246,14 +246,14 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">問い合わせDM</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">自社物件への問い合わせメッセージ</p>
+          <h1 className="text-lg font-semibold text-foreground">対応中のメッセージ</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">自社物件への質問・問い合わせ</p>
         </div>
         <Tabs defaultValue="active">
           <TabsList className="bg-muted">
             <TabsTrigger value="active" className="gap-1.5">
               <MessageCircle className="w-3.5 h-3.5" />
-              DM
+              対応中
               {ownerDms.length > 0 && <span className="text-xs bg-primary/10 text-primary px-1.5 rounded-full ml-0.5">{ownerDms.length}</span>}
             </TabsTrigger>
             <TabsTrigger value="hidden" className="gap-1.5">
@@ -317,22 +317,22 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">ダイレクトメッセージ</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">物件登録者との1対1のやり取り</p>
+          <h1 className="text-lg font-semibold text-foreground">質問中の一覧</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">問い合わせ中の物件一覧</p>
         </div>
         <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation("/properties")}>
           <Home className="w-4 h-4" />新しく物件の質問
         </Button>
       </div>
       <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
-        物件に関してのご質問・ご相談は、物件一覧 &gt; 物件を選択 &gt;「登録者にDM」ボタンからできます
+        物件に関してのご質問・ご相談は、物件一覧 &gt; 物件を選択 &gt;「物件への質問」ボタンからできます
       </div>
 
       <Tabs defaultValue="active">
         <TabsList className="bg-muted">
           <TabsTrigger value="active" className="gap-1.5">
             <MessageCircle className="w-3.5 h-3.5" />
-            DM
+            質問中
             {activeDmThreads.length > 0 && (
               <span className="text-xs bg-primary/10 text-primary px-1.5 rounded-full ml-0.5">{activeDmThreads.length}</span>
             )}
@@ -355,7 +355,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner" 
 
         <TabsContent value="active" className="mt-4">
           {activeDmThreads.length === 0 ? (
-            <EmptyState icon={MessageCircle} message="ダイレクトメッセージはありません" />
+            <EmptyState icon={MessageCircle} message="質問中の物件はありません" />
           ) : (
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <table className="w-full"><thead><tr className="border-b border-border bg-muted">

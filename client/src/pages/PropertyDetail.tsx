@@ -1255,7 +1255,7 @@ export default function PropertyDetail() {
             </Button>
             {property.userId !== user?.id && (
               <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
-                <MessageCircle className="w-4 h-4" />登録者にDM
+                <MessageCircle className="w-4 h-4" />物件への質問
               </Button>
             )}
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/chat/${property.id}`)}>
@@ -2094,10 +2094,10 @@ export default function PropertyDetail() {
             <div className="bg-card border border-border rounded-lg p-5 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">この物件について問い合わせる</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">登録者にダイレクトメッセージで問い合わせできます</p>
+                <p className="text-xs text-muted-foreground mt-0.5">物件について質問・問い合わせができます</p>
               </div>
               <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
-                <MessageCircle className="w-4 h-4" />登録者にDM
+                <MessageCircle className="w-4 h-4" />物件への質問
               </Button>
             </div>
           )}
