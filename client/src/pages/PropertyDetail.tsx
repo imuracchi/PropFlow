@@ -1345,7 +1345,7 @@ export default function PropertyDetail() {
                 <FileText className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">紹介資料の作成</h3>
+                <h3 className="font-semibold text-foreground">PDF資料の作成</h3>
                 <p className="text-sm text-muted-foreground mt-0.5">含めるページを選択してください</p>
               </div>
             </div>
@@ -2105,7 +2105,7 @@ export default function PropertyDetail() {
                   <FileText className="w-5 h-5 text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">紹介資料を作成する</p>
+                  <p className="text-sm font-semibold text-foreground">物件PDF資料を作る</p>
                   <p className="text-xs text-muted-foreground mt-0.5">概要・地図なども一緒に、自社用資料として「ダウンロード資料」に保存できます</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={async () => {
