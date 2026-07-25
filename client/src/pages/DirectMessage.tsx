@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, Send, Loader2, User, Home, Bookmark } from "lucide-react";
+import { ChevronLeft, Send, Loader2, User, Home, Bookmark, CheckCircle2 } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -77,8 +77,13 @@ export default function DirectMessage() {
           </button>
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">DM</span>
           <div>
-            <h2 className="font-semibold text-foreground text-sm">
+            <h2 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
               {partnerThread?.partnerName ?? `ユーザー #${partnerId}`}
+              {(partnerThread as any)?.partnerVerified === 1 && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  <CheckCircle2 className="w-3 h-3" />認証済み
+                </span>
+              )}
             </h2>
             {partnerThread?.partnerCompany && (
               <p className="text-xs text-muted-foreground">{partnerThread.partnerCompany}</p>
