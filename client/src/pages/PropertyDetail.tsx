@@ -2106,7 +2106,7 @@ export default function PropertyDetail() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground">紹介資料を作成する</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">地図・写真・概要をまとめたPDFを印刷・保存できます</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">概要・地図なども一緒に、自社用資料として「ダウンロード資料」に保存できます</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={async () => {
                   const files = await utils.property.listFiles.fetch({ propertyId: property.id });
