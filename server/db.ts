@@ -159,6 +159,7 @@ export async function listActiveUsers() {
       status: users.status, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn,
       loginMethod: users.loginMethod, termsAgreedAt: users.termsAgreedAt,
       hasBusinessCard: sql<number>`CASE WHEN ${users.businessCardBase64} IS NOT NULL THEN 1 ELSE 0 END`,
+      verified: users.verified,
       notifyAnnounce: users.notifyAnnounce,
     })
     .from(users)
