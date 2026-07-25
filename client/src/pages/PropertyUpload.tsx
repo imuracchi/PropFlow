@@ -63,6 +63,9 @@ export default function PropertyUpload() {
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
+  const [additionalDocVisibility, setAdditionalDocVisibility] = useState<Record<string, boolean>>({});
+  const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const [memo, setMemo] = useState("");
   const [error, setError] = useState("");
 
@@ -237,7 +240,7 @@ export default function PropertyUpload() {
       });
 
       if (result) {
-        const totalFiles = pdfFiles.length + photoFiles.length;
+        const totalFiles = pdfFiles.length + additionalFiles.length + photoFiles.length;
         let uploaded = 0;
         for (const file of pdfFiles) {
           uploaded++;
@@ -250,6 +253,19 @@ export default function PropertyUpload() {
             size: file.size,
             contentBase64: base64,
             visible: docVisibility[key] ?? true,
+          });
+        }
+        for (const file of additionalFiles) {
+          uploaded++;
+          setSubmitProgress(`追加資料をアップロード中... (${uploaded}/${totalFiles})`);
+          const base64 = await fileToBase64(file);
+          const key = `add-${file.name}-${file.size}`;
+          await uploadFileMutation.mutateAsync({
+            propertyId: result.id,
+            name: file.name,
+            size: file.size,
+            contentBase64: base64,
+            visible: additionalDocVisibility[key] ?? true,
           });
         }
         for (const photo of photoFiles) {
@@ -350,6 +366,13 @@ export default function PropertyUpload() {
           ))}
         </div>
 
+        {/* 推奨注釈 */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 space-y-1">
+          <p className="text-sm font-semibold text-blue-800">まず物件概要がわかる1枚をアップしてください</p>
+          <p className="text-xs text-blue-700">AIがそのファイルをもとに物件情報を自動入力します。登記簿謄本・間取り図などの追加資料は<span className="font-semibold">次のステップ（内容確認・編集）で追加できます。</span></p>
+          <p className="text-xs text-blue-600/80">※ 複数ファイルの一括アップは非推奨です（解析精度の低下・処理時間の増加につながります）</p>
+        </div>
+
         {/* ドロップゾーン */}
         <input
           ref={fileInputRef}
@@ -361,7 +384,7 @@ export default function PropertyUpload() {
         />
         <div
           className={`border-2 border-dashed rounded-xl p-16 text-center transition-all cursor-pointer bg-card ${
-            dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+            dragOver ? "border-primary bg-primary/5" : pdfFiles.length > 1 ? "border-amber-400 bg-amber-50" : "border-border hover:border-primary/50"
           }`}
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
@@ -376,9 +399,15 @@ export default function PropertyUpload() {
               <p className="font-semibold text-foreground">PDF・画像ファイルをドロップ</p>
               <p className="text-sm text-muted-foreground mt-1">またはクリックしてファイルを選択</p>
             </div>
-            <p className="text-xs text-muted-foreground">物件概要書・登記簿謄本・間取り図・現場写真など（PDF/JPG/PNG、最大20MB）</p>
+            <p className="text-xs text-muted-foreground">物件概要書（PDF/JPG/PNG、最大20MB）<span className="text-primary font-medium ml-1">1枚推奨</span></p>
           </div>
         </div>
+        {pdfFiles.length > 1 && (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+            <span className="text-amber-600 text-sm mt-0.5">⚠</span>
+            <p className="text-xs text-amber-700">{pdfFiles.length}件選択されています。<span className="font-semibold">1枚の推奨を超えています。</span>複数ファイルのAI解析は時間がかかり、精度が下がる場合があります。残りの資料は次のステップで追加できます。</p>
+          </div>
+        )}
 
         {/* 選択済みファイル */}
         {pdfFiles.length > 0 && (
@@ -626,6 +655,72 @@ export default function PropertyUpload() {
           {!name || !address || !type || !price ? (
             <p className="text-xs text-muted-foreground mt-2">※ AI生成には基本情報（物件名・所在地・種別・価格）の入力が必要です</p>
           ) : null}
+        </div>
+      </div>
+
+      {/* 追加資料 */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-muted-foreground" />
+            <span className="font-semibold text-foreground text-sm">追加資料</span>
+            <span className="text-xs text-muted-foreground">（任意）登記簿謄本・間取り図・その他の資料</span>
+          </div>
+        </div>
+        <div className="p-5 space-y-3">
+          <input
+            ref={additionalFileInputRef}
+            type="file"
+            accept="application/pdf,image/*"
+            multiple
+            className="hidden"
+            onChange={e => {
+              if (!e.target.files) return;
+              const files = Array.from(e.target.files).filter(f =>
+                (f.type === "application/pdf" || f.type.startsWith("image/")) && f.size <= 20 * 1024 * 1024
+              );
+              setAdditionalFiles(prev => {
+                const existing = new Set(prev.map(f => `${f.name}-${f.size}`));
+                return [...prev, ...files.filter(f => !existing.has(`${f.name}-${f.size}`))];
+              });
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            className="w-full border-2 border-dashed border-border rounded-lg py-5 flex flex-col items-center gap-2 hover:border-primary/40 transition-colors"
+            onClick={() => additionalFileInputRef.current?.click()}
+          >
+            <Upload className="w-6 h-6 text-muted-foreground/50" />
+            <span className="text-sm text-muted-foreground">クリックして資料を追加（PDF/JPG/PNG、最大20MB）</span>
+          </button>
+          {additionalFiles.length > 0 && (
+            <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
+              {additionalFiles.map((file, i) => {
+                const key = `add-${file.name}-${file.size}`;
+                const visible = additionalDocVisibility[key] ?? true;
+                return (
+                  <div key={key} className="flex items-center gap-3 px-4 py-2.5">
+                    <FileText className="w-4 h-4 text-red-500 shrink-0" />
+                    <span className="text-sm text-foreground flex-1 truncate">{file.name}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                    <button
+                      type="button"
+                      className={`text-xs font-medium px-2 py-1 rounded flex items-center gap-1 shrink-0 ${visible ? "text-muted-foreground hover:bg-muted" : "bg-amber-100 text-amber-700"}`}
+                      onClick={() => setAdditionalDocVisibility(prev => ({ ...prev, [key]: !visible }))}
+                    >
+                      {visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      {visible ? "全員に公開" : "登録者のみ"}
+                    </button>
+                    <button type="button" className="text-muted-foreground hover:text-destructive"
+                      onClick={() => setAdditionalFiles(prev => prev.filter((_, j) => j !== i))}>
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
