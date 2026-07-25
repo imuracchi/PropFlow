@@ -1269,18 +1269,6 @@ export default function PropertyDetail() {
                 }
               }}
             ><Share2 className="w-4 h-4" />共有</Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={async () => {
-              const files = await utils.property.listFiles.fetch({ propertyId: property.id });
-              const docs = (files ?? []).filter((f: any) => f.category !== "photo" && /\.pdf$/i.test(f.name));
-              setPrintDocFiles(docs.map((f: any) => ({ id: f.id, name: f.name })));
-              setPrintAttachments(new Set(docs.map((f: any) => f.id)));
-              setShowPrintDialog(true);
-            }}>
-              <FileText className="w-4 h-4" />紹介資料作成
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/simulation/${property.id}`)}>
-              <Calculator className="w-4 h-4" />シミュレーション
-            </Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportPropertyCsv(property, details, createdDate)}>
               <Download className="w-4 h-4" />CSV
             </Button>
@@ -2105,6 +2093,41 @@ export default function PropertyDetail() {
               </Button>
             </div>
           )}
+
+          {/* 活用ツール */}
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 bg-muted/50 border-b border-border">
+              <p className="text-sm font-semibold text-foreground">活用ツール</p>
+            </div>
+            <div className="divide-y divide-border">
+              <div className="flex items-center gap-4 px-4 py-4">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">紹介資料を作成する</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">地図・写真・概要をまとめたPDFを印刷・保存できます</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={async () => {
+                  const files = await utils.property.listFiles.fetch({ propertyId: property.id });
+                  const docs = (files ?? []).filter((f: any) => f.category !== "photo" && /\.pdf$/i.test(f.name));
+                  setPrintDocFiles(docs.map((f: any) => ({ id: f.id, name: f.name })));
+                  setPrintAttachments(new Set(docs.map((f: any) => f.id)));
+                  setShowPrintDialog(true);
+                }}>作成</Button>
+              </div>
+              <div className="flex items-center gap-4 px-4 py-4">
+                <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                  <Calculator className="w-5 h-5 text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">収益シミュレーション</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">想定利回り・利益を試算できます</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setLocation(`/simulation/${property.id}`)}>開始</Button>
+              </div>
+            </div>
+          </div>
         </>
       )}
     </div>
