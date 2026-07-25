@@ -1254,8 +1254,8 @@ export default function PropertyDetail() {
               <Heart className={`w-4 h-4 ${isFavorite ? "fill-red-500" : ""}`} />お気に入り
             </Button>
             {property.userId !== user?.id && (
-              <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
-                <MessageCircle className="w-4 h-4" />物件への質問
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
+                <MessageCircle className="w-4 h-4" />質問する
               </Button>
             )}
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/chat/${property.id}`)}>
@@ -2091,13 +2091,24 @@ export default function PropertyDetail() {
           <PropertyMemo propertyId={propertyId} />
 
           {property.userId !== user?.id && (
-            <div className="bg-card border border-border rounded-lg p-5 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">この物件について問い合わせる</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">物件について質問・問い合わせができます</p>
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-primary shrink-0" />
+                <p className="text-sm font-semibold text-foreground">登録者に直接質問できます</p>
               </div>
-              <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
-                <MessageCircle className="w-4 h-4" />物件への質問
+              {(property.showCompany !== 0 && property.userCompany) ? (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{property.userCompany}</span> との1対1のやり取りが始まります
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">物件の登録者との1対1のやり取りが始まります</p>
+              )}
+              <Button
+                className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+                size="lg"
+                onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}
+              >
+                <MessageCircle className="w-4 h-4" />物件への質問を送る
               </Button>
             </div>
           )}
