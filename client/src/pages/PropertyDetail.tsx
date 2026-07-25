@@ -1313,7 +1313,10 @@ export default function PropertyDetail() {
                   variant="outline" size="sm"
                   className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
                   disabled={setPublishedMutation.isPending}
-                  onClick={() => setPublishedMutation.mutate({ propertyId, published: true })}
+                  onClick={async () => {
+                    await setPublishedMutation.mutateAsync({ propertyId, published: true });
+                    if (!property.lineNotifiedAt) setShowNotifyConfirm(true);
+                  }}
                 >
                   <Eye className="w-4 h-4" />
                   {setPublishedMutation.isPending ? "公開中..." : "公開する"}
