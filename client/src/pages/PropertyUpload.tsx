@@ -76,6 +76,9 @@ export default function PropertyUpload() {
   const [excludeSearch, setExcludeSearch] = useState("");
   const [excludePicker, setExcludePicker] = useState(false);
 
+  const [showNotifyDialog, setShowNotifyDialog] = useState(false);
+  const [newPropertyId, setNewPropertyId] = useState<number | null>(null);
+
   const createMutation = trpc.property.create.useMutation();
   const uploadFileMutation = trpc.property.uploadFile.useMutation();
   const saveMemoMutation = trpc.memo.save.useMutation();
@@ -83,6 +86,7 @@ export default function PropertyUpload() {
   const commentMutation = trpc.property.generateComment.useMutation();
   const transportMutation = trpc.property.analyzeTransport.useMutation();
   const addExclusionMutation = trpc.property.addExclusion.useMutation();
+  const notifyLineMutation = trpc.property.notifyLine.useMutation();
   const { data: allUsers } = trpc.user.list.useQuery();
 
   const fillFormFromData = (data: Record<string, unknown>) => {
@@ -294,7 +298,13 @@ export default function PropertyUpload() {
           }
         }
         setSubmitting(false);
-        setLocation(`/property/${result.id}`);
+        // 公開モードの場合のみ通知ダイアログを表示
+        if (publishMode === "publish") {
+          setNewPropertyId(result.id);
+          setShowNotifyDialog(true);
+        } else {
+          setLocation(`/property/${result.id}`);
+        }
       } else {
         setSubmitting(false);
       }
@@ -303,6 +313,62 @@ export default function PropertyUpload() {
       setError(err.message || "登録に失敗しました");
     }
   };
+
+  // ── 登録完了後 通知ダイアログ ──
+  if (showNotifyDialog && newPropertyId) {
+    const hasExclusions = excludedUsers.length > 0;
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="bg-card border border-border rounded-xl shadow-lg p-6 max-w-sm w-full space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+              <Bell className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-xs text-green-700 font-medium">物件登録が完了しました</p>
+              <h3 className="font-semibold text-foreground">新着として通知しますか？</h3>
+            </div>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
+              <span className="text-green-600 mt-0.5">✓</span>
+              <span>新着メール：{hasExclusions ? "閲覧制限者を除く全員へ送信" : "全員へ送信"}</span>
+            </div>
+            <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
+              <span className="text-green-600 mt-0.5">✓</span>
+              <span>プッシュ通知：{hasExclusions ? "閲覧制限者を除く全員へ送信" : "全員へ送信"}</span>
+            </div>
+            <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
+              {hasExclusions ? (
+                <><span className="text-muted-foreground mt-0.5">—</span><span className="text-muted-foreground">LINE通知：閲覧制限があるため送信しません</span></>
+              ) : (
+                <><span className="text-green-600 mt-0.5">✓</span><span>LINE通知：全員へ送信</span></>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => setLocation(`/property/${newPropertyId}`)}>
+              スキップ
+            </Button>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2"
+              disabled={notifyLineMutation.isPending}
+              onClick={() => {
+                notifyLineMutation.mutate({ propertyId: newPropertyId }, {
+                  onSuccess: () => setLocation(`/property/${newPropertyId}`),
+                });
+              }}
+            >
+              {notifyLineMutation.isPending
+                ? <><Loader2 className="w-4 h-4 animate-spin" />送信中...</>
+                : <>OK・通知する</>
+              }
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Step 1: PDF Upload ──
   if (step === "upload") {
