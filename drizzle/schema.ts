@@ -203,6 +203,13 @@ export const propertyExclusions = mysqlTable("property_exclusions", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const propertyReads = mysqlTable("property_reads", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  propertyId: int("propertyId").notNull(),
+  readAt: timestamp("readAt").defaultNow().notNull(),
+});
+
 export const broadcastLogs = mysqlTable("broadcast_logs", {
   id: int("id").autoincrement().primaryKey(),
   subject: varchar("subject", { length: 500 }).notNull(),

@@ -60,7 +60,6 @@ export default function DirectMessage() {
     if (!input.trim() || !partnerId) return;
     await sendMutation.mutateAsync({ receiverId: partnerId, content: input.trim(), propertyId });
     setInput("");
-    localStorage.setItem(`chat-read-dm-${partnerId}-${propertyId ?? 0}`, String(Date.now()));
   };
 
   if (isLoading) {

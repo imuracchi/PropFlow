@@ -550,6 +550,17 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
+    markRead: protectedProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.markPropertyRead(ctx.user.id, input.propertyId);
+        return { success: true };
+      }),
+
+    readIds: protectedProcedure.query(async ({ ctx }) => {
+      return db.getReadPropertyIds(ctx.user.id);
+    }),
+
     notifyLine: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input }) => {

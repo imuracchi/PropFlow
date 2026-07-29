@@ -709,15 +709,15 @@ function IntroducerCard({ property }: { property: any }) {
         <div className="border-t border-border divide-y divide-border">
           {items.map(item => (
             <div key={item.label} className="flex">
-              <span className="w-32 shrink-0 text-sm text-muted-foreground px-5 py-3 bg-muted/30">{item.label}</span>
+              <span className="w-24 md:w-32 shrink-0 text-sm text-muted-foreground px-3 md:px-5 py-3 bg-muted/30">{item.label}</span>
               {(item as any).hidden ? (
-                <span className="text-sm text-muted-foreground/40 italic px-5 py-3">非公開</span>
+                <span className="text-sm text-muted-foreground/40 italic px-3 md:px-5 py-3">非公開</span>
               ) : item.label === "URL" && item.value ? (
-                <a href={item.value.startsWith("http") ? item.value : `https://${item.value}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline px-5 py-3">{item.value}</a>
+                <a href={item.value.startsWith("http") ? item.value : `https://${item.value}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline px-3 md:px-5 py-3 break-all">{item.value}</a>
               ) : item.label === "メール" && item.value ? (
-                <a href={`mailto:${item.value}`} className="text-sm text-primary hover:underline px-5 py-3">{item.value}</a>
+                <a href={`mailto:${item.value}`} className="text-sm text-primary hover:underline px-3 md:px-5 py-3 break-all">{item.value}</a>
               ) : (
-                <span className={`text-sm px-5 py-3 ${item.value ? "text-foreground" : "text-muted-foreground/40"}`}>{item.value || "未設定"}</span>
+                <span className={`text-sm px-3 md:px-5 py-3 break-all ${item.value ? "text-foreground" : "text-muted-foreground/40"}`}>{item.value || "未設定"}</span>
               )}
             </div>
           ))}
@@ -1909,8 +1909,8 @@ export default function PropertyDetail() {
                   ) : (
                     details.map(([label, value]) => (
                       <div key={label} className="flex">
-                        <span className="w-40 shrink-0 text-sm text-muted-foreground px-5 py-3 bg-muted/30">{label}</span>
-                        <span className={`text-sm font-medium whitespace-pre-wrap px-5 py-3 flex-1 ${label === "売出価格" ? "text-primary font-bold" : "text-foreground"}`}>{value}</span>
+                        <span className="w-24 md:w-40 shrink-0 text-sm text-muted-foreground px-3 md:px-5 py-3 bg-muted/30">{label}</span>
+                        <span className={`text-sm font-medium whitespace-pre-wrap px-3 md:px-5 py-3 flex-1 min-w-0 ${label === "売出価格" ? "text-primary font-bold" : "text-foreground"}`}>{value}</span>
                       </div>
                     ))
                   )}

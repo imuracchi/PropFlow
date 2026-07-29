@@ -42,8 +42,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [showNewOnly, setShowNewOnly] = useState(false);
   const { user } = useAuth();
 
-  const isPropertyRead = (id: number) => !!localStorage.getItem(`propflow-property-read-${id}`);
-
   const { data: properties, isLoading } = trpc.property.list.useQuery();
   const { data: myProperties, isLoading: myLoading } = trpc.mypage.myProperties.useQuery(undefined, { enabled: mode === "mine" });
   const { data: favoriteIds } = trpc.favorite.ids.useQuery();
@@ -51,6 +49,11 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const { data: chatPropertyIds } = trpc.mypage.chatProperties.useQuery(undefined, { enabled: mode === "chat" });
   const { data: buyerPref } = trpc.buyer.getPreference.useQuery();
   const { data: allMemos } = trpc.memo.all.useQuery();
+  const { data: readPropertyIds } = trpc.property.readIds.useQuery();
+  const markReadMutation = trpc.property.markRead.useMutation();
+
+  const readSet = new Set(readPropertyIds ?? []);
+  const isPropertyRead = (id: number) => readSet.has(id);
   const toggleMutation = trpc.favorite.toggle.useMutation();
   const utils = trpc.useUtils();
 
@@ -404,7 +407,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                     <tr
                       key={property.id}
                       className="hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => { localStorage.setItem(`propflow-property-read-${property.id}`, "1"); setLocation(`/property/${property.id}`); }}
+                      onClick={() => { markReadMutation.mutate({ propertyId: property.id }); setLocation(`/property/${property.id}`); }}
                     >
                       <td className="w-10 px-3 py-4">
                         <input

@@ -1,7 +1,7 @@
 import { eq, desc, count, and, or, sql, notInArray, lt, isNull, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions, broadcastLogs } from "../drizzle/schema";
+import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions, broadcastLogs, propertyReads } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _migrationsDone = false;
@@ -37,6 +37,13 @@ export async function runStartupMigrations() {
     "ALTER TABLE `properties` ADD COLUMN `transactionFlow` text NULL",
     "ALTER TABLE `dm_read_status` ADD COLUMN `flagged` int NOT NULL DEFAULT 0",
     "ALTER TABLE `users` ADD COLUMN `verified` int NOT NULL DEFAULT 0",
+    `CREATE TABLE IF NOT EXISTS \`property_reads\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`userId\` int NOT NULL,
+      \`propertyId\` int NOT NULL,
+      \`readAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY \`uq_property_reads\` (\`userId\`, \`propertyId\`)
+    )`,
     `CREATE TABLE IF NOT EXISTS \`broadcast_logs\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`subject\` varchar(500) NOT NULL,
@@ -526,6 +533,19 @@ export async function getDeletedPropertiesByUserId(userId: number) {
     .from(properties)
     .where(and(eq(properties.userId, userId), eq(properties.deleted, 1)))
     .orderBy(desc(properties.updatedAt));
+}
+
+export async function markPropertyRead(userId: number, propertyId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(propertyReads).values({ userId, propertyId }).onDuplicateKeyUpdate({ set: { readAt: new Date() } });
+}
+
+export async function getReadPropertyIds(userId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ propertyId: propertyReads.propertyId }).from(propertyReads).where(eq(propertyReads.userId, userId));
+  return rows.map(r => r.propertyId);
 }
 
 export async function setUserVerified(id: number, verified: boolean) {
@@ -1069,12 +1089,15 @@ export async function getDirectMessageThreads(userId: number) {
     .where(sql`${properties.id} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`) : [];
 
   const readStatuses = await db
-    .select({ partnerId: dmReadStatus.partnerId, propertyId: dmReadStatus.propertyId, flagged: dmReadStatus.flagged })
+    .select({ partnerId: dmReadStatus.partnerId, propertyId: dmReadStatus.propertyId, flagged: dmReadStatus.flagged, lastReadAt: dmReadStatus.lastReadAt })
     .from(dmReadStatus)
     .where(eq(dmReadStatus.userId, userId));
   const flagMap = new Map<string, boolean>();
+  const readAtMap = new Map<string, Date>();
   for (const rs of readStatuses) {
-    flagMap.set(`${rs.partnerId}-${rs.propertyId ?? 0}`, rs.flagged === 1);
+    const key = `${rs.partnerId}-${rs.propertyId ?? 0}`;
+    flagMap.set(key, rs.flagged === 1);
+    if (rs.lastReadAt) readAtMap.set(key, rs.lastReadAt);
   }
 
   return Array.from(threadMap.values())
@@ -1092,6 +1115,7 @@ export async function getDirectMessageThreads(userId: number) {
         messageCount: thread.count,
         lastMessageAt: thread.lastAt,
         flagged: flagMap.get(`${thread.partnerId}-${thread.propertyId ?? 0}`) ?? false,
+        lastReadAt: readAtMap.get(`${thread.partnerId}-${thread.propertyId ?? 0}`) ?? null,
       };
     });
 }

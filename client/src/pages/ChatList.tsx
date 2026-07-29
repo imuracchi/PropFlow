@@ -6,10 +6,6 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 
-function getLastRead(key: string): number {
-  try { return Number(localStorage.getItem(`chat-read-${key}`) ?? "0"); } catch { return 0; }
-}
-
 type DmThread = {
   partnerId: number;
   partnerName: string;
@@ -19,6 +15,7 @@ type DmThread = {
   messageCount: number;
   lastMessageAt: string | Date;
   flagged?: boolean;
+  lastReadAt?: string | Date | null;
 };
 
 function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
@@ -30,9 +27,8 @@ function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
   const dmUrl = thread.propertyId
     ? `/dm/${thread.partnerId}/${thread.propertyId}`
     : `/dm/${thread.partnerId}`;
-  const dmKey = `dm-${thread.partnerId}-${thread.propertyId ?? 0}`;
-  const lastRead = getLastRead(dmKey);
-  const hasNew = new Date(thread.lastMessageAt).getTime() > lastRead;
+  const lastReadMs = thread.lastReadAt ? new Date(thread.lastReadAt).getTime() : 0;
+  const hasNew = new Date(thread.lastMessageAt).getTime() > lastReadMs;
 
   const handleToggleFlag = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -43,7 +39,6 @@ function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
     <tr
       className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border"
       onClick={() => {
-        localStorage.setItem(`chat-read-${dmKey}`, String(Date.now()));
         setLocation(dmUrl);
       }}
     >
