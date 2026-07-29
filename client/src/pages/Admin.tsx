@@ -193,7 +193,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["業者名", "メール", "登録方法", ...(!isManagement ? ["プラン"] : []), "ステータス", "登録日", "最終ログイン", ...(!isManagement ? ["名刺/認証"] : []), "規約同意", ...(!isManagement ? ["操作"] : [])].map(h => (
+                    {["業者名", "メール", "登録方法", ...(!isManagement ? ["プラン"] : []), "ステータス", "登録日", "最終ログイン", ...(isManagement ? ["名刺"] : ["名刺/認証", "規約同意", "操作"])].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -277,13 +277,23 @@ export default function Admin() {
                             )}
                           </td>
                         )}
-                        <td className="px-4 py-3">
-                          {user.termsAgreedAt ? (
-                            <span className="text-xs text-green-600 font-medium">済</span>
-                          ) : (
-                            <span className="text-xs text-red-500 font-medium">未</span>
-                          )}
-                        </td>
+                        {isManagement ? (
+                          <td className="px-4 py-3">
+                            {(user as any).hasBusinessCard ? (
+                              <span className="text-xs text-green-600 font-medium">あり</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground/50">なし</span>
+                            )}
+                          </td>
+                        ) : (
+                          <td className="px-4 py-3">
+                            {user.termsAgreedAt ? (
+                              <span className="text-xs text-green-600 font-medium">済</span>
+                            ) : (
+                              <span className="text-xs text-red-500 font-medium">未</span>
+                            )}
+                          </td>
+                        )}
                         {!isManagement && (
                           <td className="px-4 py-3">
                             <DropdownMenu>

@@ -1133,7 +1133,7 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
-    getUserDetail: adminProcedure
+    getUserDetail: managementProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         const user = await db.getUserById(input.id);
