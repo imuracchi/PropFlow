@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search, Heart, Building2,
-  Plus, MapPin, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff
+  Plus, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff, SlidersHorizontal, X as XIcon
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -40,6 +40,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [showNewOnly, setShowNewOnly] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const { user } = useAuth();
 
   const { data: properties, isLoading } = trpc.property.list.useQuery();
@@ -306,54 +307,90 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
         </div>
       )}
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="エリア・住所・業者名・種別で検索..."
-          className="pl-10 bg-card border-border h-11"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-        />
-      </div>
+      {/* 検索バー＋絞り込みボタン */}
+      {(() => {
+        const activeFilterCount = [filterType !== "all", minLandArea, maxLandArea, minPrice, maxPrice, showNewOnly].filter(Boolean).length;
+        const clearAll = () => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); setShowNewOnly(false); };
+        return (
+          <>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="エリア・住所・業者名で検索..."
+                  className="pl-10 bg-card border-border h-11"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Button
+                variant={activeFilterCount > 0 ? "default" : "outline"}
+                className={`h-11 px-4 gap-2 shrink-0 ${activeFilterCount > 0 ? "bg-primary text-primary-foreground" : ""}`}
+                onClick={() => setShowFilters(v => !v)}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="hidden sm:inline">絞り込み</span>
+                {activeFilterCount > 0 && (
+                  <span className="bg-white/30 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center leading-none">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </div>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-40 bg-card border-border">
-            <SelectValue placeholder="物件種別：全て" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">種別：全て</SelectItem>
-            {types.map(t => (
-              <SelectItem key={t} value={t}>{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">土地面積</span>
-          <Input className="w-24 bg-card border-border h-9 text-sm" placeholder="下限㎡" value={minLandArea} onChange={e => setMinLandArea(e.target.value)} />
-          <span className="text-xs text-muted-foreground">〜</span>
-          <Input className="w-24 bg-card border-border h-9 text-sm" placeholder="上限㎡" value={maxLandArea} onChange={e => setMaxLandArea(e.target.value)} />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">価格</span>
-          <Input className="w-28 bg-card border-border h-9 text-sm" placeholder="下限(円)" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
-          <span className="text-xs text-muted-foreground">〜</span>
-          <Input className="w-28 bg-card border-border h-9 text-sm" placeholder="上限(円)" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
-        </div>
-        <Button
-          variant={showNewOnly ? "default" : "outline"}
-          size="sm"
-          className={`h-9 gap-1.5 text-xs shrink-0 ${showNewOnly ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}`}
-          onClick={() => setShowNewOnly(!showNewOnly)}
-        >
-          新着のみ
-        </Button>
-        {(minLandArea || maxLandArea || minPrice || maxPrice || filterType !== "all" || showNewOnly) && (
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-9" onClick={() => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); setShowNewOnly(false); }}>
-            条件クリア
-          </Button>
-        )}
-      </div>
+            {/* スライド展開パネル */}
+            <div className={`overflow-hidden transition-all duration-200 ${showFilters ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
+              <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">物件種別</p>
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger className="w-40 bg-background border-border">
+                        <SelectValue placeholder="全て" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全て</SelectItem>
+                        {types.map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">土地面積（㎡）</p>
+                    <div className="flex items-center gap-1.5">
+                      <Input className="w-24 bg-background border-border h-9 text-sm" placeholder="下限" value={minLandArea} onChange={e => setMinLandArea(e.target.value)} />
+                      <span className="text-xs text-muted-foreground">〜</span>
+                      <Input className="w-24 bg-background border-border h-9 text-sm" placeholder="上限" value={maxLandArea} onChange={e => setMaxLandArea(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">価格（円）</p>
+                    <div className="flex items-center gap-1.5">
+                      <Input className="w-28 bg-background border-border h-9 text-sm" placeholder="下限" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+                      <span className="text-xs text-muted-foreground">〜</span>
+                      <Input className="w-28 bg-background border-border h-9 text-sm" placeholder="上限" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+                    </div>
+                  </div>
+                  <Button
+                    variant={showNewOnly ? "default" : "outline"}
+                    size="sm"
+                    className={`h-9 gap-1.5 text-xs shrink-0 ${showNewOnly ? "bg-orange-500 hover:bg-orange-600 text-white border-0" : ""}`}
+                    onClick={() => setShowNewOnly(!showNewOnly)}
+                  >
+                    新着のみ
+                  </Button>
+                </div>
+                {activeFilterCount > 0 && (
+                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1.5 h-8" onClick={clearAll}>
+                    <XIcon className="w-3.5 h-3.5" />条件をクリア
+                  </Button>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {filtered.length === 0 ? (
         <div className="bg-card border border-border rounded-lg py-16 text-center">
@@ -374,7 +411,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted">
-                  <th className="w-10 px-3 py-2.5">
+                  <th className="w-10 px-3 py-2.5 hidden md:table-cell">
                     <input
                       type="checkbox"
                       className="accent-primary w-4 h-4"
@@ -409,7 +446,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       className="hover:bg-accent/50 transition-colors cursor-pointer"
                       onClick={() => { markReadMutation.mutate({ propertyId: property.id }); setLocation(`/property/${property.id}`); }}
                     >
-                      <td className="w-10 px-3 py-4">
+                      <td className="w-10 px-3 py-4 hidden md:table-cell">
                         <input
                           type="checkbox"
                           className="accent-primary w-4 h-4"
@@ -419,12 +456,16 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                         />
                       </td>
                       <td className="px-3 py-3 md:px-4 md:py-4">
+                        {/* バッジ行 */}
                         <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                           <span className="text-[10px] text-muted-foreground/60 hidden md:inline">#{property.id}</span>
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                             {property.type}
                           </span>
                           {isNew && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">新着</span>}
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded md:hidden ${STATUS_MAP[property.status]?.cls ?? ""}`}>
+                            {STATUS_MAP[property.status]?.label}
+                          </span>
                           {mode === "mine" && (
                             (property as any).published === 0 ? (
                               <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-300">
@@ -437,8 +478,17 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                             )
                           )}
                         </div>
+                        {/* 物件名 */}
                         <p className="font-medium text-foreground text-sm md:text-[15px] leading-snug">{property.name}</p>
-                        <p className="text-xs font-semibold text-primary mt-0.5 md:hidden">{property.priceNegotiable ? "応相談" : (property.price ? `${property.price.toLocaleString()}円` : "—")}</p>
+                        {/* 住所・面積（モバイルのみ） */}
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate md:hidden">
+                          {property.address}
+                          {property.landArea ? ` · ${property.landArea.toFixed(0)}㎡（${toTsubo(property.landArea)}坪）` : ""}
+                        </p>
+                        {/* 価格（モバイルのみ） */}
+                        <p className="text-xs font-semibold text-primary mt-0.5 md:hidden">
+                          {property.priceNegotiable ? "応相談" : (property.price ? `${property.price.toLocaleString()}円` : "—")}
+                        </p>
                       </td>
                       <td className="px-4 py-4 text-sm text-muted-foreground max-w-[250px] hidden md:table-cell">
                         {property.address}
