@@ -945,8 +945,13 @@ export default function PropertyDetail() {
   const incrementViewMutation = trpc.property.incrementView.useMutation();
 
   useEffect(() => {
-    if (propertyId) incrementViewMutation.mutate({ propertyId });
-  }, [propertyId]);
+    if (!property || !user) return;
+    const isOwner = user.id === property.userId;
+    const isAdminOrMgmt = user.role === "admin" || user.role === "management";
+    if (!isOwner && !isAdminOrMgmt) {
+      incrementViewMutation.mutate({ propertyId: property.id });
+    }
+  }, [property?.id]);
 
   const toggleFavorite = async () => {
     await toggleFavMutation.mutateAsync({ propertyId });
