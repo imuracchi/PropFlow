@@ -855,6 +855,14 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
+    partnerInfo: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        const user = await db.getUserById(input.userId);
+        if (!user) return null;
+        return { name: user.name, company: user.company, verified: user.verified };
+      }),
+
     markRead: protectedProcedure
       .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
       .mutation(async ({ input, ctx }) => {

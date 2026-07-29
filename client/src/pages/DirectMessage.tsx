@@ -27,9 +27,16 @@ export default function DirectMessage() {
   const utils = trpc.useUtils();
   const { data: threads } = trpc.dm.threads.useQuery();
   const partnerThread = threads?.find(t => t.partnerId === partnerId && t.propertyId === (propertyId ?? null));
+  const { data: partnerInfo } = trpc.dm.partnerInfo.useQuery(
+    { userId: partnerId },
+    { enabled: !!partnerId && !partnerThread }
+  );
+  const partnerName = partnerThread?.partnerName ?? partnerInfo?.name ?? null;
+  const partnerCompany = partnerThread?.partnerCompany ?? partnerInfo?.company ?? null;
+  const partnerVerified = (partnerThread as any)?.partnerVerified ?? partnerInfo?.verified ?? 0;
   const isFlagged = partnerThread?.flagged ?? false;
 
-  const sendMutation = trpc.dm.send.useMutation({ onSuccess: () => refetch() });
+  const sendMutation = trpc.dm.send.useMutation({ onSuccess: () => { refetch(); utils.dm.threads.invalidate(); } });
   const markReadMutation = trpc.dm.markRead.useMutation();
   const flagMutation = trpc.dm.setFlag.useMutation({
     onSuccess: () => utils.dm.threads.invalidate(),
@@ -77,15 +84,15 @@ export default function DirectMessage() {
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">DM</span>
           <div>
             <h2 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
-              {partnerThread?.partnerName ?? `ユーザー #${partnerId}`}
-              {(partnerThread as any)?.partnerVerified === 1 && (
+              {partnerName ?? `ユーザー #${partnerId}`}
+              {partnerVerified === 1 && (
                 <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   <CheckCircle2 className="w-3 h-3" />認証済み
                 </span>
               )}
             </h2>
-            {partnerThread?.partnerCompany && (
-              <p className="text-xs text-muted-foreground">{partnerThread.partnerCompany}</p>
+            {partnerCompany && (
+              <p className="text-xs text-muted-foreground">{partnerCompany}</p>
             )}
           </div>
         </div>
