@@ -1640,9 +1640,9 @@ export default function PropertyDetail() {
           <IntroducerCard property={property} />
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <div className="bg-primary rounded-lg p-3 md:p-4 col-span-2 md:col-span-1">
-              <p className="text-[10px] md:text-xs text-white/80 font-medium mb-0.5">売出価格</p>
-              <p className="text-base md:text-xl font-bold text-white">{property.priceNegotiable ? "応相談" : (property.price?.toLocaleString() ?? "—") + "円"}</p>
+            <div className="bg-card border-2 border-primary/30 rounded-lg p-3 md:p-4 col-span-2 md:col-span-1">
+              <p className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">売出価格</p>
+              <p className="text-base md:text-xl font-bold text-primary">{property.priceNegotiable ? "応相談" : (property.price?.toLocaleString() ?? "—") + "円"}</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-3 md:p-4">
               <p className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">土地面積</p>

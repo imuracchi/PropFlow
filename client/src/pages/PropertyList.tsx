@@ -479,24 +479,24 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                           )}
                         </div>
                         {/* 物件名 */}
-                        <p className="font-medium text-foreground text-sm md:text-[15px] leading-snug truncate">{property.name}</p>
+                        <p className="font-medium text-foreground text-sm md:text-[15px] leading-snug">{property.name}</p>
                         {/* 住所・面積（モバイルのみ） */}
-                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate md:hidden">
+                        <p className="text-[11px] text-muted-foreground mt-0.5 md:hidden">
                           {property.address}
                           {property.landArea ? ` · ${property.landArea.toFixed(0)}㎡（${toTsubo(property.landArea)}坪）` : ""}
                         </p>
                         {/* 価格＋ハート（モバイルのみ） */}
-                        <div className="flex items-center justify-between mt-0.5 md:hidden">
-                          <p className="text-xs font-semibold text-primary">
+                        <div className="flex items-center gap-2 mt-1 md:hidden">
+                          <p className="text-xs font-semibold text-primary flex-1">
                             {property.priceNegotiable ? "応相談" : (property.price ? `${property.price.toLocaleString()}円` : "—")}
                           </p>
                           <div className="flex items-center gap-0.5 shrink-0">
-                            {hasMemo && <StickyNote className="w-3 h-3 text-amber-500" />}
+                            {hasMemo && <StickyNote className="w-3.5 h-3.5 text-amber-500" />}
                             <button
-                              className="p-1 rounded transition-colors"
+                              className="p-1.5 rounded-md hover:bg-muted transition-colors"
                               onClick={(e) => toggleFavorite(property.id, e)}
                             >
-                              <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground/40"}`} />
+                              <Heart className={`w-4.5 h-4.5 ${isFav ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
                             </button>
                             {(property as any).favoriteCount > 0 && (
                               <span className="text-[10px] font-medium text-red-500">{(property as any).favoriteCount}</span>
