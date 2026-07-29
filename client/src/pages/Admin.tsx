@@ -199,12 +199,17 @@ export default function Admin() {
                 <tbody className="divide-y divide-border">
                   {filteredUsers.map(user => {
                     const planInfo = PLAN_MAP[user.plan] ?? PLAN_MAP.standard;
+                    const avatarCls = (user as any).role === "admin"
+                      ? "bg-orange-100 text-orange-600"
+                      : (user as any).role === "management"
+                      ? "bg-green-100 text-green-600"
+                      : "bg-primary/10 text-primary";
                     return (
                       <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3">
                           <button className="flex items-center gap-2 text-left hover:opacity-70 transition-opacity" onClick={() => setSelectedUserId(user.id)}>
                             <Avatar className="w-7 h-7">
-                              <AvatarFallback className="text-xs bg-primary/10 text-primary font-bold">{(user.name ?? "?").charAt(0)}</AvatarFallback>
+                              <AvatarFallback className={`text-xs font-bold ${avatarCls}`}>{(user.name ?? "?").charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-medium text-primary text-xs hover:underline">{user.name}</p>
