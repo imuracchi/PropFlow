@@ -93,7 +93,7 @@ function AdminRoute() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (user?.role !== "admin") {
+  if (user?.role !== "admin" && user?.role !== "management") {
     setLocation("/properties");
     return null;
   }
