@@ -407,7 +407,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
         </div>
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          <div className="md:overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted">
@@ -428,7 +428,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   {buyerPref && (
                     <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors hidden md:table-cell" onClick={() => toggleSort("match")}>マッチ<SortIcon col="match" /></th>
                   )}
-                  <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap">
+                  <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap hidden md:table-cell">
                     <Heart className="w-3.5 h-3.5 mx-auto text-muted-foreground" />
                   </th>
                 </tr>
@@ -479,16 +479,30 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                           )}
                         </div>
                         {/* 物件名 */}
-                        <p className="font-medium text-foreground text-sm md:text-[15px] leading-snug">{property.name}</p>
+                        <p className="font-medium text-foreground text-sm md:text-[15px] leading-snug truncate">{property.name}</p>
                         {/* 住所・面積（モバイルのみ） */}
                         <p className="text-[11px] text-muted-foreground mt-0.5 truncate md:hidden">
                           {property.address}
                           {property.landArea ? ` · ${property.landArea.toFixed(0)}㎡（${toTsubo(property.landArea)}坪）` : ""}
                         </p>
-                        {/* 価格（モバイルのみ） */}
-                        <p className="text-xs font-semibold text-primary mt-0.5 md:hidden">
-                          {property.priceNegotiable ? "応相談" : (property.price ? `${property.price.toLocaleString()}円` : "—")}
-                        </p>
+                        {/* 価格＋ハート（モバイルのみ） */}
+                        <div className="flex items-center justify-between mt-0.5 md:hidden">
+                          <p className="text-xs font-semibold text-primary">
+                            {property.priceNegotiable ? "応相談" : (property.price ? `${property.price.toLocaleString()}円` : "—")}
+                          </p>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            {hasMemo && <StickyNote className="w-3 h-3 text-amber-500" />}
+                            <button
+                              className="p-1 rounded transition-colors"
+                              onClick={(e) => toggleFavorite(property.id, e)}
+                            >
+                              <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground/40"}`} />
+                            </button>
+                            {(property as any).favoriteCount > 0 && (
+                              <span className="text-[10px] font-medium text-red-500">{(property as any).favoriteCount}</span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-4 text-sm text-muted-foreground max-w-[250px] hidden md:table-cell">
                         {property.address}
@@ -535,7 +549,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                           )}
                         </td>
                       )}
-                      <td className="px-4 py-4 text-center">
+                      <td className="px-4 py-4 text-center hidden md:table-cell">
                         <div className="flex items-center justify-center gap-1">
                           {hasMemo && (
                             <span title="メモあり"><StickyNote className="w-3.5 h-3.5 text-amber-500" /></span>
