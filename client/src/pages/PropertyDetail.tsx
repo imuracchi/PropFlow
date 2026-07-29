@@ -1270,9 +1270,9 @@ export default function PropertyDetail() {
             <span className="hidden md:inline">お気に入り</span>
           </Button>
           {property.userId !== user?.id && (
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
+            <Button variant="default" size="sm" className="gap-1.5" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
               <MessageCircle className="w-4 h-4" />
-              <span className="hidden md:inline">質問する</span>
+              質問する
             </Button>
           )}
           <Button
