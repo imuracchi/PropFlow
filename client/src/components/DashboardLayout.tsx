@@ -27,6 +27,22 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 
+const userBottomNav = [
+  { icon: List, label: "物件一覧", path: "/properties" },
+  { icon: MessageCircle, label: "DM", path: "/dm-list" },
+  { icon: Upload, label: "物件登録", path: "/upload" },
+  { icon: Building2, label: "自社物件", path: "/my-properties" },
+  { icon: UserCircle, label: "マイページ", path: "/mypage" },
+];
+
+const adminBottomNav = [
+  { icon: List, label: "物件一覧", path: "/properties" },
+  { icon: MessageCircle, label: "DM", path: "/dm-list" },
+  { icon: ShieldCheck, label: "管理", path: "/admin" },
+  { icon: Building2, label: "自社物件", path: "/my-properties" },
+  { icon: UserCircle, label: "マイページ", path: "/mypage" },
+];
+
 type MenuItem = { icon: typeof List; label: string; path: string; href?: string };
 type MenuSection = { title: string | null; items: MenuItem[] };
 
@@ -99,7 +115,9 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const sections = (user?.role === "admin" || user?.role === "management") ? [...baseSections, adminSection] : baseSections;
+  const isAdminOrMgmt = user?.role === "admin" || user?.role === "management";
+  const sections = isAdminOrMgmt ? [...baseSections, adminSection] : baseSections;
+  const bottomNav = isAdminOrMgmt ? adminBottomNav : userBottomNav;
   const allItems = sections.flatMap(s => s.items);
   const matchPath = (basePath: string) =>
     location === basePath || location.startsWith(basePath + "/");
@@ -243,8 +261,38 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-6">{children}</main>
+        <main className={`flex-1 p-6 ${isMobile ? "pb-24" : ""}`}>{children}</main>
       </SidebarInset>
+
+      {/* ボトムナビ（モバイルのみ） */}
+      {isMobile && (
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div className="flex items-stretch h-16">
+            {bottomNav.map(item => {
+              const isActive = location === item.path || location.startsWith(item.path + "/");
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => setLocation(item.path)}
+                  className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors ${
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  <div className={`relative flex items-center justify-center w-10 h-6 rounded-full transition-colors ${
+                    isActive ? "bg-primary/10" : ""
+                  }`}>
+                    <item.icon className={`w-5 h-5 transition-transform ${isActive ? "scale-110" : ""}`} />
+                  </div>
+                  <span className={`text-[10px] font-medium leading-none ${isActive ? "text-primary" : "text-muted-foreground/70"}`}>
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
     </>
   );
 }
