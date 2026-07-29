@@ -1,3 +1,35 @@
+export async function sendLinePush(lineUserId: string, message: string | object): Promise<boolean> {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token) return false;
+  const msg = typeof message === "string" ? { type: "text", text: message } : message;
+  try {
+    const res = await fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ to: lineUserId, messages: [msg] }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[LINE] Push failed:", res.status, err);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("[LINE] Push error:", e);
+    return false;
+  }
+}
+
+export async function sendLineReply(replyToken: string, text: string): Promise<void> {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token) return;
+  await fetch("https://api.line.me/v2/bot/message/reply", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify({ replyToken, messages: [{ type: "text", text }] }),
+  }).catch(() => {});
+}
+
 export async function sendLineBroadcast(message: string | object): Promise<boolean> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) {

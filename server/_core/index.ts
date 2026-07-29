@@ -119,6 +119,34 @@ async function startServer() {
     }
   });
 
+  // LINE Webhook — メールアドレスを受け取り lineUserId と紐付け
+  app.post("/api/line/webhook", async (req, res) => {
+    res.status(200).end(); // LINE に即 200 を返す
+    try {
+      const { getUserByEmail, saveLineUserId } = await import("../db");
+      const { sendLineReply } = await import("./line");
+      const events = (req.body as any)?.events ?? [];
+      for (const event of events) {
+        if (event.type === "message" && event.message?.type === "text") {
+          const lineUserId: string = event.source?.userId;
+          const text: string = (event.message.text ?? "").trim();
+          const emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+          if (emailMatch && lineUserId) {
+            const user = await getUserByEmail(emailMatch[0].toLowerCase());
+            if (user) {
+              await saveLineUserId(user.id, lineUserId);
+              await sendLineReply(event.replyToken, `✅ ${emailMatch[0]} と連携しました。\nDMが届いた際にLINEへ通知します。`);
+            } else {
+              await sendLineReply(event.replyToken, `❌ ${emailMatch[0]} は登録されていません。\nPropFlowに登録済みのメールアドレスを送ってください。`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[LINE Webhook] Error:", e);
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

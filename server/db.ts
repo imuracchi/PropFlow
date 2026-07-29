@@ -37,6 +37,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `properties` ADD COLUMN `transactionFlow` text NULL",
     "ALTER TABLE `dm_read_status` ADD COLUMN `flagged` int NOT NULL DEFAULT 0",
     "ALTER TABLE `users` ADD COLUMN `verified` int NOT NULL DEFAULT 0",
+    "ALTER TABLE `users` ADD COLUMN `lineUserId` varchar(100) NULL",
     `CREATE TABLE IF NOT EXISTS \`property_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`userId\` int NOT NULL,
@@ -533,6 +534,19 @@ export async function getDeletedPropertiesByUserId(userId: number) {
     .from(properties)
     .where(and(eq(properties.userId, userId), eq(properties.deleted, 1)))
     .orderBy(desc(properties.updatedAt));
+}
+
+export async function saveLineUserId(userId: number, lineUserId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ lineUserId }).where(eq(users.id, userId));
+}
+
+export async function getLineUserIdByUserId(userId: number): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select({ lineUserId: users.lineUserId }).from(users).where(eq(users.id, userId)).limit(1);
+  return rows[0]?.lineUserId ?? null;
 }
 
 export async function markPropertyRead(userId: number, propertyId: number) {

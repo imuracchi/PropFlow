@@ -835,6 +835,23 @@ JSONのみ返してください。` },
             </div>`;
           sendMail(receiverEmail, `【PropFlow】${senderName}さんからDMが届きました`, mailHtml).catch(() => {});
         }
+        // LINE プッシュ通知
+        const receiverLineUserId = await db.getLineUserIdByUserId(input.receiverId);
+        if (receiverLineUserId) {
+          const { sendLinePush } = await import("./_core/line");
+          const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+          const dmUrl = input.propertyId
+            ? `${siteUrl}/dm/${ctx.user.id}/${input.propertyId}`
+            : `${siteUrl}/dm/${ctx.user.id}`;
+          const propInfo = input.propertyId ? await db.getPropertyById(input.propertyId) : null;
+          const lineText = [
+            `💬 ${senderName}さんからDMが届きました`,
+            propInfo ? `📋 ${propInfo.name}` : null,
+            `「${input.content.slice(0, 50)}${input.content.length > 50 ? "…" : ""}」`,
+            dmUrl,
+          ].filter(Boolean).join("\n");
+          sendLinePush(receiverLineUserId, lineText).catch(() => {});
+        }
         return { success: true };
       }),
 
