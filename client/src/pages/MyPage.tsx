@@ -623,12 +623,15 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
-    zipCode: "", address: "", phone: "", fax: "", url: "", businessHours: "", holidays: "", bio: "",
+    name: "", company: "", license: "", zipCode: "", address: "", phone: "", fax: "", url: "", businessHours: "", holidays: "", bio: "",
   });
   const updateMutation = trpc.auth.updateProfile.useMutation({ onSuccess: () => { refresh(); setEditing(false); } });
 
   const startEdit = () => {
     setForm({
+      name: user.name ?? "",
+      company: user.company ?? "",
+      license: user.license ?? "",
       zipCode: user.zipCode ?? "",
       address: user.address ?? "",
       phone: user.phone ?? "",
@@ -686,6 +689,11 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
       {editing ? (
         <div className="space-y-4 pt-2 border-t border-border">
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label>氏名</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="山田 太郎" /></div>
+            <div className="space-y-1.5"><Label>会社名</Label><Input value={form.company} onChange={e => setForm(p => ({ ...p, company: e.target.value }))} placeholder="株式会社〇〇不動産" /></div>
+          </div>
+          <div className="space-y-1.5"><Label>資格・免許番号</Label><Input value={form.license} onChange={e => setForm(p => ({ ...p, license: e.target.value }))} placeholder="東京都知事(3)第12345号" /></div>
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5"><Label>郵便番号</Label><Input value={form.zipCode} onChange={e => setForm(p => ({ ...p, zipCode: e.target.value }))} placeholder="123-4567" /></div>
             <div className="space-y-1.5"><Label>電話番号</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="03-1234-5678" /></div>
           </div>
@@ -718,9 +726,6 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
         </div>
       )}
 
-      <div className="pt-4 border-t border-border">
-        <p className="text-xs text-muted-foreground">※ 会社名・メール・資格の変更は下記「管理者への連絡」からお問い合わせください。</p>
-      </div>
     </div>
   );
 }

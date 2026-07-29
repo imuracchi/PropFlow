@@ -220,6 +220,9 @@ JSONのみ返してください。` },
 
     updateProfile: protectedProcedure
       .input(z.object({
+        name: z.string().min(1).optional(),
+        company: z.string().min(1).optional(),
+        license: z.string().nullable().optional(),
         zipCode: z.string().nullable().optional(),
         address: z.string().nullable().optional(),
         phone: z.string().nullable().optional(),
@@ -235,6 +238,9 @@ JSONのみ返してください。` },
         const { users } = await import("../drizzle/schema");
         const { eq } = await import("drizzle-orm");
         await dbConn.update(users).set({
+          ...(input.name ? { name: input.name } : {}),
+          ...(input.company ? { company: input.company } : {}),
+          license: input.license ?? null,
           zipCode: input.zipCode ?? null,
           address: input.address ?? null,
           phone: input.phone ?? null,
