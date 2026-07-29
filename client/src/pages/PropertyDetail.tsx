@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ChevronLeft, Heart, Share2, Pencil, MessageCircle, Bell, Camera, Calculator,
+  Heart, Share2, Pencil, MessageCircle, Bell, Camera, Calculator,
   HelpCircle, MapPin, Map, Building2, CheckCircle2,
   ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, Eye, FileText, Upload, Download, StickyNote, UserCircle, UserX
 } from "lucide-react";
@@ -1228,16 +1228,25 @@ export default function PropertyDetail() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors" onClick={() => setLocation("/properties")}>
-        <ChevronLeft className="w-4 h-4" />物件一覧に戻る
-      </button>
-
       {/* ヘッダー */}
       <div className="space-y-2">
-        {/* 種別バッジ */}
-        <span className="text-xs font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary inline-flex items-center gap-1.5">
-          <Building2 className="w-3.5 h-3.5" />{property.type}
-        </span>
+        {/* 種別バッジ + 公開状態バッジ */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary inline-flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5" />{property.type}
+          </span>
+          {isOwner && !isEditing && (
+            (property as any).published === 0 ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300">
+                <EyeOff className="w-3 h-3" />下書き
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-300">
+                <Eye className="w-3 h-3" />公開中
+              </span>
+            )
+          )}
+        </div>
         {/* タイトル */}
         <h1 className="text-lg font-semibold text-foreground leading-snug">{property.name}</h1>
         {/* 住所 */}
@@ -1286,56 +1295,6 @@ export default function PropertyDetail() {
           </Button>
         </div>
 
-        {/* 登録者向け管理エリア */}
-        {isOwner && !isEditing && (
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
-            {/* 公開状態バッジ */}
-            {(property as any).published === 0 ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300">
-                <EyeOff className="w-3 h-3" />下書き
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-300">
-                <Eye className="w-3 h-3" />公開中
-              </span>
-            )}
-            {/* 公開/非公開切替 */}
-            {(property as any).published === 0 ? (
-              <Button
-                variant="outline" size="sm"
-                className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
-                disabled={setPublishedMutation.isPending}
-                onClick={async () => {
-                  await setPublishedMutation.mutateAsync({ propertyId, published: true });
-                  if (!property.lineNotifiedAt) setShowNotifyConfirm(true);
-                }}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                {setPublishedMutation.isPending ? "公開中..." : "公開する"}
-              </Button>
-            ) : (
-              <Button
-                variant="outline" size="sm"
-                className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
-                disabled={setPublishedMutation.isPending}
-                onClick={() => setPublishedMutation.mutate({ propertyId, published: false })}
-              >
-                <EyeOff className="w-3.5 h-3.5" />
-                {setPublishedMutation.isPending ? "変更中..." : "非公開にする"}
-              </Button>
-            )}
-            {/* 通知（公開中かつ未通知のみ） */}
-            {(property as any).published === 1 && !property.lineNotifiedAt && (
-              <Button
-                variant="outline" size="sm"
-                className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
-                onClick={() => setShowNotifyConfirm(true)}
-              >
-                <Bell className="w-3.5 h-3.5" />通知する
-              </Button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* 紹介資料ページ選択ダイアログ */}
@@ -1522,108 +1481,7 @@ export default function PropertyDetail() {
         </div>
       )}
 
-      {/* 閲覧制限パネル */}
-      {isOwner && (
-        <div className="bg-card border border-border rounded-lg">
-          <button
-            className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-muted/30 transition-colors rounded-lg"
-            onClick={() => setShowExclusions(v => !v)}
-          >
-            <span className="text-sm font-semibold text-red-600 flex items-center gap-2">
-              <UserX className="w-4 h-4 text-red-500" />
-              閲覧制限
-              {(exclusions?.length ?? 0) > 0 ? (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">{exclusions!.length}名</span>
-              ) : (
-                <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">なし</span>
-              )}
-            </span>
-            {showExclusions ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-          </button>
-          {showExclusions && (
-            <div className="border-t border-border px-5 py-4 space-y-3">
-              <p className="text-xs text-muted-foreground">設定したユーザーにはこの物件が一覧・詳細ともに表示されません。</p>
-              {(exclusions ?? []).length === 0 ? (
-                <p className="text-sm text-muted-foreground/60">制限中のユーザーはいません</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {exclusions!.map(ex => (
-                    <div key={ex.id} className="flex items-center justify-between py-1.5 px-3 bg-muted/40 rounded-lg">
-                      <span className="text-sm text-foreground">
-                        {ex.userName ?? "—"}
-                        {ex.userCompany && <span className="text-xs text-muted-foreground ml-1.5">({ex.userCompany})</span>}
-                      </span>
-                      <button
-                        className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
-                        onClick={() => removeExclusionMutation.mutate({ propertyId, userId: ex.userId })}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {!excludePicker ? (
-                <Button
-                  variant="outline" size="sm" className="gap-1.5 text-xs"
-                  onClick={() => { setExcludePicker(true); setExcludeSearch(""); }}
-                >
-                  <Plus className="w-3.5 h-3.5" />ユーザーを追加
-                </Button>
-              ) : (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      autoFocus
-                      placeholder="名前・会社名で検索..."
-                      className="h-8 text-sm max-w-64"
-                      value={excludeSearch}
-                      onChange={e => setExcludeSearch(e.target.value)}
-                    />
-                    <button className="text-muted-foreground hover:text-foreground" onClick={() => setExcludePicker(false)}>
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  {excludeSearch.trim() && (
-                    <div className="bg-card border border-border rounded-lg shadow-md max-h-48 overflow-y-auto">
-                      {(allUsers ?? [])
-                        .filter(u => {
-                          const q = excludeSearch.toLowerCase();
-                          return (
-                            !(exclusions ?? []).some(ex => ex.userId === u.id) &&
-                            ((u.name ?? "").toLowerCase().includes(q) || (u.company ?? "").toLowerCase().includes(q))
-                          );
-                        })
-                        .map(u => (
-                          <button
-                            key={u.id}
-                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors border-b border-border last:border-0"
-                            onClick={() => {
-                              addExclusionMutation.mutate({ propertyId, userId: u.id });
-                              setExcludePicker(false);
-                              setExcludeSearch("");
-                            }}
-                          >
-                            {u.name ?? "—"}
-                            {u.company && <span className="text-xs text-muted-foreground ml-1.5">({u.company})</span>}
-                          </button>
-                        ))
-                      }
-                      {(allUsers ?? []).filter(u => {
-                        const q = excludeSearch.toLowerCase();
-                        return !(exclusions ?? []).some(ex => ex.userId === u.id) &&
-                          ((u.name ?? "").toLowerCase().includes(q) || (u.company ?? "").toLowerCase().includes(q));
-                      }).length === 0 && (
-                        <p className="px-4 py-3 text-sm text-muted-foreground">該当するユーザーがいません</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      {/* 閲覧制限・公開設定は下部へ移動 */}
 
       {/* ── 旧編集モード削除済み ── */}
       {false && isEditing && (
@@ -2130,6 +1988,140 @@ export default function PropertyDetail() {
               </div>
             </div>
           </div>
+
+          {/* 公開設定（オーナーのみ・下部） */}
+          {isOwner && !isEditing && (
+            <div className="border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 bg-muted/50 border-b border-border">
+                <p className="text-sm font-semibold text-foreground">公開設定</p>
+              </div>
+              <div className="px-4 py-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {(property as any).published === 0 ? (
+                    <>
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300">
+                        <EyeOff className="w-3 h-3" />下書き
+                      </span>
+                      <Button
+                        variant="outline" size="sm"
+                        className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
+                        disabled={setPublishedMutation.isPending}
+                        onClick={async () => {
+                          await setPublishedMutation.mutateAsync({ propertyId, published: true });
+                          if (!property.lineNotifiedAt) setShowNotifyConfirm(true);
+                        }}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        {setPublishedMutation.isPending ? "公開中..." : "公開する"}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-300">
+                        <Eye className="w-3 h-3" />公開中
+                      </span>
+                      <Button
+                        variant="outline" size="sm"
+                        className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
+                        disabled={setPublishedMutation.isPending}
+                        onClick={() => setPublishedMutation.mutate({ propertyId, published: false })}
+                      >
+                        <EyeOff className="w-3.5 h-3.5" />
+                        {setPublishedMutation.isPending ? "変更中..." : "非公開にする"}
+                      </Button>
+                      {!property.lineNotifiedAt && (
+                        <Button
+                          variant="outline" size="sm"
+                          className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
+                          onClick={() => setShowNotifyConfirm(true)}
+                        >
+                          <Bell className="w-3.5 h-3.5" />通知する
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* 閲覧制限 */}
+              <div className="border-t border-border">
+                <button
+                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                  onClick={() => setShowExclusions(v => !v)}
+                >
+                  <span className="text-sm font-semibold text-red-600 flex items-center gap-2">
+                    <UserX className="w-4 h-4 text-red-500" />
+                    閲覧制限
+                    {(exclusions?.length ?? 0) > 0 ? (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">{exclusions!.length}名</span>
+                    ) : (
+                      <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">なし</span>
+                    )}
+                  </span>
+                  {showExclusions ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+                {showExclusions && (
+                  <div className="border-t border-border px-4 py-4 space-y-3">
+                    <p className="text-xs text-muted-foreground">設定したユーザーにはこの物件が一覧・詳細ともに表示されません。</p>
+                    {(exclusions ?? []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground/60">制限中のユーザーはいません</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {exclusions!.map(ex => (
+                          <div key={ex.id} className="flex items-center justify-between py-1.5 px-3 bg-muted/40 rounded-lg">
+                            <span className="text-sm text-foreground">
+                              {ex.userName ?? "—"}
+                              {ex.userCompany && <span className="text-xs text-muted-foreground ml-1.5">({ex.userCompany})</span>}
+                            </span>
+                            <button
+                              className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                              onClick={() => removeExclusionMutation.mutate({ propertyId, userId: ex.userId })}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {!excludePicker ? (
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => { setExcludePicker(true); setExcludeSearch(""); }}>
+                        <Plus className="w-3.5 h-3.5" />ユーザーを追加
+                      </Button>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <Input autoFocus placeholder="名前・会社名で検索..." className="h-8 text-sm max-w-64" value={excludeSearch} onChange={e => setExcludeSearch(e.target.value)} />
+                          <button className="text-muted-foreground hover:text-foreground" onClick={() => setExcludePicker(false)}><X className="w-4 h-4" /></button>
+                        </div>
+                        {excludeSearch.trim() && (
+                          <div className="bg-card border border-border rounded-lg shadow-md max-h-48 overflow-y-auto">
+                            {(allUsers ?? []).filter(u => {
+                              const q = excludeSearch.toLowerCase();
+                              return !(exclusions ?? []).some(ex => ex.userId === u.id) &&
+                                ((u.name ?? "").toLowerCase().includes(q) || (u.company ?? "").toLowerCase().includes(q));
+                            }).map(u => (
+                              <button key={u.id} className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors border-b border-border last:border-0"
+                                onClick={() => { addExclusionMutation.mutate({ propertyId, userId: u.id }); setExcludePicker(false); setExcludeSearch(""); }}>
+                                {u.name ?? "—"}
+                                {u.company && <span className="text-xs text-muted-foreground ml-1.5">({u.company})</span>}
+                              </button>
+                            ))}
+                            {(allUsers ?? []).filter(u => {
+                              const q = excludeSearch.toLowerCase();
+                              return !(exclusions ?? []).some(ex => ex.userId === u.id) &&
+                                ((u.name ?? "").toLowerCase().includes(q) || (u.company ?? "").toLowerCase().includes(q));
+                            }).length === 0 && (
+                              <p className="px-4 py-3 text-sm text-muted-foreground">該当するユーザーがいません</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
