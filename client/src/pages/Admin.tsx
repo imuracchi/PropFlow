@@ -103,7 +103,7 @@ export default function Admin() {
     { label: "承認待ち", value: stats ? `${stats.pendingUsers}件` : "—", icon: Clock, accent: stats?.pendingUsers ? "text-amber-600 bg-amber-50" : "text-muted-foreground bg-muted" },
   ];
 
-  if (statsLoading && !isManagement) {
+  if (statsLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
 
@@ -115,23 +115,21 @@ export default function Admin() {
       </div>
 
       {/* サマリーカード */}
-      {!isManagement && (
-        <div className="grid grid-cols-3 gap-4">
-          {statCards.map(stat => (
-            <div key={stat.label} className="bg-card border border-border rounded-lg p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                </div>
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.accent}`}>
-                  <stat.icon className="w-5 h-5" />
-                </div>
+      <div className={`grid gap-4 ${isManagement ? "grid-cols-2" : "grid-cols-3"}`}>
+        {statCards.filter(s => !isManagement || s.label !== "承認待ち").map(stat => (
+          <div key={stat.label} className="bg-card border border-border rounded-lg p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
+                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+              </div>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.accent}`}>
+                <stat.icon className="w-5 h-5" />
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
 
       {/* タブ */}
       <Tabs defaultValue="users">

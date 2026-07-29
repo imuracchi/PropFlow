@@ -1052,7 +1052,7 @@ JSONのみ返してください。` },
   }),
 
   admin: router({
-    stats: adminProcedure.query(async () => {
+    stats: managementProcedure.query(async () => {
       return db.getAdminStats();
     }),
 
