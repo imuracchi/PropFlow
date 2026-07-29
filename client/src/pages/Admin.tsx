@@ -14,6 +14,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { useState } from "react";
 
 const PLAN_MAP: Record<string, { label: string; cls: string }> = {
@@ -29,6 +30,9 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 };
 
 export default function Admin() {
+  const { user: currentUser } = useAuth();
+  const isManagement = currentUser?.role === "management";
+
   const [userSearch, setUserSearch] = useState("");
   const [propSearch, setPropSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
@@ -50,6 +54,7 @@ export default function Admin() {
   const deleteUserMutation = trpc.admin.deleteUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const updatePlanMutation = trpc.admin.updatePlan.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
   const verifyUserMutation = trpc.admin.verifyUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
+  const setManagementMutation = trpc.admin.setManagement.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
   const hidePropMutation = trpc.admin.hideProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const restorePropMutation = trpc.admin.restoreProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const hardDeleteMutation = trpc.admin.hardDeleteProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); setDeleteTarget(null); } });
@@ -98,7 +103,7 @@ export default function Admin() {
     { label: "承認待ち", value: stats ? `${stats.pendingUsers}件` : "—", icon: Clock, accent: stats?.pendingUsers ? "text-amber-600 bg-amber-50" : "text-muted-foreground bg-muted" },
   ];
 
-  if (statsLoading) {
+  if (statsLoading && !isManagement) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
 
@@ -110,49 +115,55 @@ export default function Admin() {
       </div>
 
       {/* サマリーカード */}
-      <div className="grid grid-cols-3 gap-4">
-        {statCards.map(stat => (
-          <div key={stat.label} className="bg-card border border-border rounded-lg p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
-                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.accent}`}>
-                <stat.icon className="w-5 h-5" />
+      {!isManagement && (
+        <div className="grid grid-cols-3 gap-4">
+          {statCards.map(stat => (
+            <div key={stat.label} className="bg-card border border-border rounded-lg p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
+                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                </div>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.accent}`}>
+                  <stat.icon className="w-5 h-5" />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* タブ */}
       <Tabs defaultValue="users">
         <TabsList className="bg-muted">
           <TabsTrigger value="users" className="gap-1.5">
             <Users className="w-3.5 h-3.5" />
-            業者管理
+            業者一覧
           </TabsTrigger>
           <TabsTrigger value="properties" className="gap-1.5">
             <Building2 className="w-3.5 h-3.5" />
-            物件管理
+            物件一覧
           </TabsTrigger>
-          <TabsTrigger value="dm" className="gap-1.5">
-            <MessageCircle className="w-3.5 h-3.5" />
-            DM管理
-          </TabsTrigger>
-          <TabsTrigger value="logs" className="gap-1.5">
-            <ScrollText className="w-3.5 h-3.5" />
-            操作ログ
-          </TabsTrigger>
-          <TabsTrigger value="broadcast" className="gap-1.5">
-            <Send className="w-3.5 h-3.5" />
-            一斉配信
-          </TabsTrigger>
-          <TabsTrigger value="ai" className="gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
-            AI分析
-          </TabsTrigger>
+          {!isManagement && (
+            <>
+              <TabsTrigger value="dm" className="gap-1.5">
+                <MessageCircle className="w-3.5 h-3.5" />
+                DM管理
+              </TabsTrigger>
+              <TabsTrigger value="logs" className="gap-1.5">
+                <ScrollText className="w-3.5 h-3.5" />
+                操作ログ
+              </TabsTrigger>
+              <TabsTrigger value="broadcast" className="gap-1.5">
+                <Send className="w-3.5 h-3.5" />
+                一斉配信
+              </TabsTrigger>
+              <TabsTrigger value="ai" className="gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                AI分析
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         {/* 業者管理タブ */}
@@ -162,9 +173,11 @@ export default function Admin() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="業者名・メールで検索..." className="pl-10 bg-card border-border" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
             </div>
-            <Button size="sm" className="gap-1.5" onClick={() => setShowCreateUser(true)}>
-              <UserPlus className="w-3.5 h-3.5" />代理登録
-            </Button>
+            {!isManagement && (
+              <Button size="sm" className="gap-1.5" onClick={() => setShowCreateUser(true)}>
+                <UserPlus className="w-3.5 h-3.5" />代理登録
+              </Button>
+            )}
           </div>
 
           {showCreateUser && <CreateUserForm onClose={() => setShowCreateUser(false)} onSuccess={() => { setShowCreateUser(false); utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); }} />}
@@ -180,7 +193,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["業者名", "メール", "登録方法", "プラン", "ステータス", "登録日", "最終ログイン", "名刺/認証", "規約同意", "操作"].map(h => (
+                    {["業者名", "メール", "登録方法", ...(!isManagement ? ["プラン"] : []), "ステータス", "登録日", "最終ログイン", ...(!isManagement ? ["名刺/認証"] : []), "規約同意", ...(!isManagement ? ["操作"] : [])].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -209,23 +222,25 @@ export default function Admin() {
                             <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">代理登録</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
-                          <Select
-                            value={user.plan}
-                            onValueChange={(v) => updatePlanMutation.mutate({ id: user.id, plan: v as any })}
-                          >
-                            <SelectTrigger className="h-7 w-32 text-xs border-0 bg-transparent p-0">
-                              <span className={`text-xs font-medium px-2 py-0.5 rounded ${planInfo.cls}`}>
-                                {planInfo.label}
-                              </span>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="standard">スタンダード</SelectItem>
-                              <SelectItem value="gold">ゴールド</SelectItem>
-                              <SelectItem value="platinum">プラチナ</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </td>
+                        {!isManagement && (
+                          <td className="px-4 py-3">
+                            <Select
+                              value={user.plan}
+                              onValueChange={(v) => updatePlanMutation.mutate({ id: user.id, plan: v as any })}
+                            >
+                              <SelectTrigger className="h-7 w-32 text-xs border-0 bg-transparent p-0">
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded ${planInfo.cls}`}>
+                                  {planInfo.label}
+                                </span>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="standard">スタンダード</SelectItem>
+                                <SelectItem value="gold">ゴールド</SelectItem>
+                                <SelectItem value="platinum">プラチナ</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded ${
                             user.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
@@ -239,27 +254,29 @@ export default function Admin() {
                         <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                           {new Date(user.lastSignedIn).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                         </td>
-                        <td className="px-4 py-3">
-                          {(user as any).hasBusinessCard ? (
-                            <div className="flex flex-col gap-1">
-                              {(user as any).verified ? (
-                                <span className="text-xs font-medium text-primary flex items-center gap-1">
-                                  <CheckCircle2 className="w-3 h-3" />認証済み
-                                </span>
-                              ) : (
-                                <span className="text-xs text-green-600 font-medium">名刺あり</span>
-                              )}
-                              <button
-                                className={`text-[10px] underline ${(user as any).verified ? "text-muted-foreground" : "text-primary"}`}
-                                onClick={() => verifyUserMutation.mutate({ id: user.id, verified: !(user as any).verified })}
-                              >
-                                {(user as any).verified ? "取消" : "認証する"}
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground/50">なし</span>
-                          )}
-                        </td>
+                        {!isManagement && (
+                          <td className="px-4 py-3">
+                            {(user as any).hasBusinessCard ? (
+                              <div className="flex flex-col gap-1">
+                                {(user as any).verified ? (
+                                  <span className="text-xs font-medium text-primary flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" />認証済み
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-green-600 font-medium">名刺あり</span>
+                                )}
+                                <button
+                                  className={`text-[10px] underline ${(user as any).verified ? "text-muted-foreground" : "text-primary"}`}
+                                  onClick={() => verifyUserMutation.mutate({ id: user.id, verified: !(user as any).verified })}
+                                >
+                                  {(user as any).verified ? "取消" : "認証する"}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground/50">なし</span>
+                            )}
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           {user.termsAgreedAt ? (
                             <span className="text-xs text-green-600 font-medium">済</span>
@@ -267,40 +284,54 @@ export default function Admin() {
                             <span className="text-xs text-red-500 font-medium">未</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {user.status === "active" ? (
-                                <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => suspendMutation.mutate({ id: user.id })}>
-                                  <Ban className="w-3.5 h-3.5" />アカウント停止
+                        {!isManagement && (
+                          <td className="px-4 py-3">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {user.status === "active" ? (
+                                  <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => suspendMutation.mutate({ id: user.id })}>
+                                    <Ban className="w-3.5 h-3.5" />アカウント停止
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem className="gap-2 text-xs" onClick={() => activateMutation.mutate({ id: user.id })}>
+                                    <UserCheck className="w-3.5 h-3.5" />アカウント有効化
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                {(user as any).role !== "admin" && (
+                                  <DropdownMenuItem className="gap-2 text-xs" onClick={() => {
+                                    const isCurrentlyManagement = (user as any).role === "management";
+                                    if (confirm(isCurrentlyManagement ? `${user.name}のマネジメント権限を取り消しますか？` : `${user.name}にマネジメント権限を付与しますか？`)) {
+                                      setManagementMutation.mutate({ id: user.id, management: !isCurrentlyManagement });
+                                    }
+                                  }}>
+                                    <Shield className="w-3.5 h-3.5" />
+                                    {(user as any).role === "management" ? "マネジメント取消" : "マネジメント付与"}
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="gap-2 text-xs text-primary" onClick={() => {
+                                  if (confirm(`${user.name}として代理ログインしますか？`)) {
+                                    loginAsMutation.mutate({ userId: user.id }, {
+                                      onSuccess: () => { window.location.href = "/properties"; },
+                                    });
+                                  }
+                                }}>
+                                  <ArrowUpRight className="w-3.5 h-3.5" />このユーザーとしてログイン
                                 </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem className="gap-2 text-xs" onClick={() => activateMutation.mutate({ id: user.id })}>
-                                  <UserCheck className="w-3.5 h-3.5" />アカウント有効化
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => { if (confirm(`${user.name}を完全に削除しますか？この操作は取り消せません。`)) deleteUserMutation.mutate({ id: user.id }); }}>
+                                  <Trash2 className="w-3.5 h-3.5" />アカウント削除
                                 </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="gap-2 text-xs text-primary" onClick={() => {
-                                if (confirm(`${user.name}として代理ログインしますか？`)) {
-                                  loginAsMutation.mutate({ userId: user.id }, {
-                                    onSuccess: () => { window.location.href = "/properties"; },
-                                  });
-                                }
-                              }}>
-                                <ArrowUpRight className="w-3.5 h-3.5" />このユーザーとしてログイン
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => { if (confirm(`${user.name}を完全に削除しますか？この操作は取り消せません。`)) deleteUserMutation.mutate({ id: user.id }); }}>
-                                <Trash2 className="w-3.5 h-3.5" />アカウント削除
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -326,7 +357,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["ID", "物件名", "登録者", "価格", "表示", "登録日", "操作"].map(h => (
+                    {["ID", "物件名", "登録者", "価格", "表示", "登録日", ...(!isManagement ? ["操作"] : [])].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -357,30 +388,32 @@ export default function Admin() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(prop.createdAt).toLocaleDateString("ja-JP")}</td>
-                        <td className="px-4 py-3">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {isHidden ? (
-                                <DropdownMenuItem className="gap-2 text-xs" onClick={() => restorePropMutation.mutate({ id: prop.id })}>
-                                  <RotateCcw className="w-3.5 h-3.5" />表示に戻す
+                        {!isManagement && (
+                          <td className="px-4 py-3">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {isHidden ? (
+                                  <DropdownMenuItem className="gap-2 text-xs" onClick={() => restorePropMutation.mutate({ id: prop.id })}>
+                                    <RotateCcw className="w-3.5 h-3.5" />表示に戻す
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem className="gap-2 text-xs" onClick={() => hidePropMutation.mutate({ id: prop.id })}>
+                                    <EyeOff className="w-3.5 h-3.5" />非表示にする
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => setDeleteTarget({ id: prop.id, name: prop.name })}>
+                                  <Trash2 className="w-3.5 h-3.5" />完全に削除
                                 </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem className="gap-2 text-xs" onClick={() => hidePropMutation.mutate({ id: prop.id })}>
-                                  <EyeOff className="w-3.5 h-3.5" />非表示にする
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => setDeleteTarget({ id: prop.id, name: prop.name })}>
-                                <Trash2 className="w-3.5 h-3.5" />完全に削除
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

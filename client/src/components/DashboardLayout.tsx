@@ -99,7 +99,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const sections = user?.role === "admin" ? [...baseSections, adminSection] : baseSections;
+  const sections = (user?.role === "admin" || user?.role === "management") ? [...baseSections, adminSection] : baseSections;
   const allItems = sections.flatMap(s => s.items);
   const matchPath = (basePath: string) =>
     location === basePath || location.startsWith(basePath + "/");

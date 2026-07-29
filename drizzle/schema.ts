@@ -19,7 +19,7 @@ export const users = mysqlTable("users", {
   loginMethod: varchar("loginMethod", { length: 64 }),
   logoBase64: longtext("logoBase64"),
   businessCardBase64: longtext("businessCardBase64"),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "management"]).default("user").notNull(),
   plan: mysqlEnum("plan", ["standard", "gold", "platinum"]).default("standard").notNull(),
   status: mysqlEnum("status", ["pending", "active", "suspended"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

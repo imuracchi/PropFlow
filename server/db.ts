@@ -38,6 +38,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `dm_read_status` ADD COLUMN `flagged` int NOT NULL DEFAULT 0",
     "ALTER TABLE `users` ADD COLUMN `verified` int NOT NULL DEFAULT 0",
     "ALTER TABLE `users` ADD COLUMN `lineUserId` varchar(100) NULL",
+    "ALTER TABLE `users` MODIFY COLUMN `role` ENUM('user','admin','management') NOT NULL DEFAULT 'user'",
     `CREATE TABLE IF NOT EXISTS \`property_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`userId\` int NOT NULL,
@@ -566,6 +567,12 @@ export async function setUserVerified(id: number, verified: boolean) {
   const db = await getDb();
   if (!db) return;
   await db.update(users).set({ verified: verified ? 1 : 0 }).where(eq(users.id, id));
+}
+
+export async function setUserRole(id: number, role: "user" | "management") {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ role }).where(eq(users.id, id));
 }
 
 export async function updateUserBusinessCard(id: number, businessCardBase64: string | null) {

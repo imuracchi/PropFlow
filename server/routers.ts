@@ -1,6 +1,6 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, managementProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken } from "./_core/auth";
 import { parsePropertyFromPdfs } from "./_core/pdfParser";
@@ -1061,7 +1061,7 @@ JSONのみ返してください。` },
       return users.map(({ passwordHash, ...u }) => u);
     }),
 
-    allUsers: adminProcedure.query(async () => {
+    allUsers: managementProcedure.query(async () => {
       return db.listActiveUsers();
     }),
 
@@ -1077,6 +1077,13 @@ JSONのみ返してください。` },
       .input(z.object({ id: z.number(), verified: z.boolean() }))
       .mutation(async ({ input }) => {
         await db.setUserVerified(input.id, input.verified);
+        return { success: true };
+      }),
+
+    setManagement: adminProcedure
+      .input(z.object({ id: z.number(), management: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await db.setUserRole(input.id, input.management ? "management" : "user");
         return { success: true };
       }),
 
@@ -1101,7 +1108,7 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
-    allProperties: adminProcedure.query(async () => {
+    allProperties: managementProcedure.query(async () => {
       return db.listAllPropertiesAdmin();
     }),
 
