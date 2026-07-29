@@ -942,6 +942,11 @@ export default function PropertyDetail() {
   const { data: favoriteIds } = trpc.favorite.ids.useQuery();
   const toggleFavMutation = trpc.favorite.toggle.useMutation();
   const isFavorite = (favoriteIds ?? []).includes(propertyId);
+  const incrementViewMutation = trpc.property.incrementView.useMutation();
+
+  useEffect(() => {
+    if (propertyId) incrementViewMutation.mutate({ propertyId });
+  }, [propertyId]);
 
   const toggleFavorite = async () => {
     await toggleFavMutation.mutateAsync({ propertyId });

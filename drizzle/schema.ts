@@ -69,6 +69,7 @@ export const properties = mysqlTable("properties", {
   otherRestrictions: text("otherRestrictions"),
   faqs: json("faqs").$type<{ q: string; a: string }[]>(),
   files: json("files").$type<{ name: string; size: number }[]>(),
+  viewCount: int("viewCount").default(0).notNull(),
   deleted: int("deleted").default(0).notNull(),
   published: int("published").default(1).notNull(),
   lineNotifiedAt: timestamp("lineNotifiedAt"),

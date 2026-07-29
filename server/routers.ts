@@ -557,6 +557,19 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
+    incrementView: protectedProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.incrementViewCount(input.propertyId);
+        return { success: true };
+      }),
+
+    topViewed: managementProcedure
+      .input(z.object({ limit: z.number().optional() }))
+      .query(async ({ input }) => {
+        return db.getTopViewedProperties(input.limit ?? 20);
+      }),
+
     readIds: protectedProcedure.query(async ({ ctx }) => {
       return db.getReadPropertyIds(ctx.user.id);
     }),

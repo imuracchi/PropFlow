@@ -46,6 +46,7 @@ export default function Admin() {
   const { data: adminProperties } = trpc.admin.allProperties.useQuery();
   const { data: activityLogs } = trpc.admin.activityLogs.useQuery();
   const { data: adminDmMessages } = trpc.admin.allDmMessages.useQuery();
+  const { data: topViewed } = trpc.property.topViewed.useQuery({});
 
   const approveMutation = trpc.admin.approveUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const rejectMutation = trpc.admin.rejectUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.stats.invalidate(); } });
@@ -435,6 +436,34 @@ export default function Admin() {
             </div>
 
           )}
+
+          {/* 閲覧数ランキング */}
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="px-4 py-3 bg-muted/40 border-b border-border">
+              <h3 className="text-sm font-semibold">閲覧数ランキング（上位20件）</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[400px]">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    {["順位", "物件名", "種別", "閲覧数"].map(h => (
+                      <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {(topViewed ?? []).map((p, i) => (
+                    <tr key={p.id} className="hover:bg-accent/30">
+                      <td className="px-4 py-3 text-sm font-bold text-muted-foreground w-12">{i + 1}</td>
+                      <td className="px-4 py-3 font-medium max-w-[200px] truncate">{p.name}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{p.type}</td>
+                      <td className="px-4 py-3 font-bold text-primary whitespace-nowrap">{p.viewCount.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </TabsContent>
 
         {/* DM管理タブ */}

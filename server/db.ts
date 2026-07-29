@@ -39,6 +39,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` ADD COLUMN `verified` int NOT NULL DEFAULT 0",
     "ALTER TABLE `users` ADD COLUMN `lineUserId` varchar(100) NULL",
     "ALTER TABLE `users` MODIFY COLUMN `role` ENUM('user','admin','management') NOT NULL DEFAULT 'user'",
+    "ALTER TABLE `properties` ADD COLUMN `viewCount` int NOT NULL DEFAULT 0",
     `CREATE TABLE IF NOT EXISTS \`property_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`userId\` int NOT NULL,
@@ -1589,4 +1590,29 @@ export async function getBroadcastLogs() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(broadcastLogs).orderBy(desc(broadcastLogs.sentAt)).limit(50);
+}
+
+export async function incrementViewCount(propertyId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(properties).set({ viewCount: sql`viewCount + 1` }).where(eq(properties.id, propertyId));
+}
+
+export async function getTopViewedProperties(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: properties.id,
+    name: properties.name,
+    type: properties.type,
+    address: properties.address,
+    price: properties.price,
+    priceNegotiable: properties.priceNegotiable,
+    viewCount: properties.viewCount,
+    published: properties.published,
+    createdAt: properties.createdAt,
+  }).from(properties)
+    .where(eq(properties.deleted, 0))
+    .orderBy(desc(properties.viewCount))
+    .limit(limit);
 }
