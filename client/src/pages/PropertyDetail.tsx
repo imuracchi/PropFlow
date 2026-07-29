@@ -1233,112 +1233,109 @@ export default function PropertyDetail() {
       </button>
 
       {/* ヘッダー */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary flex items-center gap-1.5">
-            <Building2 className="w-3.5 h-3.5" />{property.type}
-          </span>
-        </div>
-        <h1 className="text-lg font-semibold text-foreground">{property.name}</h1>
+      <div className="space-y-2">
+        {/* 種別バッジ */}
+        <span className="text-xs font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary inline-flex items-center gap-1.5">
+          <Building2 className="w-3.5 h-3.5" />{property.type}
+        </span>
+        {/* タイトル */}
+        <h1 className="text-lg font-semibold text-foreground leading-snug">{property.name}</h1>
+        {/* 住所 */}
         <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
           <MapPin className="w-4 h-4 shrink-0 mt-0.5" /><span>{property.address}</span>
         </div>
-        <p className="text-sm text-muted-foreground flex items-center gap-1.5 flex-wrap">
-          {property.showCompany !== 0 && property.userCompany ? `登録：${property.userCompany} / ` : "登録日：" }{createdDate}
+        {/* 登録者・日付・認証 */}
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+          {property.showCompany !== 0 && property.userCompany ? `${property.userCompany} · ` : ""}{createdDate}
           {(property as any).userVerified === 1 && (
             <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
               <CheckCircle2 className="w-3 h-3" />認証済み
             </span>
           )}
         </p>
-        <div className="flex flex-col gap-2">
-          {/* 閲覧者向けアクション */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" className={`gap-1.5 ${isFavorite ? "text-red-500 border-red-200 bg-red-50" : ""}`} onClick={toggleFavorite}>
-              <Heart className={`w-4 h-4 ${isFavorite ? "fill-red-500" : ""}`} />お気に入り
+
+        {/* アクションボタン — モバイルはアイコンのみ、PCはラベルあり */}
+        <div className="flex items-center gap-2 pt-1">
+          <Button variant="outline" size="sm" className={`gap-1.5 ${isFavorite ? "text-red-500 border-red-200 bg-red-50" : ""}`} onClick={toggleFavorite}>
+            <Heart className={`w-4 h-4 ${isFavorite ? "fill-red-500" : ""}`} />
+            <span className="hidden md:inline">お気に入り</span>
+          </Button>
+          {property.userId !== user?.id && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden md:inline">質問する</span>
             </Button>
-            {property.userId !== user?.id && (
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocation(`/dm/${property.userId}/${property.id}`)}>
-                <MessageCircle className="w-4 h-4" />質問する
+          )}
+          <Button
+            variant="outline" size="sm" className="gap-1.5"
+            onClick={async () => {
+              const url = window.location.href;
+              if (navigator.share) {
+                await navigator.share({ title: property.name, url });
+              } else {
+                await navigator.clipboard.writeText(url);
+                alert("URLをコピーしました");
+              }
+            }}
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="hidden md:inline">共有</span>
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 hidden md:inline-flex" onClick={() => exportPropertyCsv(property, details, createdDate)}>
+            <Download className="w-4 h-4" />CSV
+          </Button>
+        </div>
+
+        {/* 登録者向け管理エリア */}
+        {isOwner && !isEditing && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
+            {/* 公開状態バッジ */}
+            {(property as any).published === 0 ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300">
+                <EyeOff className="w-3 h-3" />下書き
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-300">
+                <Eye className="w-3 h-3" />公開中
+              </span>
+            )}
+            {/* 公開/非公開切替 */}
+            {(property as any).published === 0 ? (
+              <Button
+                variant="outline" size="sm"
+                className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
+                disabled={setPublishedMutation.isPending}
+                onClick={async () => {
+                  await setPublishedMutation.mutateAsync({ propertyId, published: true });
+                  if (!property.lineNotifiedAt) setShowNotifyConfirm(true);
+                }}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                {setPublishedMutation.isPending ? "公開中..." : "公開する"}
+              </Button>
+            ) : (
+              <Button
+                variant="outline" size="sm"
+                className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
+                disabled={setPublishedMutation.isPending}
+                onClick={() => setPublishedMutation.mutate({ propertyId, published: false })}
+              >
+                <EyeOff className="w-3.5 h-3.5" />
+                {setPublishedMutation.isPending ? "変更中..." : "非公開にする"}
               </Button>
             )}
-            <Button
-              variant="outline" size="sm" className="gap-1.5"
-              onClick={async () => {
-                const url = window.location.href;
-                if (navigator.share) {
-                  await navigator.share({ title: property.name, url });
-                } else {
-                  await navigator.clipboard.writeText(url);
-                  alert("URLをコピーしました");
-                }
-              }}
-            ><Share2 className="w-4 h-4" />共有</Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportPropertyCsv(property, details, createdDate)}>
-              <Download className="w-4 h-4" />CSV
-            </Button>
+            {/* 通知（公開中かつ未通知のみ） */}
+            {(property as any).published === 1 && !property.lineNotifiedAt && (
+              <Button
+                variant="outline" size="sm"
+                className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
+                onClick={() => setShowNotifyConfirm(true)}
+              >
+                <Bell className="w-3.5 h-3.5" />通知する
+              </Button>
+            )}
           </div>
-
-          {/* 登録者向け管理エリア */}
-          {isOwner && !isEditing && (
-            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
-              <span className="text-xs text-muted-foreground font-medium">管理：</span>
-              {/* 公開状態バッジ */}
-              {(property as any).published === 0 ? (
-                <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300">
-                  <EyeOff className="w-3 h-3" />下書き
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-300">
-                  <Eye className="w-3 h-3" />公開中
-                </span>
-              )}
-              {/* 公開/非公開切替ボタン */}
-              {(property as any).published === 0 ? (
-                <Button
-                  variant="outline" size="sm"
-                  className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
-                  disabled={setPublishedMutation.isPending}
-                  onClick={async () => {
-                    await setPublishedMutation.mutateAsync({ propertyId, published: true });
-                    if (!property.lineNotifiedAt) setShowNotifyConfirm(true);
-                  }}
-                >
-                  <Eye className="w-4 h-4" />
-                  {setPublishedMutation.isPending ? "公開中..." : "公開する"}
-                </Button>
-              ) : (
-                <Button
-                  variant="outline" size="sm"
-                  className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
-                  disabled={setPublishedMutation.isPending}
-                  onClick={() => setPublishedMutation.mutate({ propertyId, published: false })}
-                >
-                  <EyeOff className="w-4 h-4" />
-                  {setPublishedMutation.isPending ? "変更中..." : "非公開にする"}
-                </Button>
-              )}
-              <div className="w-px h-5 bg-border mx-1" />
-              {/* 通知・お知らせ（公開中のみ） */}
-              {(property as any).published === 1 && (
-                property.lineNotifiedAt ? (
-                  <Button variant="outline" size="sm" className="gap-1.5 text-muted-foreground cursor-default" disabled>
-                    <Bell className="w-4 h-4" />新着通知済み（{new Date(property.lineNotifiedAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}）
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline" size="sm"
-                    className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
-                    onClick={() => setShowNotifyConfirm(true)}
-                  >
-                    <Bell className="w-4 h-4" />新着として通知する
-                  </Button>
-                )
-              )}
-              <div className="w-px h-5 bg-border mx-1" />
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* 紹介資料ページ選択ダイアログ */}
