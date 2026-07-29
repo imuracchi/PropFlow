@@ -266,8 +266,10 @@ function DashboardLayoutContent({
 
       {/* ボトムナビ（モバイルのみ） */}
       {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <nav
+          className="fixed bottom-0 left-0 right-0 z-50 bg-card shadow-[0_-2px_12px_rgba(0,0,0,0.08)]"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
           <div className="flex items-stretch h-16">
             {bottomNav.map(item => {
               const isActive = location === item.path || location.startsWith(item.path + "/");
@@ -275,16 +277,21 @@ function DashboardLayoutContent({
                 <button
                   key={item.path}
                   onClick={() => setLocation(item.path)}
-                  className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors ${
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  }`}
+                  className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative"
                 >
-                  <div className={`relative flex items-center justify-center w-10 h-6 rounded-full transition-colors ${
-                    isActive ? "bg-primary/10" : ""
+                  {isActive && (
+                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary" />
+                  )}
+                  <div className={`flex items-center justify-center w-10 h-7 rounded-xl transition-colors ${
+                    isActive ? "bg-primary/12" : ""
                   }`}>
-                    <item.icon className={`w-5 h-5 transition-transform ${isActive ? "scale-110" : ""}`} />
+                    <item.icon className={`w-5 h-5 transition-all ${
+                      isActive ? "text-primary scale-110" : "text-foreground/50"
+                    }`} />
                   </div>
-                  <span className={`text-[10px] font-medium leading-none ${isActive ? "text-primary" : "text-muted-foreground/70"}`}>
+                  <span className={`text-[10px] font-medium leading-none ${
+                    isActive ? "text-primary" : "text-foreground/45"
+                  }`}>
                     {item.label}
                   </span>
                 </button>
