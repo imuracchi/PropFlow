@@ -263,7 +263,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
         <div className="flex flex-wrap items-center gap-2 justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold text-foreground whitespace-nowrap">{MODE_TITLE[mode]}</h1>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{filtered.length}件</span>
           </div>
           <div className="flex items-center gap-2">
             {selectedIds.size > 0 && (
@@ -290,7 +289,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-foreground">{MODE_TITLE[mode]}</span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{filtered.length}件</span>
           </div>
           <div className="flex items-center gap-2">
             {selectedIds.size > 0 && (
