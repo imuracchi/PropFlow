@@ -947,8 +947,8 @@ export default function PropertyDetail() {
   useEffect(() => {
     if (!property || !user) return;
     const isOwner = user.id === property.userId;
-    const isAdminOrMgmt = user.role === "admin" || user.role === "management";
-    if (!isOwner && !isAdminOrMgmt) {
+    const isAdmin = user.role === "admin";
+    if (!isOwner && !isAdmin) {
       incrementViewMutation.mutate({ propertyId: property.id });
     }
   }, [property?.id]);
