@@ -187,8 +187,8 @@ export default function Admin() {
               <p className="text-muted-foreground">登録業者はまだいません</p>
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-card border border-border rounded-lg overflow-hidden overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     {["業者名", "メール", "登録方法", ...(!isManagement ? ["プラン"] : []), "ステータス", "登録日", "最終ログイン", ...(isManagement ? ["名刺"] : ["名刺/認証", "規約同意", "操作"])].map(h => (
@@ -366,8 +366,8 @@ export default function Admin() {
               <p className="text-muted-foreground">物件はまだ登録されていません</p>
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-card border border-border rounded-lg overflow-hidden overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     {["ID", "物件名", "登録者", "価格", "表示", "登録日", ...(!isManagement ? ["操作"] : [])].map(h => (
@@ -442,9 +442,9 @@ export default function Admin() {
           {(adminDmMessages ?? []).length === 0 ? (
             <div className="bg-card border border-border rounded-lg py-12 text-center text-muted-foreground">DMはありません</div>
           ) : (
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="bg-card border border-border rounded-lg overflow-hidden overflow-x-auto">
               <div className="max-h-[600px] overflow-y-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[500px]">
                   <thead className="sticky top-0 bg-card"><tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">№</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">物件名</th>
