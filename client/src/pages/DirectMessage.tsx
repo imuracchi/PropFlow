@@ -163,13 +163,7 @@ export default function DirectMessage() {
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder="メッセージを入力...（Shift+Enterで改行）"
+            placeholder="メッセージを入力..."
             rows={2}
             className="flex-1 resize-none bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-32 overflow-y-auto"
             style={{ minHeight: "56px", height: "auto" }}
