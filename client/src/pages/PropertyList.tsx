@@ -404,7 +404,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
           )}
         </div>
       ) : (
-        <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden shadow-sm">
+        <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden shadow-sm -mx-6 md:mx-0">
           <div className="md:overflow-x-auto">
             <table className="w-full">
               <thead>

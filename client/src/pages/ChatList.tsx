@@ -144,7 +144,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner-d
           </TabsList>
           <TabsContent value="active" className="mt-4">
             {ownerDms.length === 0 ? <EmptyState icon={MessageCircle} message="自社物件への問い合わせはまだありません" /> : (
-              <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden">
+              <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden -mx-6 md:mx-0">
                 <table className="w-full"><thead><tr className="border-b border-border bg-muted">
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
@@ -159,7 +159,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner-d
           </TabsContent>
           <TabsContent value="hidden" className="mt-4">
             {hiddenDmThreads.length === 0 ? <EmptyState icon={EyeOff} message="非表示のDMはありません" /> : (
-              <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden">
+              <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden -mx-6 md:mx-0">
                 <table className="w-full"><tbody>
                   {hiddenDmThreads.map(thread => <DmCard key={`hidden-${dmKey(thread)}`} thread={thread} />)}
                 </tbody></table>
@@ -168,7 +168,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner-d
           </TabsContent>
           <TabsContent value="flagged" className="mt-4">
             {ownerFlaggedDms.length === 0 ? <EmptyState icon={Bookmark} message="要返信のDMはありません" /> : (
-              <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden">
+              <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden -mx-6 md:mx-0">
                 <table className="w-full"><thead><tr className="border-b border-border bg-muted">
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
@@ -232,7 +232,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner-d
           {activeDmThreads.length === 0 ? (
             <EmptyState icon={MessageCircle} message="質問中の物件はありません" />
           ) : (
-            <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden">
+            <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden -mx-6 md:mx-0">
               <table className="w-full"><thead><tr className="border-b border-border bg-muted">
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
@@ -250,7 +250,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner-d
           {hiddenDmThreads.length === 0 ? (
             <EmptyState icon={EyeOff} message="非表示のDMはありません" />
           ) : (
-            <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden">
+            <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden -mx-6 md:mx-0">
               <table className="w-full"><tbody>
                 {hiddenDmThreads.map(thread => <DmCard key={`hidden-${dmKey(thread)}`} thread={thread} />)}
               </tbody></table>
@@ -262,7 +262,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner-d
           {flaggedDmThreads.length === 0 ? (
             <EmptyState icon={Bookmark} message="要返信のDMはありません" />
           ) : (
-            <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden">
+            <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden -mx-6 md:mx-0">
               <table className="w-full"><thead><tr className="border-b border-border bg-muted">
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">物件名</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
