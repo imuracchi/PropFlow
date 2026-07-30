@@ -255,9 +255,7 @@ function DashboardLayoutContent({
           <div className="flex border-b h-14 items-center justify-between bg-primary px-3 sticky top-0 z-40">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="h-10 w-10 rounded-lg bg-white/20 text-white hover:bg-white/30" />
-              <span className="text-sm font-semibold text-white">
-                {activeMenuItem?.label ?? "PropFlow"}
-              </span>
+              <img src="/logo2.png" alt="PropFlow" className="h-7 object-contain brightness-0 invert" />
             </div>
           </div>
         )}
