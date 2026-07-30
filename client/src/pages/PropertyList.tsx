@@ -431,7 +431,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="md:divide-y md:divide-border">
                 {sortedFiltered.map(property => {
                   const statusInfo = STATUS_MAP[property.status] ?? STATUS_MAP.available;
                   const isFav = (favoriteIds ?? []).includes(property.id);

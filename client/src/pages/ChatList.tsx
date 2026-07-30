@@ -37,7 +37,7 @@ function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
 
   return (
     <tr
-      className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border"
+      className="hover:bg-muted/30 transition-colors cursor-pointer md:border-b md:border-border"
       onClick={() => {
         setLocation(dmUrl);
       }}
