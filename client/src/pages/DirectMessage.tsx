@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useIsMobile } from "@/hooks/useMobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, Send, Loader2, User, Home, Bookmark, CheckCircle2 } from "lucide-react";
@@ -13,6 +14,7 @@ export default function DirectMessage() {
   const partnerId = Number(paramsWithProp?.id ?? paramsSimple?.id);
   const propertyId = paramsWithProp?.propertyId ? Number(paramsWithProp.propertyId) : null;
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const { data: property } = trpc.property.getById.useQuery(
     { id: propertyId! },
@@ -163,7 +165,13 @@ export default function DirectMessage() {
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="メッセージを入力..."
+            onKeyDown={e => {
+              if (!isMobile && e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder={isMobile ? "メッセージを入力..." : "メッセージを入力...（Shift+Enterで改行）"}
             rows={2}
             className="flex-1 resize-none bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-32 overflow-y-auto"
             style={{ minHeight: "56px", height: "auto" }}
