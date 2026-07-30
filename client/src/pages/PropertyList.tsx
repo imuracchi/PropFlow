@@ -404,7 +404,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
           )}
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
+        <div className="bg-card border-y border-border md:border md:rounded-lg overflow-hidden shadow-sm">
           <div className="md:overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -431,7 +431,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   </th>
                 </tr>
               </thead>
-              <tbody className="md:divide-y md:divide-border">
+              <tbody className="divide-y divide-border">
                 {sortedFiltered.map(property => {
                   const statusInfo = STATUS_MAP[property.status] ?? STATUS_MAP.available;
                   const isFav = (favoriteIds ?? []).includes(property.id);
