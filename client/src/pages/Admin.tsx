@@ -951,8 +951,32 @@ function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
   const [url, setUrl] = useState("");
   const [license, setLicense] = useState("");
   const [error, setError] = useState("");
+  const [cardReading, setCardReading] = useState(false);
 
   const mutation = trpc.admin.createUser.useMutation();
+  const readCardMutation = trpc.auth.readBusinessCard.useMutation();
+
+  const handleCardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCardReading(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      const result = await readCardMutation.mutateAsync({ imageBase64: base64, mimeType: file.type });
+      if (result.success && result.data) {
+        const d = result.data as any;
+        if (d.name) setName(d.name);
+        if (d.company) setCompany(d.company);
+        if (d.phone) setPhone(d.phone);
+        if (d.fax) setFax(d.fax);
+        if (d.url) setUrl(d.url);
+        if (d.license) setLicense(d.license);
+      }
+      setCardReading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async () => {
     setError("");
@@ -986,6 +1010,19 @@ function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
         <button className="text-muted-foreground hover:text-foreground" onClick={onClose}>✕</button>
       </div>
       <div className="p-5 space-y-3">
+        <div className="border border-dashed border-border rounded-lg p-3 text-center">
+          <label className="cursor-pointer flex flex-col items-center gap-1.5">
+            <input type="file" accept="image/*" className="hidden" onChange={handleCardUpload} disabled={cardReading} />
+            {cardReading ? (
+              <span className="text-sm text-muted-foreground">名刺を読み取り中...</span>
+            ) : (
+              <>
+                <span className="text-sm font-medium text-primary">名刺画像をアップロード</span>
+                <span className="text-xs text-muted-foreground">アップロードすると自動入力されます</span>
+              </>
+            )}
+          </label>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-muted-foreground">メールアドレス <span className="text-red-500">*</span></label>
