@@ -1210,6 +1210,34 @@ JSONのみ返してください。` },
           status: "active",
         });
         db.logActivity(ctx.user.id, "admin_create_user", `管理者がユーザー${input.email}を代理登録`).catch(() => {});
+
+        const nameLabel = input.name ? `${input.name}　様` : "　様";
+        sendMail(input.email, "【PropFlow】ご登録完了のお知らせ", `
+<p>${nameLabel}</p>
+<p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
+<p>下記にてご登録をさせて頂きました。</p>
+<p>
+  <a href="https://propflow.jp/">https://propflow.jp/</a><br>
+  ログインID：${input.email}<br>
+  パスワード：${input.password}
+</p>
+<p>パスワードは、ログイン後にマイページから変更頂けます。</p>
+<p>
+  個別物件のご質問に関しては、<br>
+  物件詳細画面から「質問する」にてご登録企業様にご連絡頂けます。<br>
+  ※1on1ですので、他の方から見える事はございません。
+</p>
+<p>
+  使い方などのご不明点ございましたら、<br>
+  こちらのメールか、公式LINEからご連絡くださいませ。
+</p>
+<p>宜しくお願い致します。</p>
+<p>PropFlowサポート　加藤</p>
+        `.trim(), {
+          replyTo: "katomochi55@gmail.com",
+          cc: "katomochi55@gmail.com",
+        }).catch(() => {});
+
         return { success: true } as const;
       }),
 
