@@ -166,6 +166,9 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
                   {loginMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   ログイン
                 </Button>
+                <div className="text-center">
+                  <a href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline">パスワードをお忘れの方</a>
+                </div>
               </div>
             </div>
           </TabsContent>

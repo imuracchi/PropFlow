@@ -253,6 +253,51 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
+    requestPasswordReset: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        const user = await db.getUserByEmail(input.email);
+        if (!user) return { success: true } as const;
+        const token = nanoid(64);
+        const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
+        const dbConn = await db.getDb();
+        if (!dbConn) return { success: false } as const;
+        const { users } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        await dbConn.update(users).set({ resetToken: token, resetTokenExpiresAt: expiresAt }).where(eq(users.id, user.id));
+        const { sendMail } = await import("./_core/mail");
+        const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+        await sendMail(
+          input.email,
+          "【PropFlow】パスワードリセットのご案内",
+          `<p>${user.name ?? ""}様</p>
+<p>パスワードリセットのリクエストを受け付けました。</p>
+<p>下記のリンクから新しいパスワードを設定してください。<br>有効期限は1時間です。</p>
+<p><a href="${siteUrl}/reset-password/${token}" style="display:inline-block;background:#2563eb;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">パスワードを再設定する</a></p>
+<p>このメールに心当たりがない場合は無視してください。</p>
+<p>PropFlowサポート</p>`
+        );
+        return { success: true } as const;
+      }),
+
+    resetPassword: publicProcedure
+      .input(z.object({ token: z.string(), password: z.string().min(8) }))
+      .mutation(async ({ input }) => {
+        const dbConn = await db.getDb();
+        if (!dbConn) return { success: false, error: "データベースに接続できません" } as const;
+        const { users } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const [user] = await dbConn.select().from(users).where(eq(users.resetToken, input.token)).limit(1);
+        if (!user) return { success: false, error: "無効なリンクです" } as const;
+        if (!user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
+          return { success: false, error: "リンクの有効期限が切れています" } as const;
+        }
+        const { hashPassword } = await import("./_core/auth");
+        const newHash = await hashPassword(input.password);
+        await dbConn.update(users).set({ passwordHash: newHash, resetToken: null, resetTokenExpiresAt: null }).where(eq(users.id, user.id));
+        return { success: true } as const;
+      }),
+
     changePassword: protectedProcedure
       .input(z.object({
         currentPassword: z.string().min(1),

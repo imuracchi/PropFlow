@@ -35,6 +35,8 @@ export const users = mysqlTable("users", {
   showUrl: int("showUrl").default(1).notNull(),
   verified: int("verified").default(0).notNull(),
   lineUserId: varchar("lineUserId", { length: 100 }),
+  resetToken: varchar("resetToken", { length: 128 }),
+  resetTokenExpiresAt: timestamp("resetTokenExpiresAt"),
 });
 
 export type User = typeof users.$inferSelect;

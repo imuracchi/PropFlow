@@ -21,6 +21,8 @@ import BuyerPreference from "./pages/BuyerPreference";
 import DocumentList from "./pages/DocumentList";
 import Simulation from "./pages/Simulation";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import { trpc } from "./lib/trpc";
@@ -112,6 +114,12 @@ function AppContent() {
     <Switch>
       <Route path="/register/:token">
         {() => <Register />}
+      </Route>
+      <Route path="/forgot-password">
+        {() => <ForgotPassword />}
+      </Route>
+      <Route path="/reset-password/:token">
+        {() => <ResetPassword />}
       </Route>
       <Route path="/features">
         {() => <Features />}
