@@ -1,3 +1,4 @@
+import React from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -23,6 +24,7 @@ import Simulation from "./pages/Simulation";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import ViewRanking from "./pages/ViewRanking";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import { trpc } from "./lib/trpc";
@@ -107,6 +109,18 @@ function AdminRoute() {
   );
 }
 
+function ManagementRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  if (user?.role !== "management") {
+    setLocation("/properties");
+    return null;
+  }
+
+  return <DashboardLayout>{children}</DashboardLayout>;
+}
+
 function AppContent() {
   const [, setLocation] = useLocation();
 
@@ -114,6 +128,9 @@ function AppContent() {
     <Switch>
       <Route path="/register/:token">
         {() => <Register />}
+      </Route>
+      <Route path="/view-ranking">
+        {() => <ManagementRoute><ViewRanking /></ManagementRoute>}
       </Route>
       <Route path="/forgot-password">
         {() => <ForgotPassword />}

@@ -1613,7 +1613,10 @@ export async function getTopViewedProperties(limit = 20) {
     viewCount: properties.viewCount,
     published: properties.published,
     createdAt: properties.createdAt,
+    ownerName: users.name,
+    ownerCompany: users.company,
   }).from(properties)
+    .leftJoin(users, eq(properties.userId, users.id))
     .where(eq(properties.deleted, 0))
     .orderBy(desc(properties.viewCount))
     .limit(limit);
