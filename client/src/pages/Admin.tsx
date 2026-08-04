@@ -439,8 +439,9 @@ export default function Admin() {
 
           {/* 閲覧数ランキング */}
           <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-4 py-3 bg-muted/40 border-b border-border">
+            <div className="px-4 py-3 bg-muted/40 border-b border-border flex items-center justify-between">
               <h3 className="text-sm font-semibold">閲覧数ランキング（上位20件）</h3>
+              <a href="/view-ranking" className="text-xs text-primary hover:underline">独立ページで見る →</a>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[400px]">
