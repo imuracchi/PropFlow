@@ -16,6 +16,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 const PLAN_MAP: Record<string, { label: string; cls: string }> = {
   standard: { label: "スタンダード", cls: "text-muted-foreground bg-muted" },
@@ -32,6 +33,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 export default function Admin() {
   const { user: currentUser } = useAuth();
   const isManagement = currentUser?.role === "management";
+  const [, setLocation] = useLocation();
 
   const [userSearch, setUserSearch] = useState("");
   const [propSearch, setPropSearch] = useState("");
@@ -142,6 +144,10 @@ export default function Admin() {
           <TabsTrigger value="properties" className="gap-1.5">
             <Building2 className="w-3.5 h-3.5" />
             物件一覧
+          </TabsTrigger>
+          <TabsTrigger value="ranking" className="gap-1.5">
+            <Eye className="w-3.5 h-3.5" />
+            物件ランキング
           </TabsTrigger>
           {!isManagement && (
             <>
@@ -437,28 +443,44 @@ export default function Admin() {
 
           )}
 
-          {/* 閲覧数ランキング */}
+        </TabsContent>
+
+        {/* 物件ランキングタブ */}
+        <TabsContent value="ranking" className="mt-4">
           <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-4 py-3 bg-muted/40 border-b border-border flex items-center justify-between">
+            <div className="px-4 py-3 bg-muted/40 border-b border-border">
               <h3 className="text-sm font-semibold">閲覧数ランキング（上位20件）</h3>
-              <a href="/view-ranking" className="text-xs text-primary hover:underline">独立ページで見る →</a>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[400px]">
+              <table className="w-full text-sm min-w-[500px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    {["順位", "物件名", "種別", "閲覧数"].map(h => (
+                    {["順位", "物件名", "種別", "掲載者", "閲覧数", "公開"].map(h => (
                       <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {(topViewed ?? []).map((p, i) => (
-                    <tr key={p.id} className="hover:bg-accent/30">
-                      <td className="px-4 py-3 text-sm font-bold text-muted-foreground w-12">{i + 1}</td>
+                    <tr key={p.id} className="hover:bg-accent/30 cursor-pointer" onClick={() => setLocation(`/property/${p.id}`)}>
+                      <td className="px-4 py-3 font-bold text-muted-foreground w-12">
+                        {i < 3 ? (
+                          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white ${i === 0 ? "bg-yellow-400" : i === 1 ? "bg-gray-400" : "bg-amber-600"}`}>{i + 1}</span>
+                        ) : i + 1}
+                      </td>
                       <td className="px-4 py-3 font-medium max-w-[200px] truncate">{p.name}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{p.type}</td>
-                      <td className="px-4 py-3 font-bold text-primary whitespace-nowrap">{p.viewCount.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground max-w-[140px] truncate">{(p as any).ownerCompany ?? (p as any).ownerName ?? "-"}</td>
+                      <td className="px-4 py-3 font-bold text-primary whitespace-nowrap">
+                        <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{p.viewCount.toLocaleString()}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        {p.published ? (
+                          <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">公開中</span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">非公開</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
