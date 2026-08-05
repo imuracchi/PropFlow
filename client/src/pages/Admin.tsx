@@ -972,6 +972,7 @@ function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
   const [zipCode, setZipCode] = useState("");
   const [address, setAddress] = useState("");
   const [url, setUrl] = useState("");
+  const [cardBase64, setCardBase64] = useState<string | undefined>(undefined);
   const [license, setLicense] = useState("");
   const [error, setError] = useState("");
   const [cardReading, setCardReading] = useState(false);
@@ -986,14 +987,18 @@ function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
+      setCardBase64(base64);
       const result = await readCardMutation.mutateAsync({ imageBase64: base64, mimeType: file.type });
       if (result.success && result.data) {
         const d = result.data as any;
         if (d.name) setName(d.name);
         if (d.company) setCompany(d.company);
+        if (d.email) setEmail(d.email);
         if (d.phone) setPhone(d.phone);
         if (d.fax) setFax(d.fax);
         if (d.url) setUrl(d.url);
+        if (d.zipCode) setZipCode(d.zipCode);
+        if (d.address) setAddress(d.address);
         if (d.license) setLicense(d.license);
       }
       setCardReading(false);
@@ -1015,9 +1020,11 @@ function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
       address: address || undefined,
       url: url || undefined,
       license: license || undefined,
+      businessCardBase64: cardBase64,
     });
     if (result.success) {
-      alert("ユーザーを登録しました");
+      const emailMsg = (result as any).emailSent ? "✅ 登録完了メールを送信しました" : "⚠️ 登録しましたがメール送信に失敗しました";
+      alert(`ユーザーを登録しました\n${emailMsg}`);
       onSuccess();
     } else {
       setError((result as any).error ?? "登録に失敗しました");

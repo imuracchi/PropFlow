@@ -126,7 +126,7 @@ export const appRouter = router({
             content: [
               { type: "image", source: { type: "base64", media_type: mediaType, data: input.imageBase64 } },
               { type: "text", text: `この名刺画像から以下の情報をJSON形式で抽出してください。見つからない項目はnullにしてください。
-{"name":"氏名","company":"会社名","phone":"電話番号","fax":"FAX番号","url":"WebサイトURL","license":"宅地建物取引士の免許番号（例: 東京都知事(3)第12345号）"}
+{"name":"氏名（フルネーム）","company":"会社名","email":"メールアドレス","phone":"電話番号（固定電話）","fax":"FAX番号","url":"WebサイトURL","zipCode":"郵便番号（ハイフンなし数字7桁、例:1234567）","address":"住所（都道府県から番地まで）","license":"宅地建物取引士の免許番号（例: 東京都知事(3)第12345号）"}
 JSONのみ返してください。` },
             ],
           }],
@@ -1274,12 +1274,13 @@ ${propList}`
         address: z.string().optional(),
         url: z.string().optional(),
         license: z.string().optional(),
+        businessCardBase64: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const existing = await db.getUserByEmail(input.email);
         if (existing) return { success: false, error: "このメールアドレスは既に登録されています" } as const;
         const passwordHash = await hashPassword(input.password);
-        await db.createUser({
+        const newUser = await db.createUser({
           openId: nanoid(),
           email: input.email,
           passwordHash,
@@ -1293,10 +1294,13 @@ ${propList}`
           license: input.license ?? null,
           status: "active",
         });
+        if (input.businessCardBase64 && newUser) {
+          await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
+        }
         db.logActivity(ctx.user.id, "admin_create_user", `管理者がユーザー${input.email}を代理登録`).catch(() => {});
 
         const nameLabel = input.name ? `${input.name}　様` : "　様";
-        sendMail(input.email, "【PropFlow】ご登録完了のお知らせ", `
+        const emailSent = await sendMail(input.email, "【PropFlow】ご登録完了のお知らせ", `
 <p>${nameLabel}</p>
 <p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
 <p>下記にてご登録をさせて頂きました。</p>
@@ -1318,11 +1322,11 @@ ${propList}`
 <p>宜しくお願い致します。</p>
 <p>PropFlowサポート　加藤</p>
         `.trim(), {
-          replyTo: "katomochi55@gmail.com",
-          cc: "katomochi55@gmail.com",
-        }).catch(() => {});
+          replyTo: "propflow@gspec.me",
+          cc: "propflow@gspec.me",
+        });
 
-        return { success: true } as const;
+        return { success: true, emailSent } as const;
       }),
 
     loginAs: adminProcedure
