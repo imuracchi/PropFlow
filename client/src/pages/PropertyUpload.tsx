@@ -346,12 +346,9 @@ export default function PropertyUpload() {
               )}
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" onClick={() => setLocation(`/property/${newPropertyId}`)}>
-              スキップ
-            </Button>
+          <div className="flex flex-col gap-2">
             <Button
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2"
+              className="w-full bg-green-600 hover:bg-green-700 text-white gap-2"
               disabled={notifyLineMutation.isPending}
               onClick={() => {
                 notifyLineMutation.mutate({ propertyId: newPropertyId }, {
@@ -364,6 +361,12 @@ export default function PropertyUpload() {
                 : <>OK・通知する</>
               }
             </Button>
+            <button
+              className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline text-center py-1"
+              onClick={() => setLocation(`/property/${newPropertyId}`)}
+            >
+              通知しないでスキップ
+            </button>
           </div>
         </div>
       </div>
