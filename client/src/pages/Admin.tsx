@@ -136,7 +136,7 @@ export default function Admin() {
 
       {/* タブ */}
       <Tabs defaultValue="users">
-        <TabsList className="bg-muted">
+        <TabsList className="bg-muted flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="users" className="gap-1.5">
             <Users className="w-3.5 h-3.5" />
             業者一覧
