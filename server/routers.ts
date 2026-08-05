@@ -615,6 +615,45 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
+    aiSearch: protectedProcedure
+      .input(z.object({ query: z.string().min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) return { ids: [], error: "ANTHROPIC_API_KEYが未設定です" };
+        const allProperties = await db.listProperties(ctx.user.id);
+        if (!allProperties.length) return { ids: [] };
+        const propList = allProperties.map(p => {
+          const price = p.priceNegotiable ? "応相談" : p.price ? `${p.price.toLocaleString()}円` : "未定";
+          const area = p.landArea ? `${p.landArea}㎡` : "不明";
+          return `ID:${p.id} 種別:${p.type} 名称:${p.name} 所在地:${p.address} 価格:${price} 面積:${area}${p.comment ? ` 備考:${p.comment}` : ""}`;
+        }).join("\n");
+        const Anthropic = (await import("@anthropic-ai/sdk")).default;
+        const client = new Anthropic({ apiKey });
+        const res = await client.messages.create({
+          model: "claude-opus-4-8",
+          max_tokens: 1024,
+          messages: [{
+            role: "user",
+            content: `以下の物件リストから、ユーザーの条件に合う物件のIDをJSON配列で返してください。
+条件に合わないものは含めないでください。
+回答はJSON配列のみ（例: [1,5,12]）で返し、それ以外のテキストは不要です。
+
+【ユーザーの条件】
+${input.query}
+
+【物件リスト】
+${propList}`
+          }],
+        });
+        const text = res.content[0].type === "text" ? res.content[0].text.trim() : "[]";
+        try {
+          const ids = JSON.parse(text.match(/\[[\d,\s]*\]/)?.[0] ?? "[]");
+          return { ids: ids as number[] };
+        } catch {
+          return { ids: [] };
+        }
+      }),
+
     topViewed: managementProcedure
       .input(z.object({ limit: z.number().optional() }))
       .query(async ({ input }) => {

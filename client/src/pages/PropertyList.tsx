@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search, Heart, Building2,
-  Plus, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff, SlidersHorizontal, X as XIcon
+  Plus, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff, SlidersHorizontal, X as XIcon, Sparkles
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -41,7 +41,12 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [maxPrice, setMaxPrice] = useState("");
   const [showNewOnly, setShowNewOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [aiMode, setAiMode] = useState(false);
+  const [aiQuery, setAiQuery] = useState("");
+  const [aiResultIds, setAiResultIds] = useState<number[] | null>(null);
+  const [aiSearching, setAiSearching] = useState(false);
   const { user } = useAuth();
+  const aiSearchMutation = trpc.property.aiSearch.useMutation();
 
   const { data: properties, isLoading } = trpc.property.list.useQuery();
   const { data: myProperties, isLoading: myLoading } = trpc.mypage.myProperties.useQuery(undefined, { enabled: mode === "mine" });
@@ -107,6 +112,10 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     .filter(p => {
       if (!showNewOnly) return true;
       return p.userId !== user?.id && !isPropertyRead(p.id);
+    })
+    .filter(p => {
+      if (!aiMode || aiResultIds === null) return true;
+      return aiResultIds.includes(p.id);
     });
 
   const types = [...new Set(baseFiltered.map(p => p.type))];
@@ -309,8 +318,38 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       {(() => {
         const activeFilterCount = [filterType !== "all", minLandArea, maxLandArea, minPrice, maxPrice, showNewOnly].filter(Boolean).length;
         const clearAll = () => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); setShowNewOnly(false); };
+        const handleAiSearch = async () => {
+          if (!aiQuery.trim()) return;
+          setAiSearching(true);
+          const res = await aiSearchMutation.mutateAsync({ query: aiQuery });
+          setAiResultIds(res.ids);
+          setAiSearching(false);
+        };
         return (
           <>
+            {/* AI検索モード */}
+            {aiMode ? (
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+                  <Input
+                    placeholder="例：工場向けの広い土地で1億以下"
+                    className="pl-10 bg-card border-primary border-2 h-11"
+                    value={aiQuery}
+                    onChange={e => { setAiQuery(e.target.value); setAiResultIds(null); }}
+                    onKeyDown={e => e.key === "Enter" && handleAiSearch()}
+                    autoFocus
+                  />
+                </div>
+                <Button className="h-11 px-4 bg-primary gap-2 shrink-0" onClick={handleAiSearch} disabled={aiSearching || !aiQuery.trim()}>
+                  {aiSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  <span className="hidden sm:inline">検索</span>
+                </Button>
+                <Button variant="outline" className="h-11 px-3 shrink-0" onClick={() => { setAiMode(false); setAiQuery(""); setAiResultIds(null); }}>
+                  <XIcon className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -321,6 +360,14 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
+              <Button
+                variant="outline"
+                className="h-11 px-3 gap-1.5 shrink-0 text-primary border-primary/40 hover:bg-primary/5"
+                onClick={() => setAiMode(true)}
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">AI検索</span>
+              </Button>
               <Button
                 variant={activeFilterCount > 0 ? "default" : "outline"}
                 className={`h-11 px-4 gap-2 shrink-0 ${activeFilterCount > 0 ? "bg-primary text-primary-foreground" : ""}`}
@@ -335,6 +382,16 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                 )}
               </Button>
             </div>
+            )}
+
+            {/* AI検索結果バナー */}
+            {aiMode && aiResultIds !== null && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm">
+                <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                <span className="text-primary font-medium">{aiResultIds.length}件</span>
+                <span className="text-muted-foreground">が条件に合致しました</span>
+              </div>
+            )}
 
             {/* スライド展開パネル */}
             <div className={`overflow-hidden transition-all duration-200 ${showFilters ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
