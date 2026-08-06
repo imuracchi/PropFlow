@@ -35,6 +35,8 @@ jobs:
             --single-transaction \
             --routines \
             --triggers \
+            --max-allowed-packet=512M \
+            --net-buffer-length=32768 \
             "$DB_NAME" > "$BACKUP_FILE"
 
           gzip "$BACKUP_FILE"
