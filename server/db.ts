@@ -41,6 +41,9 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` MODIFY COLUMN `role` ENUM('user','admin','management') NOT NULL DEFAULT 'user'",
     "ALTER TABLE `users` ADD COLUMN `resetToken` varchar(128) NULL",
     "ALTER TABLE `users` ADD COLUMN `resetTokenExpiresAt` timestamp NULL",
+    "ALTER TABLE `users` ADD COLUMN `businessHours` varchar(255) NULL",
+    "ALTER TABLE `users` ADD COLUMN `holidays` varchar(255) NULL",
+    "ALTER TABLE `users` ADD COLUMN `bio` text NULL",
     "ALTER TABLE `properties` ADD COLUMN `viewCount` int NOT NULL DEFAULT 0",
     `CREATE TABLE IF NOT EXISTS \`property_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
