@@ -1299,6 +1299,7 @@ ${propList}`
         }
         db.logActivity(ctx.user.id, "admin_create_user", `管理者がユーザー${input.email}を代理登録`).catch(() => {});
 
+        const { sendMail } = await import("./_core/mail");
         const nameLabel = input.name ? `${input.name}　様` : "　様";
         const emailSent = await sendMail(input.email, "【PropFlow】ご登録完了のお知らせ", `
 <p>${nameLabel}</p>
