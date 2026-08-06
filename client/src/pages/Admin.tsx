@@ -71,7 +71,9 @@ export default function Admin() {
 
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastLineMessage, setBroadcastLineMessage] = useState("");
   const [broadcastImageUrl, setBroadcastImageUrl] = useState("");
+  const [broadcastMode, setBroadcastMode] = useState<"both" | "email" | "line">("both");
   const [broadcastSkipLine, setBroadcastSkipLine] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<{ emailSent: number; emailTotal: number; lineSent: boolean } | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
@@ -710,16 +712,23 @@ export default function Admin() {
         <TabsContent value="broadcast" className="mt-4">
           <div className="max-w-2xl space-y-4">
             <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4 text-primary" />
-                  <h2 className="font-semibold text-foreground">一斉配信</h2>
-                  <span className="text-xs text-muted-foreground ml-1">{broadcastSkipLine ? "メールのみ" : "LINE + メール同時送信"}</span>
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <Send className="w-4 h-4 text-primary" />
+                <h2 className="font-semibold text-foreground">一斉配信</h2>
+              </div>
+
+              {/* 送信先モード */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">送信先</label>
+                <div className="flex gap-2">
+                  {([["both", "LINE + メール"], ["email", "メールのみ"], ["line", "LINEのみ"]] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${broadcastMode === val ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary/50"}`}
+                      onClick={() => { setBroadcastMode(val); setBroadcastResult(null); }}
+                    >{label}</button>
+                  ))}
                 </div>
-                <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground">
-                  <input type="checkbox" className="w-3.5 h-3.5 accent-primary" checked={broadcastSkipLine} onChange={e => setBroadcastSkipLine(e.target.checked)} />
-                  LINE通知をOFFにする
-                </label>
               </div>
 
               <div className="space-y-2">
@@ -727,43 +736,63 @@ export default function Admin() {
                 <input
                   type="text"
                   className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder="例：PropFlowの使い方 — 物件検索のコツ"
+                  placeholder="例：PropFlow｜物件掲載のご案内"
                   value={broadcastSubject}
                   onChange={e => { setBroadcastSubject(e.target.value); setBroadcastResult(null); }}
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">画像URL（任意）</label>
-                <input
-                  type="url"
-                  className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder="https://example.com/image.jpg"
-                  value={broadcastImageUrl}
-                  onChange={e => { setBroadcastImageUrl(e.target.value); setBroadcastResult(null); }}
-                />
-                {broadcastImageUrl && (
-                  <img src={broadcastImageUrl} alt="プレビュー" className="mt-1 max-h-40 rounded border border-border object-contain" onError={e => (e.currentTarget.style.display = "none")} />
-                )}
-              </div>
+              {broadcastMode !== "line" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">画像URL（任意）</label>
+                    <input
+                      type="url"
+                      className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      placeholder="https://example.com/image.jpg"
+                      value={broadcastImageUrl}
+                      onChange={e => { setBroadcastImageUrl(e.target.value); setBroadcastResult(null); }}
+                    />
+                    {broadcastImageUrl && (
+                      <img src={broadcastImageUrl} alt="プレビュー" className="mt-1 max-h-40 rounded border border-border object-contain" onError={e => (e.currentTarget.style.display = "none")} />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">メール本文</label>
+                    <textarea
+                      className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                      rows={8}
+                      placeholder="メールに送る本文を入力..."
+                      value={broadcastMessage}
+                      onChange={e => { setBroadcastMessage(e.target.value); setBroadcastResult(null); }}
+                    />
+                  </div>
+                </>
+              )}
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">本文</label>
-                <textarea
-                  className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                  rows={8}
-                  placeholder={"例：\nいつもPropFlowをご利用いただきありがとうございます。\n\n今回は物件検索のコツをご紹介します。\n\n■ フィルター機能を活用しよう\n種別・価格帯で絞り込むと効率的に探せます。\n\n■ お気に入り登録でまとめて管理\n気になる物件はハートボタンでお気に入りに追加できます。"}
-                  value={broadcastMessage}
-                  onChange={e => { setBroadcastMessage(e.target.value); setBroadcastResult(null); }}
-                />
-              </div>
+              {broadcastMode !== "email" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    LINE本文
+                    {broadcastMode === "both" && <span className="ml-1.5 text-xs font-normal text-muted-foreground">（空欄の場合はメール本文と同じ内容を送信）</span>}
+                  </label>
+                  <textarea
+                    className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                    rows={5}
+                    placeholder="LINEに送る本文を入力..."
+                    value={broadcastLineMessage}
+                    onChange={e => { setBroadcastLineMessage(e.target.value); setBroadcastResult(null); }}
+                  />
+                </div>
+              )}
 
               {broadcastResult && (
                 <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 space-y-1">
                   <p className="text-sm font-medium text-green-800">送信完了</p>
                   <p className="text-xs text-green-700">
-                    メール: {broadcastResult.emailSent}/{broadcastResult.emailTotal}件送信
-                    　LINE: {broadcastResult.lineSent ? "送信成功" : "送信失敗（トークン未設定？）"}
+                    {broadcastMode !== "line" && `メール: ${broadcastResult.emailSent}/${broadcastResult.emailTotal}件送信`}
+                    {broadcastMode === "both" && "　"}
+                    {broadcastMode !== "email" && `LINE: ${broadcastResult.lineSent ? "送信成功" : "送信失敗（トークン未設定？）"}`}
                   </p>
                 </div>
               )}
@@ -776,16 +805,23 @@ export default function Admin() {
 
               <Button
                 className="gap-2 bg-primary hover:bg-primary/90"
-                disabled={!broadcastSubject.trim() || !broadcastMessage.trim() || broadcastMutation.isPending}
+                disabled={!broadcastSubject.trim() || (broadcastMode !== "line" && !broadcastMessage.trim()) || (broadcastMode === "line" && !broadcastLineMessage.trim()) || broadcastMutation.isPending}
                 onClick={async () => {
-                  const mode = broadcastSkipLine ? "メールのみ" : "LINE＋メール";
-                  if (!confirm(`全ユーザーに${mode}を送信します。よろしいですか？\n\n件名: ${broadcastSubject}`)) return;
-                  const result = await broadcastMutation.mutateAsync({ subject: broadcastSubject, message: broadcastMessage, imageUrl: broadcastImageUrl || undefined, skipLine: broadcastSkipLine });
+                  const modeLabel = broadcastMode === "both" ? "LINE＋メール" : broadcastMode === "email" ? "メールのみ" : "LINEのみ";
+                  if (!confirm(`全ユーザーに${modeLabel}を送信します。よろしいですか？\n\n件名: ${broadcastSubject}`)) return;
+                  const result = await broadcastMutation.mutateAsync({
+                    subject: broadcastSubject,
+                    message: broadcastMode !== "line" ? broadcastMessage : undefined,
+                    lineMessage: broadcastMode !== "email" ? (broadcastLineMessage || undefined) : undefined,
+                    imageUrl: broadcastImageUrl || undefined,
+                    skipLine: broadcastMode === "email",
+                    skipEmail: broadcastMode === "line",
+                  });
                   setBroadcastResult(result);
                 }}
               >
                 {broadcastMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {broadcastMutation.isPending ? "送信中..." : broadcastSkipLine ? "メールのみ一斉送信" : "LINE + メール一斉送信"}
+                {broadcastMutation.isPending ? "送信中..." : broadcastMode === "both" ? "LINE + メール一斉送信" : broadcastMode === "email" ? "メールのみ一斉送信" : "LINEのみ一斉送信"}
               </Button>
             </div>
 
