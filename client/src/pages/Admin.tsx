@@ -337,7 +337,9 @@ export default function Admin() {
                                 )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="gap-2 text-xs" onClick={() => {
-                                  resendWelcomeMutation.mutate({ userId: user.id }, {
+                                  const pw = prompt(`${user.name ?? user.email} に送るパスワードを入力してください（6文字以上）`);
+                                  if (!pw || pw.length < 6) return;
+                                  resendWelcomeMutation.mutate({ userId: user.id, password: pw }, {
                                     onSuccess: (res) => {
                                       alert((res as any).emailSent ? `✅ ${user.email} にメールを送信しました` : "⚠️ メール送信に失敗しました");
                                     },

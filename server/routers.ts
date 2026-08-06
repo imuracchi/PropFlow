@@ -1330,13 +1330,18 @@ ${propList}`
       }),
 
     resendWelcomeEmail: adminProcedure
-      .input(z.object({ userId: z.number(), password: z.string().optional() }))
+      .input(z.object({ userId: z.number(), password: z.string().min(6) }))
       .mutation(async ({ input }) => {
         const user = await db.getUserById(input.userId);
         if (!user) return { success: false, error: "ユーザーが見つかりません" } as const;
+        const newHash = await hashPassword(input.password);
+        const dbConn = await db.getDb();
+        if (!dbConn) return { success: false, error: "DB接続エラー" } as const;
+        const { users } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        await dbConn.update(users).set({ passwordHash: newHash }).where(eq(users.id, input.userId));
         const { sendMail } = await import("./_core/mail");
         const nameLabel = user.name ? `${user.name}　様` : "　様";
-        const passwordLine = input.password ? `パスワード：${input.password}` : "パスワード：登録時に設定したパスワード";
         const emailSent = await sendMail(user.email, "【PropFlow】ご登録完了のお知らせ", `
 <p>${nameLabel}</p>
 <p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
@@ -1344,7 +1349,7 @@ ${propList}`
 <p>
   <a href="https://propflow.jp/">https://propflow.jp/</a><br>
   ログインID：${user.email}<br>
-  ${passwordLine}
+  パスワード：${input.password}
 </p>
 <p>パスワードは、ログイン後にマイページから変更頂けます。</p>
 <p>
