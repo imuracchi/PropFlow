@@ -543,6 +543,26 @@ JSONのみ返してください。` },
         return { success: true };
       }),
 
+    deleteOwn: protectedProcedure
+      .input(z.object({ propertyId: z.number(), message: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.propertyId);
+        if (!prop) throw new TRPCError({ code: "NOT_FOUND" });
+        if (prop.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "この物件の削除権限がありません" });
+
+        if (input.message?.trim()) {
+          const partnerIds = await db.getDmPartnersForProperty(input.propertyId, ctx.user.id);
+          const fullMessage = `【物件「${prop.name}」について】\n${input.message.trim()}`;
+          for (const partnerId of partnerIds) {
+            await db.sendDirectMessage(ctx.user.id, partnerId, fullMessage, input.propertyId);
+          }
+        }
+
+        await db.ownerDeleteProperty(input.propertyId);
+        db.logActivity(ctx.user.id, "property_delete_own", `物件「${prop.name}」を完全削除`).catch(() => {});
+        return { success: true };
+      }),
+
     listFiles: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .query(async ({ input, ctx }) => {

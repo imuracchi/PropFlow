@@ -54,18 +54,18 @@ function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
       </td>
       <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden md:table-cell">{thread.messageCount}件</td>
       <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(thread.lastMessageAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}</td>
-      <td className="px-2 py-3 text-center">
-        <div className="flex items-center justify-center gap-1">
+      <td className="px-1 py-2 text-center">
+        <div className="flex items-center justify-center gap-0.5">
           <button
-            className={`p-1 rounded transition-colors ${thread.flagged ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground/30 hover:text-amber-400"}`}
+            className={`p-2.5 rounded-lg transition-colors ${thread.flagged ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground/30 hover:text-amber-400"}`}
             title={thread.flagged ? "要返信を解除" : "要返信にする"}
             onClick={handleToggleFlag}
           >
-            <Bookmark className={`w-3.5 h-3.5 ${thread.flagged ? "fill-amber-400" : ""}`} />
+            <Bookmark className={`w-4 h-4 ${thread.flagged ? "fill-amber-400" : ""}`} />
           </button>
           {onHide && (
-            <button className="p-1 rounded text-muted-foreground/30 hover:text-destructive hover:bg-red-50 transition-colors" onClick={e => { e.stopPropagation(); onHide(); }}>
-              <Trash2 className="w-3.5 h-3.5" />
+            <button className="p-2.5 rounded-lg text-muted-foreground/30 hover:text-destructive hover:bg-red-50 transition-colors" onClick={e => { e.stopPropagation(); onHide(); }}>
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -150,7 +150,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner-d
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
-                  <th className="w-16"></th>
+                  <th className="w-24"></th>
                 </tr></thead><tbody>
                   {ownerDms.map(thread => <DmCard key={`dm-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
                 </tbody></table>
@@ -174,7 +174,7 @@ export default function ChatList({ mode = "buyer" }: { mode?: "buyer" | "owner-d
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">相手</th>
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">件数</th>
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">日付</th>
-                  <th className="w-16"></th>
+                  <th className="w-24"></th>
                 </tr></thead><tbody>
                   {ownerFlaggedDms.map(thread => <DmCard key={`flagged-${dmKey(thread)}`} thread={thread} onHide={() => handleDmHide(thread)} />)}
                 </tbody></table>

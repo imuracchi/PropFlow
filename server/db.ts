@@ -59,6 +59,11 @@ export async function runStartupMigrations() {
       \`lineSent\` int NOT NULL DEFAULT 0,
       \`sentAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS \`property_name_snapshots\` (
+      \`propertyId\` int NOT NULL PRIMARY KEY,
+      \`name\` varchar(255) NOT NULL,
+      \`deletedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
   ];
 
   let conn: mysql.Connection | null = null;
@@ -472,6 +477,43 @@ export async function hardDeleteProperty(id: number) {
   await db.delete(favorites).where(eq(favorites.propertyId, id));
   await db.delete(messages).where(eq(messages.propertyId, id));
   await db.delete(properties).where(eq(properties.id, id));
+}
+
+export async function getDmPartnersForProperty(propertyId: number, ownerId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ senderId: directMessages.senderId, receiverId: directMessages.receiverId })
+    .from(directMessages)
+    .where(eq(directMessages.propertyId, propertyId));
+  const partnerIds = new Set<number>();
+  for (const row of rows) {
+    if (row.senderId !== ownerId) partnerIds.add(row.senderId);
+    if (row.receiverId !== ownerId) partnerIds.add(row.receiverId);
+  }
+  return [...partnerIds];
+}
+
+export async function ownerDeleteProperty(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // 物件名をスナップショットとして保存（DM一覧での表示用）
+  const prop = await getPropertyById(id);
+  if (prop) {
+    await db.execute(sql`INSERT INTO property_name_snapshots (propertyId, name) VALUES (${id}, ${prop.name}) ON DUPLICATE KEY UPDATE name = ${prop.name}`);
+  }
+
+  await db.delete(propertyExclusions).where(eq(propertyExclusions.propertyId, id));
+  await db.delete(propertyReads).where(eq(propertyReads.propertyId, id));
+  await db.delete(propertyMemos).where(eq(propertyMemos.propertyId, id));
+  await db.delete(generatedDocuments).where(eq(generatedDocuments.propertyId, id));
+  await db.delete(chatExits).where(eq(chatExits.propertyId, id));
+  await db.delete(propertyFiles).where(eq(propertyFiles.propertyId, id));
+  await db.delete(favorites).where(eq(favorites.propertyId, id));
+  await db.delete(messages).where(eq(messages.propertyId, id));
+  await db.delete(properties).where(eq(properties.id, id));
+  // directMessages と dmReadStatus はDMスレッドを残すため削除しない
 }
 
 export async function listAllPropertiesAdmin() {
@@ -1111,6 +1153,18 @@ export async function getDirectMessageThreads(userId: number) {
     .select({ id: properties.id, name: properties.name })
     .from(properties)
     .where(sql`${properties.id} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`) : [];
+
+  // 削除済み物件の名前をスナップショットから補完
+  const foundPropIds = new Set(props.map(p => p.id));
+  const missingPropIds = propertyIds.filter(id => !foundPropIds.has(id));
+  if (missingPropIds.length > 0) {
+    const snapshots = await db.execute<{ propertyId: number; name: string }>(
+      sql`SELECT propertyId, name FROM property_name_snapshots WHERE propertyId IN (${sql.join(missingPropIds.map(id => sql`${id}`), sql`, `)})`
+    );
+    for (const row of (snapshots[0] as any[])) {
+      props.push({ id: row.propertyId, name: `${row.name}（削除済み）` });
+    }
+  }
 
   const readStatuses = await db
     .select({ partnerId: dmReadStatus.partnerId, propertyId: dmReadStatus.propertyId, flagged: dmReadStatus.flagged, lastReadAt: dmReadStatus.lastReadAt })

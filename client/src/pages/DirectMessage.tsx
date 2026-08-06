@@ -16,10 +16,11 @@ export default function DirectMessage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
 
-  const { data: property } = trpc.property.getById.useQuery(
+  const { data: property, isFetched: propertyFetched } = trpc.property.getById.useQuery(
     { id: propertyId! },
     { enabled: !!propertyId }
   );
+  const propertyDeleted = !!propertyId && propertyFetched && !property;
 
   const { data: messages, isLoading, refetch } = trpc.dm.messages.useQuery(
     { partnerId, propertyId },
@@ -98,22 +99,15 @@ export default function DirectMessage() {
             )}
           </div>
         </div>
-        <button
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-            isFlagged
-              ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
-              : "text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
-          }`}
-          onClick={() => flagMutation.mutate({ partnerId, propertyId: propertyId ?? null, flagged: !isFlagged })}
-          disabled={flagMutation.isPending}
-        >
-          <Bookmark className={`w-3.5 h-3.5 ${isFlagged ? "fill-amber-400" : ""}`} />
-          {isFlagged ? "要返信中" : "要返信"}
-        </button>
       </div>
 
       {/* 物件情報バナー */}
-      {property && (
+      {propertyDeleted ? (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/30 border border-border rounded-lg mt-3">
+          <Home className="w-4 h-4 text-muted-foreground shrink-0" />
+          <p className="text-sm text-muted-foreground">この物件は削除されました</p>
+        </div>
+      ) : property ? (
         <div
           className="flex items-center gap-3 px-4 py-2.5 bg-muted/50 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors mt-3"
           onClick={() => setLocation(`/property/${property.id}`)}
@@ -125,7 +119,7 @@ export default function DirectMessage() {
           </div>
           <p className="text-xs text-primary shrink-0">{property.price?.toLocaleString() ?? "応相談"}</p>
         </div>
-      )}
+      ) : null}
 
       {/* メッセージエリア */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4">
@@ -161,6 +155,20 @@ export default function DirectMessage() {
 
       {/* 入力エリア */}
       <div className="pt-3 border-t border-border">
+        <div className="flex justify-end mb-2">
+          <button
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              isFlagged
+                ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
+                : "text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
+            }`}
+            onClick={() => flagMutation.mutate({ partnerId, propertyId: propertyId ?? null, flagged: !isFlagged })}
+            disabled={flagMutation.isPending}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${isFlagged ? "fill-amber-400" : ""}`} />
+            {isFlagged ? "要返信中" : "要返信"}
+          </button>
+        </div>
         <div className="flex items-end gap-2">
           <textarea
             value={input}

@@ -1022,6 +1022,11 @@ export default function PropertyDetail() {
   const isOwner = user && property && (user.id === property.userId || user.role === "admin");
   const currentFaqs = faqs ?? (property?.faqs as FaqItem[] | null) ?? [];
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [deleteMessage, setDeleteMessage] = useState("");
+  const deleteOwnMutation = trpc.property.deleteOwn.useMutation();
+
   useEffect(() => {
     if (property && isEditing) {
       setEditForm({
@@ -2000,6 +2005,28 @@ export default function PropertyDetail() {
           </div>
 
           {/* 公開設定（オーナーのみ・下部） */}
+          {/* 物件削除（オーナーのみ・自分が登録した物件のみ） */}
+          {user && property && user.id === property.userId && !isEditing && (
+            <div className="border border-red-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 bg-red-50 border-b border-red-200">
+                <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                  <Trash2 className="w-4 h-4" />物件の削除
+                </p>
+              </div>
+              <div className="px-4 py-4">
+                <p className="text-xs text-muted-foreground mb-3">この物件を完全に削除します。削除後は復元できません。</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
+                  onClick={() => { setDeleteMessage(""); setDeleteStep(1); setShowDeleteModal(true); }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />この物件を削除する
+                </Button>
+              </div>
+            </div>
+          )}
+
           {isOwner && !isEditing && (
             <div className="border border-border rounded-xl overflow-hidden">
               <div className="px-4 py-3 bg-muted/50 border-b border-border">
@@ -2133,6 +2160,94 @@ export default function PropertyDetail() {
             </div>
           )}
         </>
+      )}
+
+      {/* 物件削除確認モーダル */}
+      {showDeleteModal && property && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md">
+            <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-500" />
+              <h3 className="font-semibold text-foreground">
+                物件を削除する
+                <span className="ml-2 text-xs font-normal text-muted-foreground">ステップ {deleteStep} / 2</span>
+              </h3>
+            </div>
+
+            {deleteStep === 1 ? (
+              <>
+                <div className="px-5 py-4 space-y-4">
+                  <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 space-y-1">
+                    <p className="text-sm font-semibold text-red-700">⚠️ この操作は取り消せません</p>
+                    <p className="text-xs text-red-600">削除した物件は完全に削除され、復元できません。写真・添付資料・やり取りの履歴もすべて消去されます。</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">やり取りした相手へのメッセージ（任意）</label>
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-2">入力した場合、この物件でDMをしていた全員にメッセージが送信されます。</p>
+                    <Textarea
+                      value={deleteMessage}
+                      onChange={e => setDeleteMessage(e.target.value)}
+                      placeholder="例：この度、物件の売却が決まりましたのでご案内を終了いたします。ご興味いただきありがとうございました。"
+                      className="text-sm resize-none"
+                      rows={4}
+                    />
+                  </div>
+                </div>
+                <div className="px-5 py-4 border-t border-border flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setShowDeleteModal(false)}>
+                    キャンセル
+                  </Button>
+                  <Button
+                    className="flex-1 gap-2 bg-red-600 hover:bg-red-700 text-white border-0"
+                    onClick={() => setDeleteStep(2)}
+                  >
+                    <Trash2 className="w-4 h-4" />次へ
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="px-5 py-4 space-y-4">
+                  <p className="text-sm text-foreground font-medium">「{property.name}」を削除します。</p>
+                  {deleteMessage.trim() && (
+                    <div className="bg-muted/50 border border-border rounded-lg px-4 py-3">
+                      <p className="text-xs text-muted-foreground mb-1">送信するメッセージ</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">{deleteMessage.trim()}</p>
+                    </div>
+                  )}
+                  <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                    <p className="text-sm font-semibold text-red-700">本当に削除しますか？</p>
+                    <p className="text-xs text-red-600 mt-0.5">この操作は取り消せません。復元できません。</p>
+                  </div>
+                </div>
+                <div className="px-5 py-4 border-t border-border flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setDeleteStep(1)} disabled={deleteOwnMutation.isPending}>
+                    戻る
+                  </Button>
+                  <Button
+                    className="flex-1 gap-2 bg-red-600 hover:bg-red-700 text-white border-0"
+                    disabled={deleteOwnMutation.isPending}
+                    onClick={async () => {
+                      try {
+                        await deleteOwnMutation.mutateAsync({
+                          propertyId: property.id,
+                          message: deleteMessage.trim() || undefined,
+                        });
+                        setShowDeleteModal(false);
+                        setLocation("/properties");
+                      } catch (e: any) {
+                        alert(e?.message ?? "削除に失敗しました");
+                      }
+                    }}
+                  >
+                    {deleteOwnMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    削除する
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
