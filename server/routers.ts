@@ -1304,11 +1304,11 @@ ${propList}`
 <p>${nameLabel}</p>
 <p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
 <p>下記にてご登録をさせて頂きました。</p>
-<div style="background:#f0f4ff;border:2px solid #2563eb;border-radius:8px;padding:16px;margin:16px 0;">
-  <p style="margin:0 0 8px;"><strong>ログインURL：</strong><a href="https://propflow.jp/">https://propflow.jp/</a></p>
-  <p style="margin:0 0 8px;"><strong>ログインID（メールアドレス）：</strong>${input.email}</p>
-  <p style="margin:0;font-size:18px;"><strong>パスワード：${input.password}</strong></p>
-</div>
+<p>
+  ログインURL：<a href="https://propflow.jp/">https://propflow.jp/</a><br>
+  ログインID：${input.email}<br>
+  パスワード：${input.password}
+</p>
 <p>パスワードは、ログイン後にマイページから変更頂けます。</p>
 <p>
   個別物件のご質問に関しては、<br>
@@ -1346,11 +1346,11 @@ ${propList}`
 <p>${nameLabel}</p>
 <p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
 <p>下記にてご登録をさせて頂きました。</p>
-<div style="background:#f0f4ff;border:2px solid #2563eb;border-radius:8px;padding:16px;margin:16px 0;">
-  <p style="margin:0 0 8px;"><strong>ログインURL：</strong><a href="https://propflow.jp/">https://propflow.jp/</a></p>
-  <p style="margin:0 0 8px;"><strong>ログインID（メールアドレス）：</strong>${user.email}</p>
-  <p style="margin:0;font-size:18px;"><strong>パスワード：${input.password}</strong></p>
-</div>
+<p>
+  ログインURL：<a href="https://propflow.jp/">https://propflow.jp/</a><br>
+  ログインID：${user.email}<br>
+  パスワード：${input.password}
+</p>
 <p>パスワードは、ログイン後にマイページから変更頂けます。</p>
 <p>
   個別物件のご質問に関しては、<br>
