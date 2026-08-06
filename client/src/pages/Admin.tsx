@@ -1010,24 +1010,28 @@ function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
     setError("");
     if (!email || !password) { setError("メールアドレスとパスワードは必須です"); return; }
     if (password.length < 6) { setError("パスワードは6文字以上にしてください"); return; }
-    const result = await mutation.mutateAsync({
-      email, password,
-      name: name || undefined,
-      company: company || undefined,
-      phone: phone || undefined,
-      fax: fax || undefined,
-      zipCode: zipCode || undefined,
-      address: address || undefined,
-      url: url || undefined,
-      license: license || undefined,
-      businessCardBase64: cardBase64,
-    });
-    if (result.success) {
-      const emailMsg = (result as any).emailSent ? "✅ 登録完了メールを送信しました" : "⚠️ 登録しましたがメール送信に失敗しました";
-      alert(`ユーザーを登録しました\n${emailMsg}`);
-      onSuccess();
-    } else {
-      setError((result as any).error ?? "登録に失敗しました");
+    try {
+      const result = await mutation.mutateAsync({
+        email, password,
+        name: name || undefined,
+        company: company || undefined,
+        phone: phone || undefined,
+        fax: fax || undefined,
+        zipCode: zipCode || undefined,
+        address: address || undefined,
+        url: url || undefined,
+        license: license || undefined,
+        businessCardBase64: cardBase64,
+      });
+      if (result.success) {
+        const emailMsg = (result as any).emailSent ? "✅ 登録完了メールを送信しました" : "⚠️ 登録しましたがメール送信に失敗しました";
+        alert(`ユーザーを登録しました\n${emailMsg}`);
+        onSuccess();
+      } else {
+        setError((result as any).error ?? "登録に失敗しました");
+      }
+    } catch (e: any) {
+      setError(e?.message ?? "エラーが発生しました");
     }
   };
 
