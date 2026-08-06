@@ -1060,7 +1060,7 @@ function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
           </div>
           <div>
             <label className="text-xs text-muted-foreground">パスワード <span className="text-red-500">*</span></label>
-            <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="6文字以上" />
+            <Input type="text" value={password} onChange={e => setPassword(e.target.value)} placeholder="6文字以上" />
           </div>
           <div>
             <label className="text-xs text-muted-foreground">氏名</label>
