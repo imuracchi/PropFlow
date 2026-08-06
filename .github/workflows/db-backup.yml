@@ -1,0 +1,50 @@
+name: DB Backup
+
+on:
+  schedule:
+    - cron: '0 18 * * *'  # 毎日 JST 3:00 (UTC 18:00)
+  workflow_dispatch:       # 手動実行も可能
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install MySQL client
+        run: sudo apt-get install -y mysql-client
+
+      - name: Dump database
+        env:
+          MYSQLHOST: ${{ secrets.MYSQLHOST }}
+          MYSQLPORT: ${{ secrets.MYSQLPORT }}
+          MYSQLUSER: ${{ secrets.MYSQLUSER }}
+          MYSQLPASSWORD: ${{ secrets.MYSQLPASSWORD }}
+          MYSQLDATABASE: ${{ secrets.MYSQLDATABASE }}
+        run: |
+          BACKUP_FILE="backup_$(date +%Y%m%d_%H%M%S).sql"
+
+          mysqldump \
+            -h "$MYSQLHOST" \
+            -P "$MYSQLPORT" \
+            -u "$MYSQLUSER" \
+            -p"$MYSQLPASSWORD" \
+            --ssl-mode=REQUIRED \
+            --single-transaction \
+            --routines \
+            --triggers \
+            "$MYSQLDATABASE" > "$BACKUP_FILE"
+
+          gzip "$BACKUP_FILE"
+          echo "Backup complete: ${BACKUP_FILE}.gz"
+          ls -lh "${BACKUP_FILE}.gz"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_number }}-${{ github.run_id }}
+          path: "*.sql.gz"
+          retention-days: 30
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "::error::DB バックアップに失敗しました"
