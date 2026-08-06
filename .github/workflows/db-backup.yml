@@ -15,24 +15,27 @@ jobs:
 
       - name: Dump database
         env:
-          MYSQLHOST: ${{ secrets.MYSQLHOST }}
-          MYSQLPORT: ${{ secrets.MYSQLPORT }}
-          MYSQLUSER: ${{ secrets.MYSQLUSER }}
-          MYSQLPASSWORD: ${{ secrets.MYSQLPASSWORD }}
-          MYSQLDATABASE: ${{ secrets.MYSQLDATABASE }}
+          MYSQL_PUBLIC_URL: ${{ secrets.MYSQL_PUBLIC_URL }}
         run: |
+          # mysql://user:pass@host:port/dbname を分解
+          DB_USER=$(echo "$MYSQL_PUBLIC_URL" | sed 's|mysql://\([^:]*\):.*|\1|')
+          DB_PASS=$(echo "$MYSQL_PUBLIC_URL" | sed 's|mysql://[^:]*:\([^@]*\)@.*|\1|')
+          DB_HOST=$(echo "$MYSQL_PUBLIC_URL" | sed 's|.*@\([^:/]*\)[:/].*|\1|')
+          DB_PORT=$(echo "$MYSQL_PUBLIC_URL" | sed 's|.*@[^:]*:\([0-9]*\)/.*|\1|')
+          DB_NAME=$(echo "$MYSQL_PUBLIC_URL" | sed 's|.*/\([^?]*\).*|\1|')
+
           BACKUP_FILE="backup_$(date +%Y%m%d_%H%M%S).sql"
 
           mysqldump \
-            -h "$MYSQLHOST" \
-            -P "$MYSQLPORT" \
-            -u "$MYSQLUSER" \
-            -p"$MYSQLPASSWORD" \
+            -h "$DB_HOST" \
+            -P "$DB_PORT" \
+            -u "$DB_USER" \
+            -p"$DB_PASS" \
             --ssl-mode=REQUIRED \
             --single-transaction \
             --routines \
             --triggers \
-            "$MYSQLDATABASE" > "$BACKUP_FILE"
+            "$DB_NAME" > "$BACKUP_FILE"
 
           gzip "$BACKUP_FILE"
           echo "Backup complete: ${BACKUP_FILE}.gz"
