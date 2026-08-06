@@ -63,6 +63,7 @@ export default function Admin() {
   const hardDeleteMutation = trpc.admin.hardDeleteProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); setDeleteTarget(null); } });
   const deleteDmMutation = trpc.admin.deleteDm.useMutation({ onSuccess: () => { utils.admin.allDmMessages.invalidate(); } });
   const loginAsMutation = trpc.admin.loginAs.useMutation();
+  const resendWelcomeMutation = trpc.admin.resendWelcomeEmail.useMutation();
   const broadcastMutation = trpc.admin.broadcast.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); } });
   const broadcastLogsQuery = trpc.admin.broadcastLogs.useQuery();
   const analyzeDmsMutation = trpc.admin.analyzeDms.useMutation({ onSuccess: (data) => setAnalysisResult(data) });
@@ -334,6 +335,16 @@ export default function Admin() {
                                     {(user as any).role === "management" ? "マネジメント取消" : "マネジメント付与"}
                                   </DropdownMenuItem>
                                 )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="gap-2 text-xs" onClick={() => {
+                                  resendWelcomeMutation.mutate({ userId: user.id }, {
+                                    onSuccess: (res) => {
+                                      alert((res as any).emailSent ? `✅ ${user.email} にメールを送信しました` : "⚠️ メール送信に失敗しました");
+                                    },
+                                  });
+                                }}>
+                                  <Mail className="w-3.5 h-3.5" />登録メールを再送信
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="gap-2 text-xs text-primary" onClick={() => {
                                   if (confirm(`${user.name}として代理ログインしますか？`)) {

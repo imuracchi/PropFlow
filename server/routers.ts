@@ -1329,6 +1329,42 @@ ${propList}`
         return { success: true, emailSent } as const;
       }),
 
+    resendWelcomeEmail: adminProcedure
+      .input(z.object({ userId: z.number(), password: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const user = await db.getUserById(input.userId);
+        if (!user) return { success: false, error: "ユーザーが見つかりません" } as const;
+        const { sendMail } = await import("./_core/mail");
+        const nameLabel = user.name ? `${user.name}　様` : "　様";
+        const passwordLine = input.password ? `パスワード：${input.password}` : "パスワード：登録時に設定したパスワード";
+        const emailSent = await sendMail(user.email, "【PropFlow】ご登録完了のお知らせ", `
+<p>${nameLabel}</p>
+<p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
+<p>下記にてご登録をさせて頂きました。</p>
+<p>
+  <a href="https://propflow.jp/">https://propflow.jp/</a><br>
+  ログインID：${user.email}<br>
+  ${passwordLine}
+</p>
+<p>パスワードは、ログイン後にマイページから変更頂けます。</p>
+<p>
+  個別物件のご質問に関しては、<br>
+  物件詳細画面から「質問する」にてご登録企業様にご連絡頂けます。<br>
+  ※1on1ですので、他の方から見える事はございません。
+</p>
+<p>
+  使い方などのご不明点ございましたら、<br>
+  こちらのメールか、公式LINEからご連絡くださいませ。
+</p>
+<p>宜しくお願い致します。</p>
+<p>PropFlowサポート　加藤</p>
+        `.trim(), {
+          replyTo: "propflow@gspec.me",
+          cc: "propflow@gspec.me",
+        });
+        return { success: true, emailSent } as const;
+      }),
+
     loginAs: adminProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
