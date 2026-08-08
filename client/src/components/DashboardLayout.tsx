@@ -26,6 +26,7 @@ import {
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { AddToHomeScreenBanner } from "./AddToHomeScreenBanner";
 
 const userBottomNav = [
   { icon: List, label: "物件一覧", path: "/properties" },
@@ -261,6 +262,8 @@ function DashboardLayoutContent({
         )}
         <main className={`flex-1 p-6 ${isMobile ? "pb-24" : ""}`}>{children}</main>
       </SidebarInset>
+
+      <AddToHomeScreenBanner />
 
       {/* ボトムナビ（モバイルのみ） */}
       {isMobile && (
