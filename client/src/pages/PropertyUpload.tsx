@@ -1066,9 +1066,9 @@ export default function PropertyUpload() {
             <div className="flex items-start gap-3">
               <span className="text-2xl shrink-0">⚠</span>
               <div>
-                <p className="font-semibold text-sm">企業情報が含まれています</p>
+                <p className="font-semibold text-sm">企業情報が含まれている可能性があります</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  アップロードされたPDFに企業のロゴや連絡先が含まれています。ファイルの公開設定を選択してください。
+                  アップロードされたPDFに企業のロゴや連絡先が含まれている可能性があります。ファイルの公開設定を選択してください。
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">公開・非公開設定は後から変更できます。</p>
               </div>
