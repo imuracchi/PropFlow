@@ -503,13 +503,21 @@ export default function PropertyUpload() {
         )}
 
         {/* アクションボタン */}
-        <Button
-          className="w-full h-12 text-base gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
-          disabled={pdfFiles.length === 0 || extracting}
-          onClick={handleExtract}
-        >
-          <Sparkles className="w-5 h-5" />AIで情報を抽出
-        </Button>
+        <div className="grid grid-cols-2 gap-4">
+          <Button variant="outline" className="h-12 text-base gap-2" disabled={extracting} onClick={() => {
+            setStep("form");
+            if (pdfFiles.some(f => f.type === "application/pdf")) setShowVisibilityDialog(true);
+          }}>
+            手動で入力する
+          </Button>
+          <Button
+            className="h-12 text-base gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+            disabled={pdfFiles.length === 0 || extracting}
+            onClick={handleExtract}
+          >
+            <Sparkles className="w-5 h-5" />AIで情報を抽出
+          </Button>
+        </div>
 
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm space-y-1.5">
           <p className="font-semibold text-amber-800">【ご注意ください】</p>
