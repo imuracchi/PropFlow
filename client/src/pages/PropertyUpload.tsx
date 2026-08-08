@@ -23,6 +23,7 @@ export default function PropertyUpload() {
   const [dragOver, setDragOver] = useState(false);
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
   const [docVisibility, setDocVisibility] = useState<Record<string, boolean>>({});
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [extractProgress, setExtractProgress] = useState("");
   const [extractError, setExtractError] = useState("");
@@ -117,8 +118,21 @@ export default function PropertyUpload() {
     if (data.otherRestrictions) setOtherRestrictions(String(data.otherRestrictions));
   };
 
-  const handleFilesSelect = (files: FileList | File[]) => {
+  const doFilesSelect = (files: File[]) => {
     const newFiles: File[] = [];
+    for (const file of files) {
+      if (!pdfFiles.some(f => f.name === file.name && f.size === file.size)) {
+        newFiles.push(file);
+      }
+    }
+    if (newFiles.length > 0) {
+      setPdfFiles(prev => [...prev, ...newFiles]);
+      setExtractError("");
+    }
+  };
+
+  const handleFilesSelect = (files: FileList | File[]) => {
+    const validated: File[] = [];
     for (const file of Array.from(files)) {
       if (file.type !== "application/pdf" && !file.type.startsWith("image/")) {
         setExtractError("PDFまたは画像ファイルをアップロードしてください");
@@ -128,13 +142,14 @@ export default function PropertyUpload() {
         setExtractError("ファイルサイズは20MB以下にしてください");
         continue;
       }
-      if (!pdfFiles.some(f => f.name === file.name && f.size === file.size)) {
-        newFiles.push(file);
-      }
+      validated.push(file);
     }
-    if (newFiles.length > 0) {
-      setPdfFiles(prev => [...prev, ...newFiles]);
-      setExtractError("");
+    if (validated.length === 0) return;
+    const pdfs = validated.filter(f => f.type === "application/pdf");
+    if (pdfs.length > 0) {
+      setPendingFiles(validated);
+    } else {
+      doFilesSelect(validated);
     }
   };
 
@@ -1040,6 +1055,37 @@ export default function PropertyUpload() {
           {publishMode === "publish" ? "今すぐ公開する" : "下書き保存する"}
         </Button>
       </div>
+
+      {/* ファイル公開確認ダイアログ */}
+      {pendingFiles && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-card rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <p className="font-semibold text-sm">ファイル公開の確認</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  企業のロゴや連絡先が記載されている可能性があります。このファイルをそのまま公開してよろしいですか？
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted"
+                onClick={() => setPendingFiles(null)}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground font-medium"
+                onClick={() => { doFilesSelect(pendingFiles); setPendingFiles(null); }}
+              >
+                公開する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
