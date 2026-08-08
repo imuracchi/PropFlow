@@ -527,8 +527,6 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   const [downloading, setDownloading] = useState<number | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [viewingFile, setViewingFile] = useState<{ id: number; name: string } | null>(null);
-  const [pendingUploadFiles, setPendingUploadFiles] = useState<FileList | null>(null);
-
   const { data: allFiles, isLoading } = trpc.property.listFiles.useQuery({ propertyId });
   const files = (allFiles ?? []).filter(f => (f as any).category !== "photo");
   const uploadMutation = trpc.property.uploadFile.useMutation();
@@ -546,7 +544,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
     utils.property.listFiles.invalidate({ propertyId });
   };
 
-  const doUpload = async (fileList: FileList) => {
+  const handleUpload = async (fileList: FileList) => {
     const pdfFiles = Array.from(fileList).filter(f => f.type === "application/pdf");
     if (pdfFiles.length === 0) return;
     setUploading(true);
@@ -559,10 +557,6 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
     utils.property.listFiles.invalidate({ propertyId });
     setUploading(false);
     setUploadProgress("");
-  };
-
-  const handleUpload = (fileList: FileList) => {
-    setPendingUploadFiles(fileList);
   };
 
   const handleDelete = async (fileId: number) => {
@@ -691,36 +685,6 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
         <FileViewerModal fileId={viewingFile.id} name={viewingFile.name} onClose={() => setViewingFile(null)} />
       )}
 
-      {/* ファイル公開確認ダイアログ */}
-      {pendingUploadFiles && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">⚠️</span>
-              <div>
-                <p className="font-semibold text-sm">ファイル公開の確認</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  企業のロゴや連絡先が記載されている可能性があります。このファイルをそのまま公開してよろしいですか？
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button
-                className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted"
-                onClick={() => setPendingUploadFiles(null)}
-              >
-                キャンセル
-              </button>
-              <button
-                className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground font-medium"
-                onClick={() => { doUpload(pendingUploadFiles); setPendingUploadFiles(null); }}
-              >
-                公開する
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -535,6 +535,52 @@ export default function PropertyUpload() {
             <li>多くのPDFファイルをアップしすぎると、抽出が困難になる場合がございます。</li>
           </ul>
         </div>
+
+        {/* ファイル公開確認ダイアログ（アップロードステップ） */}
+        {pendingFiles && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="bg-card rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl shrink-0">⚠</span>
+                <div>
+                  <p className="font-semibold text-sm">企業情報が含まれている可能性があります</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    アップロードするPDFに企業のロゴや連絡先が記載されている場合があります。AIが内容を読み取りますが、ファイル自体の公開設定を選択してください。
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  className="w-full px-4 py-2.5 text-sm rounded-lg bg-primary text-primary-foreground font-medium"
+                  onClick={() => { doFilesSelect(pendingFiles); setPendingFiles(null); }}
+                >
+                  全員に公開する
+                </button>
+                <button
+                  className="w-full px-4 py-2.5 text-sm rounded-lg bg-amber-100 text-amber-800 font-medium"
+                  onClick={() => {
+                    doFilesSelect(pendingFiles);
+                    const keys = pendingFiles.filter(f => f.type === "application/pdf").map(f => `${f.name}-${f.size}`);
+                    setDocVisibility(prev => {
+                      const next = { ...prev };
+                      keys.forEach(k => { next[k] = false; });
+                      return next;
+                    });
+                    setPendingFiles(null);
+                  }}
+                >
+                  非公開にする（登録者のみ閲覧可）
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted text-muted-foreground"
+                  onClick={() => setPendingFiles(null)}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -770,14 +816,27 @@ export default function PropertyUpload() {
               e.target.value = "";
             }}
           />
-          <button
-            type="button"
-            className="w-full border-2 border-dashed border-border rounded-lg py-5 flex flex-col items-center gap-2 hover:border-primary/40 transition-colors"
+          <div
+            className="w-full border-2 border-dashed border-border rounded-lg py-5 flex flex-col items-center gap-2 hover:border-primary/40 transition-colors cursor-pointer"
             onClick={() => additionalFileInputRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-primary", "bg-primary/5"); }}
+            onDragLeave={e => { e.currentTarget.classList.remove("border-primary", "bg-primary/5"); }}
+            onDrop={e => {
+              e.preventDefault();
+              e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+              if (!e.dataTransfer.files) return;
+              const files = Array.from(e.dataTransfer.files).filter(f =>
+                (f.type === "application/pdf" || f.type.startsWith("image/")) && f.size <= 20 * 1024 * 1024
+              );
+              setAdditionalFiles(prev => {
+                const existing = new Set(prev.map(f => `${f.name}-${f.size}`));
+                return [...prev, ...files.filter(f => !existing.has(`${f.name}-${f.size}`))];
+              });
+            }}
           >
             <Upload className="w-6 h-6 text-muted-foreground/50" />
-            <span className="text-sm text-muted-foreground">クリックして資料を追加（PDF/JPG/PNG、最大20MB）</span>
-          </button>
+            <span className="text-sm text-muted-foreground">ドロップまたはクリックして資料を追加（PDF/JPG/PNG、最大20MB）</span>
+          </div>
           {additionalFiles.length > 0 && (
             <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {additionalFiles.map((file, i) => {
@@ -1056,36 +1115,6 @@ export default function PropertyUpload() {
         </Button>
       </div>
 
-      {/* ファイル公開確認ダイアログ */}
-      {pendingFiles && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">⚠️</span>
-              <div>
-                <p className="font-semibold text-sm">ファイル公開の確認</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  企業のロゴや連絡先が記載されている可能性があります。このファイルをそのまま公開してよろしいですか？
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button
-                className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted"
-                onClick={() => setPendingFiles(null)}
-              >
-                キャンセル
-              </button>
-              <button
-                className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground font-medium"
-                onClick={() => { doFilesSelect(pendingFiles); setPendingFiles(null); }}
-              >
-                公開する
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
