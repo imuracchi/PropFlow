@@ -23,7 +23,7 @@ export default function PropertyUpload() {
   const [dragOver, setDragOver] = useState(false);
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
   const [docVisibility, setDocVisibility] = useState<Record<string, boolean>>({});
-  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  const [showVisibilityDialog, setShowVisibilityDialog] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [extractProgress, setExtractProgress] = useState("");
   const [extractError, setExtractError] = useState("");
@@ -118,19 +118,6 @@ export default function PropertyUpload() {
     if (data.otherRestrictions) setOtherRestrictions(String(data.otherRestrictions));
   };
 
-  const doFilesSelect = (files: File[]) => {
-    const newFiles: File[] = [];
-    for (const file of files) {
-      if (!pdfFiles.some(f => f.name === file.name && f.size === file.size)) {
-        newFiles.push(file);
-      }
-    }
-    if (newFiles.length > 0) {
-      setPdfFiles(prev => [...prev, ...newFiles]);
-      setExtractError("");
-    }
-  };
-
   const handleFilesSelect = (files: FileList | File[]) => {
     const validated: File[] = [];
     for (const file of Array.from(files)) {
@@ -145,11 +132,10 @@ export default function PropertyUpload() {
       validated.push(file);
     }
     if (validated.length === 0) return;
-    const pdfs = validated.filter(f => f.type === "application/pdf");
-    if (pdfs.length > 0) {
-      setPendingFiles(validated);
-    } else {
-      doFilesSelect(validated);
+    const newFiles = validated.filter(f => !pdfFiles.some(p => p.name === f.name && p.size === f.size));
+    if (newFiles.length > 0) {
+      setPdfFiles(prev => [...prev, ...newFiles]);
+      setExtractError("");
     }
   };
 
@@ -193,6 +179,9 @@ export default function PropertyUpload() {
       }
 
       setStep("form");
+      if (pdfFiles.some(f => f.type === "application/pdf")) {
+        setShowVisibilityDialog(true);
+      }
     } catch (err: any) {
       setExtractError(err?.message ?? "PDF解析中にエラーが発生しました");
     } finally {
@@ -514,18 +503,13 @@ export default function PropertyUpload() {
         )}
 
         {/* アクションボタン */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button variant="outline" className="h-12 text-base gap-2" disabled={extracting} onClick={() => setStep("form")}>
-            手動で入力する
-          </Button>
-          <Button
-            className="h-12 text-base gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
-            disabled={pdfFiles.length === 0 || extracting}
-            onClick={handleExtract}
-          >
-            <Sparkles className="w-5 h-5" />AIで情報を抽出
-          </Button>
-        </div>
+        <Button
+          className="w-full h-12 text-base gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+          disabled={pdfFiles.length === 0 || extracting}
+          onClick={handleExtract}
+        >
+          <Sparkles className="w-5 h-5" />AIで情報を抽出
+        </Button>
 
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm space-y-1.5">
           <p className="font-semibold text-amber-800">【ご注意ください】</p>
@@ -536,51 +520,6 @@ export default function PropertyUpload() {
           </ul>
         </div>
 
-        {/* ファイル公開確認ダイアログ（アップロードステップ） */}
-        {pendingFiles && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="bg-card rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl shrink-0">⚠</span>
-                <div>
-                  <p className="font-semibold text-sm">企業情報が含まれている可能性があります</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    アップロードするPDFに企業のロゴや連絡先が記載されている場合があります。AIが内容を読み取りますが、ファイル自体の公開設定を選択してください。
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  className="w-full px-4 py-2.5 text-sm rounded-lg bg-primary text-primary-foreground font-medium"
-                  onClick={() => { doFilesSelect(pendingFiles); setPendingFiles(null); }}
-                >
-                  全員に公開する
-                </button>
-                <button
-                  className="w-full px-4 py-2.5 text-sm rounded-lg bg-amber-100 text-amber-800 font-medium"
-                  onClick={() => {
-                    doFilesSelect(pendingFiles);
-                    const keys = pendingFiles.filter(f => f.type === "application/pdf").map(f => `${f.name}-${f.size}`);
-                    setDocVisibility(prev => {
-                      const next = { ...prev };
-                      keys.forEach(k => { next[k] = false; });
-                      return next;
-                    });
-                    setPendingFiles(null);
-                  }}
-                >
-                  非公開にする（登録者のみ閲覧可）
-                </button>
-                <button
-                  className="w-full px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted text-muted-foreground"
-                  onClick={() => setPendingFiles(null)}
-                >
-                  キャンセル
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -1115,6 +1054,44 @@ export default function PropertyUpload() {
         </Button>
       </div>
 
+      {/* ファイル公開確認ダイアログ */}
+      {showVisibilityDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-card rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl shrink-0">⚠</span>
+              <div>
+                <p className="font-semibold text-sm">企業情報が含まれている可能性があります</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  アップロードされたPDFに企業のロゴや連絡先が記載されている場合があります。ファイルの公開設定を選択してください。
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                className="w-full px-4 py-2.5 text-sm rounded-lg bg-primary text-primary-foreground font-medium"
+                onClick={() => setShowVisibilityDialog(false)}
+              >
+                全員に公開する
+              </button>
+              <button
+                className="w-full px-4 py-2.5 text-sm rounded-lg bg-amber-100 text-amber-800 font-medium"
+                onClick={() => {
+                  const keys = pdfFiles.filter(f => f.type === "application/pdf").map(f => `${f.name}-${f.size}`);
+                  setDocVisibility(prev => {
+                    const next = { ...prev };
+                    keys.forEach(k => { next[k] = false; });
+                    return next;
+                  });
+                  setShowVisibilityDialog(false);
+                }}
+              >
+                非公開にする（登録者のみ閲覧可）
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
