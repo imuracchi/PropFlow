@@ -214,6 +214,80 @@ async function startServer() {
     }
   });
   console.log("[CRON] Expired document cleanup scheduled at 0:00 JST daily");
+
+  // 毎分：予約配信チェック
+  cron.schedule("* * * * *", async () => {
+    try {
+      const db = await import("../db");
+      const pending = await db.getPendingBroadcastSchedules();
+      if (pending.length === 0) return;
+
+      const { sendMail } = await import("./mail");
+      const { sendLineBroadcast } = await import("./line");
+      const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+
+      for (const schedule of pending) {
+        console.log(`[CRON] 予約配信送信: id=${schedule.id} subject=${schedule.subject}`);
+        await db.updateBroadcastScheduleStatus(schedule.id, "sending");
+        try {
+          const cleanSubject = schedule.subject.replace(/^【PropFlow】\s*/, "");
+          const emailBody = schedule.message ?? "";
+          const lineBody = schedule.lineMessage ?? emailBody;
+
+          let emailSent = 0;
+          if (!schedule.skipEmail && emailBody) {
+            const emails = await db.getAllActiveUserEmails();
+            const imageBlock = schedule.imageUrl
+              ? `<img src="${schedule.imageUrl}" alt="" style="width:100%;display:block;border-radius:4px;margin-bottom:16px" />`
+              : "";
+            const emailHtml = `
+              <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+                <div style="background:#1e3a5f;padding:20px 24px">
+                  <img src="${siteUrl}/logo1.png" alt="PropFlow" style="height:32px;object-fit:contain" />
+                </div>
+                <div style="padding:24px">
+                  <h2 style="margin:0 0 16px;font-size:18px;color:#1e3a5f">${cleanSubject}</h2>
+                  ${imageBlock}
+                  <div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap">${emailBody}</div>
+                </div>
+                <div style="background:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb">
+                  <p style="margin:0;font-size:12px;color:#6b7280">PropFlow | <a href="${siteUrl}" style="color:#2563eb">${siteUrl}</a></p>
+                </div>
+              </div>`;
+            for (const email of emails) {
+              const ok = await sendMail(email, `【PropFlow】${cleanSubject}`, emailHtml);
+              if (ok) emailSent++;
+            }
+          }
+
+          let lineSent = false;
+          if (!schedule.skipLine && lineBody) {
+            const bubbleContents: any = {
+              type: "bubble",
+              ...(schedule.imageUrl ? { hero: { type: "image", url: schedule.imageUrl, size: "full", aspectRatio: "20:13", aspectMode: "cover" } } : {}),
+              header: { type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
+                contents: [{ type: "text", text: "📢 " + cleanSubject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }] },
+              body: { type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
+                contents: [{ type: "text", text: lineBody, size: "sm", color: "#374151", wrap: true }] },
+              footer: { type: "box", layout: "vertical", paddingAll: "12px",
+                contents: [{ type: "button", action: { type: "uri", label: "PropFlowを開く", uri: siteUrl }, style: "primary", color: "#2563eb", height: "sm" }] },
+            };
+            lineSent = await sendLineBroadcast({ type: "flex", altText: cleanSubject, contents: bubbleContents });
+          }
+
+          await db.saveBroadcastLog({ subject: schedule.subject, message: emailBody, imageUrl: schedule.imageUrl, emailSent, emailTotal: emailSent, lineSent });
+          await db.updateBroadcastScheduleStatus(schedule.id, "sent");
+          console.log(`[CRON] 予約配信完了: id=${schedule.id} email=${emailSent}件 LINE=${lineSent}`);
+        } catch (e) {
+          console.error(`[CRON] 予約配信エラー: id=${schedule.id}`, e);
+          await db.updateBroadcastScheduleStatus(schedule.id, "error");
+        }
+      }
+    } catch (e) {
+      console.error("[CRON] 予約配信チェックエラー:", e);
+    }
+  });
+  console.log("[CRON] 予約配信チェック: 毎分実行");
 }
 
 startServer().catch(console.error);

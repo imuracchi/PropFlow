@@ -1639,6 +1639,41 @@ ${messageTexts}
           totalMessages: allMessages.length,
         };
       }),
+
+    listSchedules: adminProcedure
+      .query(async () => {
+        return db.listBroadcastSchedules();
+      }),
+
+    createSchedule: adminProcedure
+      .input(z.object({
+        subject: z.string().min(1),
+        message: z.string().optional(),
+        lineMessage: z.string().optional(),
+        imageUrl: z.string().url().optional(),
+        skipLine: z.boolean().optional(),
+        skipEmail: z.boolean().optional(),
+        scheduledAt: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.createBroadcastSchedule({
+          subject: input.subject,
+          message: input.message ?? "",
+          lineMessage: input.lineMessage,
+          imageUrl: input.imageUrl,
+          skipLine: input.skipLine,
+          skipEmail: input.skipEmail,
+          scheduledAt: new Date(input.scheduledAt),
+        });
+        return { success: true };
+      }),
+
+    cancelSchedule: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.updateBroadcastScheduleStatus(input.id, "cancelled");
+        return { success: true };
+      }),
   }),
 });
 

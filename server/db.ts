@@ -75,6 +75,18 @@ export async function runStartupMigrations() {
       \`resultCount\` int NOT NULL DEFAULT 0,
       \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS \`broadcast_schedules\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`subject\` varchar(500) NOT NULL,
+      \`message\` text NOT NULL,
+      \`lineMessage\` text NULL,
+      \`imageUrl\` varchar(500) NULL,
+      \`skipLine\` tinyint NOT NULL DEFAULT 0,
+      \`skipEmail\` tinyint NOT NULL DEFAULT 0,
+      \`scheduledAt\` datetime NOT NULL,
+      \`status\` varchar(20) NOT NULL DEFAULT 'pending',
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
   ];
 
   let conn: mysql.Connection | null = null;
@@ -1657,6 +1669,52 @@ export async function getBroadcastLogs() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(broadcastLogs).orderBy(desc(broadcastLogs.sentAt)).limit(50);
+}
+
+export async function createBroadcastSchedule(data: {
+  subject: string; message: string; lineMessage?: string | null;
+  imageUrl?: string | null; skipLine?: boolean; skipEmail?: boolean; scheduledAt: Date;
+}) {
+  let conn: mysql.Connection | null = null;
+  try {
+    conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    await conn.execute(
+      `INSERT INTO broadcast_schedules (subject, message, lineMessage, imageUrl, skipLine, skipEmail, scheduledAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [data.subject, data.message, data.lineMessage ?? null, data.imageUrl ?? null,
+       data.skipLine ? 1 : 0, data.skipEmail ? 1 : 0, data.scheduledAt]
+    );
+  } finally { await conn?.end(); }
+}
+
+export async function listBroadcastSchedules() {
+  let conn: mysql.Connection | null = null;
+  try {
+    conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    const [rows] = await conn.execute(
+      `SELECT * FROM broadcast_schedules ORDER BY scheduledAt DESC LIMIT 50`
+    ) as any[];
+    return rows as any[];
+  } finally { await conn?.end(); }
+}
+
+export async function getPendingBroadcastSchedules() {
+  let conn: mysql.Connection | null = null;
+  try {
+    conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    const [rows] = await conn.execute(
+      `SELECT * FROM broadcast_schedules WHERE status = 'pending' AND scheduledAt <= NOW()`
+    ) as any[];
+    return rows as any[];
+  } finally { await conn?.end(); }
+}
+
+export async function updateBroadcastScheduleStatus(id: number, status: string) {
+  let conn: mysql.Connection | null = null;
+  try {
+    conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    await conn.execute(`UPDATE broadcast_schedules SET status = ? WHERE id = ?`, [status, id]);
+  } finally { await conn?.end(); }
 }
 
 export async function incrementViewCount(propertyId: number) {
