@@ -622,6 +622,10 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
           )}
         </div>
       </div>
+      <div className="px-5 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700 flex items-start gap-1.5">
+        <span className="shrink-0 mt-0.5">⚠</span>
+        <span>ファイルが正しく表示されない場合は、ダウンロードしてPCでご確認ください。</span>
+      </div>
       {uploading && (
         <div className="px-5 py-3 bg-primary/5 border-b border-border flex items-center gap-2 text-sm text-primary">
           <Loader2 className="w-4 h-4 animate-spin shrink-0" />
