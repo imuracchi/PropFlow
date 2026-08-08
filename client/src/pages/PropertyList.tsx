@@ -47,6 +47,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [aiSearching, setAiSearching] = useState(false);
   const { user } = useAuth();
   const aiSearchMutation = trpc.property.aiSearch.useMutation();
+  const logSearchMutation = trpc.property.logSearch.useMutation();
 
   const { data: properties, isLoading } = trpc.property.list.useQuery();
   const { data: myProperties, isLoading: myLoading } = trpc.mypage.myProperties.useQuery(undefined, { enabled: mode === "mine" });
@@ -325,15 +326,43 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
           setAiResultIds(res.ids);
           setAiSearching(false);
         };
+        const handleKeywordSearch = (q: string) => {
+          setSearchQuery(q);
+          if (q.trim().length >= 2 && user) {
+            const count = baseFiltered.filter(p => {
+              const lower = q.toLowerCase();
+              return p.address.toLowerCase().includes(lower) || p.name.toLowerCase().includes(lower) || (p.userCompany ?? "").toLowerCase().includes(lower);
+            }).length;
+            logSearchMutation.mutate({ query: q, resultCount: count });
+          }
+        };
         return (
           <>
-            {/* AI検索モード */}
+            {/* 検索モード切替タブ */}
+            <div className="flex rounded-lg border border-border overflow-hidden w-fit">
+              <button
+                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors ${!aiMode ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
+                onClick={() => { setAiMode(false); setAiQuery(""); setAiResultIds(null); }}
+              >
+                <Search className="w-3.5 h-3.5" />
+                キーワード検索
+              </button>
+              <button
+                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-l border-border ${aiMode ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
+                onClick={() => setAiMode(true)}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                AI検索
+              </button>
+            </div>
+
+            {/* 検索入力エリア */}
             {aiMode ? (
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
                   <Input
-                    placeholder="例：工場向けの広い土地で1億以下"
+                    placeholder="例：工場向けの広い土地で1億以下、大阪市内の倉庫用地"
                     className="pl-10 bg-card border-primary border-2 h-11"
                     value={aiQuery}
                     onChange={e => { setAiQuery(e.target.value); setAiResultIds(null); }}
@@ -345,43 +374,44 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   {aiSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   <span className="hidden sm:inline">検索</span>
                 </Button>
-                <Button variant="outline" className="h-11 px-3 shrink-0" onClick={() => { setAiMode(false); setAiQuery(""); setAiResultIds(null); }}>
-                  <XIcon className="w-4 h-4" />
+                <Button
+                  variant={activeFilterCount > 0 ? "default" : "outline"}
+                  className={`h-11 px-4 gap-2 shrink-0 ${activeFilterCount > 0 ? "bg-primary text-primary-foreground" : ""}`}
+                  onClick={() => setShowFilters(v => !v)}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  {activeFilterCount > 0 && (
+                    <span className="bg-white/30 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </Button>
               </div>
             ) : (
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="エリア・住所・業者名で検索..."
-                  className="pl-10 bg-card border-border h-11"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="エリア・住所・業者名で検索..."
+                    className="pl-10 bg-card border-border h-11"
+                    value={searchQuery}
+                    onChange={e => handleKeywordSearch(e.target.value)}
+                  />
+                </div>
+                <Button
+                  variant={activeFilterCount > 0 ? "default" : "outline"}
+                  className={`h-11 px-4 gap-2 shrink-0 ${activeFilterCount > 0 ? "bg-primary text-primary-foreground" : ""}`}
+                  onClick={() => setShowFilters(v => !v)}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span className="hidden sm:inline">絞り込み</span>
+                  {activeFilterCount > 0 && (
+                    <span className="bg-white/30 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                className="h-11 px-3 gap-1.5 shrink-0 text-primary border-primary/40 hover:bg-primary/5"
-                onClick={() => setAiMode(true)}
-              >
-                <Sparkles className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">AI検索</span>
-              </Button>
-              <Button
-                variant={activeFilterCount > 0 ? "default" : "outline"}
-                className={`h-11 px-4 gap-2 shrink-0 ${activeFilterCount > 0 ? "bg-primary text-primary-foreground" : ""}`}
-                onClick={() => setShowFilters(v => !v)}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                <span className="hidden sm:inline">絞り込み</span>
-                {activeFilterCount > 0 && (
-                  <span className="bg-white/30 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center leading-none">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </Button>
-            </div>
             )}
 
             {/* AI検索結果バナー */}
@@ -390,6 +420,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                 <Sparkles className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-primary font-medium">{aiResultIds.length}件</span>
                 <span className="text-muted-foreground">が条件に合致しました</span>
+                <button className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => { setAiQuery(""); setAiResultIds(null); }}>
+                  <XIcon className="w-4 h-4" />
+                </button>
               </div>
             )}
 

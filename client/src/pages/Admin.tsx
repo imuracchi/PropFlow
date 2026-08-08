@@ -49,6 +49,8 @@ export default function Admin() {
   const { data: activityLogs } = trpc.admin.activityLogs.useQuery();
   const { data: adminDmMessages } = trpc.admin.allDmMessages.useQuery();
   const { data: topViewed } = trpc.property.topViewed.useQuery({});
+  const { data: searchLogs } = trpc.property.searchLogs.useQuery({});
+  const { data: searchRanking } = trpc.property.searchRanking.useQuery({});
 
   const approveMutation = trpc.admin.approveUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const rejectMutation = trpc.admin.rejectUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.stats.invalidate(); } });
@@ -151,6 +153,10 @@ export default function Admin() {
           <TabsTrigger value="ranking" className="gap-1.5">
             <Eye className="w-3.5 h-3.5" />
             物件ランキング
+          </TabsTrigger>
+          <TabsTrigger value="search" className="gap-1.5">
+            <Search className="w-3.5 h-3.5" />
+            検索ログ
           </TabsTrigger>
           {!isManagement && (
             <>
@@ -498,6 +504,87 @@ export default function Admin() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* 検索ログタブ */}
+        <TabsContent value="search" className="mt-4 space-y-4">
+          {/* 検索ランキング */}
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="px-4 py-3 bg-muted/40 border-b border-border">
+              <h3 className="text-sm font-semibold">検索キーワードランキング（上位20件）</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[400px]">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    {["順位", "検索ワード", "種別", "検索回数", "平均ヒット数"].map(h => (
+                      <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {(searchRanking ?? []).map((r: any, i: number) => (
+                    <tr key={i} className="hover:bg-accent/30">
+                      <td className="px-4 py-3 font-bold text-muted-foreground w-12">
+                        {i < 3 ? (
+                          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white ${i === 0 ? "bg-yellow-400" : i === 1 ? "bg-gray-400" : "bg-amber-600"}`}>{i + 1}</span>
+                        ) : i + 1}
+                      </td>
+                      <td className="px-4 py-3 font-medium max-w-[240px] truncate">{r.query}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.searchType === "ai" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                          {r.searchType === "ai" ? "AI" : "キーワード"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-bold text-primary">{Number(r.searchCount).toLocaleString()}回</td>
+                      <td className="px-4 py-3 text-muted-foreground">{Number(r.avgResults).toFixed(1)}件</td>
+                    </tr>
+                  ))}
+                  {(searchRanking ?? []).length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">まだ検索ログがありません</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 検索ログ一覧 */}
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="px-4 py-3 bg-muted/40 border-b border-border">
+              <h3 className="text-sm font-semibold">最近の検索ログ（直近100件）</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    {["日時", "ユーザー", "種別", "検索ワード", "ヒット数"].map(h => (
+                      <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {(searchLogs ?? []).map((log: any) => (
+                    <tr key={log.id} className="hover:bg-accent/30">
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(log.createdAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs max-w-[120px] truncate">{log.userCompany ?? log.userName ?? "-"}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${log.searchType === "ai" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                          {log.searchType === "ai" ? "AI" : "KW"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 max-w-[240px] truncate font-medium">{log.query}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground">{log.resultCount}件</td>
+                    </tr>
+                  ))}
+                  {(searchLogs ?? []).length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">まだ検索ログがありません</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>

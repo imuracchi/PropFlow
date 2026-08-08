@@ -67,6 +67,14 @@ export async function runStartupMigrations() {
       \`name\` varchar(255) NOT NULL,
       \`deletedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS \`search_logs\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`userId\` int NOT NULL,
+      \`searchType\` varchar(10) NOT NULL,
+      \`query\` varchar(500) NOT NULL,
+      \`resultCount\` int NOT NULL DEFAULT 0,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
   ];
 
   let conn: mysql.Connection | null = null;
@@ -1677,4 +1685,60 @@ export async function getTopViewedProperties(limit = 20) {
     .where(eq(properties.deleted, 0))
     .orderBy(desc(properties.viewCount))
     .limit(limit);
+}
+
+export async function saveSearchLog(userId: number, searchType: "keyword" | "ai", query: string, resultCount: number) {
+  let conn: mysql.Connection | null = null;
+  try {
+    conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    await conn.execute(
+      "INSERT INTO `search_logs` (`userId`, `searchType`, `query`, `resultCount`) VALUES (?, ?, ?, ?)",
+      [userId, searchType, query.slice(0, 500), resultCount]
+    );
+  } catch {
+    // ログ失敗は握りつぶす
+  } finally {
+    await conn?.end();
+  }
+}
+
+export async function getSearchLogs(limit = 100) {
+  let conn: mysql.Connection | null = null;
+  try {
+    conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    const [rows] = await conn.execute(
+      `SELECT sl.id, sl.searchType, sl.query, sl.resultCount, sl.createdAt,
+              u.name AS userName, u.company AS userCompany
+       FROM search_logs sl
+       LEFT JOIN users u ON sl.userId = u.id
+       ORDER BY sl.createdAt DESC
+       LIMIT ?`,
+      [limit]
+    );
+    return rows as any[];
+  } catch {
+    return [];
+  } finally {
+    await conn?.end();
+  }
+}
+
+export async function getSearchRanking(limit = 20) {
+  let conn: mysql.Connection | null = null;
+  try {
+    conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    const [rows] = await conn.execute(
+      `SELECT query, searchType, COUNT(*) AS searchCount, AVG(resultCount) AS avgResults
+       FROM search_logs
+       GROUP BY query, searchType
+       ORDER BY searchCount DESC
+       LIMIT ?`,
+      [limit]
+    );
+    return rows as any[];
+  } catch {
+    return [];
+  } finally {
+    await conn?.end();
+  }
 }

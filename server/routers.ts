@@ -642,10 +642,30 @@ JSONのみ返してください。` },
         if (!apiKey) return { ids: [], error: "ANTHROPIC_API_KEYが未設定です" };
         const allProperties = await db.listProperties(ctx.user.id);
         if (!allProperties.length) return { ids: [] };
-        const propList = allProperties.map(p => {
+        const propList = allProperties.map((p: any) => {
           const price = p.priceNegotiable ? "応相談" : p.price ? `${p.price.toLocaleString()}円` : "未定";
-          const area = p.landArea ? `${p.landArea}㎡` : "不明";
-          return `ID:${p.id} 種別:${p.type} 名称:${p.name} 所在地:${p.address} 価格:${price} 面積:${area}${p.comment ? ` 備考:${p.comment}` : ""}`;
+          const landArea = p.landArea ? `${p.landArea}㎡（${(p.landArea * 0.3025).toFixed(1)}坪）` : "不明";
+          const buildingArea = p.buildingArea ? `${p.buildingArea}㎡` : null;
+          const parts = [
+            `ID:${p.id}`,
+            `種別:${p.type}`,
+            `名称:${p.name}`,
+            `所在地:${p.address}`,
+            `価格:${price}`,
+            `土地面積:${landArea}`,
+            buildingArea ? `建物面積:${buildingArea}` : null,
+            p.zoning ? `用途地域:${p.zoning}` : null,
+            p.transport ? `交通:${p.transport}` : null,
+            p.landCategory ? `地目:${p.landCategory}` : null,
+            p.structure ? `構造:${p.structure}` : null,
+            p.buildingAge ? `築年数:${p.buildingAge}年` : null,
+            p.access ? `接道:${p.access}` : null,
+            p.rights ? `権利:${p.rights}` : null,
+            p.fireProtection ? `防火:${p.fireProtection}` : null,
+            p.remarks ? `備考:${p.remarks}` : null,
+            p.transactionFlow ? `取引形態:${p.transactionFlow}` : null,
+          ].filter(Boolean);
+          return parts.join(" ");
         }).join("\n");
         const Anthropic = (await import("@anthropic-ai/sdk")).default;
         const client = new Anthropic({ apiKey });
@@ -654,9 +674,10 @@ JSONのみ返してください。` },
           max_tokens: 1024,
           messages: [{
             role: "user",
-            content: `以下の物件リストから、ユーザーの条件に合う物件のIDをJSON配列で返してください。
-条件に合わないものは含めないでください。
+            content: `あなたは不動産物件の検索AIです。以下の物件リストから、ユーザーの条件に合う物件のIDをJSON配列で返してください。
+条件に部分的に合う物件も含め、合わないものは含めないでください。
 回答はJSON配列のみ（例: [1,5,12]）で返し、それ以外のテキストは不要です。
+条件に合う物件が1件もない場合は空配列 [] を返してください。
 
 【ユーザーの条件】
 ${input.query}
@@ -667,17 +688,37 @@ ${propList}`
         });
         const text = res.content[0].type === "text" ? res.content[0].text.trim() : "[]";
         try {
-          const ids = JSON.parse(text.match(/\[[\d,\s]*\]/)?.[0] ?? "[]");
-          return { ids: ids as number[] };
+          const ids = JSON.parse(text.match(/\[[\d,\s]*\]/)?.[0] ?? "[]") as number[];
+          db.saveSearchLog(ctx.user.id, "ai", input.query, ids.length).catch(() => {});
+          return { ids };
         } catch {
           return { ids: [] };
         }
+      }),
+
+    logSearch: protectedProcedure
+      .input(z.object({ query: z.string().min(1), resultCount: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.saveSearchLog(ctx.user.id, "keyword", input.query, input.resultCount);
+        return { ok: true };
       }),
 
     topViewed: managementProcedure
       .input(z.object({ limit: z.number().optional() }))
       .query(async ({ input }) => {
         return db.getTopViewedProperties(input.limit ?? 20);
+      }),
+
+    searchLogs: adminProcedure
+      .input(z.object({ limit: z.number().optional() }))
+      .query(async ({ input }) => {
+        return db.getSearchLogs(input.limit ?? 100);
+      }),
+
+    searchRanking: adminProcedure
+      .input(z.object({ limit: z.number().optional() }))
+      .query(async ({ input }) => {
+        return db.getSearchRanking(input.limit ?? 20);
       }),
 
     readIds: protectedProcedure.query(async ({ ctx }) => {
