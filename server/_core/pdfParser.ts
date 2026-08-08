@@ -89,6 +89,7 @@ const EXTRACT_PROMPT = `あなたは不動産物件資料から物件情報を�
 - heightDistrict: 高度地区（なければnull）
 - otherRestrictions: その他制限（建ぺい率/容積率/日影規制等。なければnull）
 - remarks: 備考（セットバック・建築条件等の重要事項。なければnull）
+- hasCompanyInfo: 資料内に会社ロゴ・会社名・電話番号・FAX・メールアドレス・URLなど企業の連絡先情報が含まれている場合はtrue、含まれていない場合はfalse
 
 必ず有効なJSONのみを返してください。マークダウンや説明文は不要です。
 数値フィールドは数値型で返してください。不明な場合はnullを入れてください。`;
