@@ -504,10 +504,7 @@ export default function PropertyUpload() {
 
         {/* アクションボタン */}
         <div className="grid grid-cols-2 gap-4">
-          <Button variant="outline" className="h-12 text-base gap-2" disabled={extracting} onClick={() => {
-            setStep("form");
-            if (pdfFiles.some(f => f.type === "application/pdf")) setShowVisibilityDialog(true);
-          }}>
+          <Button variant="outline" className="h-12 text-base gap-2" disabled={extracting} onClick={() => setStep("form")}>
             手動で入力する
           </Button>
           <Button
