@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { X, Share, Plus } from "lucide-react";
 
-const DISMISSED_KEY = "pwa_banner_dismissed";
+const DISMISSED_KEY = "pwa_banner_dismissed_at";
+const DISMISS_DAYS = 30;
 
 export function AddToHomeScreenBanner() {
   const [show, setShow] = useState(false);
@@ -13,7 +14,8 @@ export function AddToHomeScreenBanner() {
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches
       || (window.navigator as any).standalone === true;
     if (isStandalone) return;
-    if (localStorage.getItem(DISMISSED_KEY)) return;
+    const dismissedAt = localStorage.getItem(DISMISSED_KEY);
+    if (dismissedAt && Date.now() - Number(dismissedAt) < DISMISS_DAYS * 86400 * 1000) return;
 
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as any).MSStream;
     setIsIos(ios);
@@ -36,7 +38,7 @@ export function AddToHomeScreenBanner() {
   }, []);
 
   const dismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, "1");
+    localStorage.setItem(DISMISSED_KEY, String(Date.now()));
     setShow(false);
   };
 
