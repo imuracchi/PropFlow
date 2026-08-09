@@ -362,7 +362,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                 <div className="relative flex-1">
                   <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
                   <Input
-                    placeholder="例：工場向けの広い土地で1億以下、大阪市内の倉庫用地"
+                    placeholder="例：東京都心で店舗向け、3億前後、駅近希望"
                     className="pl-10 bg-card border-primary border-2 h-11"
                     value={aiQuery}
                     onChange={e => { setAiQuery(e.target.value); setAiResultIds(null); }}
@@ -419,7 +419,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
               <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm">
                 <Sparkles className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-primary font-medium">{aiResultIds.length}件</span>
-                <span className="text-muted-foreground">が条件に合致しました</span>
+                <span className="text-muted-foreground">{aiResultIds.length === 0 ? "— 条件を変えて再検索してみてください" : "が条件に近い物件です"}</span>
                 <button className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => { setAiQuery(""); setAiResultIds(null); }}>
                   <XIcon className="w-4 h-4" />
                 </button>
