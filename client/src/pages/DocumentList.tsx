@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { fmtDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2, Loader2, Download, Eye, Building2, X, AlertTriangle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -207,7 +208,7 @@ export default function DocumentList() {
                       <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{doc.propertyName ?? `#${doc.propertyId}`}</span>
                     </td>
                     <td className="px-3 py-3 text-xs text-muted-foreground hidden md:table-cell">
-                      {new Date(doc.createdAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      {fmtDateTime(doc.createdAt)}
                     </td>
                     <td className="px-3 py-3 text-xs hidden md:table-cell">
                       <span className={isExpiringSoon ? "text-red-500 font-semibold" : "text-muted-foreground"}>

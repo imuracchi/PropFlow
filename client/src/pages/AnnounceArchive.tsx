@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { fmtDate } from "@/lib/utils";
 import { Megaphone } from "lucide-react";
 
 export default function AnnounceArchive() {
@@ -31,7 +32,7 @@ export default function AnnounceArchive() {
                   <span className="text-sm font-semibold text-foreground">{log.subject}</span>
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0">
-                  {new Date(log.sentAt).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}
+                  {fmtDate(log.sentAt)}
                 </span>
               </div>
               <div className="px-5 py-4 space-y-3">

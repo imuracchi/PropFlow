@@ -1,3 +1,4 @@
+import { fmtDateShort } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageCircle, Home, Loader2, EyeOff, Trash2, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ function DmCard({ thread, onHide }: { thread: DmThread; onHide?: () => void }) {
         {thread.partnerName}{thread.partnerCompany ? ` (${thread.partnerCompany})` : ""}
       </td>
       <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden md:table-cell">{thread.messageCount}件</td>
-      <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(thread.lastMessageAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}</td>
+      <td className="px-4 py-3 text-right text-xs text-muted-foreground">{fmtDateShort(thread.lastMessageAt)}</td>
       <td className="px-1 py-2 text-center">
         <div className="flex items-center justify-center gap-0.5">
           <button

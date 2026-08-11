@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { fmtDateTime } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,7 +145,7 @@ export default function DirectMessage() {
                   {msg.content}
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(msg.createdAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  {fmtDateTime(msg.createdAt)}
                 </span>
               </div>
             </div>

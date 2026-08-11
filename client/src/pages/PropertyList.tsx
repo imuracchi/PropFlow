@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { fmtDate, fmtDateShort } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -247,7 +248,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       (p as any).otherRestrictions ?? "",
       (p as any).remarks ?? "",
       p.userCompany ?? "",
-      new Date(p.createdAt).toLocaleDateString("ja-JP"),
+      fmtDate(p.createdAt),
       memoMap.get(p.id) ?? "",
     ]);
     const bom = "﻿";
@@ -630,7 +631,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                         <p className="text-[15px] font-semibold text-primary">{property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"}</p>
                       </td>
                       <td className="px-4 py-4 text-center text-xs text-muted-foreground whitespace-nowrap hidden md:table-cell">
-                        {new Date(property.createdAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" })}
+                        {fmtDateShort(property.createdAt)}
                       </td>
                       {buyerPref && (
                         <td className="text-center px-2 py-4 whitespace-nowrap hidden md:table-cell">

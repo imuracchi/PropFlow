@@ -1,3 +1,4 @@
+import { fmtDate, fmtDateTime, fmtDateShort } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -277,10 +278,10 @@ export default function Admin() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
-                          {new Date(user.createdAt).toLocaleDateString("ja-JP", { year: "2-digit", month: "2-digit", day: "2-digit" })}
+                          {fmtDate(user.createdAt)}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
-                          {new Date(user.lastSignedIn).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          {fmtDateTime(user.lastSignedIn)}
                         </td>
                         {!isManagement && (
                           <td className="px-4 py-3">
@@ -437,7 +438,7 @@ export default function Admin() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(prop.createdAt).toLocaleDateString("ja-JP")}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">{fmtDate(prop.createdAt)}</td>
                         {!isManagement && (
                           <td className="px-4 py-3">
                             <DropdownMenu>
@@ -586,7 +587,7 @@ export default function Admin() {
                   {(searchLogs ?? []).map((log: any) => (
                     <tr key={log.id} className="hover:bg-accent/30">
                       <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(typeof log.createdAt === "string" ? log.createdAt.replace(" ", "T") + "Z" : log.createdAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        {fmtDateTime(log.createdAt)}
                       </td>
                       <td className="px-4 py-2.5 text-xs max-w-[120px] truncate">{log.userCompany ?? log.userName ?? "-"}</td>
                       <td className="px-4 py-2.5">
@@ -637,7 +638,7 @@ export default function Admin() {
                               {m.senderCompany && <span className="text-xs text-muted-foreground ml-1">({m.senderCompany})</span>}
                             </button>
                           </td>
-                          <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{new Date(m.createdAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTime(m.createdAt)}</td>
                           <td className="px-4 py-2.5 text-center">
                             <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1 h-6 px-2"
                               onClick={() => { if (confirm("このDMを削除しますか？")) deleteDmMutation.mutate({ messageId: m.id }); }}
@@ -782,7 +783,7 @@ export default function Admin() {
                     {(activityLogs ?? []).map((log: any) => (
                       <tr key={log.id}>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">#{log.id}</td>
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{new Date(log.createdAt).toLocaleString("ja-JP")}</td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTime(log.createdAt)}</td>
                         <td className="px-4 py-2.5 text-sm">{log.userName ?? "?"}<span className="text-xs text-muted-foreground ml-1">{log.userCompany ? `(${log.userCompany})` : ""}</span></td>
                         <td className="px-4 py-2.5">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded ${
@@ -967,7 +968,7 @@ export default function Admin() {
                       {broadcastLogsQuery.data.map(log => (
                         <tr key={log.id} className="border-b border-border/50 last:border-0">
                           <td className="py-2 pr-4 whitespace-nowrap text-muted-foreground text-xs">
-                            {new Date(log.sentAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            {fmtDateTime(log.sentAt)}
                           </td>
                           <td className="py-2 pr-4 max-w-[200px] truncate">{log.subject}</td>
                           <td className="py-2 pr-4 whitespace-nowrap">{log.emailSent}/{log.emailTotal}件</td>
@@ -1031,7 +1032,7 @@ export default function Admin() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{s.subject}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(s.scheduledAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          {fmtDateTime(s.scheduledAt)}
                         </p>
                       </div>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -1177,8 +1178,8 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
             </div>
           )}
           <div className="pt-3 border-t border-border text-xs text-muted-foreground space-y-1">
-            <p>登録日: {new Date(user.createdAt).toLocaleDateString("ja-JP")}</p>
-            <p>最終ログイン: {new Date(user.lastSignedIn).toLocaleDateString("ja-JP")}</p>
+            <p>登録日: {fmtDate(user.createdAt)}</p>
+            <p>最終ログイン: {fmtDate(user.lastSignedIn)}</p>
           </div>
         </div>
       </div>

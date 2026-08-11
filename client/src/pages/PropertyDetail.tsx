@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { fmtDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1221,7 +1222,7 @@ export default function PropertyDetail() {
   }
 
   const STATUS_MAP: Record<string, string> = { available: "公開中", negotiating: "商談中", sold: "売却済" };
-  const createdDate = new Date(property.createdAt).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
+  const createdDate = fmtDate(property.createdAt);
 
   const details: [string, string][] = [
     ["物件名", property.name],
