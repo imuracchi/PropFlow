@@ -1746,57 +1746,39 @@ export async function getTopViewedProperties(limit = 20) {
 }
 
 export async function saveSearchLog(userId: number, searchType: "keyword" | "ai", query: string, resultCount: number) {
-  let conn: mysql.Connection | null = null;
   try {
-    conn = await mysql.createConnection(process.env.DATABASE_URL!);
-    await conn.execute(
-      "INSERT INTO `search_logs` (`userId`, `searchType`, `query`, `resultCount`) VALUES (?, ?, ?, ?)",
-      [userId, searchType, query.slice(0, 500), resultCount]
-    );
+    const db = await getDb();
+    if (!db) throw new Error("DB not available");
+    await db.execute(sql`INSERT INTO search_logs (userId, searchType, query, resultCount) VALUES (${userId}, ${searchType}, ${query.slice(0, 500)}, ${resultCount})`);
+    console.log(`[saveSearchLog] OK userId=${userId} query="${query}"`);
   } catch (e: any) {
     console.error("[saveSearchLog] error:", e.message);
-  } finally {
-    await conn?.end();
   }
 }
 
 export async function getSearchLogs(limit = 100) {
-  let conn: mysql.Connection | null = null;
   try {
-    conn = await mysql.createConnection(process.env.DATABASE_URL!);
-    const [rows] = await conn.execute(
-      `SELECT sl.id, sl.searchType, sl.query, sl.resultCount, sl.createdAt,
-              u.name AS userName, u.company AS userCompany
-       FROM search_logs sl
-       LEFT JOIN users u ON sl.userId = u.id
-       ORDER BY sl.createdAt DESC
-       LIMIT ?`,
-      [limit]
-    );
+    const db = await getDb();
+    if (!db) return [];
+    const result = await db.execute(sql`SELECT sl.id, sl.searchType, sl.query, sl.resultCount, sl.createdAt, u.name AS userName, u.company AS userCompany FROM search_logs sl LEFT JOIN users u ON sl.userId = u.id ORDER BY sl.createdAt DESC LIMIT ${limit}`) as unknown as any[][];
+    const rows = result[0] ?? result;
+    console.log(`[getSearchLogs] rows=${Array.isArray(rows) ? rows.length : "?"}`);
     return rows as any[];
-  } catch {
+  } catch (e: any) {
+    console.error("[getSearchLogs] error:", e.message);
     return [];
-  } finally {
-    await conn?.end();
   }
 }
 
 export async function getSearchRanking(limit = 20) {
-  let conn: mysql.Connection | null = null;
   try {
-    conn = await mysql.createConnection(process.env.DATABASE_URL!);
-    const [rows] = await conn.execute(
-      `SELECT query, searchType, COUNT(*) AS searchCount, AVG(resultCount) AS avgResults
-       FROM search_logs
-       GROUP BY query, searchType
-       ORDER BY searchCount DESC
-       LIMIT ?`,
-      [limit]
-    );
+    const db = await getDb();
+    if (!db) return [];
+    const result = await db.execute(sql`SELECT query, searchType, COUNT(*) AS searchCount, AVG(resultCount) AS avgResults FROM search_logs GROUP BY query, searchType ORDER BY searchCount DESC LIMIT ${limit}`) as unknown as any[][];
+    const rows = result[0] ?? result;
     return rows as any[];
-  } catch {
+  } catch (e: any) {
+    console.error("[getSearchRanking] error:", e.message);
     return [];
-  } finally {
-    await conn?.end();
   }
 }
