@@ -49,6 +49,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const aiSearchMutation = trpc.property.aiSearch.useMutation();
   const logSearchMutation = trpc.property.logSearch.useMutation();
   const logTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isComposingRef = useRef(false);
 
   const { data: properties, isLoading } = trpc.property.list.useQuery();
   const { data: myProperties, isLoading: myLoading } = trpc.mypage.myProperties.useQuery(undefined, { enabled: mode === "mine" });
@@ -327,11 +328,11 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
           setAiResultIds(res.ids);
           setAiSearching(false);
         };
-        const handleKeywordSearch = (q: string) => {
-          setSearchQuery(q);
-          if (q.trim().length >= 2 && user) {
+        const scheduleLog = (q: string) => {
+          if (q.trim().length >= 2 && user && !isComposingRef.current) {
             if (logTimerRef.current) clearTimeout(logTimerRef.current);
             logTimerRef.current = setTimeout(() => {
+              if (isComposingRef.current) return;
               const count = baseFiltered.filter(p => {
                 const lower = q.toLowerCase();
                 return p.address.toLowerCase().includes(lower) || p.name.toLowerCase().includes(lower) || (p.userCompany ?? "").toLowerCase().includes(lower);
@@ -339,6 +340,10 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
               logSearchMutation.mutate({ query: q, resultCount: count });
             }, 1500);
           }
+        };
+        const handleKeywordSearch = (q: string) => {
+          setSearchQuery(q);
+          scheduleLog(q);
         };
         return (
           <>
@@ -400,6 +405,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                     className="pl-10 bg-card border-border h-11"
                     value={searchQuery}
                     onChange={e => handleKeywordSearch(e.target.value)}
+                    onCompositionStart={() => { isComposingRef.current = true; }}
+                    onCompositionEnd={e => { isComposingRef.current = false; scheduleLog((e.target as HTMLInputElement).value); }}
                   />
                 </div>
                 <Button
