@@ -717,7 +717,18 @@ ${propList}`
     searchLogs: adminProcedure
       .input(z.object({ limit: z.number().optional() }))
       .query(async ({ input }) => {
-        return db.getSearchLogs(input.limit ?? 100);
+        const rows = await db.getSearchLogs(input.limit ?? 100);
+        console.log(`[searchLogs] returned ${rows.length} rows`);
+        return rows;
+      }),
+
+    testSearchLog: adminProcedure
+      .mutation(async ({ ctx }) => {
+        console.log(`[testSearchLog] inserting test row for userId=${ctx.user.id}`);
+        await db.saveSearchLog(ctx.user.id, "keyword", "テスト検索", 99);
+        const rows = await db.getSearchLogs(5);
+        console.log(`[testSearchLog] after insert, rows=${rows.length}`);
+        return { inserted: true, rowCount: rows.length };
       }),
 
     searchRanking: adminProcedure
