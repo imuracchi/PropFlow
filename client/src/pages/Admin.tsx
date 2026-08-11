@@ -586,7 +586,7 @@ export default function Admin() {
                   {(searchLogs ?? []).map((log: any) => (
                     <tr key={log.id} className="hover:bg-accent/30">
                       <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(log.createdAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        {new Date(typeof log.createdAt === "string" ? log.createdAt.replace(" ", "T") + "Z" : log.createdAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </td>
                       <td className="px-4 py-2.5 text-xs max-w-[120px] truncate">{log.userCompany ?? log.userName ?? "-"}</td>
                       <td className="px-4 py-2.5">
