@@ -703,6 +703,7 @@ ${propList}`
     logSearch: protectedProcedure
       .input(z.object({ query: z.string().min(1), resultCount: z.number() }))
       .mutation(async ({ input, ctx }) => {
+        console.log(`[logSearch] userId=${ctx.user.id} query="${input.query}" count=${input.resultCount}`);
         await db.saveSearchLog(ctx.user.id, "keyword", input.query, input.resultCount);
         return { ok: true };
       }),
