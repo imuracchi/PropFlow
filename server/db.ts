@@ -1753,8 +1753,8 @@ export async function saveSearchLog(userId: number, searchType: "keyword" | "ai"
       "INSERT INTO `search_logs` (`userId`, `searchType`, `query`, `resultCount`) VALUES (?, ?, ?, ?)",
       [userId, searchType, query.slice(0, 500), resultCount]
     );
-  } catch {
-    // ログ失敗は握りつぶす
+  } catch (e: any) {
+    console.error("[saveSearchLog] error:", e.message);
   } finally {
     await conn?.end();
   }

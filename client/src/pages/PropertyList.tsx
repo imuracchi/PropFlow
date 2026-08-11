@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -48,6 +48,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const { user } = useAuth();
   const aiSearchMutation = trpc.property.aiSearch.useMutation();
   const logSearchMutation = trpc.property.logSearch.useMutation();
+  const logTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: properties, isLoading } = trpc.property.list.useQuery();
   const { data: myProperties, isLoading: myLoading } = trpc.mypage.myProperties.useQuery(undefined, { enabled: mode === "mine" });
@@ -329,11 +330,14 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
         const handleKeywordSearch = (q: string) => {
           setSearchQuery(q);
           if (q.trim().length >= 2 && user) {
-            const count = baseFiltered.filter(p => {
-              const lower = q.toLowerCase();
-              return p.address.toLowerCase().includes(lower) || p.name.toLowerCase().includes(lower) || (p.userCompany ?? "").toLowerCase().includes(lower);
-            }).length;
-            logSearchMutation.mutate({ query: q, resultCount: count });
+            if (logTimerRef.current) clearTimeout(logTimerRef.current);
+            logTimerRef.current = setTimeout(() => {
+              const count = baseFiltered.filter(p => {
+                const lower = q.toLowerCase();
+                return p.address.toLowerCase().includes(lower) || p.name.toLowerCase().includes(lower) || (p.userCompany ?? "").toLowerCase().includes(lower);
+              }).length;
+              logSearchMutation.mutate({ query: q, resultCount: count });
+            }, 1500);
           }
         };
         return (
