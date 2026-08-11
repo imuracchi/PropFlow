@@ -51,7 +51,7 @@ export default function Admin() {
   const { data: topViewed } = trpc.property.topViewed.useQuery({});
   const { data: searchLogs, refetch: refetchSearchLogs } = trpc.property.searchLogs.useQuery({});
   const { data: searchRanking } = trpc.property.searchRanking.useQuery({});
-  const testSearchLogMutation = trpc.property.testSearchLog.useMutation({ onSuccess: () => refetchSearchLogs() });
+  const clearSearchLogsMutation = trpc.property.clearSearchLogs.useMutation({ onSuccess: () => refetchSearchLogs() });
 
   const approveMutation = trpc.admin.approveUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const rejectMutation = trpc.admin.rejectUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.stats.invalidate(); } });
@@ -566,11 +566,11 @@ export default function Admin() {
             <div className="px-4 py-3 bg-muted/40 border-b border-border flex items-center justify-between">
               <h3 className="text-sm font-semibold">最近の検索ログ（直近100件）</h3>
               <button
-                className="text-xs px-3 py-1 rounded bg-muted border border-border hover:bg-muted/80"
-                onClick={() => testSearchLogMutation.mutate()}
-                disabled={testSearchLogMutation.isPending}
+                className="text-xs px-3 py-1 rounded bg-red-50 border border-red-200 text-red-700 hover:bg-red-100"
+                onClick={() => { if (confirm("検索ログを全件削除しますか？")) clearSearchLogsMutation.mutate(); }}
+                disabled={clearSearchLogsMutation.isPending}
               >
-                {testSearchLogMutation.isPending ? "挿入中..." : "DBテスト挿入"}
+                {clearSearchLogsMutation.isPending ? "削除中..." : "全件削除"}
               </button>
             </div>
             <div className="overflow-x-auto">

@@ -1770,6 +1770,17 @@ export async function getSearchLogs(limit = 100) {
   }
 }
 
+export async function clearSearchLogs() {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.execute(sql`DELETE FROM search_logs`);
+    console.log("[clearSearchLogs] all rows deleted");
+  } catch (e: any) {
+    console.error("[clearSearchLogs] error:", e.message);
+  }
+}
+
 export async function getSearchRanking(limit = 20) {
   try {
     const db = await getDb();

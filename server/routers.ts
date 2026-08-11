@@ -722,13 +722,10 @@ ${propList}`
         return rows;
       }),
 
-    testSearchLog: adminProcedure
-      .mutation(async ({ ctx }) => {
-        console.log(`[testSearchLog] inserting test row for userId=${ctx.user.id}`);
-        await db.saveSearchLog(ctx.user.id, "keyword", "テスト検索", 99);
-        const rows = await db.getSearchLogs(5);
-        console.log(`[testSearchLog] after insert, rows=${rows.length}`);
-        return { inserted: true, rowCount: rows.length };
+    clearSearchLogs: adminProcedure
+      .mutation(async () => {
+        await db.clearSearchLogs();
+        return { ok: true };
       }),
 
     searchRanking: adminProcedure
