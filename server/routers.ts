@@ -714,7 +714,7 @@ ${propList}`
         return db.getTopViewedProperties(input.limit ?? 20);
       }),
 
-    searchLogs: adminProcedure
+    searchLogs: managementProcedure
       .input(z.object({ limit: z.number().optional() }))
       .query(async ({ input }) => {
         const rows = await db.getSearchLogs(input.limit ?? 100);
@@ -728,7 +728,7 @@ ${propList}`
         return { ok: true };
       }),
 
-    searchRanking: adminProcedure
+    searchRanking: managementProcedure
       .input(z.object({ limit: z.number().optional() }))
       .query(async ({ input }) => {
         return db.getSearchRanking(input.limit ?? 20);

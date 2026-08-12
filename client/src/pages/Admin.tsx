@@ -566,13 +566,15 @@ export default function Admin() {
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="px-4 py-3 bg-muted/40 border-b border-border flex items-center justify-between">
               <h3 className="text-sm font-semibold">最近の検索ログ（直近100件）</h3>
-              <button
-                className="text-xs px-3 py-1 rounded bg-red-50 border border-red-200 text-red-700 hover:bg-red-100"
-                onClick={() => { if (confirm("検索ログを全件削除しますか？")) clearSearchLogsMutation.mutate(); }}
-                disabled={clearSearchLogsMutation.isPending}
-              >
-                {clearSearchLogsMutation.isPending ? "削除中..." : "全件削除"}
-              </button>
+              {!isManagement && (
+                <button
+                  className="text-xs px-3 py-1 rounded bg-red-50 border border-red-200 text-red-700 hover:bg-red-100"
+                  onClick={() => { if (confirm("検索ログを全件削除しますか？")) clearSearchLogsMutation.mutate(); }}
+                  disabled={clearSearchLogsMutation.isPending}
+                >
+                  {clearSearchLogsMutation.isPending ? "削除中..." : "全件削除"}
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[500px]">
