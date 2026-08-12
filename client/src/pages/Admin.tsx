@@ -632,7 +632,7 @@ export default function Admin() {
                       return (
                         <tr key={m.id}>
                           <td className="px-4 py-2.5 text-xs text-muted-foreground">#{m.id}</td>
-                          <td className="px-4 py-2.5 text-sm">{m.propertyName || "—"}</td>
+                          <td className="px-4 py-2.5 text-sm max-w-[160px] truncate">{m.propertyName || "—"}</td>
                           <td className="px-4 py-2.5 text-sm max-w-[250px] truncate">{m.content}</td>
                           <td className="px-4 py-2.5">
                             <button className="text-sm text-primary hover:underline" onClick={() => window.open(dmUrl, "_blank")}>
