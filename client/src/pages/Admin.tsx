@@ -547,7 +547,7 @@ export default function Admin() {
                       <td className="px-4 py-3 font-medium max-w-[240px] truncate">{r.query}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.searchType === "ai" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                          {r.searchType === "ai" ? "AI" : "キーワード"}
+                          {r.searchType === "ai" ? "AI" : "KW"}
                         </span>
                       </td>
                       <td className="px-4 py-3 font-bold text-primary">{Number(r.searchCount).toLocaleString()}回</td>
