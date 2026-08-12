@@ -1461,9 +1461,11 @@ ${propList}`
       return db.getActivityLogs(500);
     }),
 
-    allDmMessages: managementProcedure.query(async () => {
-      return db.getAllDmMessagesAdmin();
-    }),
+    allDmMessages: managementProcedure
+      .input(z.object({ from: z.string().optional(), to: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        return db.getAllDmMessagesAdmin(200, input?.from ? new Date(input.from) : undefined, input?.to ? new Date(input.to) : undefined);
+      }),
 
     deleteDm: adminProcedure
       .input(z.object({ messageId: z.number() }))

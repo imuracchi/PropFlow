@@ -41,6 +41,8 @@ export default function Admin() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [viewDm, setViewDm] = useState<any | null>(null);
+  const [dmDateFrom, setDmDateFrom] = useState("");
+  const [dmDateTo, setDmDateTo] = useState("");
   const [showCreateUser, setShowCreateUser] = useState(false);
 
   const utils = trpc.useUtils();
@@ -49,7 +51,10 @@ export default function Admin() {
   const { data: allUsers, isLoading: usersLoading } = trpc.admin.allUsers.useQuery();
   const { data: adminProperties } = trpc.admin.allProperties.useQuery();
   const { data: activityLogs } = trpc.admin.activityLogs.useQuery();
-  const { data: adminDmMessages } = trpc.admin.allDmMessages.useQuery();
+  const { data: adminDmMessages } = trpc.admin.allDmMessages.useQuery({
+    from: dmDateFrom ? `${dmDateFrom}T00:00:00+09:00` : undefined,
+    to: dmDateTo ? `${dmDateTo}T23:59:59+09:00` : undefined,
+  });
   const { data: topViewed } = trpc.property.topViewed.useQuery({});
   const { data: searchLogs, refetch: refetchSearchLogs } = trpc.property.searchLogs.useQuery({});
   const { data: searchRanking } = trpc.property.searchRanking.useQuery({});
@@ -613,6 +618,18 @@ export default function Admin() {
 
         {/* DM管理タブ */}
         <TabsContent value="dm" className="mt-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-2 bg-card border border-border rounded-lg px-4 py-3">
+            <span className="text-xs font-medium text-muted-foreground">期間で絞り込み</span>
+            <input type="date" className="border border-border rounded-md px-2 py-1 text-sm bg-background" value={dmDateFrom} onChange={e => setDmDateFrom(e.target.value)} />
+            <span className="text-xs text-muted-foreground">〜</span>
+            <input type="date" className="border border-border rounded-md px-2 py-1 text-sm bg-background" value={dmDateTo} onChange={e => setDmDateTo(e.target.value)} />
+            {(dmDateFrom || dmDateTo) && (
+              <button className="text-xs px-2 py-1 rounded border border-border text-muted-foreground hover:bg-muted" onClick={() => { setDmDateFrom(""); setDmDateTo(""); }}>
+                クリア
+              </button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">最大200件まで表示（日時はJST）</span>
+          </div>
           {(adminDmMessages ?? []).length === 0 ? (
             <div className="bg-card border border-border rounded-lg py-12 text-center text-muted-foreground">DMはありません</div>
           ) : (

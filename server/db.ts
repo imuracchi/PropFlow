@@ -1,4 +1,4 @@
-import { eq, desc, count, and, or, sql, notInArray, lt, isNull, ne } from "drizzle-orm";
+import { eq, desc, count, and, or, sql, notInArray, lt, gte, lte, isNull, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { InsertUser, users, properties, InsertProperty, messages, favorites, propertyFiles, propertyMemos, directMessages, chatExits, pushSubscriptions, registrationTokens, buyerPreferences, activityLogs, generatedDocuments, dmReadStatus, propertyExclusions, broadcastLogs, propertyReads } from "../drizzle/schema";
@@ -1465,10 +1465,14 @@ export async function adminDeleteDmThread(senderId: number, receiverId: number, 
   await db.delete(directMessages).where(cond!);
 }
 
-export async function getAllDmMessagesAdmin(limit = 200) {
+export async function getAllDmMessagesAdmin(limit = 200, from?: Date, to?: Date) {
   const db = await getDb();
   if (!db) return [];
   const senderAlias = sql`sender`.as("sender");
+  const dateConditions = [
+    from ? gte(directMessages.createdAt, from) : undefined,
+    to ? lte(directMessages.createdAt, to) : undefined,
+  ].filter((c): c is NonNullable<typeof c> => c !== undefined);
   const rows = await db
     .select({
       id: directMessages.id,
@@ -1479,6 +1483,7 @@ export async function getAllDmMessagesAdmin(limit = 200) {
       createdAt: directMessages.createdAt,
     })
     .from(directMessages)
+    .where(dateConditions.length > 0 ? and(...dateConditions) : undefined)
     .orderBy(desc(directMessages.createdAt))
     .limit(limit);
 
