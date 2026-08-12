@@ -631,7 +631,6 @@ export default function Admin() {
                   </tr></thead>
                   <tbody className="divide-y divide-border">
                     {(adminDmMessages ?? []).map((m: any) => {
-                      const dmUrl = m.propertyId ? `/dm/${m.receiverId}/${m.propertyId}` : `/dm/${m.receiverId}`;
                       return (
                         <tr key={m.id}>
                           <td className="px-4 py-2.5 text-xs text-muted-foreground">#{m.id}</td>
@@ -642,11 +641,9 @@ export default function Admin() {
                           >
                             {m.content}
                           </td>
-                          <td className="px-4 py-2.5 whitespace-nowrap">
-                            <button className="text-sm text-primary hover:underline" onClick={() => window.open(dmUrl, "_blank")}>
-                              {m.senderName ?? "?"}
-                              {m.senderCompany && <span className="text-xs text-muted-foreground ml-1">({m.senderCompany})</span>}
-                            </button>
+                          <td className="px-4 py-2.5 text-sm whitespace-nowrap">
+                            {m.senderName ?? "?"}
+                            {m.senderCompany && <span className="text-xs text-muted-foreground ml-1">({m.senderCompany})</span>}
                           </td>
                           <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTime(m.createdAt)}</td>
                           {!isManagement && (
