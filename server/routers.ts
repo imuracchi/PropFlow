@@ -1461,7 +1461,7 @@ ${propList}`
       return db.getActivityLogs(500);
     }),
 
-    allDmMessages: adminProcedure.query(async () => {
+    allDmMessages: managementProcedure.query(async () => {
       return db.getAllDmMessagesAdmin();
     }),
 

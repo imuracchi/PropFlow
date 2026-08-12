@@ -497,9 +497,17 @@ export async function restoreProperty(id: number) {
 export async function hardDeleteProperty(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  // 物件名をスナップショットとして保存（DM一覧での表示用）
+  const prop = await getPropertyById(id);
+  if (prop) {
+    await db.execute(sql`INSERT INTO property_name_snapshots (propertyId, name) VALUES (${id}, ${prop.name}) ON DUPLICATE KEY UPDATE name = ${prop.name}`);
+  }
+
   await db.delete(favorites).where(eq(favorites.propertyId, id));
   await db.delete(messages).where(eq(messages.propertyId, id));
   await db.delete(properties).where(eq(properties.id, id));
+  // directMessages はDMスレッドを残すため削除しない
 }
 
 export async function getDmPartnersForProperty(propertyId: number, ownerId: number): Promise<number[]> {
@@ -1484,6 +1492,18 @@ export async function getAllDmMessagesAdmin(limit = 200) {
 
   const userList = userIds.size > 0 ? await db.select({ id: users.id, name: users.name, company: users.company }).from(users).where(sql`${users.id} IN (${sql.join([...userIds].map(id => sql`${id}`), sql`, `)})`) : [];
   const propList = propIds.size > 0 ? await db.select({ id: properties.id, name: properties.name }).from(properties).where(sql`${properties.id} IN (${sql.join([...propIds].map(id => sql`${id}`), sql`, `)})`) : [];
+
+  // 削除済み物件の名前をスナップショットから補完
+  const foundPropIds = new Set(propList.map(p => p.id));
+  const missingPropIds = [...propIds].filter(id => !foundPropIds.has(id));
+  if (missingPropIds.length > 0) {
+    const snapshots = await db.execute<{ propertyId: number; name: string }>(
+      sql`SELECT propertyId, name FROM property_name_snapshots WHERE propertyId IN (${sql.join(missingPropIds.map(id => sql`${id}`), sql`, `)})`
+    );
+    for (const row of (snapshots[0] as unknown as { propertyId: number; name: string }[])) {
+      propList.push({ id: row.propertyId, name: `${row.name}（削除済み）` });
+    }
+  }
 
   const userMap = new Map(userList.map(u => [u.id, u]));
   const propMap = new Map(propList.map(p => [p.id, p]));

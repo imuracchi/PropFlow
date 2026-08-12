@@ -40,6 +40,7 @@ export default function Admin() {
   const [propSearch, setPropSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [viewDm, setViewDm] = useState<any | null>(null);
   const [showCreateUser, setShowCreateUser] = useState(false);
 
   const utils = trpc.useUtils();
@@ -168,12 +169,12 @@ export default function Admin() {
             <Search className="w-3.5 h-3.5" />
             検索ログ
           </TabsTrigger>
+          <TabsTrigger value="dm" className="gap-1.5">
+            <MessageCircle className="w-3.5 h-3.5" />
+            DM管理
+          </TabsTrigger>
           {!isManagement && (
             <>
-              <TabsTrigger value="dm" className="gap-1.5">
-                <MessageCircle className="w-3.5 h-3.5" />
-                DM管理
-              </TabsTrigger>
               <TabsTrigger value="logs" className="gap-1.5">
                 <ScrollText className="w-3.5 h-3.5" />
                 操作ログ
@@ -617,14 +618,16 @@ export default function Admin() {
           ) : (
             <div className="bg-card border border-border rounded-lg overflow-hidden overflow-x-auto">
               <div className="max-h-[600px] overflow-y-auto">
-                <table className="w-full text-sm min-w-[500px]">
+                <table className="w-full text-sm min-w-[900px]">
                   <thead className="sticky top-0 bg-card"><tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">№</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">物件名</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">内容</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">発言者</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">日時</th>
-                    <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground">操作</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">発言者</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">日時</th>
+                    {!isManagement && (
+                      <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground">操作</th>
+                    )}
                   </tr></thead>
                   <tbody className="divide-y divide-border">
                     {(adminDmMessages ?? []).map((m: any) => {
@@ -633,19 +636,26 @@ export default function Admin() {
                         <tr key={m.id}>
                           <td className="px-4 py-2.5 text-xs text-muted-foreground">#{m.id}</td>
                           <td className="px-4 py-2.5 text-sm max-w-[160px] truncate">{m.propertyName || "—"}</td>
-                          <td className="px-4 py-2.5 text-sm max-w-[250px] truncate">{m.content}</td>
-                          <td className="px-4 py-2.5">
+                          <td
+                            className="px-4 py-2.5 text-sm max-w-[420px] truncate cursor-pointer hover:underline hover:text-primary"
+                            onClick={() => setViewDm(m)}
+                          >
+                            {m.content}
+                          </td>
+                          <td className="px-4 py-2.5 whitespace-nowrap">
                             <button className="text-sm text-primary hover:underline" onClick={() => window.open(dmUrl, "_blank")}>
                               {m.senderName ?? "?"}
                               {m.senderCompany && <span className="text-xs text-muted-foreground ml-1">({m.senderCompany})</span>}
                             </button>
                           </td>
                           <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTime(m.createdAt)}</td>
-                          <td className="px-4 py-2.5 text-center">
-                            <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1 h-6 px-2"
-                              onClick={() => { if (confirm("このDMを削除しますか？")) deleteDmMutation.mutate({ messageId: m.id }); }}
-                            ><Trash2 className="w-3 h-3" />削除</Button>
-                          </td>
+                          {!isManagement && (
+                            <td className="px-4 py-2.5 text-center">
+                              <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1 h-6 px-2"
+                                onClick={() => { if (confirm("このDMを削除しますか？")) deleteDmMutation.mutate({ messageId: m.id }); }}
+                              ><Trash2 className="w-3 h-3" />削除</Button>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -1092,6 +1102,28 @@ export default function Admin() {
       {/* 業者詳細モーダル */}
       {selectedUserId && (
         <UserDetailModal userId={selectedUserId} onClose={() => setSelectedUserId(null)} />
+      )}
+
+      {/* DM内容モーダル */}
+      {viewDm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setViewDm(null)}>
+          <div className="bg-card border border-border rounded-xl shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
+              <div>
+                <h2 className="font-bold text-foreground">{viewDm.propertyName || "—"}</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {viewDm.senderName ?? "?"}
+                  {viewDm.senderCompany && <span className="ml-1">({viewDm.senderCompany})</span>}
+                  <span className="ml-2">{fmtDateTime(viewDm.createdAt)}</span>
+                </p>
+              </div>
+              <button className="text-muted-foreground hover:text-foreground p-1" onClick={() => setViewDm(null)}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 text-sm whitespace-pre-wrap break-words">{viewDm.content}</div>
+          </div>
+        </div>
       )}
     </div>
   );
