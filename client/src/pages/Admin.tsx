@@ -1235,9 +1235,20 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
   );
 }
 
+function randomDigits(n: number): string {
+  let s = "";
+  for (let i = 0; i < n; i++) s += Math.floor(Math.random() * 10);
+  return s;
+}
+
+function passwordFromPhone(phone?: string): string {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  return digits.length >= 8 ? digits.slice(-8) : randomDigits(8);
+}
+
 function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(() => passwordFromPhone());
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
@@ -1273,6 +1284,7 @@ function CreateUserForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
         if (d.zipCode) setZipCode(d.zipCode);
         if (d.address) setAddress(d.address);
         if (d.license) setLicense(d.license);
+        setPassword(passwordFromPhone(d.mobile || d.phone));
       }
       setCardReading(false);
     };
