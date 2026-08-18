@@ -228,7 +228,7 @@ export default function DirectMessage() {
             }}
             placeholder={isMobile ? "メッセージを入力..." : "メッセージを入力...（Shift+Enterで改行）"}
             rows={1}
-            className="flex-1 resize-none bg-muted/50 border-none rounded-3xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-32 overflow-y-auto"
+            className="flex-1 resize-none bg-card border border-border rounded-3xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-32 overflow-y-auto"
             style={{ minHeight: "40px", height: "auto" }}
             ref={(el) => {
               if (el) {
