@@ -9,7 +9,7 @@ import {
   Search, MessageCircle, ScrollText, Shield,
   MoreHorizontal, ArrowUpRight, Loader2, UserPlus, FileText, Ban, UserCheck,
   Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin, Send,
-  Sparkles, BarChart2
+  Sparkles, BarChart2, Smartphone, Monitor
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -803,6 +803,7 @@ export default function Admin() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">日時</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">ユーザー</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">アクション</th>
+                    <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground">端末</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">詳細</th>
                   </tr></thead>
                   <tbody className="divide-y divide-border">
@@ -827,6 +828,15 @@ export default function Admin() {
                             log.action === "terms_agree" ? "規約同意" :
                             log.action
                           }</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-center">
+                          {log.deviceType === "mobile" ? (
+                            <Smartphone className="w-3.5 h-3.5 mx-auto text-muted-foreground" />
+                          ) : log.deviceType === "pc" ? (
+                            <Monitor className="w-3.5 h-3.5 mx-auto text-muted-foreground" />
+                          ) : (
+                            <span className="text-xs text-muted-foreground/40">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">{log.detail ?? "—"}</td>
                       </tr>

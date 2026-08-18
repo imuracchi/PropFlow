@@ -181,6 +181,7 @@ export const activityLogs = mysqlTable("activity_logs", {
   userId: int("userId").notNull(),
   action: varchar("action", { length: 64 }).notNull(),
   detail: text("detail"),
+  deviceType: varchar("deviceType", { length: 10 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

@@ -90,7 +90,7 @@ export const appRouter = router({
           return { success: false, error: "アカウントが停止されています。管理者にお問い合わせください" } as const;
         }
         await db.updateLastSignedIn(user.id);
-        db.logActivity(user.id, "login").catch(() => {});
+        db.logActivity(user.id, "login", undefined, ctx.req.headers["user-agent"]).catch(() => {});
         const token = await createSessionToken(user.id, user.openId);
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
@@ -380,7 +380,7 @@ JSONのみ返してください。` },
     agreeTerms: protectedProcedure
       .mutation(async ({ ctx }) => {
         await db.agreeToTerms(ctx.user.id);
-        db.logActivity(ctx.user.id, "terms_agree", "利用規約に同意").catch(() => {});
+        db.logActivity(ctx.user.id, "terms_agree", "利用規約に同意", ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };
       }),
 
@@ -535,7 +535,7 @@ JSONのみ返してください。` },
             files: input.files ?? null,
           });
           if (result) {
-            db.logActivity(ctx.user.id, "property_create", `物件「${input.name}」を登録`).catch(() => {});
+            db.logActivity(ctx.user.id, "property_create", `物件「${input.name}」を登録`, ctx.req.headers["user-agent"]).catch(() => {});
           }
           return result;
         } catch (e: any) {
@@ -612,7 +612,7 @@ JSONのみ返してください。` },
         }
 
         await db.ownerDeleteProperty(input.propertyId);
-        db.logActivity(ctx.user.id, "property_delete_own", `物件「${prop.name}」を完全削除`).catch(() => {});
+        db.logActivity(ctx.user.id, "property_delete_own", `物件「${prop.name}」を完全削除`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };
       }),
 
@@ -1026,7 +1026,7 @@ ${propList}`
       .mutation(async ({ input, ctx }) => {
         await db.rejoinDm(ctx.user.id, input.receiverId, input.propertyId ?? null);
         await db.sendDirectMessage(ctx.user.id, input.receiverId, input.content, input.propertyId ?? null);
-        db.logActivity(ctx.user.id, "dm_send", `DM送信 (相手ID:${input.receiverId})`).catch(() => {});
+        db.logActivity(ctx.user.id, "dm_send", `DM送信 (相手ID:${input.receiverId})`, ctx.req.headers["user-agent"]).catch(() => {});
 
         const senderName = ctx.user.name ?? "ユーザー";
         const propInfo = await sendDmNotifications({
@@ -1422,7 +1422,7 @@ ${propList}`
         if (input.businessCardBase64 && newUser) {
           await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
         }
-        db.logActivity(ctx.user.id, "admin_create_user", `管理者がユーザー${input.email}を代理登録`).catch(() => {});
+        db.logActivity(ctx.user.id, "admin_create_user", `管理者がユーザー${input.email}を代理登録`, ctx.req.headers["user-agent"]).catch(() => {});
 
         const { sendMail } = await import("./_core/mail");
         const nameLabel = input.name ? `${input.name}　様` : "　様";
@@ -1504,7 +1504,7 @@ ${propList}`
         const token = await createSessionToken(targetUser.id, targetUser.openId);
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        db.logActivity(ctx.user.id, "admin_login_as", `管理者が${targetUser.name}（ID:${targetUser.id}）として代理ログイン`).catch(() => {});
+        db.logActivity(ctx.user.id, "admin_login_as", `管理者が${targetUser.name}（ID:${targetUser.id}）として代理ログイン`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true } as const;
       }),
 

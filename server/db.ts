@@ -88,6 +88,7 @@ export async function runStartupMigrations() {
       \`status\` varchar(20) NOT NULL DEFAULT 'pending',
       \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    "ALTER TABLE `activity_logs` ADD COLUMN `deviceType` varchar(10) NULL",
   ];
 
   let conn: mysql.Connection | null = null;
@@ -1467,10 +1468,15 @@ export async function upsertBuyerPreference(userId: number, data: {
 
 // ---- Activity Logs ----
 
-export async function logActivity(userId: number, action: string, detail?: string) {
+function detectDeviceType(userAgent?: string): "mobile" | "pc" {
+  if (!userAgent) return "pc";
+  return /Mobile|Android|iPhone|iPad|iPod/i.test(userAgent) ? "mobile" : "pc";
+}
+
+export async function logActivity(userId: number, action: string, detail?: string, userAgent?: string) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(activityLogs).values({ userId, action, detail: detail ?? null });
+  await db.insert(activityLogs).values({ userId, action, detail: detail ?? null, deviceType: detectDeviceType(userAgent) });
 }
 
 export async function getActivityLogs(limit = 200) {
@@ -1482,6 +1488,7 @@ export async function getActivityLogs(limit = 200) {
       userId: activityLogs.userId,
       action: activityLogs.action,
       detail: activityLogs.detail,
+      deviceType: activityLogs.deviceType,
       createdAt: activityLogs.createdAt,
       userName: users.name,
       userCompany: users.company,
