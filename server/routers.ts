@@ -42,6 +42,7 @@ async function sendDmNotifications(opts: {
         </div>
         <a href="${dmUrl}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">DMを確認・返信する</a>
         <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
+        <p style="margin-top:4px;font-size:12px;color:#9ca3af;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
       </div>`;
     sendMail(receiverEmail, opts.emailSubject, mailHtml).catch(() => {});
   }
@@ -95,6 +96,7 @@ async function sendBroadcastToAll(opts: {
         <div style="background:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb">
           <p style="margin:0;font-size:12px;color:#6b7280">PropFlow | <a href="${siteUrl}" style="color:#2563eb">${siteUrl}</a></p>
           <p style="margin:4px 0 0;font-size:11px;color:#9ca3af">メール通知の設定は<a href="${siteUrl}/mypage" style="color:#9ca3af">マイページ</a>から変更できます</p>
+          <p style="margin:4px 0 0;font-size:11px;color:#9ca3af">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
         </div>
       </div>`;
     for (const email of emails) {
@@ -194,6 +196,7 @@ export const appRouter = router({
             <a href="${registerUrl}" style="display:inline-block;background:#2563eb;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">登録フォームを開く</a>
             <p style="color:#888;font-size:13px;">このリンクの有効期限は72時間です。</p>
             <p style="color:#888;font-size:13px;">心当たりがない場合はこのメールを無視してください。</p>
+            <p style="color:#9ca3af;font-size:12px;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
           </div>
         `);
         return { success: true } as const;
@@ -405,7 +408,8 @@ JSONのみ返してください。` },
 <p>下記のリンクから新しいパスワードを設定してください。<br>有効期限は1時間です。</p>
 <p><a href="${siteUrl}/reset-password/${token}" style="display:inline-block;background:#2563eb;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">パスワードを再設定する</a></p>
 <p>このメールに心当たりがない場合は無視してください。</p>
-<p>PropFlowサポート</p>`
+<p>PropFlowサポート</p>
+<p style="color:#9ca3af;font-size:12px;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>`
         );
         return { success: true } as const;
       }),
@@ -949,6 +953,7 @@ ${propList}`
             </div>
             <a href="${siteUrl}/property/${prop.id}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">物件の詳細を見る</a>
             <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
+            <p style="margin-top:4px;font-size:12px;color:#9ca3af;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
           </div>`;
         for (const email of emails) {
           sendMail(email, `【PropFlow】新着物件: ${prop.name}`, mailHtml).catch(() => {});
@@ -1243,6 +1248,7 @@ ${propList}`
               <h2 style="color:#2563eb;">📇 名刺が届きました</h2>
               <p>${senderName}様${senderCompany}より、PropFlow経由で名刺が送られました。添付ファイルをご確認ください。</p>
               ${propertyBlock}
+              <p style="margin-top:16px;font-size:12px;color:#9ca3af;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
             </div>
           `,
           { attachments: [{ filename: "名刺.jpg", content: ctx.user.businessCardBase64 }] }
