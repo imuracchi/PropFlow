@@ -72,6 +72,7 @@ export const properties = mysqlTable("properties", {
   faqs: json("faqs").$type<{ q: string; a: string }[]>(),
   files: json("files").$type<{ name: string; size: number }[]>(),
   viewCount: int("viewCount").default(0).notNull(),
+  dealPrice: bigint("dealPrice", { mode: "number" }),
   deleted: int("deleted").default(0).notNull(),
   published: int("published").default(1).notNull(),
   lineNotifiedAt: timestamp("lineNotifiedAt"),

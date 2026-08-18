@@ -89,6 +89,7 @@ export async function runStartupMigrations() {
       \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
     "ALTER TABLE `activity_logs` ADD COLUMN `deviceType` varchar(10) NULL",
+    "ALTER TABLE `properties` ADD COLUMN `dealPrice` bigint NULL",
   ];
 
   let conn: mysql.Connection | null = null;
