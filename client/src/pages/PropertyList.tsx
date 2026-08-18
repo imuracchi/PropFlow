@@ -21,6 +21,34 @@ function toTsubo(sqm: number) {
   return (sqm * 0.3025).toFixed(2);
 }
 
+const PREFECTURE_REGIONS: { region: string; prefectures: string[] }[] = [
+  { region: "北海道・東北", prefectures: ["北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県"] },
+  { region: "関東", prefectures: ["東京都", "神奈川県", "埼玉県", "千葉県", "茨城県", "栃木県", "群馬県"] },
+  { region: "中部", prefectures: ["愛知県", "静岡県", "岐阜県", "山梨県", "長野県", "新潟県", "富山県", "石川県", "福井県"] },
+  { region: "近畿", prefectures: ["大阪府", "京都府", "兵庫県", "奈良県", "滋賀県", "和歌山県"] },
+  { region: "中国・四国", prefectures: ["広島県", "岡山県", "山口県", "鳥取県", "島根県", "徳島県", "香川県", "愛媛県", "高知県"] },
+  { region: "九州・沖縄", prefectures: ["福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"] },
+];
+
+const CITY_TO_PREFECTURE: Record<string, string> = {
+  "京都市": "京都府", "大阪市": "大阪府", "横浜市": "神奈川県", "川崎市": "神奈川県", "相模原市": "神奈川県",
+  "名古屋市": "愛知県", "福岡市": "福岡県", "北九州市": "福岡県", "札幌市": "北海道", "仙台市": "宮城県",
+  "広島市": "広島県", "神戸市": "兵庫県", "さいたま市": "埼玉県", "千葉市": "千葉県", "堺市": "大阪府",
+  "新潟市": "新潟県", "浜松市": "静岡県", "静岡市": "静岡県", "岡山市": "岡山県", "熊本市": "熊本県",
+};
+
+function extractPrefecture(address: string): string | null {
+  for (const { prefectures } of PREFECTURE_REGIONS) {
+    for (const pref of prefectures) {
+      if (address.includes(pref)) return pref;
+    }
+  }
+  for (const [city, pref] of Object.entries(CITY_TO_PREFECTURE)) {
+    if (address.includes(city)) return pref;
+  }
+  return null;
+}
+
 type ListMode = "all" | "mine" | "favorites" | "memo" | "chat";
 
 const MODE_TITLE: Record<ListMode, string> = {
@@ -42,6 +70,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [maxPrice, setMaxPrice] = useState("");
   const [showNewOnly, setShowNewOnly] = useState(false);
   const [showHotOnly, setShowHotOnly] = useState(false);
+  const [filterRegion, setFilterRegion] = useState<string | null>(null);
+  const [filterPrefecture, setFilterPrefecture] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [aiMode, setAiMode] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
@@ -125,11 +155,26 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       return ((p as any).inquiryCount ?? 0) >= 3;
     })
     .filter(p => {
+      if (!filterRegion) return true;
+      const pref = extractPrefecture(p.address);
+      if (!pref) return false;
+      if (filterPrefecture) return pref === filterPrefecture;
+      const regionDef = PREFECTURE_REGIONS.find(r => r.region === filterRegion);
+      return regionDef ? regionDef.prefectures.includes(pref) : true;
+    })
+    .filter(p => {
       if (!aiMode || aiResultIds === null) return true;
       return aiResultIds.includes(p.id);
     });
 
   const types = [...new Set(baseFiltered.map(p => p.type))];
+
+  const prefectureCounts = new Map<string, number>();
+  for (const p of baseFiltered) {
+    const pref = extractPrefecture(p.address);
+    if (pref) prefectureCounts.set(pref, (prefectureCounts.get(pref) ?? 0) + 1);
+  }
+  const availableRegions = PREFECTURE_REGIONS.filter(r => r.prefectures.some(p => prefectureCounts.has(p)));
 
   const calcMatch = (p: typeof filtered[0]): number | null => {
     if (!buyerPref) return null;
@@ -328,8 +373,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
 
       {/* 検索バー＋絞り込みボタン */}
       {(() => {
-        const activeFilterCount = [filterType !== "all", minLandArea, maxLandArea, minPrice, maxPrice, showNewOnly, showHotOnly].filter(Boolean).length;
-        const clearAll = () => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); setShowNewOnly(false); setShowHotOnly(false); };
+        const activeFilterCount = [filterType !== "all", minLandArea, maxLandArea, minPrice, maxPrice, showNewOnly, showHotOnly, filterRegion].filter(Boolean).length;
+        const clearAll = () => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); setShowNewOnly(false); setShowHotOnly(false); setFilterRegion(null); setFilterPrefecture(null); };
         const handleAiSearch = async () => {
           if (!aiQuery.trim()) return;
           setAiSearching(true);
@@ -452,8 +497,42 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
             )}
 
             {/* スライド展開パネル */}
-            <div className={`overflow-hidden transition-all duration-200 ${showFilters ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
+            <div className={`overflow-hidden transition-all duration-200 ${showFilters ? "max-h-[560px] opacity-100" : "max-h-0 opacity-0"}`}>
               <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">エリア</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableRegions.map(r => (
+                      <button
+                        key={r.region}
+                        type="button"
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${filterRegion === r.region ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
+                        onClick={() => {
+                          if (filterRegion === r.region) { setFilterRegion(null); setFilterPrefecture(null); }
+                          else { setFilterRegion(r.region); setFilterPrefecture(null); }
+                        }}
+                      >
+                        {r.region}
+                      </button>
+                    ))}
+                  </div>
+                  {filterRegion && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {PREFECTURE_REGIONS.find(r => r.region === filterRegion)?.prefectures
+                        .filter(p => prefectureCounts.has(p))
+                        .map(pref => (
+                          <button
+                            key={pref}
+                            type="button"
+                            className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${filterPrefecture === pref ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
+                            onClick={() => setFilterPrefecture(filterPrefecture === pref ? null : pref)}
+                          >
+                            {pref}（{prefectureCounts.get(pref)}）
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-3 items-end">
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">物件種別</p>
