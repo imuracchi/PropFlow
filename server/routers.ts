@@ -1216,7 +1216,7 @@ ${propList}`
       }),
 
     sendBusinessCard: protectedProcedure
-      .input(z.object({ partnerId: z.number() }))
+      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user.businessCardBase64) {
           return { success: false, error: "名刺画像が登録されていません" } as const;
@@ -1226,6 +1226,14 @@ ${propList}`
 
         const senderName = ctx.user.name ?? "ユーザー";
         const senderCompany = ctx.user.company ? `（${ctx.user.company}）` : "";
+        const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+
+        const prop = input.propertyId ? await db.getPropertyById(input.propertyId) : null;
+        const propertyBlock = prop
+          ? `<p style="margin-top:16px;">対象物件: 「${prop.name}」<br/><a href="${siteUrl}/property/${prop.id}" style="color:#2563eb;">${siteUrl}/property/${prop.id}</a></p>
+             <p style="margin-top:8px;font-size:13px;color:#6b7280;">※物件ページを開いたら「資料」タブに添付資料がありますのでご確認ください。</p>`
+          : "";
+
         const { sendMail } = await import("./_core/mail");
         const ok = await sendMail(
           partner.email,
@@ -1234,6 +1242,7 @@ ${propList}`
             <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px;">
               <h2 style="color:#2563eb;">📇 名刺が届きました</h2>
               <p>${senderName}様${senderCompany}より、PropFlow経由で名刺が送られました。添付ファイルをご確認ください。</p>
+              ${propertyBlock}
             </div>
           `,
           { attachments: [{ filename: "名刺.jpg", content: ctx.user.businessCardBase64 }] }

@@ -924,6 +924,9 @@ export default function PropertyDetail() {
   const toggleFavMutation = trpc.favorite.toggle.useMutation();
   const isFavorite = (favoriteIds ?? []).includes(propertyId);
   const incrementViewMutation = trpc.property.incrementView.useMutation();
+  const [activeTab, setActiveTab] = useState("overview");
+  const { data: propertyFilesForBanner } = trpc.property.listFiles.useQuery({ propertyId }, { enabled: !!propertyId });
+  const visibleFileCount = (propertyFilesForBanner ?? []).length;
 
   useEffect(() => {
     if (!property || !user) return;
@@ -1666,7 +1669,7 @@ export default function PropertyDetail() {
             </div>
           </div>
 
-          <Tabs defaultValue="overview">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full grid grid-cols-4 bg-muted/60 border border-border">
               <TabsTrigger value="overview" className="text-xs sm:text-sm px-1 sm:px-3">
                 <span className="sm:hidden">概要</span>
@@ -1689,7 +1692,17 @@ export default function PropertyDetail() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="mt-4">
+            <TabsContent value="overview" className="mt-4 space-y-3">
+              {visibleFileCount > 0 && (
+                <button
+                  className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-primary/5 border border-primary/20 text-left hover:bg-primary/10 transition-colors"
+                  onClick={() => setActiveTab("files")}
+                >
+                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-sm font-medium text-primary flex-1">📎 添付資料が{visibleFileCount}件あります</span>
+                  <span className="text-xs text-primary shrink-0">資料タブを見る →</span>
+                </button>
+              )}
               <div className="bg-card border border-border rounded-lg">
                 <div className="px-5 py-3 border-b border-border flex items-center justify-between bg-muted/40">
                   <h3 className="text-sm font-semibold text-foreground">物件概要</h3>

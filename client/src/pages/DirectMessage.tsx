@@ -319,7 +319,7 @@ export default function DirectMessage() {
                       disabled={sendBusinessCardMutation.isPending || cardSent}
                       onClick={async () => {
                         if (!confirm("登録されている名刺情報を送ります。よろしいですか？")) return;
-                        const res = await sendBusinessCardMutation.mutateAsync({ partnerId });
+                        const res = await sendBusinessCardMutation.mutateAsync({ partnerId, propertyId });
                         if (res.success) setCardSent(true);
                         else alert(res.error ?? "送信に失敗しました");
                       }}
@@ -331,7 +331,7 @@ export default function DirectMessage() {
                       ) : (
                         <IdCard className="w-3.5 h-3.5" />
                       )}
-                      {cardSent ? "名刺を送りました" : "名刺を送る（メールで送付）"}
+                      {cardSent ? "送りました" : propertyId ? "名刺付き物件情報リンクを送る" : "名刺を送る（メールで送付）"}
                     </button>
                   </div>
                 )}
