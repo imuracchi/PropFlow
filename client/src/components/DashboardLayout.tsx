@@ -261,7 +261,7 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className={`flex-1 p-6 ${isMobile && !hideBottomNav ? "pb-24" : ""}`}>{children}</main>
+        <main className={`flex-1 px-6 ${hideBottomNav ? "py-2" : "py-6"} ${isMobile && !hideBottomNav ? "pb-24" : ""}`}>{children}</main>
       </SidebarInset>
 
       <AddToHomeScreenBanner />

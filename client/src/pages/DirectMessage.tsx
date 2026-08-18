@@ -95,14 +95,13 @@ export default function DirectMessage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-6.5rem)] md:h-[calc(100dvh-3rem)] max-w-4xl">
+    <div className="flex flex-col h-[calc(100dvh-4.5rem)] md:h-[calc(100dvh-1rem)] max-w-4xl">
       {/* ヘッダー */}
       <div className="flex items-center justify-between pb-2 border-b border-border">
         <div className="flex items-center gap-3">
           <button className="text-muted-foreground hover:text-primary transition-colors" onClick={() => setLocation("/dm-list")}>
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">DM</span>
           <h2 className="font-semibold text-foreground text-sm flex items-center gap-1.5 min-w-0">
             <span className="truncate">{partnerName ?? `ユーザー #${partnerId}`}</span>
             {partnerVerified === 1 && (
@@ -119,13 +118,13 @@ export default function DirectMessage() {
 
       {/* 物件情報バナー */}
       {propertyDeleted ? (
-        <div className="flex items-center gap-1.5 px-1 py-1.5">
+        <div className="flex items-center gap-1.5 px-1 py-2.5">
           <Home className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           <p className="text-xs text-muted-foreground">この物件は削除されました</p>
         </div>
       ) : property ? (
         <div
-          className="flex items-center gap-1.5 px-1 py-1.5 cursor-pointer hover:text-primary transition-colors"
+          className="flex items-center gap-1.5 px-1 py-2.5 cursor-pointer hover:text-primary transition-colors"
           onClick={() => setLocation(`/property/${property.id}`)}
         >
           <Home className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -177,7 +176,7 @@ export default function DirectMessage() {
       </div>
 
       {/* 入力エリア */}
-      <div className="pt-3 border-t border-border">
+      <div className="pt-2 border-t border-border">
         <div className="flex flex-wrap items-center gap-2 mb-2">
           {!contactStatus?.mineShared ? (
             <button
@@ -228,9 +227,9 @@ export default function DirectMessage() {
               }
             }}
             placeholder={isMobile ? "メッセージを入力..." : "メッセージを入力...（Shift+Enterで改行）"}
-            rows={2}
-            className="flex-1 resize-none bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-32 overflow-y-auto"
-            style={{ minHeight: "56px", height: "auto" }}
+            rows={1}
+            className="flex-1 resize-none bg-muted/50 border-none rounded-3xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-32 overflow-y-auto"
+            style={{ minHeight: "40px", height: "auto" }}
             ref={(el) => {
               if (el) {
                 el.style.height = "auto";
