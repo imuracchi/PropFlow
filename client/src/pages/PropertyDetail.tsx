@@ -1004,6 +1004,8 @@ export default function PropertyDetail() {
   const currentFaqs = faqs ?? (property?.faqs as FaqItem[] | null) ?? [];
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDealModal, setShowDealModal] = useState(false);
+  const [dealPriceInput, setDealPriceInput] = useState("");
   const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [deleteMessage, setDeleteMessage] = useState("");
   const deleteOwnMutation = trpc.property.deleteOwn.useMutation();
@@ -1991,6 +1993,39 @@ export default function PropertyDetail() {
             </div>
           </div>
 
+          {/* 成約にする（オーナーのみ） */}
+          {user && property && user.id === property.userId && !isEditing && property.status !== "sold" && (
+            <div className="border border-green-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 bg-green-50 border-b border-green-200">
+                <p className="text-sm font-semibold text-green-700 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />この物件が成約しましたか？
+                </p>
+              </div>
+              <div className="px-4 py-4">
+                <p className="text-xs text-muted-foreground mb-3">成約すると一覧で「売却済」と表示されます。</p>
+                <Button
+                  size="sm"
+                  className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => { setDealPriceInput(""); setShowDealModal(true); }}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />成約にする
+                </Button>
+              </div>
+            </div>
+          )}
+          {user && property && user.id === property.userId && !isEditing && property.status === "sold" && (
+            <div className="border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 bg-muted/50">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />成約済みです
+                  {(property as any).dealPrice ? (
+                    <span className="text-xs font-normal text-muted-foreground">（成約金額: {(property as any).dealPrice.toLocaleString()}円）</span>
+                  ) : null}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* 公開設定（オーナーのみ・下部） */}
           {/* 物件削除（オーナーのみ・自分が登録した物件のみ） */}
           {user && property && user.id === property.userId && !isEditing && (
@@ -2233,6 +2268,50 @@ export default function PropertyDetail() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 成約確認モーダル */}
+      {showDealModal && property && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDealModal(false)}>
+          <div className="bg-card border border-border rounded-xl shadow-lg max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <h3 className="font-semibold text-foreground">成約にする</h3>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-sm text-foreground">「{property.name}」を成約済みにします。</p>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">成約金額（円・わからなければ空欄でOK）</label>
+                <Input
+                  type="number"
+                  value={dealPriceInput}
+                  onChange={e => setDealPriceInput(e.target.value)}
+                  placeholder="例：150000000"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-border flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setShowDealModal(false)}>キャンセル</Button>
+              <Button
+                className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white"
+                disabled={updateMutation.isPending}
+                onClick={async () => {
+                  await updateMutation.mutateAsync({
+                    id: property.id,
+                    status: "sold",
+                    dealPrice: dealPriceInput.trim() ? Number(dealPriceInput) : null,
+                  });
+                  utils.property.getById.invalidate({ id: propertyId });
+                  utils.property.list.invalidate();
+                  setShowDealModal(false);
+                }}
+              >
+                {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                成約にする
+              </Button>
+            </div>
           </div>
         </div>
       )}

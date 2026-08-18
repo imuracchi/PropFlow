@@ -427,6 +427,7 @@ export async function getPropertyById(id: number) {
       type: properties.type,
       status: properties.status,
       viewCount: properties.viewCount,
+      dealPrice: properties.dealPrice,
       inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as("inquiryCount"),
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,

@@ -96,11 +96,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const isPropertyRead = (id: number) => readSet.has(id);
   const toggleMutation = trpc.favorite.toggle.useMutation();
   const utils = trpc.useUtils();
-  const updateStatusMutation = trpc.property.update.useMutation({
-    onSuccess: () => { utils.mypage.myProperties.invalidate(); utils.property.list.invalidate(); },
-  });
-  const [dealPriceModal, setDealPriceModal] = useState<{ id: number; name: string } | null>(null);
-  const [dealPriceInput, setDealPriceInput] = useState("");
 
   const toggleFavorite = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -691,27 +686,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                             {property.type}
                           </span>
                           {isNew && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">新着</span>}
-                          {mode === "mine" ? (
-                            <select
-                              className={`text-[10px] font-medium pl-1.5 pr-4 py-0.5 rounded border cursor-pointer ${STATUS_MAP[property.status]?.cls ?? ""}`}
-                              value={property.status}
-                              onClick={e => e.stopPropagation()}
-                              onChange={e => {
-                                e.stopPropagation();
-                                const newStatus = e.target.value as any;
-                                if (newStatus === "sold") {
-                                  setDealPriceInput(property.price ? String(property.price) : "");
-                                  setDealPriceModal({ id: property.id, name: property.name });
-                                } else {
-                                  updateStatusMutation.mutate({ id: property.id, status: newStatus });
-                                }
-                              }}
-                            >
-                              {Object.entries(STATUS_MAP).map(([value, info]) => (
-                                <option key={value} value={value}>{info.label}</option>
-                              ))}
-                            </select>
-                          ) : property.status !== "available" && (
+                          {property.status !== "available" && (
                             <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${STATUS_MAP[property.status]?.cls ?? ""}`}>
                               {STATUS_MAP[property.status]?.label}
                             </span>
@@ -833,51 +808,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                 })}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* 成約金額入力モーダル */}
-      {dealPriceModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDealPriceModal(null)}>
-          <div className="bg-card border border-border rounded-xl shadow-lg max-w-sm w-full" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-              <h3 className="text-sm font-semibold text-foreground">売却済にする</h3>
-              <button className="text-muted-foreground hover:text-foreground p-1" onClick={() => setDealPriceModal(null)}>
-                <XIcon className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-5 space-y-3">
-              <p className="text-sm text-foreground">「{dealPriceModal.name}」</p>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">成約金額（円・任意・社内記録用）</label>
-                <Input
-                  type="number"
-                  className="bg-background border-border"
-                  placeholder="未定なら空欄でOK"
-                  value={dealPriceInput}
-                  onChange={e => setDealPriceInput(e.target.value)}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">この金額は今のところ社内記録のみで、公開はされません。</p>
-            </div>
-            <div className="flex gap-2 px-5 py-3 border-t border-border">
-              <Button variant="outline" className="flex-1" onClick={() => setDealPriceModal(null)}>キャンセル</Button>
-              <Button
-                className="flex-1 bg-primary text-primary-foreground"
-                disabled={updateStatusMutation.isPending}
-                onClick={() => {
-                  updateStatusMutation.mutate({
-                    id: dealPriceModal.id,
-                    status: "sold",
-                    dealPrice: dealPriceInput.trim() ? Number(dealPriceInput) : null,
-                  });
-                  setDealPriceModal(null);
-                }}
-              >
-                {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "決定"}
-              </Button>
-            </div>
           </div>
         </div>
       )}
