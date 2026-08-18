@@ -1266,7 +1266,7 @@ export default function PropertyDetail() {
         </div>
         {/* 登録者・日付・認証 */}
         <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
-          {property.showCompany !== 0 && property.userCompany ? `${property.userCompany} · ` : ""}{createdDate}
+          {createdDate}
           {(property as any).userVerified === 1 && (
             <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
               <CheckCircle2 className="w-3 h-3" />認証済み
@@ -1605,9 +1605,6 @@ export default function PropertyDetail() {
               <div className="px-5 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
                 <p className="text-sm font-semibold text-foreground">紹介コメント</p>
                 <div className="flex items-center gap-2">
-                  {property.showCompany !== 0 && property.userCompany && !isEditingComment && (
-                    <p className="text-xs text-muted-foreground">{property.userCompany}</p>
-                  )}
                   {isOwner && (
                     isEditingComment ? (
                       <div className="flex items-center gap-1.5">
@@ -1948,13 +1945,7 @@ export default function PropertyDetail() {
                 <MessageCircle className="w-4 h-4 text-primary shrink-0" />
                 <p className="text-sm font-semibold text-foreground">登録者に直接質問できます</p>
               </div>
-              {(property.showCompany !== 0 && property.userCompany) ? (
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">{property.userCompany}</span> との1対1のやり取りが始まります
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">物件の登録者との1対1のやり取りが始まります</p>
-              )}
+              <p className="text-xs text-muted-foreground">物件の登録者との1対1のやり取りが始まります</p>
               <Button
                 className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
                 size="lg"
