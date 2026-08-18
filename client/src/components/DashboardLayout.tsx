@@ -126,6 +126,7 @@ function DashboardLayoutContent({
     matchPath(item.path.split("?")[0])
   );
   const isMobile = useIsMobile();
+  const hideBottomNav = location.startsWith("/dm/");
 
   useEffect(() => {
     if (isCollapsed) setIsResizing(false);
@@ -260,13 +261,13 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className={`flex-1 p-6 ${isMobile ? "pb-24" : ""}`}>{children}</main>
+        <main className={`flex-1 p-6 ${isMobile && !hideBottomNav ? "pb-24" : ""}`}>{children}</main>
       </SidebarInset>
 
       <AddToHomeScreenBanner />
 
-      {/* ボトムナビ（モバイルのみ） */}
-      {isMobile && (
+      {/* ボトムナビ（モバイルのみ、DM会話画面では非表示） */}
+      {isMobile && !hideBottomNav && (
         <nav
           className="fixed bottom-0 left-0 right-0 z-50 bg-card shadow-[0_-2px_12px_rgba(0,0,0,0.08)]"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}

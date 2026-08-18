@@ -3,7 +3,7 @@ import { fmtDateTime } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, Send, Loader2, User, Home, Bookmark, CheckCircle2, IdCard, Phone, Printer, Globe, Mail, X, Copy, Check } from "lucide-react";
+import { ChevronLeft, Send, Loader2, User, Home, Bookmark, CheckCircle2, IdCard, Phone, Printer, Globe, Mail, X, Copy, Check, Building2 } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -95,7 +95,7 @@ export default function DirectMessage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] max-w-4xl">
+    <div className="flex flex-col h-[calc(100vh-6.5rem)] md:h-[calc(100vh-3rem)] max-w-4xl">
       {/* ヘッダー */}
       <div className="flex items-center justify-between pb-3 border-b border-border">
         <div className="flex items-center gap-3">
@@ -248,6 +248,8 @@ export default function DirectMessage() {
       {contactModal && (() => {
         const contact = contactModal === "mine" ? contactStatus?.myContact : contactStatus?.partnerContact;
         const title = contactModal === "mine" ? "自分の連絡先" : `${partnerName ?? "相手"}さんの連絡先`;
+        const company = contactModal === "mine" ? (user?.company ?? null) : partnerCompany;
+        const verified = contactModal === "mine" ? user?.verified === 1 : partnerVerified === 1;
         const hasAny = contact && (contact.phone || contact.fax || contact.url || contact.email);
         return (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setContactModal(null)}>
@@ -261,8 +263,11 @@ export default function DirectMessage() {
                 </button>
               </div>
               <div className="p-5 space-y-3">
-                {contactModal === "partner" && partnerVerified === 1 && (
-                  <p className="text-xs text-muted-foreground">名刺登録の認証ユーザーです</p>
+                {company && (
+                  <p className="flex items-center gap-2 text-sm font-medium text-foreground"><Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" /><span className="truncate">{company}</span></p>
+                )}
+                {verified && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />名刺登録済みの認証ユーザーです</p>
                 )}
                 {!hasAny && <p className="text-sm text-muted-foreground italic">登録されている情報がありません</p>}
                 {contact?.phone && (
