@@ -691,43 +691,19 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
 }
 
 function IntroducerCard({ property }: { property: any }) {
-  const [open, setOpen] = useState(false);
-  const items = [
-    { label: "名前", value: property.userName },
-    { label: "会社名", value: property.showCompany !== 0 ? property.userCompany : null, hidden: property.showCompany === 0 },
-    { label: "メール", value: property.userEmail },
-    { label: "電話番号", value: property.showPhone !== 0 ? property.userPhone : null, hidden: property.showPhone === 0 },
-    { label: "FAX", value: property.showFax !== 0 ? property.userFax : null, hidden: property.showFax === 0 },
-    { label: "URL", value: property.showUrl !== 0 ? property.userUrl : null, hidden: property.showUrl === 0 },
-  ];
-
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <button className="w-full px-5 py-3 flex items-center justify-between text-left bg-muted/40" onClick={() => setOpen(!open)}>
+      <div className="px-5 py-3 bg-muted/40 flex items-center gap-2">
         <span className="text-sm font-semibold text-foreground flex items-center gap-2">
           <UserCircle className="w-4 h-4 text-primary" />
           登録者情報
         </span>
-        {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-      </button>
-      {open && (
-        <div className="border-t border-border divide-y divide-border">
-          {items.map(item => (
-            <div key={item.label} className="flex">
-              <span className="w-24 md:w-32 shrink-0 text-sm text-muted-foreground px-3 md:px-5 py-3 bg-muted/30">{item.label}</span>
-              {(item as any).hidden ? (
-                <span className="text-sm text-muted-foreground/40 italic px-3 md:px-5 py-3">非公開</span>
-              ) : item.label === "URL" && item.value ? (
-                <a href={item.value.startsWith("http") ? item.value : `https://${item.value}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline px-3 md:px-5 py-3 break-all">{item.value}</a>
-              ) : item.label === "メール" && item.value ? (
-                <a href={`mailto:${item.value}`} className="text-sm text-primary hover:underline px-3 md:px-5 py-3 break-all">{item.value}</a>
-              ) : (
-                <span className={`text-sm px-3 md:px-5 py-3 break-all ${item.value ? "text-foreground" : "text-muted-foreground/40"}`}>{item.value || "未設定"}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
+      <div className="px-5 py-3 border-t border-border">
+        <p className="text-sm text-muted-foreground">
+          登録者の情報は、「質問する」からDMで繋がれば表示されます。
+        </p>
+      </div>
     </div>
   );
 }
@@ -1255,6 +1231,21 @@ export default function PropertyDetail() {
           <span className="text-xs font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary inline-flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5" />{property.type}
           </span>
+          {property.status !== "available" && (
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${property.status === "negotiating" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
+              {STATUS_MAP[property.status]}
+            </span>
+          )}
+          {(property as any).viewCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Eye className="w-3.5 h-3.5" />{(property as any).viewCount}
+            </span>
+          )}
+          {(property as any).inquiryCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600">
+              <MessageCircle className="w-3.5 h-3.5" />{(property as any).inquiryCount}人問い合わせ
+            </span>
+          )}
           {isOwner && !isEditing && (
             (property as any).published === 0 ? (
               <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300">

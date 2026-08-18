@@ -438,12 +438,12 @@ function VisibilitySettings() {
   const mutation = trpc.auth.updateVisibilitySettings.useMutation();
   const utils = trpc.useUtils();
 
-  const [vals, setVals] = useState({ showCompany: 1, showPhone: 1, showFax: 1, showUrl: 1 });
+  const [vals, setVals] = useState({ showCompany: 1 });
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (settings && !loaded) {
-      setVals({ showCompany: settings.showCompany, showPhone: settings.showPhone, showFax: settings.showFax, showUrl: settings.showUrl });
+      setVals({ showCompany: settings.showCompany });
       setLoaded(true);
     }
   }, [settings]);
@@ -459,9 +459,6 @@ function VisibilitySettings() {
 
   const items = [
     { key: "showCompany", label: "会社名" },
-    { key: "showPhone", label: "電話番号" },
-    { key: "showFax", label: "FAX番号" },
-    { key: "showUrl", label: "URL" },
   ];
 
   return (

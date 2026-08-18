@@ -8,6 +8,59 @@ import * as db from "./db";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
+async function sendDmNotifications(opts: {
+  senderId: number;
+  senderName: string;
+  senderCompany: string;
+  receiverId: number;
+  propertyId: number | null;
+  content: string;
+  title: string;
+  emailSubject: string;
+  emailHeading: string;
+}) {
+  const propInfo = opts.propertyId ? await db.getPropertyById(opts.propertyId) : null;
+  const dmPath = opts.propertyId ? `/dm/${opts.senderId}/${opts.propertyId}` : `/dm/${opts.senderId}`;
+  const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+  const dmUrl = `${siteUrl}${dmPath}`;
+
+  const { sendPushToUsers } = await import("./_core/webpush");
+  sendPushToUsers([opts.receiverId], opts.title, opts.content.slice(0, 100), dmPath).catch(() => {});
+
+  const receiverEmail = await db.getUserEmailIfNotify(opts.receiverId, "dm");
+  if (receiverEmail) {
+    const { sendMail } = await import("./_core/mail");
+    const mailHtml = `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+        <h2 style="color:#1e3a5f;">${opts.emailHeading}</h2>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">
+          <p style="font-size:14px;font-weight:700;color:#1e3a5f;margin:0 0 4px;">${opts.senderName}${opts.senderCompany ? `（${opts.senderCompany}）` : ""}</p>
+          ${propInfo ? `<p style="margin:4px 0;font-size:13px;color:#64748b;">📋 ${propInfo.name}</p>` : ""}
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:6px;padding:12px;margin-top:8px;">
+            <p style="margin:0;color:#1a1a1a;white-space:pre-wrap;">${opts.content}</p>
+          </div>
+        </div>
+        <a href="${dmUrl}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">DMを確認・返信する</a>
+        <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
+      </div>`;
+    sendMail(receiverEmail, opts.emailSubject, mailHtml).catch(() => {});
+  }
+
+  const receiverLineUserId = await db.getLineUserIdByUserId(opts.receiverId);
+  if (receiverLineUserId) {
+    const { sendLinePush } = await import("./_core/line");
+    const lineText = [
+      opts.title,
+      propInfo ? `📋 ${propInfo.name}` : null,
+      `「${opts.content.slice(0, 50)}${opts.content.length > 50 ? "…" : ""}」`,
+      dmUrl,
+    ].filter(Boolean).join("\n");
+    sendLinePush(receiverLineUserId, lineText).catch(() => {});
+  }
+
+  return propInfo;
+}
+
 export const appRouter = router({
   auth: router({
     me: publicProcedure.query(opts => {
@@ -336,7 +389,7 @@ JSONのみ返してください。` },
     }),
 
     updateVisibilitySettings: protectedProcedure
-      .input(z.object({ showCompany: z.number(), showPhone: z.number(), showFax: z.number(), showUrl: z.number() }))
+      .input(z.object({ showCompany: z.number() }))
       .mutation(async ({ input, ctx }) => {
         await db.updateVisibilitySettings(ctx.user.id, input);
         return { success: true };
@@ -976,59 +1029,23 @@ ${propList}`
         db.logActivity(ctx.user.id, "dm_send", `DM送信 (相手ID:${input.receiverId})`).catch(() => {});
 
         const senderName = ctx.user.name ?? "ユーザー";
+        const propInfo = await sendDmNotifications({
+          senderId: ctx.user.id,
+          senderName,
+          senderCompany: ctx.user.company ?? "",
+          receiverId: input.receiverId,
+          propertyId: input.propertyId ?? null,
+          content: input.content,
+          title: `💬 ${senderName}さんからDM`,
+          emailSubject: `【PropFlow】${senderName}さんからDMが届きました`,
+          emailHeading: "💬 DMが届きました",
+        });
 
-        // プッシュ通知
-        const { sendPushToUsers } = await import("./_core/webpush");
-        const dmPath = input.propertyId ? `/dm/${ctx.user.id}/${input.propertyId}` : `/dm/${ctx.user.id}`;
-        sendPushToUsers(
-          [input.receiverId],
-          `💬 ${senderName}さんからDM`,
-          input.content.slice(0, 100),
-          dmPath
-        ).catch(() => {});
-        const senderCompany = ctx.user.company ?? "";
-        const receiverEmail = await db.getUserEmailIfNotify(input.receiverId, "dm");
-        if (receiverEmail) {
-          const { sendMail } = await import("./_core/mail");
-          const siteUrl = process.env.SITE_URL || "https://propflow.jp";
-          const dmUrl = input.propertyId
-            ? `${siteUrl}/dm/${ctx.user.id}/${input.propertyId}`
-            : `${siteUrl}/dm/${ctx.user.id}`;
-          const propInfo = input.propertyId
-            ? await db.getPropertyById(input.propertyId)
-            : null;
-          const mailHtml = `
-            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-              <h2 style="color:#1e3a5f;">💬 DMが届きました</h2>
-              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">
-                <p style="font-size:14px;font-weight:700;color:#1e3a5f;margin:0 0 4px;">${senderName}${senderCompany ? `（${senderCompany}）` : ""}</p>
-                ${propInfo ? `<p style="margin:4px 0;font-size:13px;color:#64748b;">📋 ${propInfo.name}</p>` : ""}
-                <div style="background:white;border:1px solid #e2e8f0;border-radius:6px;padding:12px;margin-top:8px;">
-                  <p style="margin:0;color:#1a1a1a;white-space:pre-wrap;">${input.content}</p>
-                </div>
-              </div>
-              <a href="${dmUrl}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">DMを確認・返信する</a>
-              <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
-            </div>`;
-          sendMail(receiverEmail, `【PropFlow】${senderName}さんからDMが届きました`, mailHtml).catch(() => {});
+        // 物件オーナー以外からの問い合わせが入ったら自動で商談中に
+        if (propInfo && ctx.user.id !== propInfo.userId && propInfo.status === "available") {
+          db.updateProperty(propInfo.id, { status: "negotiating" }).catch(() => {});
         }
-        // LINE プッシュ通知
-        const receiverLineUserId = await db.getLineUserIdByUserId(input.receiverId);
-        if (receiverLineUserId) {
-          const { sendLinePush } = await import("./_core/line");
-          const siteUrl = process.env.SITE_URL || "https://propflow.jp";
-          const dmUrl = input.propertyId
-            ? `${siteUrl}/dm/${ctx.user.id}/${input.propertyId}`
-            : `${siteUrl}/dm/${ctx.user.id}`;
-          const propInfo = input.propertyId ? await db.getPropertyById(input.propertyId) : null;
-          const lineText = [
-            `💬 ${senderName}さんからDMが届きました`,
-            propInfo ? `📋 ${propInfo.name}` : null,
-            `「${input.content.slice(0, 50)}${input.content.length > 50 ? "…" : ""}」`,
-            dmUrl,
-          ].filter(Boolean).join("\n");
-          sendLinePush(receiverLineUserId, lineText).catch(() => {});
-        }
+
         return { success: true };
       }),
 
@@ -1038,6 +1055,40 @@ ${propList}`
         const user = await db.getUserById(input.userId);
         if (!user) return null;
         return { name: user.name, company: user.company, verified: user.verified };
+      }),
+
+    contactStatus: protectedProcedure
+      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
+      .query(async ({ input, ctx }) => {
+        const { mineShared, partnerShared } = await db.getContactShareStatus(ctx.user.id, input.partnerId, input.propertyId);
+        const partner = partnerShared ? await db.getUserById(input.partnerId) : null;
+        return {
+          mineShared,
+          partnerShared,
+          myContact: { phone: ctx.user.phone, fax: ctx.user.fax, url: ctx.user.url, email: ctx.user.email },
+          partnerContact: partner ? { phone: partner.phone, fax: partner.fax, url: partner.url, email: partner.email } : null,
+        };
+      }),
+
+    shareContact: protectedProcedure
+      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.shareContact(ctx.user.id, input.partnerId, input.propertyId);
+        const content = "📇 連絡先を共有しました";
+        await db.sendDirectMessage(ctx.user.id, input.partnerId, content, input.propertyId);
+        const senderName = ctx.user.name ?? "ユーザー";
+        await sendDmNotifications({
+          senderId: ctx.user.id,
+          senderName,
+          senderCompany: ctx.user.company ?? "",
+          receiverId: input.partnerId,
+          propertyId: input.propertyId,
+          content,
+          title: `📇 ${senderName}さんが連絡先を共有しました`,
+          emailSubject: `【PropFlow】${senderName}さんが連絡先を共有しました`,
+          emailHeading: "📇 連絡先が共有されました",
+        });
+        return { success: true };
       }),
 
     markRead: protectedProcedure

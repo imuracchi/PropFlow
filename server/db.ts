@@ -36,6 +36,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `property_files` ADD COLUMN `visible` int NOT NULL DEFAULT 1",
     "ALTER TABLE `properties` ADD COLUMN `transactionFlow` text NULL",
     "ALTER TABLE `dm_read_status` ADD COLUMN `flagged` int NOT NULL DEFAULT 0",
+    "ALTER TABLE `dm_read_status` ADD COLUMN `contactShared` int NOT NULL DEFAULT 0",
     "ALTER TABLE `users` ADD COLUMN `verified` int NOT NULL DEFAULT 0",
     "ALTER TABLE `users` ADD COLUMN `lineUserId` varchar(100) NULL",
     "ALTER TABLE `users` MODIFY COLUMN `role` ENUM('user','admin','management') NOT NULL DEFAULT 'user'",
@@ -285,7 +286,7 @@ export async function getVisibilitySettings(userId: number) {
   return rows[0] ?? { showCompany: 1, showPhone: 1, showFax: 1, showUrl: 1 };
 }
 
-export async function updateVisibilitySettings(userId: number, settings: { showCompany: number; showPhone: number; showFax: number; showUrl: number }) {
+export async function updateVisibilitySettings(userId: number, settings: { showCompany: number }) {
   const db = await getDb();
   if (!db) return;
   await db.update(users).set(settings).where(eq(users.id, userId));
@@ -308,6 +309,13 @@ export async function listProperties(viewerUserId?: number) {
     .from(favorites)
     .groupBy(favorites.propertyId)
     .as("fav_count");
+  const inquiryCountSub = db
+    .select({ propertyId: directMessages.propertyId, cnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("cnt") })
+    .from(directMessages)
+    .innerJoin(properties, eq(directMessages.propertyId, properties.id))
+    .where(sql`${directMessages.senderId} != ${properties.userId}`)
+    .groupBy(directMessages.propertyId)
+    .as("inquiry_count");
   const baseWhere = eq(properties.deleted, 0);
   const visibilityFilter = viewerUserId
     ? sql`(
@@ -343,15 +351,18 @@ export async function listProperties(viewerUserId?: number) {
       otherRestrictions: properties.otherRestrictions,
       negotiation: properties.negotiation,
       remarks: properties.remarks,
+      viewCount: properties.viewCount,
       createdAt: properties.createdAt,
       userName: users.name,
       userCompany: users.company,
       userVerified: users.verified,
       favoriteCount: sql<number>`COALESCE(${favCountSub.cnt}, 0)`.as("favoriteCount"),
+      inquiryCount: sql<number>`COALESCE(${inquiryCountSub.cnt}, 0)`.as("inquiryCount"),
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
     .leftJoin(favCountSub, eq(properties.id, favCountSub.propertyId))
+    .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
     .where(visibilityFilter ? and(baseWhere, visibilityFilter) : baseWhere)
     .orderBy(desc(properties.createdAt));
 }
@@ -397,6 +408,13 @@ export async function getPropertyExcludedUserIds(propertyId: number): Promise<nu
 export async function getPropertyById(id: number) {
   const db = await getDb();
   if (!db) return null;
+  const inquiryCountSub = db
+    .select({ propertyId: directMessages.propertyId, cnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("cnt") })
+    .from(directMessages)
+    .innerJoin(properties, eq(directMessages.propertyId, properties.id))
+    .where(sql`${directMessages.senderId} != ${properties.userId}`)
+    .groupBy(directMessages.propertyId)
+    .as("inquiry_count");
   const result = await db
     .select({
       id: properties.id,
@@ -406,6 +424,8 @@ export async function getPropertyById(id: number) {
       lotNumber: properties.lotNumber,
       type: properties.type,
       status: properties.status,
+      viewCount: properties.viewCount,
+      inquiryCount: sql<number>`COALESCE(${inquiryCountSub.cnt}, 0)`.as("inquiryCount"),
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,
       estimatedYield: properties.estimatedYield,
@@ -448,6 +468,7 @@ export async function getPropertyById(id: number) {
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
+    .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
     .where(eq(properties.id, id))
     .limit(1);
   return result[0] ?? null;
@@ -574,6 +595,13 @@ export async function listAllPropertiesAdmin() {
 export async function getMyProperties(userId: number) {
   const db = await getDb();
   if (!db) return [];
+  const inquiryCountSub = db
+    .select({ propertyId: directMessages.propertyId, cnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("cnt") })
+    .from(directMessages)
+    .innerJoin(properties, eq(directMessages.propertyId, properties.id))
+    .where(sql`${directMessages.senderId} != ${properties.userId}`)
+    .groupBy(directMessages.propertyId)
+    .as("inquiry_count");
   return db
     .select({
       id: properties.id,
@@ -587,9 +615,12 @@ export async function getMyProperties(userId: number) {
       landArea: properties.landArea,
       buildingArea: properties.buildingArea,
       published: properties.published,
+      viewCount: properties.viewCount,
+      inquiryCount: sql<number>`COALESCE(${inquiryCountSub.cnt}, 0)`.as("inquiryCount"),
       createdAt: properties.createdAt,
     })
     .from(properties)
+    .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
     .where(and(eq(properties.userId, userId), eq(properties.deleted, 0)))
     .orderBy(desc(properties.createdAt));
 }
@@ -1241,6 +1272,39 @@ export async function setDmFlag(userId: number, partnerId: number, propertyId: n
   } else {
     await db.insert(dmReadStatus).values({ userId, partnerId, propertyId, lastReadAt: new Date(), flagged: flagged ? 1 : 0 });
   }
+}
+
+export async function shareContact(userId: number, partnerId: number, propertyId: number | null) {
+  const db = await getDb();
+  if (!db) return;
+  const propCond = propertyId !== null
+    ? and(eq(dmReadStatus.userId, userId), eq(dmReadStatus.partnerId, partnerId), eq(dmReadStatus.propertyId, propertyId))
+    : and(eq(dmReadStatus.userId, userId), eq(dmReadStatus.partnerId, partnerId), sql`${dmReadStatus.propertyId} IS NULL`);
+  const existing = await db.select().from(dmReadStatus).where(propCond!).limit(1);
+  if (existing.length > 0) {
+    await db.update(dmReadStatus).set({ contactShared: 1 }).where(propCond!);
+  } else {
+    await db.insert(dmReadStatus).values({ userId, partnerId, propertyId, lastReadAt: new Date(), contactShared: 1 });
+  }
+}
+
+export async function getContactShareStatus(userId: number, partnerId: number, propertyId: number | null) {
+  const db = await getDb();
+  if (!db) return { mineShared: false, partnerShared: false };
+  const mineCond = propertyId !== null
+    ? and(eq(dmReadStatus.userId, userId), eq(dmReadStatus.partnerId, partnerId), eq(dmReadStatus.propertyId, propertyId))
+    : and(eq(dmReadStatus.userId, userId), eq(dmReadStatus.partnerId, partnerId), sql`${dmReadStatus.propertyId} IS NULL`);
+  const partnerCond = propertyId !== null
+    ? and(eq(dmReadStatus.userId, partnerId), eq(dmReadStatus.partnerId, userId), eq(dmReadStatus.propertyId, propertyId))
+    : and(eq(dmReadStatus.userId, partnerId), eq(dmReadStatus.partnerId, userId), sql`${dmReadStatus.propertyId} IS NULL`);
+  const [mineRows, partnerRows] = await Promise.all([
+    db.select({ contactShared: dmReadStatus.contactShared }).from(dmReadStatus).where(mineCond!).limit(1),
+    db.select({ contactShared: dmReadStatus.contactShared }).from(dmReadStatus).where(partnerCond!).limit(1),
+  ]);
+  return {
+    mineShared: mineRows[0]?.contactShared === 1,
+    partnerShared: partnerRows[0]?.contactShared === 1,
+  };
 }
 
 // ---- Push Subscriptions ----

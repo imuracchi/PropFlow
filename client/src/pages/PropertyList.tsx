@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search, Heart, Building2,
-  Plus, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff, SlidersHorizontal, X as XIcon, Sparkles
+  Plus, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff, SlidersHorizontal, X as XIcon, Sparkles, MessageCircle
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -65,6 +65,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const isPropertyRead = (id: number) => readSet.has(id);
   const toggleMutation = trpc.favorite.toggle.useMutation();
   const utils = trpc.useUtils();
+  const updateStatusMutation = trpc.property.update.useMutation({
+    onSuccess: () => { utils.mypage.myProperties.invalidate(); utils.property.list.invalidate(); },
+  });
 
   const toggleFavorite = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -567,9 +570,32 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                             {property.type}
                           </span>
                           {isNew && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">新着</span>}
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded md:hidden ${STATUS_MAP[property.status]?.cls ?? ""}`}>
-                            {STATUS_MAP[property.status]?.label}
-                          </span>
+                          {mode === "mine" ? (
+                            <select
+                              className={`text-[10px] font-medium pl-1.5 pr-4 py-0.5 rounded border cursor-pointer ${STATUS_MAP[property.status]?.cls ?? ""}`}
+                              value={property.status}
+                              onClick={e => e.stopPropagation()}
+                              onChange={e => { e.stopPropagation(); updateStatusMutation.mutate({ id: property.id, status: e.target.value as any }); }}
+                            >
+                              {Object.entries(STATUS_MAP).map(([value, info]) => (
+                                <option key={value} value={value}>{info.label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${STATUS_MAP[property.status]?.cls ?? ""}`}>
+                              {STATUS_MAP[property.status]?.label}
+                            </span>
+                          )}
+                          {(property.viewCount ?? 0) > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                              <Eye className="w-2.5 h-2.5" />{property.viewCount}
+                            </span>
+                          )}
+                          {((property as any).inquiryCount ?? 0) > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-blue-600">
+                              <MessageCircle className="w-2.5 h-2.5" />{(property as any).inquiryCount}人問い合わせ
+                            </span>
+                          )}
                           {mode === "mine" && (
                             (property as any).published === 0 ? (
                               <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-300">
