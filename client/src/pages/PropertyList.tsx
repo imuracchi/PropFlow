@@ -410,14 +410,14 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                 </button>
                 <button
                   className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-l border-border ${searchMode === "keyword" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
-                  onClick={() => setSearchMode("keyword")}
+                  onClick={() => { setSearchMode("keyword"); setFilterRegion(null); setFilterPrefecture(null); }}
                 >
                   <Search className="w-3.5 h-3.5" />
                   キーワード検索
                 </button>
                 <button
                   className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-l border-border ${searchMode === "ai" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
-                  onClick={() => setSearchMode("ai")}
+                  onClick={() => { setSearchMode("ai"); setFilterRegion(null); setFilterPrefecture(null); }}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   AI検索

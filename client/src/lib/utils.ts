@@ -25,3 +25,7 @@ export function fmtDateTime(d: any): string {
 export function fmtDateShort(d: any): string {
   return toJSTDate(d).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo", month: "2-digit", day: "2-digit" });
 }
+
+export function fmtTime(d: any): string {
+  return toJSTDate(d).toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit" });
+}
