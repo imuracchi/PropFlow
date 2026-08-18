@@ -320,7 +320,7 @@ export default function DirectMessage() {
                       onClick={async () => {
                         if (!confirm("登録されている名刺情報を送ります。よろしいですか？")) return;
                         const res = await sendBusinessCardMutation.mutateAsync({ partnerId, propertyId });
-                        if (res.success) setCardSent(true);
+                        if (res.success) { setCardSent(true); refetch(); utils.dm.threads.invalidate(); setContactModal(null); }
                         else alert(res.error ?? "送信に失敗しました");
                       }}
                     >

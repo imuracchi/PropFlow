@@ -1253,6 +1253,9 @@ ${propList}`
           `,
           { attachments: [{ filename: "名刺.jpg", content: ctx.user.businessCardBase64 }] }
         );
+        if (ok) {
+          await db.sendDirectMessage(ctx.user.id, input.partnerId, "📇 名刺付き情報メールを送りました", input.propertyId);
+        }
         return { success: ok } as const;
       }),
 
