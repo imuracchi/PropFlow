@@ -22,6 +22,7 @@ export default function DirectMessage() {
     { enabled: !!propertyId }
   );
   const propertyDeleted = !!propertyId && propertyFetched && !property;
+  const isClosed = propertyDeleted || property?.status === "sold";
 
   const { data: messages, isLoading, refetch } = trpc.dm.messages.useQuery(
     { partnerId, propertyId },
@@ -85,7 +86,7 @@ export default function DirectMessage() {
   }, [property, messages, initialSent]);
 
   const sendMessage = async () => {
-    if (!input.trim() || !partnerId) return;
+    if (!input.trim() || !partnerId || isClosed) return;
     await sendMutation.mutateAsync({ receiverId: partnerId, content: input.trim(), propertyId });
     setInput("");
   };
@@ -129,6 +130,9 @@ export default function DirectMessage() {
         >
           <Home className="w-3.5 h-3.5 text-primary shrink-0" />
           <p className="text-xs font-medium text-foreground truncate">{property.name}</p>
+          {property.status === "sold" && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 shrink-0">成約済み</span>
+          )}
         </div>
       ) : null}
 
@@ -216,36 +220,42 @@ export default function DirectMessage() {
             {isFlagged ? "要返信中" : "要返信"}
           </button>
         </div>
-        <div className="flex items-end gap-2">
-          <textarea
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => {
-              if (!isMobile && e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder={isMobile ? "メッセージを入力..." : "メッセージを入力...（Shift+Enterで改行）"}
-            rows={1}
-            className="flex-1 resize-none bg-card border border-border rounded-3xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-32 overflow-y-auto"
-            style={{ minHeight: "40px", height: "auto" }}
-            ref={(el) => {
-              if (el) {
-                el.style.height = "auto";
-                el.style.height = Math.min(el.scrollHeight, 128) + "px";
-              }
-            }}
-          />
-          <Button
-            className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 h-10 w-10 shadow-sm"
-            size="icon"
-            onClick={sendMessage}
-            disabled={!input.trim() || sendMutation.isPending}
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
+        {isClosed ? (
+          <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-3xl bg-muted/50 text-xs text-muted-foreground">
+            {propertyDeleted ? "この物件は削除されたため、これ以上メッセージを送信できません" : "この物件は成約済みのため、これ以上メッセージを送信できません"}
+          </div>
+        ) : (
+          <div className="flex items-end gap-2">
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => {
+                if (!isMobile && e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder={isMobile ? "メッセージを入力..." : "メッセージを入力...（Shift+Enterで改行）"}
+              rows={1}
+              className="flex-1 resize-none bg-card border border-border rounded-3xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-32 overflow-y-auto"
+              style={{ minHeight: "40px", height: "auto" }}
+              ref={(el) => {
+                if (el) {
+                  el.style.height = "auto";
+                  el.style.height = Math.min(el.scrollHeight, 128) + "px";
+                }
+              }}
+            />
+            <Button
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 h-10 w-10 shadow-sm"
+              size="icon"
+              onClick={sendMessage}
+              disabled={!input.trim() || sendMutation.isPending}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* 連絡先モーダル */}

@@ -61,6 +61,83 @@ async function sendDmNotifications(opts: {
   return propInfo;
 }
 
+async function sendBroadcastToAll(opts: {
+  subject: string;
+  message?: string;
+  lineMessage?: string;
+  imageUrl?: string;
+  skipLine?: boolean;
+  skipEmail?: boolean;
+}) {
+  const { sendMail } = await import("./_core/mail");
+  const { sendLineBroadcast } = await import("./_core/line");
+  const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+  const cleanSubject = opts.subject.replace(/^【PropFlow】\s*/, "");
+  const emailBody = opts.message ?? "";
+  const lineBody = opts.lineMessage ?? emailBody;
+
+  const emails = await db.getAllActiveUserEmails();
+  let emailSent = 0;
+  if (!opts.skipEmail && emailBody) {
+    const imageBlock = opts.imageUrl
+      ? `<img src="${opts.imageUrl}" alt="" style="width:100%;display:block;border-radius:4px;margin-bottom:16px" />`
+      : "";
+    const emailHtml = `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+        <div style="background:#1e3a5f;padding:20px 24px">
+          <img src="${siteUrl}/logo1.png" alt="PropFlow" style="height:32px;object-fit:contain" />
+        </div>
+        <div style="padding:24px">
+          <h2 style="margin:0 0 16px;font-size:18px;color:#1e3a5f">${cleanSubject}</h2>
+          ${imageBlock}
+          <div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap">${emailBody}</div>
+        </div>
+        <div style="background:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb">
+          <p style="margin:0;font-size:12px;color:#6b7280">PropFlow | <a href="${siteUrl}" style="color:#2563eb">${siteUrl}</a></p>
+          <p style="margin:4px 0 0;font-size:11px;color:#9ca3af">メール通知の設定は<a href="${siteUrl}/mypage" style="color:#9ca3af">マイページ</a>から変更できます</p>
+        </div>
+      </div>`;
+    for (const email of emails) {
+      const ok = await sendMail(email, `【PropFlow】${cleanSubject}`, emailHtml);
+      if (ok) emailSent++;
+    }
+  }
+
+  let lineSent = false;
+  if (!opts.skipLine && lineBody) {
+    const bubbleContents: any = {
+      type: "bubble",
+      ...(opts.imageUrl ? {
+        hero: { type: "image", url: opts.imageUrl, size: "full", aspectRatio: "20:13", aspectMode: "cover" },
+      } : {}),
+      header: {
+        type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
+        contents: [{ type: "text", text: "📢 " + cleanSubject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }],
+      },
+      body: {
+        type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
+        contents: [{ type: "text", text: lineBody, size: "sm", color: "#374151", wrap: true }],
+      },
+      footer: {
+        type: "box", layout: "vertical", paddingAll: "12px",
+        contents: [{ type: "button", action: { type: "uri", label: "PropFlowを開く", uri: siteUrl }, style: "primary", color: "#2563eb", height: "sm" }],
+      },
+    };
+    lineSent = await sendLineBroadcast({ type: "flex", altText: cleanSubject, contents: bubbleContents });
+  }
+
+  await db.saveBroadcastLog({
+    subject: opts.subject,
+    message: emailBody,
+    imageUrl: opts.imageUrl,
+    emailSent,
+    emailTotal: emails.length,
+    lineSent,
+  });
+
+  return { emailSent, emailTotal: emails.length, lineSent };
+}
+
 export const appRouter = router({
   auth: router({
     me: publicProcedure.query(opts => {
@@ -595,6 +672,52 @@ JSONのみ返してください。` },
         }
         await db.deleteProperty(input.id);
         return { success: true };
+      }),
+
+    markSold: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        dealPrice: z.number().nullable(),
+        announcePublic: z.boolean(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.id);
+        if (!prop) throw new TRPCError({ code: "NOT_FOUND" });
+        if (prop.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "この物件の権限がありません" });
+
+        await db.updateProperty(input.id, { status: "sold", dealPrice: input.dealPrice });
+
+        // やり取りしていた相手に成約を通知
+        const partnerIds = await db.getDmPartnersForProperty(input.id, ctx.user.id);
+        const notifyContent = `🎉「${prop.name}」は成約となりました。ご興味いただきありがとうございました。`;
+        for (const partnerId of partnerIds) {
+          await db.sendDirectMessage(ctx.user.id, partnerId, notifyContent, input.id);
+          await sendDmNotifications({
+            senderId: ctx.user.id,
+            senderName: ctx.user.name ?? "ユーザー",
+            senderCompany: ctx.user.company ?? "",
+            receiverId: partnerId,
+            propertyId: input.id,
+            content: notifyContent,
+            title: "🎉 物件が成約しました",
+            emailSubject: `【PropFlow】「${prop.name}」が成約しました`,
+            emailHeading: "🎉 物件が成約しました",
+          });
+        }
+
+        // 全体お知らせ（任意）
+        let broadcastResult = null;
+        if (input.announcePublic) {
+          const priceText = input.dealPrice ? `${input.dealPrice.toLocaleString()}円で` : "";
+          const message = `「${prop.name}」が${priceText}成約しました！`;
+          broadcastResult = await sendBroadcastToAll({
+            subject: `「${prop.name}」成約のお知らせ`,
+            message,
+            lineMessage: message,
+          });
+        }
+
+        return { success: true, notifiedCount: partnerIds.length, broadcastResult };
       }),
 
     deleteOwn: protectedProcedure
@@ -1561,77 +1684,7 @@ ${propList}`
         skipLine: z.boolean().optional(),
         skipEmail: z.boolean().optional(),
       }))
-      .mutation(async ({ input }) => {
-        const { sendMail } = await import("./_core/mail");
-        const { sendLineBroadcast } = await import("./_core/line");
-        const siteUrl = process.env.SITE_URL || "https://propflow.jp";
-        const cleanSubject = input.subject.replace(/^【PropFlow】\s*/, "");
-        const emailBody = input.message ?? "";
-        const lineBody = input.lineMessage ?? emailBody;
-
-        // メール送信
-        const emails = await db.getAllActiveUserEmails();
-        let emailSent = 0;
-        if (!input.skipEmail && emailBody) {
-          const imageBlock = input.imageUrl
-            ? `<img src="${input.imageUrl}" alt="" style="width:100%;display:block;border-radius:4px;margin-bottom:16px" />`
-            : "";
-          const emailHtml = `
-            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
-              <div style="background:#1e3a5f;padding:20px 24px">
-                <img src="${siteUrl}/logo1.png" alt="PropFlow" style="height:32px;object-fit:contain" />
-              </div>
-              <div style="padding:24px">
-                <h2 style="margin:0 0 16px;font-size:18px;color:#1e3a5f">${cleanSubject}</h2>
-                ${imageBlock}
-                <div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap">${emailBody}</div>
-              </div>
-              <div style="background:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb">
-                <p style="margin:0;font-size:12px;color:#6b7280">PropFlow | <a href="${siteUrl}" style="color:#2563eb">${siteUrl}</a></p>
-                <p style="margin:4px 0 0;font-size:11px;color:#9ca3af">メール通知の設定は<a href="${siteUrl}/mypage" style="color:#9ca3af">マイページ</a>から変更できます</p>
-              </div>
-            </div>`;
-          for (const email of emails) {
-            const ok = await sendMail(email, `【PropFlow】${cleanSubject}`, emailHtml);
-            if (ok) emailSent++;
-          }
-        }
-
-        // LINE broadcast
-        let lineSent = false;
-        if (!input.skipLine && lineBody) {
-          const bubbleContents: any = {
-            type: "bubble",
-            ...(input.imageUrl ? {
-              hero: { type: "image", url: input.imageUrl, size: "full", aspectRatio: "20:13", aspectMode: "cover" },
-            } : {}),
-            header: {
-              type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
-              contents: [{ type: "text", text: "📢 " + cleanSubject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }],
-            },
-            body: {
-              type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
-              contents: [{ type: "text", text: lineBody, size: "sm", color: "#374151", wrap: true }],
-            },
-            footer: {
-              type: "box", layout: "vertical", paddingAll: "12px",
-              contents: [{ type: "button", action: { type: "uri", label: "PropFlowを開く", uri: siteUrl }, style: "primary", color: "#2563eb", height: "sm" }],
-            },
-          };
-          lineSent = await sendLineBroadcast({ type: "flex", altText: cleanSubject, contents: bubbleContents });
-        }
-
-        await db.saveBroadcastLog({
-          subject: input.subject,
-          message: emailBody,
-          imageUrl: input.imageUrl,
-          emailSent,
-          emailTotal: emails.length,
-          lineSent,
-        });
-
-        return { emailSent, emailTotal: emails.length, lineSent };
-      }),
+      .mutation(async ({ input }) => sendBroadcastToAll(input)),
 
     analyzeDms: adminProcedure
       .mutation(async () => {

@@ -1006,6 +1006,8 @@ export default function PropertyDetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDealModal, setShowDealModal] = useState(false);
   const [dealPriceInput, setDealPriceInput] = useState("");
+  const [announcePublic, setAnnouncePublic] = useState(true);
+  const markSoldMutation = trpc.property.markSold.useMutation();
   const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [deleteMessage, setDeleteMessage] = useState("");
   const deleteOwnMutation = trpc.property.deleteOwn.useMutation();
@@ -2281,7 +2283,7 @@ export default function PropertyDetail() {
               <h3 className="font-semibold text-foreground">成約にする</h3>
             </div>
             <div className="px-5 py-4 space-y-3">
-              <p className="text-sm text-foreground">「{property.name}」を成約済みにします。</p>
+              <p className="text-sm text-foreground">「{property.name}」を成約済みにします。やり取りしていた相手にはDMで自動的にお知らせします。</p>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">成約金額（円・わからなければ空欄でOK）</label>
                 <Input
@@ -2291,24 +2293,41 @@ export default function PropertyDetail() {
                   placeholder="例：150000000"
                 />
               </div>
+              <label className="flex items-start gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 accent-primary w-4 h-4"
+                  checked={announcePublic}
+                  onChange={e => setAnnouncePublic(e.target.checked)}
+                />
+                <span className="text-xs text-foreground">この成約を公式LINE・メールでPropFlow全体にお知らせする</span>
+              </label>
+              {announcePublic && (
+                <div className="bg-muted/50 border border-border rounded-lg px-3 py-2.5 space-y-1">
+                  <p className="text-[10px] font-medium text-muted-foreground">送信されるお知らせ文</p>
+                  <p className="text-xs text-foreground">
+                    「{property.name}」が{dealPriceInput.trim() ? `${Number(dealPriceInput).toLocaleString()}円で` : ""}成約しました！
+                  </p>
+                </div>
+              )}
             </div>
             <div className="px-5 py-4 border-t border-border flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setShowDealModal(false)}>キャンセル</Button>
               <Button
                 className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white"
-                disabled={updateMutation.isPending}
+                disabled={markSoldMutation.isPending}
                 onClick={async () => {
-                  await updateMutation.mutateAsync({
+                  await markSoldMutation.mutateAsync({
                     id: property.id,
-                    status: "sold",
                     dealPrice: dealPriceInput.trim() ? Number(dealPriceInput) : null,
+                    announcePublic,
                   });
                   utils.property.getById.invalidate({ id: propertyId });
                   utils.property.list.invalidate();
                   setShowDealModal(false);
                 }}
               >
-                {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                {markSoldMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 成約にする
               </Button>
             </div>
