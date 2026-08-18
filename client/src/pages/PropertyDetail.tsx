@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Heart, Share2, Pencil, MessageCircle, Bell, Camera, Calculator,
   HelpCircle, MapPin, Map, Building2, CheckCircle2,
-  ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, Eye, FileText, Upload, Download, StickyNote, UserCircle, UserX
+  ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, Eye, FileText, Upload, Download, StickyNote, UserCircle, UserX, Flame
 } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -1242,8 +1242,8 @@ export default function PropertyDetail() {
             </span>
           )}
           {(property as any).inquiryCount >= 3 && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600">
-              <MessageCircle className="w-3.5 h-3.5" />{(property as any).inquiryCount}人問い合わせ
+            <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500 text-white">
+              <Flame className="w-3.5 h-3.5" />注目
             </span>
           )}
           {isOwner && !isEditing && (

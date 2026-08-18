@@ -218,6 +218,26 @@ export default function DirectMessage() {
             {isFlagged ? "要返信中" : "要返信"}
           </button>
         </div>
+        {contactStatus?.mineShared && contactStatus.myContact && (
+          <div className="mb-2 bg-muted/40 border border-border rounded-lg px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+            <p className="font-medium text-foreground mb-1">共有した自分の連絡先</p>
+            {contactStatus.myContact.phone && (
+              <p className="flex items-center gap-1.5"><Phone className="w-3 h-3" />{contactStatus.myContact.phone}</p>
+            )}
+            {contactStatus.myContact.fax && (
+              <p className="flex items-center gap-1.5"><Printer className="w-3 h-3" />{contactStatus.myContact.fax}</p>
+            )}
+            {contactStatus.myContact.url && (
+              <p className="flex items-center gap-1.5"><Globe className="w-3 h-3" />{contactStatus.myContact.url}</p>
+            )}
+            {contactStatus.myContact.email && (
+              <p className="flex items-center gap-1.5"><Mail className="w-3 h-3" />{contactStatus.myContact.email}</p>
+            )}
+            {!contactStatus.myContact.phone && !contactStatus.myContact.fax && !contactStatus.myContact.url && !contactStatus.myContact.email && (
+              <p className="italic">マイページに電話番号・FAX・URL・メールが未設定です</p>
+            )}
+          </div>
+        )}
         <div className="flex items-end gap-2">
           <textarea
             value={input}

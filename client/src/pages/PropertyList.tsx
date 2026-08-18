@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search, Heart, Building2,
-  Plus, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff, SlidersHorizontal, X as XIcon, Sparkles, MessageCircle
+  Plus, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff, SlidersHorizontal, X as XIcon, Sparkles, Flame
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -592,8 +592,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                             </span>
                           )}
                           {((property as any).inquiryCount ?? 0) >= 3 && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-blue-600">
-                              <MessageCircle className="w-2.5 h-2.5" />{(property as any).inquiryCount}人問い合わせ
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">
+                              <Flame className="w-2.5 h-2.5" />注目
                             </span>
                           )}
                           {mode === "mine" && (
