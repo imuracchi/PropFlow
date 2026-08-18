@@ -591,7 +591,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                               <Eye className="w-2.5 h-2.5" />{property.viewCount}
                             </span>
                           )}
-                          {((property as any).inquiryCount ?? 0) > 0 && (
+                          {((property as any).inquiryCount ?? 0) >= 3 && (
                             <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-blue-600">
                               <MessageCircle className="w-2.5 h-2.5" />{(property as any).inquiryCount}人問い合わせ
                             </span>

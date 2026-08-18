@@ -1241,7 +1241,7 @@ export default function PropertyDetail() {
               <Eye className="w-3.5 h-3.5" />{(property as any).viewCount}
             </span>
           )}
-          {(property as any).inquiryCount > 0 && (
+          {(property as any).inquiryCount >= 3 && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600">
               <MessageCircle className="w-3.5 h-3.5" />{(property as any).inquiryCount}人問い合わせ
             </span>
