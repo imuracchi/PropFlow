@@ -310,7 +310,7 @@ export async function listProperties(viewerUserId?: number) {
     .groupBy(favorites.propertyId)
     .as("fav_count");
   const inquiryCountSub = db
-    .select({ propertyId: directMessages.propertyId, cnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("cnt") })
+    .select({ propertyId: directMessages.propertyId, inquiryCnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("inquiryCnt") })
     .from(directMessages)
     .innerJoin(properties, eq(directMessages.propertyId, properties.id))
     .where(sql`${directMessages.senderId} != ${properties.userId}`)
@@ -357,7 +357,7 @@ export async function listProperties(viewerUserId?: number) {
       userCompany: users.company,
       userVerified: users.verified,
       favoriteCount: sql<number>`COALESCE(${favCountSub.cnt}, 0)`.as("favoriteCount"),
-      inquiryCount: sql<number>`COALESCE(${inquiryCountSub.cnt}, 0)`.as("inquiryCount"),
+      inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as("inquiryCount"),
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
@@ -409,7 +409,7 @@ export async function getPropertyById(id: number) {
   const db = await getDb();
   if (!db) return null;
   const inquiryCountSub = db
-    .select({ propertyId: directMessages.propertyId, cnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("cnt") })
+    .select({ propertyId: directMessages.propertyId, inquiryCnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("inquiryCnt") })
     .from(directMessages)
     .innerJoin(properties, eq(directMessages.propertyId, properties.id))
     .where(sql`${directMessages.senderId} != ${properties.userId}`)
@@ -425,7 +425,7 @@ export async function getPropertyById(id: number) {
       type: properties.type,
       status: properties.status,
       viewCount: properties.viewCount,
-      inquiryCount: sql<number>`COALESCE(${inquiryCountSub.cnt}, 0)`.as("inquiryCount"),
+      inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as("inquiryCount"),
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,
       estimatedYield: properties.estimatedYield,
@@ -596,7 +596,7 @@ export async function getMyProperties(userId: number) {
   const db = await getDb();
   if (!db) return [];
   const inquiryCountSub = db
-    .select({ propertyId: directMessages.propertyId, cnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("cnt") })
+    .select({ propertyId: directMessages.propertyId, inquiryCnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("inquiryCnt") })
     .from(directMessages)
     .innerJoin(properties, eq(directMessages.propertyId, properties.id))
     .where(sql`${directMessages.senderId} != ${properties.userId}`)
@@ -616,7 +616,7 @@ export async function getMyProperties(userId: number) {
       buildingArea: properties.buildingArea,
       published: properties.published,
       viewCount: properties.viewCount,
-      inquiryCount: sql<number>`COALESCE(${inquiryCountSub.cnt}, 0)`.as("inquiryCount"),
+      inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as("inquiryCount"),
       createdAt: properties.createdAt,
     })
     .from(properties)
