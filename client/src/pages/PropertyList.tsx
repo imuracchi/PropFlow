@@ -41,6 +41,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [showNewOnly, setShowNewOnly] = useState(false);
+  const [showHotOnly, setShowHotOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [aiMode, setAiMode] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
@@ -120,6 +121,10 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       return p.userId !== user?.id && !isPropertyRead(p.id);
     })
     .filter(p => {
+      if (!showHotOnly) return true;
+      return ((p as any).inquiryCount ?? 0) >= 3;
+    })
+    .filter(p => {
       if (!aiMode || aiResultIds === null) return true;
       return aiResultIds.includes(p.id);
     });
@@ -161,7 +166,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const matchRates = new Map<number, number | null>();
   filtered.forEach(p => matchRates.set(p.id, calcMatch(p)));
 
-  type SortKey = "name" | "address" | "landArea" | "buildingArea" | "price" | "createdAt" | "match" | null;
+  type SortKey = "name" | "address" | "landArea" | "buildingArea" | "price" | "createdAt" | "match" | "viewCount" | null;
   const [sortKey, setSortKey] = useState<SortKey>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -195,6 +200,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
           case "price": va = a.priceNegotiable ? -1 : (a.price ?? 0); vb = b.priceNegotiable ? -1 : (b.price ?? 0); break;
           case "createdAt": va = new Date(a.createdAt).getTime(); vb = new Date(b.createdAt).getTime(); break;
           case "match": va = matchRates.get(a.id) ?? -1; vb = matchRates.get(b.id) ?? -1; break;
+          case "viewCount": va = (a as any).viewCount ?? 0; vb = (b as any).viewCount ?? 0; break;
           default: return 0;
         }
         if (typeof va === "string") return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
@@ -322,8 +328,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
 
       {/* 検索バー＋絞り込みボタン */}
       {(() => {
-        const activeFilterCount = [filterType !== "all", minLandArea, maxLandArea, minPrice, maxPrice, showNewOnly].filter(Boolean).length;
-        const clearAll = () => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); setShowNewOnly(false); };
+        const activeFilterCount = [filterType !== "all", minLandArea, maxLandArea, minPrice, maxPrice, showNewOnly, showHotOnly].filter(Boolean).length;
+        const clearAll = () => { setMinLandArea(""); setMaxLandArea(""); setMinPrice(""); setMaxPrice(""); setFilterType("all"); setShowNewOnly(false); setShowHotOnly(false); };
         const handleAiSearch = async () => {
           if (!aiQuery.trim()) return;
           setAiSearching(true);
@@ -487,6 +493,14 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   >
                     新着のみ
                   </Button>
+                  <Button
+                    variant={showHotOnly ? "default" : "outline"}
+                    size="sm"
+                    className={`h-9 gap-1.5 text-xs shrink-0 ${showHotOnly ? "bg-orange-500 hover:bg-orange-600 text-white border-0" : ""}`}
+                    onClick={() => setShowHotOnly(!showHotOnly)}
+                  >
+                    <Flame className="w-3.5 h-3.5" />注目のみ
+                  </Button>
                 </div>
                 {activeFilterCount > 0 && (
                   <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1.5 h-8" onClick={clearAll}>
@@ -532,6 +546,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden lg:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("buildingArea")}>建物面積<SortIcon col="buildingArea" /></th>
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("price")}>価格<SortIcon col="price" /></th>
                   <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("createdAt")}>登録日<SortIcon col="createdAt" /></th>
+                  <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider hidden md:table-cell cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("viewCount")}>閲覧<SortIcon col="viewCount" /></th>
                   {buyerPref && (
                     <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors hidden md:table-cell" onClick={() => toggleSort("match")}>マッチ<SortIcon col="match" /></th>
                   )}
@@ -581,7 +596,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                                 <option key={value} value={value}>{info.label}</option>
                               ))}
                             </select>
-                          ) : (
+                          ) : property.status !== "available" && (
                             <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${STATUS_MAP[property.status]?.cls ?? ""}`}>
                               {STATUS_MAP[property.status]?.label}
                             </span>
@@ -662,6 +677,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       </td>
                       <td className="px-4 py-4 text-center text-xs text-muted-foreground whitespace-nowrap hidden md:table-cell">
                         {fmtDateShort(property.createdAt)}
+                      </td>
+                      <td className="px-4 py-4 text-center text-xs text-muted-foreground whitespace-nowrap hidden md:table-cell">
+                        {(property as any).viewCount ?? 0}
                       </td>
                       {buyerPref && (
                         <td className="text-center px-2 py-4 whitespace-nowrap hidden md:table-cell">
