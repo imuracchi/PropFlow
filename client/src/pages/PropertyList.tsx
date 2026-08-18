@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search, Heart, Building2,
-  Plus, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff, SlidersHorizontal, X as XIcon, Sparkles, Flame
+  Plus, Loader2, Download, StickyNote, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff, SlidersHorizontal, X as XIcon, Sparkles, Flame, MapPin
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -73,7 +73,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [filterRegion, setFilterRegion] = useState<string | null>(null);
   const [filterPrefecture, setFilterPrefecture] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [aiMode, setAiMode] = useState(false);
+  const [searchMode, setSearchMode] = useState<"area" | "keyword" | "ai">("area");
   const [aiQuery, setAiQuery] = useState("");
   const [aiResultIds, setAiResultIds] = useState<number[] | null>(null);
   const [aiSearching, setAiSearching] = useState(false);
@@ -163,7 +163,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       return regionDef ? regionDef.prefectures.includes(pref) : true;
     })
     .filter(p => {
-      if (!aiMode || aiResultIds === null) return true;
+      if (searchMode !== "ai" || aiResultIds === null) return true;
       return aiResultIds.includes(p.id);
     });
 
@@ -398,26 +398,101 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
         };
         return (
           <>
-            {/* 検索モード切替タブ */}
-            <div className="flex rounded-lg border border-border overflow-hidden w-fit">
-              <button
-                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors ${!aiMode ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
-                onClick={() => { setAiMode(false); setAiQuery(""); setAiResultIds(null); }}
-              >
-                <Search className="w-3.5 h-3.5" />
-                キーワード検索
-              </button>
-              <button
-                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-l border-border ${aiMode ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
-                onClick={() => setAiMode(true)}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                AI検索
-              </button>
+            {/* 検索モード切替タブ＋クイックフィルタ */}
+            <div className="flex flex-wrap items-center gap-2 justify-between">
+              <div className="flex rounded-lg border border-border overflow-hidden w-fit">
+                <button
+                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors ${searchMode === "area" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
+                  onClick={() => setSearchMode("area")}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  エリア
+                </button>
+                <button
+                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-l border-border ${searchMode === "keyword" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
+                  onClick={() => setSearchMode("keyword")}
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  キーワード検索
+                </button>
+                <button
+                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-l border-border ${searchMode === "ai" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
+                  onClick={() => setSearchMode("ai")}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  AI検索
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={showNewOnly ? "default" : "outline"}
+                  size="sm"
+                  className={`h-9 gap-1.5 text-xs shrink-0 ${showNewOnly ? "bg-orange-500 hover:bg-orange-600 text-white border-0" : ""}`}
+                  onClick={() => setShowNewOnly(!showNewOnly)}
+                >
+                  新着のみ
+                </Button>
+                <Button
+                  variant={showHotOnly ? "default" : "outline"}
+                  size="sm"
+                  className={`h-9 gap-1.5 text-xs shrink-0 ${showHotOnly ? "bg-orange-500 hover:bg-orange-600 text-white border-0" : ""}`}
+                  onClick={() => setShowHotOnly(!showHotOnly)}
+                >
+                  <Flame className="w-3.5 h-3.5" />注目のみ
+                </Button>
+              </div>
             </div>
 
             {/* 検索入力エリア */}
-            {aiMode ? (
+            {searchMode === "area" ? (
+              <div className="flex gap-2 items-start">
+                <div className="flex-1 bg-card border border-border rounded-lg p-3 space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableRegions.map(r => (
+                      <button
+                        key={r.region}
+                        type="button"
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${filterRegion === r.region ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
+                        onClick={() => {
+                          if (filterRegion === r.region) { setFilterRegion(null); setFilterPrefecture(null); }
+                          else { setFilterRegion(r.region); setFilterPrefecture(null); }
+                        }}
+                      >
+                        {r.region}
+                      </button>
+                    ))}
+                  </div>
+                  {filterRegion && (
+                    <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border">
+                      {PREFECTURE_REGIONS.find(r => r.region === filterRegion)?.prefectures
+                        .filter(p => prefectureCounts.has(p))
+                        .map(pref => (
+                          <button
+                            key={pref}
+                            type="button"
+                            className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors mt-1.5 ${filterPrefecture === pref ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
+                            onClick={() => setFilterPrefecture(filterPrefecture === pref ? null : pref)}
+                          >
+                            {pref}（{prefectureCounts.get(pref)}）
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant={activeFilterCount > 0 ? "default" : "outline"}
+                  className={`h-11 px-4 gap-2 shrink-0 ${activeFilterCount > 0 ? "bg-primary text-primary-foreground" : ""}`}
+                  onClick={() => setShowFilters(v => !v)}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  {activeFilterCount > 0 && (
+                    <span className="bg-white/30 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            ) : searchMode === "ai" ? (
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
@@ -452,7 +527,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="エリア・住所・業者名で検索..."
+                    placeholder="住所・物件名・業者名で検索..."
                     className="pl-10 bg-card border-border h-11"
                     value={searchQuery}
                     onChange={e => handleKeywordSearch(e.target.value)}
@@ -485,7 +560,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
             )}
 
             {/* AI検索結果バナー */}
-            {aiMode && aiResultIds !== null && (
+            {searchMode === "ai" && aiResultIds !== null && (
               <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm">
                 <Sparkles className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-primary font-medium">{aiResultIds.length}件</span>
@@ -497,42 +572,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
             )}
 
             {/* スライド展開パネル */}
-            <div className={`overflow-hidden transition-all duration-200 ${showFilters ? "max-h-[560px] opacity-100" : "max-h-0 opacity-0"}`}>
+            <div className={`overflow-hidden transition-all duration-200 ${showFilters ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
               <div className="bg-card border border-border rounded-lg p-4 space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">エリア</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {availableRegions.map(r => (
-                      <button
-                        key={r.region}
-                        type="button"
-                        className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${filterRegion === r.region ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
-                        onClick={() => {
-                          if (filterRegion === r.region) { setFilterRegion(null); setFilterPrefecture(null); }
-                          else { setFilterRegion(r.region); setFilterPrefecture(null); }
-                        }}
-                      >
-                        {r.region}
-                      </button>
-                    ))}
-                  </div>
-                  {filterRegion && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {PREFECTURE_REGIONS.find(r => r.region === filterRegion)?.prefectures
-                        .filter(p => prefectureCounts.has(p))
-                        .map(pref => (
-                          <button
-                            key={pref}
-                            type="button"
-                            className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${filterPrefecture === pref ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
-                            onClick={() => setFilterPrefecture(filterPrefecture === pref ? null : pref)}
-                          >
-                            {pref}（{prefectureCounts.get(pref)}）
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                </div>
                 <div className="flex flex-wrap gap-3 items-end">
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">物件種別</p>
@@ -564,22 +605,6 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       <Input className="w-28 bg-background border-border h-9 text-sm" placeholder="上限" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
                     </div>
                   </div>
-                  <Button
-                    variant={showNewOnly ? "default" : "outline"}
-                    size="sm"
-                    className={`h-9 gap-1.5 text-xs shrink-0 ${showNewOnly ? "bg-orange-500 hover:bg-orange-600 text-white border-0" : ""}`}
-                    onClick={() => setShowNewOnly(!showNewOnly)}
-                  >
-                    新着のみ
-                  </Button>
-                  <Button
-                    variant={showHotOnly ? "default" : "outline"}
-                    size="sm"
-                    className={`h-9 gap-1.5 text-xs shrink-0 ${showHotOnly ? "bg-orange-500 hover:bg-orange-600 text-white border-0" : ""}`}
-                    onClick={() => setShowHotOnly(!showHotOnly)}
-                  >
-                    <Flame className="w-3.5 h-3.5" />注目のみ
-                  </Button>
                 </div>
                 {activeFilterCount > 0 && (
                   <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1.5 h-8" onClick={clearAll}>

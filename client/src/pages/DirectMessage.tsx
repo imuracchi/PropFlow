@@ -3,7 +3,7 @@ import { fmtDateTime } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, Send, Loader2, User, Home, Bookmark, CheckCircle2, IdCard, Phone, Printer, Globe, Mail } from "lucide-react";
+import { ChevronLeft, Send, Loader2, User, Home, Bookmark, CheckCircle2, IdCard, Phone, Printer, Globe, Mail, X, Copy, Check } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -55,7 +55,17 @@ export default function DirectMessage() {
 
   const [input, setInput] = useState("");
   const [initialSent, setInitialSent] = useState(false);
+  const [contactModal, setContactModal] = useState<"mine" | "partner" | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch {}
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -129,33 +139,6 @@ export default function DirectMessage() {
         </div>
       ) : null}
 
-      {/* 相手の連絡先（共有済みの場合） */}
-      {contactStatus?.partnerShared && contactStatus.partnerContact && (
-        <div className="mt-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 space-y-1.5">
-          <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
-            <IdCard className="w-3.5 h-3.5" />
-            {partnerName ?? "相手"}さんの連絡先
-            {partnerVerified === 1 && (
-              <span className="text-[10px] font-normal text-muted-foreground">（名刺登録の認証ユーザーです）</span>
-            )}
-          </p>
-          <div className="text-xs text-foreground space-y-1">
-            {contactStatus.partnerContact.phone && (
-              <p className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-muted-foreground" />{contactStatus.partnerContact.phone}</p>
-            )}
-            {contactStatus.partnerContact.fax && (
-              <p className="flex items-center gap-1.5"><Printer className="w-3 h-3 text-muted-foreground" />{contactStatus.partnerContact.fax}</p>
-            )}
-            {contactStatus.partnerContact.url && (
-              <p className="flex items-center gap-1.5"><Globe className="w-3 h-3 text-muted-foreground" />{contactStatus.partnerContact.url}</p>
-            )}
-            {contactStatus.partnerContact.email && (
-              <p className="flex items-center gap-1.5"><Mail className="w-3 h-3 text-muted-foreground" />{contactStatus.partnerContact.email}</p>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* メッセージエリア */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4">
         {(!messages || messages.length === 0) && (
@@ -190,7 +173,7 @@ export default function DirectMessage() {
 
       {/* 入力エリア */}
       <div className="pt-3 border-t border-border">
-        <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           {!contactStatus?.mineShared ? (
             <button
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
@@ -201,12 +184,23 @@ export default function DirectMessage() {
               連絡先を共有する
             </button>
           ) : (
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />連絡先を共有済みです
-            </p>
+            <button
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+              onClick={() => setContactModal("mine")}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />自分の連絡先
+            </button>
+          )}
+          {contactStatus?.partnerShared && contactStatus.partnerContact && (
+            <button
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
+              onClick={() => setContactModal("partner")}
+            >
+              <IdCard className="w-3.5 h-3.5" />相手の連絡先
+            </button>
           )}
           <button
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 ml-auto ${
               isFlagged
                 ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
                 : "text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
@@ -218,26 +212,6 @@ export default function DirectMessage() {
             {isFlagged ? "要返信中" : "要返信"}
           </button>
         </div>
-        {contactStatus?.mineShared && contactStatus.myContact && (
-          <div className="mb-2 bg-muted/40 border border-border rounded-lg px-3 py-2 text-xs text-muted-foreground space-y-0.5">
-            <p className="font-medium text-foreground mb-1">共有した自分の連絡先</p>
-            {contactStatus.myContact.phone && (
-              <p className="flex items-center gap-1.5"><Phone className="w-3 h-3" />{contactStatus.myContact.phone}</p>
-            )}
-            {contactStatus.myContact.fax && (
-              <p className="flex items-center gap-1.5"><Printer className="w-3 h-3" />{contactStatus.myContact.fax}</p>
-            )}
-            {contactStatus.myContact.url && (
-              <p className="flex items-center gap-1.5"><Globe className="w-3 h-3" />{contactStatus.myContact.url}</p>
-            )}
-            {contactStatus.myContact.email && (
-              <p className="flex items-center gap-1.5"><Mail className="w-3 h-3" />{contactStatus.myContact.email}</p>
-            )}
-            {!contactStatus.myContact.phone && !contactStatus.myContact.fax && !contactStatus.myContact.url && !contactStatus.myContact.email && (
-              <p className="italic">マイページに電話番号・FAX・URL・メールが未設定です</p>
-            )}
-          </div>
-        )}
         <div className="flex items-end gap-2">
           <textarea
             value={input}
@@ -269,6 +243,55 @@ export default function DirectMessage() {
           </Button>
         </div>
       </div>
+
+      {/* 連絡先モーダル */}
+      {contactModal && (() => {
+        const contact = contactModal === "mine" ? contactStatus?.myContact : contactStatus?.partnerContact;
+        const title = contactModal === "mine" ? "自分の連絡先" : `${partnerName ?? "相手"}さんの連絡先`;
+        const hasAny = contact && (contact.phone || contact.fax || contact.url || contact.email);
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setContactModal(null)}>
+            <div className="bg-card border border-border rounded-xl shadow-lg max-w-sm w-full" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <IdCard className="w-4 h-4 text-primary" />{title}
+                </h3>
+                <button className="text-muted-foreground hover:text-foreground p-1" onClick={() => setContactModal(null)}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-5 space-y-3">
+                {contactModal === "partner" && partnerVerified === 1 && (
+                  <p className="text-xs text-muted-foreground">名刺登録の認証ユーザーです</p>
+                )}
+                {!hasAny && <p className="text-sm text-muted-foreground italic">登録されている情報がありません</p>}
+                {contact?.phone && (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-2 text-sm text-foreground min-w-0"><Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" /><span className="truncate">{contact.phone}</span></p>
+                    <button className="shrink-0 p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-primary transition-colors" onClick={() => copyToClipboard(contact.phone!, "phone")}>
+                      {copiedField === "phone" ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                )}
+                {contact?.fax && (
+                  <p className="flex items-center gap-2 text-sm text-foreground"><Printer className="w-3.5 h-3.5 text-muted-foreground shrink-0" /><span className="truncate">{contact.fax}</span></p>
+                )}
+                {contact?.url && (
+                  <p className="flex items-center gap-2 text-sm text-foreground"><Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" /><span className="truncate break-all">{contact.url}</span></p>
+                )}
+                {contact?.email && (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-2 text-sm text-foreground min-w-0"><Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" /><span className="truncate">{contact.email}</span></p>
+                    <button className="shrink-0 p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-primary transition-colors" onClick={() => copyToClipboard(contact.email!, "email")}>
+                      {copiedField === "email" ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
