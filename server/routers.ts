@@ -1215,6 +1215,32 @@ ${propList}`
         return { success: true };
       }),
 
+    sendBusinessCard: protectedProcedure
+      .input(z.object({ partnerId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user.businessCardBase64) {
+          return { success: false, error: "名刺画像が登録されていません" } as const;
+        }
+        const partner = await db.getUserById(input.partnerId);
+        if (!partner) throw new TRPCError({ code: "NOT_FOUND" });
+
+        const senderName = ctx.user.name ?? "ユーザー";
+        const senderCompany = ctx.user.company ? `（${ctx.user.company}）` : "";
+        const { sendMail } = await import("./_core/mail");
+        const ok = await sendMail(
+          partner.email,
+          `【PropFlow】${senderName}様${senderCompany}より名刺が届きました`,
+          `
+            <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px;">
+              <h2 style="color:#2563eb;">📇 名刺が届きました</h2>
+              <p>${senderName}様${senderCompany}より、PropFlow経由で名刺が送られました。添付ファイルをご確認ください。</p>
+            </div>
+          `,
+          { attachments: [{ filename: "名刺.jpg", content: ctx.user.businessCardBase64 }] }
+        );
+        return { success: ok } as const;
+      }),
+
     markRead: protectedProcedure
       .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
       .mutation(async ({ input, ctx }) => {
