@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { fmtDate, fmtTime } from "@/lib/utils";
+import { fmtDate, fmtTime, fmtDateTime } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,9 @@ export default function DirectMessage() {
     { partnerId, propertyId },
     { enabled: !!partnerId, refetchInterval: 5000 }
   );
+  const lastCardSentAt = messages
+    ?.filter(m => m.senderId === user?.id && m.content === "📇 名刺付き情報メールを送りました")
+    .at(-1)?.createdAt ?? null;
 
   const utils = trpc.useUtils();
   const { data: threads } = trpc.dm.threads.useQuery();
@@ -285,6 +288,9 @@ export default function DirectMessage() {
             </div>
             <div className="p-5 space-y-4">
               <p className="text-sm text-foreground">登録されている名刺情報をメールで送ります。よろしいですか？</p>
+              {lastCardSentAt && (
+                <p className="text-xs text-muted-foreground">前回送付日時: {fmtDateTime(lastCardSentAt)}</p>
+              )}
               {isPropertyOwner && propertyId && (
                 <label className="flex items-start gap-2 text-sm text-foreground cursor-pointer">
                   <input
