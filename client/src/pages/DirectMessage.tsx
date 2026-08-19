@@ -23,6 +23,7 @@ export default function DirectMessage() {
   );
   const propertyDeleted = !!propertyId && propertyFetched && !property;
   const isClosed = propertyDeleted || property?.status === "sold";
+  const isPropertyOwner = !!property && !!user && property.userId === user.id;
 
   const { data: messages, isLoading, refetch } = trpc.dm.messages.useQuery(
     { partnerId, propertyId },
@@ -58,7 +59,9 @@ export default function DirectMessage() {
   const [input, setInput] = useState("");
   const [initialSent, setInitialSent] = useState(false);
   const [cardSent, setCardSent] = useState(false);
-  const [contactModal, setContactModal] = useState<"mine" | "partner" | null>(null);
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [includePropertyLink, setIncludePropertyLink] = useState(true);
+  const [contactModal, setContactModal] = useState<"partner" | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -188,41 +191,21 @@ export default function DirectMessage() {
       {/* 入力エリア */}
       <div className="pt-2 border-t border-border">
         <div className="flex flex-wrap items-center gap-2 mb-2">
-          {!contactStatus?.mineShared ? (
+          {!contactStatus?.mineShared && (
             <button
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
               onClick={() => { if (confirm("自分の連絡先（電話番号・FAX・URL・メール）をこのDMの相手に共有しますか？")) shareContactMutation.mutate({ partnerId, propertyId }); }}
               disabled={shareContactMutation.isPending}
             >
               {shareContactMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <IdCard className="w-3.5 h-3.5" />}
-              連絡先を共有する
-            </button>
-          ) : (
-            <button
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
-              onClick={() => setContactModal("mine")}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />自分の連絡先
-            </button>
-          )}
-          {contactStatus?.partnerShared && contactStatus.partnerContact && (
-            <button
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
-              onClick={() => setContactModal("partner")}
-            >
-              <IdCard className="w-3.5 h-3.5" />相手の連絡先
+              連絡先共有
             </button>
           )}
           {user?.businessCardBase64 && (
             <button
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
               disabled={sendBusinessCardMutation.isPending || cardSent}
-              onClick={async () => {
-                if (!confirm("登録されている名刺情報を送ります。よろしいですか？")) return;
-                const res = await sendBusinessCardMutation.mutateAsync({ partnerId, propertyId });
-                if (res.success) { setCardSent(true); refetch(); utils.dm.threads.invalidate(); }
-                else alert(res.error ?? "送信に失敗しました");
-              }}
+              onClick={() => { setIncludePropertyLink(true); setShowCardModal(true); }}
             >
               {sendBusinessCardMutation.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -231,7 +214,15 @@ export default function DirectMessage() {
               ) : (
                 <IdCard className="w-3.5 h-3.5" />
               )}
-              {cardSent ? "送りました" : "名刺を送る"}
+              {cardSent ? "送りました" : "名刺送付"}
+            </button>
+          )}
+          {contactStatus?.partnerShared && contactStatus.partnerContact && (
+            <button
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
+              onClick={() => setContactModal("partner")}
+            >
+              <IdCard className="w-3.5 h-3.5" />相手の連絡先
             </button>
           )}
           <button
@@ -285,12 +276,66 @@ export default function DirectMessage() {
         )}
       </div>
 
+      {/* 名刺送付確認モーダル */}
+      {showCardModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCardModal(false)}>
+          <div className="bg-card border border-border rounded-xl shadow-lg max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <IdCard className="w-4 h-4 text-primary" />名刺を送る
+              </h3>
+              <button className="text-muted-foreground hover:text-foreground p-1" onClick={() => setShowCardModal(false)}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-foreground">登録されている名刺情報をメールで送ります。よろしいですか？</p>
+              {isPropertyOwner && propertyId && (
+                <label className="flex items-start gap-2 text-sm text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={includePropertyLink}
+                    onChange={e => setIncludePropertyLink(e.target.checked)}
+                  />
+                  物件資料リンクも送る
+                </label>
+              )}
+              <div className="flex gap-2 justify-end pt-1">
+                <button
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowCardModal(false)}
+                >
+                  キャンセル
+                </button>
+                <button
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  disabled={sendBusinessCardMutation.isPending}
+                  onClick={async () => {
+                    const res = await sendBusinessCardMutation.mutateAsync({
+                      partnerId,
+                      propertyId,
+                      includePropertyLink: isPropertyOwner ? includePropertyLink : true,
+                    });
+                    if (res.success) { setCardSent(true); setShowCardModal(false); refetch(); utils.dm.threads.invalidate(); }
+                    else alert(res.error ?? "送信に失敗しました");
+                  }}
+                >
+                  {sendBusinessCardMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <IdCard className="w-3.5 h-3.5" />}
+                  送る
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 連絡先モーダル */}
       {contactModal && (() => {
-        const contact = contactModal === "mine" ? contactStatus?.myContact : contactStatus?.partnerContact;
-        const title = contactModal === "mine" ? "自分の連絡先" : `${partnerName ?? "相手"}さんの連絡先`;
-        const company = contactModal === "mine" ? (user?.company ?? null) : partnerCompany;
-        const verified = contactModal === "mine" ? user?.verified === 1 : partnerVerified === 1;
+        const contact = contactStatus?.partnerContact;
+        const title = `${partnerName ?? "相手"}さんの連絡先`;
+        const company = partnerCompany;
+        const verified = partnerVerified === 1;
         const hasAny = contact && (contact.phone || contact.fax || contact.url || contact.email);
         return (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setContactModal(null)}>

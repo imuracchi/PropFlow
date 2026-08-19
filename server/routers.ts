@@ -1221,7 +1221,7 @@ ${propList}`
       }),
 
     sendBusinessCard: protectedProcedure
-      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
+      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable(), includePropertyLink: z.boolean().optional() }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user.businessCardBase64) {
           return { success: false, error: "名刺画像が登録されていません" } as const;
@@ -1233,10 +1233,12 @@ ${propList}`
         const senderCompany = ctx.user.company ? `（${ctx.user.company}）` : "";
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
 
-        const prop = input.propertyId ? await db.getPropertyById(input.propertyId) : null;
+        const includePropertyLink = input.includePropertyLink !== false;
+        const prop = input.propertyId && includePropertyLink ? await db.getPropertyById(input.propertyId) : null;
+        const senderIsOwner = !!prop && prop.userId === ctx.user.id;
         const propertyBlock = prop
           ? `<p style="margin-top:16px;">対象物件: 「${prop.name}」<br/><a href="${siteUrl}/property/${prop.id}" style="color:#2563eb;">${siteUrl}/property/${prop.id}</a></p>
-             <p style="margin-top:8px;font-size:13px;color:#6b7280;">※物件ページを開いたら「資料」タブに添付資料がありますのでご確認ください。</p>`
+             ${senderIsOwner ? `<p style="margin-top:8px;font-size:13px;color:#6b7280;">※物件ページを開いたら「資料」タブに添付資料がありますのでご確認ください。</p>` : ""}`
           : "";
 
         const { sendMail } = await import("./_core/mail");
