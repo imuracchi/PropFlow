@@ -191,40 +191,35 @@ export default function DirectMessage() {
       {/* 入力エリア */}
       <div className="pt-2 border-t border-border">
         <div className="flex flex-wrap items-center gap-2 mb-2">
-          {!contactStatus?.mineShared && (
-            <button
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
-              onClick={() => { if (confirm("自分の連絡先（電話番号・FAX・URL・メール）をこのDMの相手に共有しますか？")) shareContactMutation.mutate({ partnerId, propertyId }); }}
-              disabled={shareContactMutation.isPending}
-            >
-              {shareContactMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <IdCard className="w-3.5 h-3.5" />}
-              連絡先共有
-            </button>
-          )}
-          {user?.businessCardBase64 && (
-            <button
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
-              disabled={sendBusinessCardMutation.isPending || cardSent}
-              onClick={() => { setIncludePropertyLink(true); setShowCardModal(true); }}
-            >
-              {sendBusinessCardMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : cardSent ? (
-                <Check className="w-3.5 h-3.5" />
-              ) : (
-                <IdCard className="w-3.5 h-3.5" />
-              )}
-              {cardSent ? "送りました" : "名刺送付"}
-            </button>
-          )}
-          {contactStatus?.partnerShared && contactStatus.partnerContact && (
-            <button
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
-              onClick={() => setContactModal("partner")}
-            >
-              <IdCard className="w-3.5 h-3.5" />相手の連絡先
-            </button>
-          )}
+          <button
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+            onClick={() => { if (confirm("自分の連絡先（電話番号・FAX・URL・メール）をこのDMの相手に共有しますか？")) shareContactMutation.mutate({ partnerId, propertyId }); }}
+            disabled={shareContactMutation.isPending || contactStatus?.mineShared}
+          >
+            {shareContactMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <IdCard className="w-3.5 h-3.5" />}
+            {contactStatus?.mineShared ? "共有済み" : "連絡先共有"}
+          </button>
+          <button
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+            disabled={sendBusinessCardMutation.isPending || !user?.businessCardBase64}
+            onClick={() => { setIncludePropertyLink(true); setShowCardModal(true); }}
+          >
+            {sendBusinessCardMutation.isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : cardSent ? (
+              <Check className="w-3.5 h-3.5" />
+            ) : (
+              <IdCard className="w-3.5 h-3.5" />
+            )}
+            名刺送付
+          </button>
+          <button
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+            onClick={() => setContactModal("partner")}
+            disabled={!(contactStatus?.partnerShared && contactStatus.partnerContact)}
+          >
+            <IdCard className="w-3.5 h-3.5" />相手の連絡先
+          </button>
           <button
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 ml-auto ${
               isFlagged
@@ -317,7 +312,13 @@ export default function DirectMessage() {
                       propertyId,
                       includePropertyLink: isPropertyOwner ? includePropertyLink : true,
                     });
-                    if (res.success) { setCardSent(true); setShowCardModal(false); refetch(); utils.dm.threads.invalidate(); }
+                    if (res.success) {
+                      setCardSent(true);
+                      setShowCardModal(false);
+                      refetch();
+                      utils.dm.threads.invalidate();
+                      setTimeout(() => setCardSent(false), 2500);
+                    }
                     else alert(res.error ?? "送信に失敗しました");
                   }}
                 >
