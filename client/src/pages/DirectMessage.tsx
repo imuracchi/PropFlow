@@ -194,14 +194,14 @@ export default function DirectMessage() {
           <button
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
             onClick={() => { if (confirm("自分の連絡先（電話番号・FAX・URL・メール）をこのDMの相手に共有しますか？")) shareContactMutation.mutate({ partnerId, propertyId }); }}
-            disabled={shareContactMutation.isPending || contactStatus?.mineShared}
+            disabled={shareContactMutation.isPending || contactStatus?.mineShared || propertyDeleted}
           >
             {shareContactMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <IdCard className="w-3.5 h-3.5" />}
             {contactStatus?.mineShared ? "共有済み" : "連絡先共有"}
           </button>
           <button
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-            disabled={sendBusinessCardMutation.isPending || !user?.businessCardBase64}
+            disabled={sendBusinessCardMutation.isPending || !user?.businessCardBase64 || propertyDeleted}
             onClick={() => { setIncludePropertyLink(true); setShowCardModal(true); }}
           >
             {sendBusinessCardMutation.isPending ? (
@@ -216,7 +216,7 @@ export default function DirectMessage() {
           <button
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
             onClick={() => setContactModal("partner")}
-            disabled={!(contactStatus?.partnerShared && contactStatus.partnerContact)}
+            disabled={!(contactStatus?.partnerShared && contactStatus.partnerContact) || propertyDeleted}
           >
             <IdCard className="w-3.5 h-3.5" />相手の連絡先
           </button>
@@ -227,7 +227,7 @@ export default function DirectMessage() {
                 : "text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
             }`}
             onClick={() => flagMutation.mutate({ partnerId, propertyId: propertyId ?? null, flagged: !isFlagged })}
-            disabled={flagMutation.isPending}
+            disabled={flagMutation.isPending || propertyDeleted}
           >
             <Bookmark className={`w-3.5 h-3.5 ${isFlagged ? "fill-amber-400" : ""}`} />
             {isFlagged ? "要返信中" : "要返信"}
