@@ -213,6 +213,27 @@ export default function DirectMessage() {
               <IdCard className="w-3.5 h-3.5" />相手の連絡先
             </button>
           )}
+          {user?.businessCardBase64 && (
+            <button
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
+              disabled={sendBusinessCardMutation.isPending || cardSent}
+              onClick={async () => {
+                if (!confirm("登録されている名刺情報を送ります。よろしいですか？")) return;
+                const res = await sendBusinessCardMutation.mutateAsync({ partnerId, propertyId });
+                if (res.success) { setCardSent(true); refetch(); utils.dm.threads.invalidate(); }
+                else alert(res.error ?? "送信に失敗しました");
+              }}
+            >
+              {sendBusinessCardMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : cardSent ? (
+                <Check className="w-3.5 h-3.5" />
+              ) : (
+                <IdCard className="w-3.5 h-3.5" />
+              )}
+              {cardSent ? "送りました" : "名刺を送る"}
+            </button>
+          )}
           <button
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 ml-auto ${
               isFlagged
@@ -309,29 +330,6 @@ export default function DirectMessage() {
                     <p className="flex items-center gap-2 text-sm text-foreground min-w-0"><Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" /><span className="truncate">{contact.email}</span></p>
                     <button className="shrink-0 p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-primary transition-colors" onClick={() => copyToClipboard(contact.email!, "email")}>
                       {copiedField === "email" ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                )}
-                {contactModal === "partner" && contact?.email && user?.businessCardBase64 && (
-                  <div className="pt-2 border-t border-border">
-                    <button
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
-                      disabled={sendBusinessCardMutation.isPending || cardSent}
-                      onClick={async () => {
-                        if (!confirm("登録されている名刺情報を送ります。よろしいですか？")) return;
-                        const res = await sendBusinessCardMutation.mutateAsync({ partnerId, propertyId });
-                        if (res.success) { setCardSent(true); refetch(); utils.dm.threads.invalidate(); setContactModal(null); }
-                        else alert(res.error ?? "送信に失敗しました");
-                      }}
-                    >
-                      {sendBusinessCardMutation.isPending ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : cardSent ? (
-                        <Check className="w-3.5 h-3.5" />
-                      ) : (
-                        <IdCard className="w-3.5 h-3.5" />
-                      )}
-                      {cardSent ? "送りました" : propertyId ? "名刺付き物件情報リンクを送る" : "名刺を送る（メールで送付）"}
                     </button>
                   </div>
                 )}
