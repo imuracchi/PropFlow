@@ -32,6 +32,9 @@ export default function DirectMessage() {
   const lastCardSentAt = messages
     ?.filter(m => m.senderId === user?.id && m.content === "📇 名刺付き情報メールを送りました")
     .at(-1)?.createdAt ?? null;
+  const lastContactSharedAt = messages
+    ?.filter(m => m.senderId === user?.id && m.content === "📇 連絡先を共有しました")
+    .at(-1)?.createdAt ?? null;
 
   const utils = trpc.useUtils();
   const { data: threads } = trpc.dm.threads.useQuery();
@@ -63,6 +66,8 @@ export default function DirectMessage() {
   const [initialSent, setInitialSent] = useState(false);
   const [cardSent, setCardSent] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [includeCardWithContact, setIncludeCardWithContact] = useState(false);
   const [includePropertyLink, setIncludePropertyLink] = useState(true);
   const [contactModal, setContactModal] = useState<"partner" | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -195,34 +200,22 @@ export default function DirectMessage() {
       <div className="pt-2 border-t border-border">
         <div className="flex flex-nowrap items-center gap-1.5 mb-2">
           <button
-            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-            onClick={() => { if (confirm("自分の連絡先（電話番号・FAX・URL・メール）をこのDMの相手に共有しますか？")) shareContactMutation.mutate({ partnerId, propertyId }); }}
-            disabled={shareContactMutation.isPending || contactStatus?.mineShared || propertyDeleted}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+            onClick={() => { setIncludeCardWithContact(false); setIncludePropertyLink(true); setShowShareModal(true); }}
+            disabled={shareContactMutation.isPending || propertyDeleted}
           >
-            {shareContactMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {contactStatus?.mineShared ? "共有済み" : "連絡先共有"}
+            {shareContactMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <IdCard className="w-3.5 h-3.5" />}
+            連絡先を送る
           </button>
           <button
-            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-            disabled={sendBusinessCardMutation.isPending || !user?.businessCardBase64 || propertyDeleted}
-            onClick={() => { setIncludePropertyLink(true); setShowCardModal(true); }}
-          >
-            {sendBusinessCardMutation.isPending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : cardSent ? (
-              <Check className="w-3.5 h-3.5" />
-            ) : null}
-            名刺送付
-          </button>
-          <button
-            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
             onClick={() => setContactModal("partner")}
             disabled={!(contactStatus?.partnerShared && contactStatus.partnerContact) || propertyDeleted}
           >
-            相手の連絡先
+            <IdCard className="w-3.5 h-3.5" />相手の連絡先
           </button>
           <button
-            className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium border transition-colors shrink-0 ml-auto ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 ml-auto ${
               isFlagged
                 ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
                 : "text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
@@ -230,6 +223,7 @@ export default function DirectMessage() {
             onClick={() => flagMutation.mutate({ partnerId, propertyId: propertyId ?? null, flagged: !isFlagged })}
             disabled={flagMutation.isPending || propertyDeleted}
           >
+            <Bookmark className={`w-3.5 h-3.5 ${isFlagged ? "fill-amber-400" : ""}`} />
             {isFlagged ? "要返信中" : "要返信"}
           </button>
         </div>
@@ -270,6 +264,82 @@ export default function DirectMessage() {
           </div>
         )}
       </div>
+
+      {/* 連絡先送付確認モーダル */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowShareModal(false)}>
+          <div className="bg-card border border-border rounded-xl shadow-lg max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <IdCard className="w-4 h-4 text-primary" />連絡先を送る
+              </h3>
+              <button className="text-muted-foreground hover:text-foreground p-1" onClick={() => setShowShareModal(false)}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-foreground">自分の連絡先（電話番号・FAX・URL・メール）をこのDMの相手に共有します。よろしいですか？</p>
+              {lastContactSharedAt && (
+                <p className="text-xs text-muted-foreground">前回共有日時: {fmtDateTime(lastContactSharedAt)}</p>
+              )}
+              {user?.businessCardBase64 && (
+                <label className="flex items-start gap-2 text-sm text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={includeCardWithContact}
+                    onChange={e => setIncludeCardWithContact(e.target.checked)}
+                  />
+                  名刺も合わせて送る
+                </label>
+              )}
+              {includeCardWithContact && isPropertyOwner && propertyId && (
+                <label className="flex items-start gap-2 text-sm text-foreground cursor-pointer pl-6">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={includePropertyLink}
+                    onChange={e => setIncludePropertyLink(e.target.checked)}
+                  />
+                  物件資料リンクも送る
+                </label>
+              )}
+              <div className="flex gap-2 justify-end pt-1">
+                <button
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowShareModal(false)}
+                >
+                  キャンセル
+                </button>
+                <button
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  disabled={shareContactMutation.isPending || sendBusinessCardMutation.isPending}
+                  onClick={async () => {
+                    await shareContactMutation.mutateAsync({ partnerId, propertyId });
+                    if (includeCardWithContact) {
+                      const res = await sendBusinessCardMutation.mutateAsync({
+                        partnerId,
+                        propertyId,
+                        includePropertyLink: isPropertyOwner ? includePropertyLink : true,
+                      });
+                      if (res.success) {
+                        setCardSent(true);
+                        setTimeout(() => setCardSent(false), 2500);
+                      } else {
+                        alert(res.error ?? "名刺の送信に失敗しました");
+                      }
+                    }
+                    setShowShareModal(false);
+                  }}
+                >
+                  {(shareContactMutation.isPending || sendBusinessCardMutation.isPending) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  送る
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 名刺送付確認モーダル */}
       {showCardModal && (
@@ -379,6 +449,16 @@ export default function DirectMessage() {
                     <p className="flex items-center gap-2 text-sm text-foreground min-w-0"><Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" /><span className="truncate">{contact.email}</span></p>
                     <button className="shrink-0 p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-primary transition-colors" onClick={() => copyToClipboard(contact.email!, "email")}>
                       {copiedField === "email" ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                )}
+                {contact?.email && user?.businessCardBase64 && (
+                  <div className="pt-2 border-t border-border">
+                    <button
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
+                      onClick={() => { setContactModal(null); setIncludePropertyLink(true); setShowCardModal(true); }}
+                    >
+                      <IdCard className="w-3.5 h-3.5" />名刺と物件情報を送る
                     </button>
                   </div>
                 )}
