@@ -64,6 +64,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [, setLocation] = useLocation();
   const [filterType, setFilterType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [keywordInput, setKeywordInput] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [minLandArea, setMinLandArea] = useState("");
   const [maxLandArea, setMaxLandArea] = useState("");
@@ -381,11 +382,9 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
           setAiResultIds(res.ids);
           setAiSearching(false);
         };
-        const handleKeywordSearch = (q: string) => {
-          setSearchQuery(q);
-        };
         const commitSearchLog = (q: string) => {
           const trimmed = q.trim();
+          setSearchQuery(trimmed);
           if (trimmed.length >= 2 && user && loggedQueryRef.current !== trimmed) {
             loggedQueryRef.current = trimmed;
             const count = baseFiltered.filter(p => {
@@ -528,16 +527,16 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                   <Input
                     placeholder="住所・物件名・業者名で検索..."
                     className="pl-10 bg-card border-border h-11"
-                    value={searchQuery}
-                    onChange={e => handleKeywordSearch(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && commitSearchLog(searchQuery)}
+                    value={keywordInput}
+                    onChange={e => setKeywordInput(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && commitSearchLog(keywordInput)}
                     onBlur={e => commitSearchLog(e.target.value)}
                   />
                 </div>
                 <Button
                   className="h-11 px-4 bg-primary gap-2 shrink-0"
-                  onClick={() => commitSearchLog(searchQuery)}
-                  disabled={!searchQuery.trim()}
+                  onClick={() => commitSearchLog(keywordInput)}
+                  disabled={!keywordInput.trim()}
                 >
                   <Search className="w-4 h-4" />
                   <span className="hidden sm:inline">検索</span>

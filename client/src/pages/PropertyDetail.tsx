@@ -647,9 +647,9 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
       ) : (
         <div className="divide-y divide-border">
           {currentFiles.map(file => (
-            <div key={file.id} className="flex items-center gap-3 px-5 py-3.5">
+            <div key={file.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
               <FileText className="w-5 h-5 text-red-500 shrink-0" />
-              <button className="text-sm text-primary hover:underline flex-1 text-left truncate" onClick={() => handlePreview(file.id, file.name)}>{file.name}</button>
+              <button className="text-sm text-primary hover:underline flex-1 min-w-[140px] text-left truncate" onClick={() => handlePreview(file.id, file.name)}>{file.name}</button>
               <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
               {isOwner && (
                 <button
@@ -667,11 +667,12 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
                 </button>
               )}
               <button
-                className="text-primary hover:text-primary/70 p-1"
+                className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-primary bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                 onClick={() => handleDownload(file.id)}
                 disabled={downloading === file.id}
               >
-                {downloading === file.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                {downloading === file.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                ダウンロード
               </button>
               {isOwner && (
                 <button className="text-muted-foreground hover:text-destructive p-1" onClick={() => handleDelete(file.id)}>
