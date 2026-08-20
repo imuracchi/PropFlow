@@ -433,7 +433,7 @@ function PropertyPhotos({ isOwner, propertyId }: { isOwner: boolean; propertyId:
   if (photos.length === 0 && !isOwner) return null;
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Camera className="w-4 h-4 text-muted-foreground" />
@@ -590,11 +590,11 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   const currentFiles = files ?? [];
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+    <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-border bg-muted/40">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 shrink-0">
           <FileText className="w-4 h-4 text-muted-foreground" />
-          アップロード済みファイル
+          資料一覧
           <span className="text-xs text-muted-foreground">{currentFiles.length}件</span>
         </h3>
         <div className="flex items-center gap-2">
@@ -647,38 +647,42 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
       ) : (
         <div className="divide-y divide-border">
           {currentFiles.map(file => (
-            <div key={file.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
-              <FileText className="w-5 h-5 text-red-500 shrink-0" />
-              <button className="text-sm text-primary hover:underline flex-1 min-w-[140px] text-left truncate" onClick={() => handlePreview(file.id, file.name)}>{file.name}</button>
-              <button
-                className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-primary bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                onClick={() => handleDownload(file.id)}
-                disabled={downloading === file.id}
-              >
-                {downloading === file.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                ダウンロード
-              </button>
-              <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
-              {isOwner && (
+            <div key={file.id} className="px-5 py-3.5 space-y-2">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-red-500 shrink-0" />
+                <button className="text-sm text-primary hover:underline flex-1 text-left truncate" onClick={() => handlePreview(file.id, file.name)}>{file.name}</button>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 pl-7">
                 <button
-                  className="shrink-0 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border transition-colors"
-                  style={(file as any).visible === 0
-                    ? { background: "#fef3c7", color: "#92400e", borderColor: "#fcd34d" }
-                    : { background: "#f0fdf4", color: "#166534", borderColor: "#86efac" }}
-                  title={(file as any).visible === 0 ? "クリックで全員に公開" : "クリックで登録者のみに変更"}
-                  onClick={() => handleToggleVisibility(file.id, (file as any).visible)}
-                  disabled={visibilityMutation.isPending}
+                  className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-primary bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                  onClick={() => handleDownload(file.id)}
+                  disabled={downloading === file.id}
                 >
-                  {(file as any).visible === 0
-                    ? <><EyeOff className="w-3 h-3" />非公開中</>
-                    : <><Eye className="w-3 h-3" />公開中</>}
+                  {downloading === file.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  ダウンロード
                 </button>
-              )}
-              {isOwner && (
-                <button className="text-muted-foreground hover:text-destructive p-1" onClick={() => handleDelete(file.id)}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
+                <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                {isOwner && (
+                  <button
+                    className="shrink-0 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border transition-colors"
+                    style={(file as any).visible === 0
+                      ? { background: "#fef3c7", color: "#92400e", borderColor: "#fcd34d" }
+                      : { background: "#f0fdf4", color: "#166534", borderColor: "#86efac" }}
+                    title={(file as any).visible === 0 ? "クリックで全員に公開" : "クリックで登録者のみに変更"}
+                    onClick={() => handleToggleVisibility(file.id, (file as any).visible)}
+                    disabled={visibilityMutation.isPending}
+                  >
+                    {(file as any).visible === 0
+                      ? <><EyeOff className="w-3 h-3" />非公開中</>
+                      : <><Eye className="w-3 h-3" />公開中</>}
+                  </button>
+                )}
+                {isOwner && (
+                  <button className="text-muted-foreground hover:text-destructive p-1" onClick={() => handleDelete(file.id)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -693,7 +697,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
 
 function IntroducerCard({ property }: { property: any }) {
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
       <div className="px-5 py-3 bg-muted/40 flex items-center gap-2">
         <span className="text-sm font-semibold text-foreground flex items-center gap-2">
           <UserCircle className="w-4 h-4 text-primary" />
@@ -737,7 +741,7 @@ function PropertyMemo({ propertyId }: { propertyId: number }) {
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-amber-50/80">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <StickyNote className="w-4 h-4 text-amber-500" />
@@ -1512,7 +1516,7 @@ export default function PropertyDetail() {
           </div>
 
           {/* 基本情報 */}
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
             <div className="px-5 py-4 border-b border-border"><h2 className="font-semibold text-foreground">基本情報</h2></div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1545,7 +1549,7 @@ export default function PropertyDetail() {
           </div>
 
           {/* 詳細情報 */}
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
             <div className="px-5 py-4 border-b border-border"><h2 className="font-semibold text-foreground">詳細情報</h2></div>
             <div className="p-5 space-y-4">
               <div className="space-y-2"><Label>交通</Label><Input value={editForm.transport} onChange={e => setEditForm(p => ({ ...p, transport: e.target.value }))} placeholder="例: 東京メトロ銀座線「外苑前」駅 徒歩7分" /></div>
@@ -1571,7 +1575,7 @@ export default function PropertyDetail() {
           </div>
 
           {/* 商流 */}
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
             <div className="px-5 py-4 border-b border-border">
               <h2 className="font-semibold text-foreground">商流</h2>
               <p className="text-xs text-muted-foreground mt-0.5">売買の流れを記載しておくことで、チャットでのやり取りを減らせます</p>
@@ -1582,7 +1586,7 @@ export default function PropertyDetail() {
           </div>
 
           {/* 紹介コメント */}
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <h2 className="font-semibold text-foreground">紹介コメント</h2>
               <Button variant="outline" size="sm" className="gap-1.5 text-xs" disabled={generatingComment || !editForm.name || !editForm.address || !editForm.type || !editForm.price || !editForm.landArea} onClick={handleGenerateComment}>
@@ -1610,7 +1614,7 @@ export default function PropertyDetail() {
       {(
         <>
           {(property.comment || isOwner) && (
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
               <div className="px-5 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
                 <p className="text-sm font-semibold text-foreground">紹介コメント</p>
                 <div className="flex items-center gap-2">
@@ -1661,11 +1665,11 @@ export default function PropertyDetail() {
               <p className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">売出価格</p>
               <p className="text-base md:text-xl font-bold text-primary">{property.priceNegotiable ? "応相談" : (property.price?.toLocaleString() ?? "—") + "円"}</p>
             </div>
-            <div className="bg-card border border-border rounded-lg p-3 md:p-4">
+            <div className="bg-card border-0 sm:border border-border rounded-lg p-3 md:p-4">
               <p className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">土地面積</p>
               <p className="text-sm md:text-lg font-bold text-foreground">{property.landArea ? `${property.landArea.toFixed(2)}㎡` : "—"}</p>
             </div>
-            <div className="bg-card border border-border rounded-lg p-3 md:p-4">
+            <div className="bg-card border-0 sm:border border-border rounded-lg p-3 md:p-4">
               <p className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">建物延床面積</p>
               <p className="text-sm md:text-lg font-bold text-foreground">{property.buildingArea ? `${property.buildingArea.toFixed(2)}㎡` : "—"}</p>
             </div>
@@ -1725,7 +1729,7 @@ export default function PropertyDetail() {
                   <span className="text-xs text-muted-foreground shrink-0">資料をアップロードする →</span>
                 </button>
               )}
-              <div className="bg-card border border-border rounded-lg">
+              <div className="bg-card border-0 sm:border border-border rounded-lg">
                 <div className="px-5 py-3 border-b border-border flex items-center justify-between bg-muted/40">
                   <h3 className="text-sm font-semibold text-foreground">物件概要</h3>
                   {isOwner && (
@@ -1830,7 +1834,7 @@ export default function PropertyDetail() {
             <TabsContent value="map" className="mt-4 space-y-4">
               {/* PC: 埋め込み表示 */}
               <div className="hidden md:block">
-                <div className="bg-card border border-border rounded-lg p-5">
+                <div className="bg-card border-0 sm:border border-border rounded-lg p-5">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-foreground flex items-center gap-2"><Map className="w-4 h-4 text-primary" />Googleマップ</h3>
                     <a
@@ -1846,7 +1850,7 @@ export default function PropertyDetail() {
                   <GoogleMapPanel address={property.address} />
                   <div className="flex items-center gap-1.5 mt-3 text-sm text-muted-foreground"><MapPin className="w-4 h-4 text-primary" />{property.address}</div>
                 </div>
-                <div className="bg-card border border-border rounded-lg p-5 mt-4">
+                <div className="bg-card border-0 sm:border border-border rounded-lg p-5 mt-4">
                   <h3 className="font-semibold text-foreground flex items-center gap-2 mb-3"><Map className="w-4 h-4 text-primary" />ストリートビュー（接道状況確認）</h3>
                   <StreetViewPanel address={property.address} />
                   <p className="text-xs text-muted-foreground mt-2">接道状況・前面道路・周辺環境をドラッグで確認できます</p>
@@ -1854,7 +1858,7 @@ export default function PropertyDetail() {
               </div>
               {/* スマホ: アプリで開くボタン */}
               <div className="md:hidden space-y-3">
-                <div className="bg-card border border-border rounded-lg p-5">
+                <div className="bg-card border-0 sm:border border-border rounded-lg p-5">
                   <h3 className="font-semibold text-foreground flex items-center gap-2 mb-2"><Map className="w-4 h-4 text-primary" />Googleマップ</h3>
                   <div className="flex items-center gap-1.5 mb-4 text-sm text-muted-foreground"><MapPin className="w-4 h-4 text-primary" />{property.address}</div>
                   <a
@@ -1875,7 +1879,7 @@ export default function PropertyDetail() {
             </TabsContent>
 
             <TabsContent value="faq" className="mt-4">
-              <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
                   <div className="flex items-center gap-3">
                     <HelpCircle className="w-4 h-4 text-muted-foreground" />
@@ -1939,7 +1943,7 @@ export default function PropertyDetail() {
 
           {/* 商流 */}
           {!isEditing && (
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="bg-card border-0 sm:border border-border rounded-lg overflow-hidden">
               <div className="px-5 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
                 <p className="text-sm font-semibold text-foreground">商流</p>
                 {isOwner && (
