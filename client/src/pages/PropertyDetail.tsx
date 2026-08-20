@@ -1714,6 +1714,16 @@ export default function PropertyDetail() {
                   <span className="text-xs text-amber-700 shrink-0">資料タブを見る →</span>
                 </button>
               )}
+              {isOwner && visibleFileCount === 0 && hiddenFileCount === 0 && (
+                <button
+                  className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-muted/50 border border-border text-left hover:bg-muted transition-colors"
+                  onClick={() => setActiveTab("files")}
+                >
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium text-muted-foreground flex-1">📎 添付資料がありません</span>
+                  <span className="text-xs text-muted-foreground shrink-0">資料をアップロードする →</span>
+                </button>
+              )}
               <div className="bg-card border border-border rounded-lg">
                 <div className="px-5 py-3 border-b border-border flex items-center justify-between bg-muted/40">
                   <h3 className="text-sm font-semibold text-foreground">物件概要</h3>
