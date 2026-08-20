@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { PropertyRegisterNudgeBanner } from "@/components/PropertyRegisterNudgeBanner";
 
 const PLAN_MAP: Record<string, string> = {
   standard: "スタンダード",
@@ -70,6 +71,8 @@ export default function MyPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <h1 className="text-lg font-semibold text-foreground">マイページ</h1>
+
+      <PropertyRegisterNudgeBanner />
 
       {/* PWAインストール案内（スマホのみ上部） */}
       {!isInstalled && (
