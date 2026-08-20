@@ -1749,7 +1749,7 @@ export default function PropertyDetail() {
                       </div>
                     ) : (
                       <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={startEditing}>
-                        <Pencil className="w-3.5 h-3.5" />編集する
+                        <Pencil className="w-3.5 h-3.5" />編集
                       </Button>
                     )
                   )}
