@@ -64,7 +64,7 @@ const baseSections: MenuSection[] = [
   { title: "マイページ", items: [
     { icon: UserCircle, label: "マイページ", path: "/mypage" },
     { icon: Archive, label: "お知らせアーカイブ", path: "/announce-archive-ext", href: "/announce-archive" },
-    { icon: HelpCircle, label: "できること", path: "/features-ext", href: "https://claude.ai/code/artifact/05e7c472-05a9-4497-81ae-8e4ecf01e2c1" },
+    { icon: HelpCircle, label: "できること", path: "/features-ext", href: "/propflow-guide.html" },
   ]},
 ];
 

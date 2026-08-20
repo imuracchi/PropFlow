@@ -398,7 +398,10 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
             </div>
           </div>
         </a>
-        <div className="flex items-center justify-center gap-4 mt-4">
+        <div className="text-center mt-4">
+          <a href="/propflow-intro.html" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-medium">PropFlowのご紹介ページ →</a>
+        </div>
+        <div className="flex items-center justify-center gap-4 mt-3">
           <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">利用規約</a>
           <span className="text-xs text-muted-foreground/30">|</span>
           <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">個人情報保護方針</a>
