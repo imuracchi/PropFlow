@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { config } from "dotenv";
 
-export async function sendMail(to: string, subject: string, html: string, options?: { replyTo?: string; cc?: string; attachments?: { filename: string; content: string }[] }) {
+export async function sendMail(to: string, subject: string, html: string, options?: { replyTo?: string; cc?: string; bcc?: string; attachments?: { filename: string; content: string }[] }) {
   const { parsed } = config();
   const apiKey = parsed?.RESEND_API_KEY || process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -18,6 +18,7 @@ export async function sendMail(to: string, subject: string, html: string, option
       html,
       ...(options?.replyTo ? { reply_to: options.replyTo } : {}),
       ...(options?.cc ? { cc: options.cc } : {}),
+      ...(options?.bcc ? { bcc: options.bcc } : {}),
       ...(options?.attachments ? { attachments: options.attachments } : {}),
     });
     console.log("[Mail] Sent to:", to);

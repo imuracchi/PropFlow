@@ -1619,7 +1619,7 @@ ${propList}`
 <p>PropFlowサポート　加藤</p>
         `.trim(), {
           replyTo: "propflow@gspec.me",
-          cc: "propflow@gspec.me",
+          bcc: "imuracchi@gmail.com",
         });
 
         return { success: true, emailSent } as const;
@@ -1661,7 +1661,7 @@ ${propList}`
 <p>PropFlowサポート　加藤</p>
         `.trim(), {
           replyTo: "propflow@gspec.me",
-          cc: "propflow@gspec.me",
+          bcc: "imuracchi@gmail.com",
         });
         return { success: true, emailSent } as const;
       }),
