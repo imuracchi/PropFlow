@@ -926,7 +926,8 @@ export default function PropertyDetail() {
   const incrementViewMutation = trpc.property.incrementView.useMutation();
   const [activeTab, setActiveTab] = useState("overview");
   const { data: propertyFilesForBanner } = trpc.property.listFiles.useQuery({ propertyId }, { enabled: !!propertyId });
-  const visibleFileCount = (propertyFilesForBanner ?? []).length;
+  const visibleFileCount = (propertyFilesForBanner ?? []).filter(f => f.visible !== 0).length;
+  const hiddenFileCount = (propertyFilesForBanner ?? []).filter(f => f.visible === 0).length;
 
   useEffect(() => {
     if (!property || !user) return;
@@ -1701,6 +1702,16 @@ export default function PropertyDetail() {
                   <FileText className="w-4 h-4 text-primary shrink-0" />
                   <span className="text-sm font-medium text-primary flex-1">📎 添付資料が{visibleFileCount}件あります</span>
                   <span className="text-xs text-primary shrink-0">資料タブを見る →</span>
+                </button>
+              )}
+              {isOwner && hiddenFileCount > 0 && (
+                <button
+                  className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-left hover:bg-amber-100 transition-colors"
+                  onClick={() => setActiveTab("files")}
+                >
+                  <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="text-sm font-medium text-amber-700 flex-1">🔒 非公開資料が{hiddenFileCount}件あります</span>
+                  <span className="text-xs text-amber-700 shrink-0">資料タブを見る →</span>
                 </button>
               )}
               <div className="bg-card border border-border rounded-lg">
