@@ -87,6 +87,14 @@ a { color: inherit; }
   padding: 10px 18px; border-radius: 999px; text-decoration: none;
   box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--blue) 70%, transparent);
 }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.topbar-login {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; color: var(--text); font-weight: 700; font-size: 14px;
+  padding: 10px 18px; border-radius: 999px; text-decoration: none;
+  border: 1px solid var(--border);
+}
+.topbar-login:hover { border-color: var(--blue); color: var(--blue); }
 
 /* hero */
 .hero { padding: 72px 0 56px; }
@@ -286,7 +294,10 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
       <a href="#closing">まずは登録する</a>
       <a href="https://gspec.me/" target="_blank" rel="noopener noreferrer">運営企業</a>
     </div>
-    <a class="topbar-cta" href="https://gspec.me/contact.html" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
+    <div class="topbar-actions">
+      <a class="topbar-login" href="https://propflow.jp/">ログイン</a>
+      <a class="topbar-cta" href="https://gspec.me/contact.html" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
+    </div>
   </div>
 </div>
 
