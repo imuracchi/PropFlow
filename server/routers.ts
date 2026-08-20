@@ -1238,7 +1238,7 @@ ${propList}`
         const senderIsOwner = !!prop && prop.userId === ctx.user.id;
         const propertyBlock = prop
           ? `<p style="margin-top:16px;">対象物件: 「${prop.name}」<br/><a href="${siteUrl}/property/${prop.id}" style="color:#2563eb;">${siteUrl}/property/${prop.id}</a></p>
-             ${senderIsOwner ? `<p style="margin-top:8px;font-size:13px;color:#6b7280;">※物件ページを開いたら「資料」タブに添付資料がありますのでご確認ください。</p>` : ""}`
+             ${senderIsOwner ? `<p style="margin-top:8px;font-size:13px;color:#6b7280;">※物件ページの「資料」タブからご確認ください。</p>` : ""}`
           : "";
 
         const { sendMail } = await import("./_core/mail");

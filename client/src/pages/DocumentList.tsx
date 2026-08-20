@@ -239,7 +239,7 @@ export default function DocumentList() {
                   {expandedId === doc.id && attachIds.length > 0 && (
                     <tr>
                       <td colSpan={5} className="px-4 py-3 bg-muted/30">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">添付資料</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">資料</p>
                         <div className="space-y-1">
                           {((doc as any).attachmentNames ?? []).map((f: any) => (
                             <div key={f.id} className="flex items-center gap-2 text-xs">

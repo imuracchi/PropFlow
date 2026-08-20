@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Heart, Share2, Pencil, MessageCircle, Bell, Camera, Calculator,
-  HelpCircle, MapPin, Map, Building2, CheckCircle2,
+  HelpCircle, MapPin, Map, Building2, CheckCircle2, Info,
   ChevronDown, ChevronUp, Plus, Trash2, Check, X, Loader2, Sparkles, AlertTriangle, EyeOff, Eye, FileText, Upload, Download, StickyNote, UserCircle, UserX, Flame
 } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
@@ -260,7 +260,7 @@ ${pg.route ? page4 : ""}
 
 ${pg.attachments && attachmentNames && attachmentNames.length > 0 ? `<div class="page">
 ${hdr}
-<div class="mt">添付資料一覧</div>
+<div class="mt">資料一覧</div>
 <table class="dt" style="margin-top:16px;">
 <tr><th style="width:40px;">№</th><th>資料名</th></tr>
 ${attachmentNames.map((name, i) => `<tr><td style="text-align:center;">${i + 1}</td><td>${name}</td></tr>`).join("\n")}
@@ -650,6 +650,14 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
             <div key={file.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
               <FileText className="w-5 h-5 text-red-500 shrink-0" />
               <button className="text-sm text-primary hover:underline flex-1 min-w-[140px] text-left truncate" onClick={() => handlePreview(file.id, file.name)}>{file.name}</button>
+              <button
+                className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-primary bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                onClick={() => handleDownload(file.id)}
+                disabled={downloading === file.id}
+              >
+                {downloading === file.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                ダウンロード
+              </button>
               <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
               {isOwner && (
                 <button
@@ -666,14 +674,6 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
                     : <><Eye className="w-3 h-3" />公開中</>}
                 </button>
               )}
-              <button
-                className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-primary bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                onClick={() => handleDownload(file.id)}
-                disabled={downloading === file.id}
-              >
-                {downloading === file.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                ダウンロード
-              </button>
               {isOwner && (
                 <button className="text-muted-foreground hover:text-destructive p-1" onClick={() => handleDelete(file.id)}>
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1357,7 +1357,7 @@ export default function PropertyDetail() {
                       checked={printPages.attachments}
                       onChange={() => setPrintPages(prev => ({ ...prev, attachments: !prev.attachments }))}
                     />
-                    <span className="text-sm text-foreground font-medium">添付資料一覧</span>
+                    <span className="text-sm text-foreground font-medium">資料一覧</span>
                   </label>
                   {printPages.attachments && (
                     <div className="ml-8 space-y-1 border-l-2 border-border pl-3">
@@ -1673,14 +1673,14 @@ export default function PropertyDetail() {
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full grid grid-cols-4 bg-muted/60 border border-border">
-              <TabsTrigger value="overview" className="text-xs sm:text-sm px-1 sm:px-3">
+              <TabsTrigger value="overview" className="gap-1 text-xs sm:text-sm px-1 sm:px-3">
+                <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                 <span className="sm:hidden">概要</span>
                 <span className="hidden sm:inline">物件概要</span>
               </TabsTrigger>
               <TabsTrigger value="files" className="gap-1 text-xs sm:text-sm px-1 sm:px-3">
                 <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-                <span className="sm:hidden">資料</span>
-                <span className="hidden sm:inline">アップロード資料</span>
+                資料
               </TabsTrigger>
               <TabsTrigger value="map" className="gap-1 text-xs sm:text-sm px-1 sm:px-3">
                 <Map className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
@@ -1701,7 +1701,7 @@ export default function PropertyDetail() {
                   onClick={() => setActiveTab("files")}
                 >
                   <FileText className="w-4 h-4 text-primary shrink-0" />
-                  <span className="text-sm font-medium text-primary flex-1">📎 添付資料が{visibleFileCount}件あります</span>
+                  <span className="text-sm font-medium text-primary flex-1">📎 資料が{visibleFileCount}件あります</span>
                   <span className="text-xs text-primary shrink-0">資料タブを見る →</span>
                 </button>
               )}
@@ -1721,7 +1721,7 @@ export default function PropertyDetail() {
                   onClick={() => setActiveTab("files")}
                 >
                   <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm font-medium text-muted-foreground flex-1">📎 添付資料がありません</span>
+                  <span className="text-sm font-medium text-muted-foreground flex-1">📎 資料がありません</span>
                   <span className="text-xs text-muted-foreground shrink-0">資料をアップロードする →</span>
                 </button>
               )}
@@ -2238,7 +2238,7 @@ export default function PropertyDetail() {
                 <div className="px-5 py-4 space-y-4">
                   <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 space-y-1">
                     <p className="text-sm font-semibold text-red-700">⚠️ この操作は取り消せません</p>
-                    <p className="text-xs text-red-600">削除した物件は完全に削除され、復元できません。写真・添付資料・やり取りの履歴もすべて消去されます。</p>
+                    <p className="text-xs text-red-600">削除した物件は完全に削除され、復元できません。写真・資料・やり取りの履歴もすべて消去されます。</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">やり取りした相手へのメッセージ（任意）</label>
