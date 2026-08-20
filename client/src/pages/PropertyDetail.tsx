@@ -599,10 +599,14 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
         </h3>
         <div className="flex items-center gap-2">
           {currentFiles.length > 1 && (
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={handleDownloadAll} disabled={downloadingAll}>
+            <button
+              className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-primary bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+              onClick={handleDownloadAll}
+              disabled={downloadingAll}
+            >
               {downloadingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
               一括ダウンロード
-            </Button>
+            </button>
           )}
           {isOwner && (
             <>
@@ -746,12 +750,15 @@ function PropertyMemo({ propertyId }: { propertyId: number }) {
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <StickyNote className="w-4 h-4 text-amber-500" />
           自分用メモ
-          <span className="text-xs text-muted-foreground font-normal">（他のユーザーには見えません）</span>
+          <span className="text-xs text-muted-foreground font-normal">（他からは見えません）</span>
         </h3>
         {!isEditing && (
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-7" onClick={startEdit}>
+          <button
+            className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-400 bg-amber-100/60 text-amber-700 hover:bg-amber-100 transition-colors"
+            onClick={startEdit}
+          >
             <Pencil className="w-3 h-3" />{memo ? "編集" : "メモを追加"}
-          </Button>
+          </button>
         )}
       </div>
       {isEditing ? (
@@ -2013,13 +2020,16 @@ export default function PropertyDetail() {
                   <p className="text-sm font-semibold text-foreground">物件PDF資料を作る</p>
                   <p className="text-xs text-muted-foreground mt-0.5">概要・地図なども一緒に、自社用資料として「ダウンロード資料」に保存できます</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={async () => {
-                  const files = await utils.property.listFiles.fetch({ propertyId: property.id });
-                  const docs = (files ?? []).filter((f: any) => f.category !== "photo" && /\.pdf$/i.test(f.name));
-                  setPrintDocFiles(docs.map((f: any) => ({ id: f.id, name: f.name })));
-                  setPrintAttachments(new Set(docs.map((f: any) => f.id)));
-                  setShowPrintDialog(true);
-                }}>作成</Button>
+                <button
+                  className="shrink-0 text-xs font-semibold px-4 py-2 rounded-lg border border-blue-600 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                  onClick={async () => {
+                    const files = await utils.property.listFiles.fetch({ propertyId: property.id });
+                    const docs = (files ?? []).filter((f: any) => f.category !== "photo" && /\.pdf$/i.test(f.name));
+                    setPrintDocFiles(docs.map((f: any) => ({ id: f.id, name: f.name })));
+                    setPrintAttachments(new Set(docs.map((f: any) => f.id)));
+                    setShowPrintDialog(true);
+                  }}
+                >作成</button>
               </div>
               <div className="flex items-center gap-4 px-4 py-4">
                 <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
@@ -2029,7 +2039,10 @@ export default function PropertyDetail() {
                   <p className="text-sm font-semibold text-foreground">収益シミュレーション</p>
                   <p className="text-xs text-muted-foreground mt-0.5">想定利回り・利益を試算できます</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setLocation(`/simulation/${property.id}`)}>開始</Button>
+                <button
+                  className="shrink-0 text-xs font-semibold px-4 py-2 rounded-lg border border-green-600 bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+                  onClick={() => setLocation(`/simulation/${property.id}`)}
+                >開始</button>
               </div>
             </div>
           </div>
