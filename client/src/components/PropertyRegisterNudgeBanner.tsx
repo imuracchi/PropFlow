@@ -26,26 +26,32 @@ export function PropertyRegisterNudgeBanner() {
   };
 
   return (
-    <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl px-4 py-3 mb-4 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-9 h-9 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0">
-          <Sparkles className="w-4.5 h-4.5" />
+    <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl px-4 py-3 mb-4">
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0 mt-0.5">
+          <Sparkles className="w-4 h-4" />
         </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">物件登録はカンタン。PDFをAIが読み取って、たった1分で登録完了。</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground leading-snug">物件登録はカンタン。PDFをAIが読み取って、たった1分で登録完了。</p>
           <p className="text-xs text-muted-foreground mt-0.5">概要書をアップロードするだけで、あとは確認して登録するだけです。</p>
+          <button
+            onClick={() => setLocation("/upload")}
+            className="mt-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg px-3 py-1.5 sm:hidden"
+          >
+            物件を登録する →
+          </button>
         </div>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button
-          onClick={() => setLocation("/upload")}
-          className="bg-primary text-primary-foreground text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap"
-        >
-          物件を登録する →
-        </button>
-        <button onClick={dismiss} className="text-muted-foreground hover:text-foreground p-1 shrink-0">
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setLocation("/upload")}
+            className="hidden sm:block bg-primary text-primary-foreground text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap"
+          >
+            物件を登録する →
+          </button>
+          <button onClick={dismiss} className="text-muted-foreground hover:text-foreground p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
