@@ -936,6 +936,7 @@ export default function PropertyDetail() {
   const toggleFavMutation = trpc.favorite.toggle.useMutation();
   const isFavorite = (favoriteIds ?? []).includes(propertyId);
   const incrementViewMutation = trpc.property.incrementView.useMutation();
+  const logSimulationStartMutation = trpc.simulation.logStart.useMutation();
   const [activeTab, setActiveTab] = useState("overview");
   const { data: propertyFilesForBanner } = trpc.property.listFiles.useQuery({ propertyId }, { enabled: !!propertyId });
   const visibleFileCount = (propertyFilesForBanner ?? []).filter(f => f.visible !== 0).length;
@@ -2041,7 +2042,7 @@ export default function PropertyDetail() {
                 </div>
                 <button
                   className="shrink-0 text-xs font-semibold px-4 py-2 rounded-lg border border-green-600 bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
-                  onClick={() => setLocation(`/simulation/${property.id}`)}
+                  onClick={() => { logSimulationStartMutation.mutate({ propertyId: property.id }); setLocation(`/simulation/${property.id}`); }}
                 >開始</button>
               </div>
             </div>

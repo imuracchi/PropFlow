@@ -875,6 +875,7 @@ ${propList}`
         try {
           const ids = JSON.parse(text.match(/\[[\d,\s]*\]/)?.[0] ?? "[]") as number[];
           db.saveSearchLog(ctx.user.id, "ai", input.query, ids.length).catch(() => {});
+          db.logActivity(ctx.user.id, "search", `AI検索「${input.query}」(${ids.length}件)`, ctx.req.headers["user-agent"]).catch(() => {});
           return { ids };
         } catch {
           return { ids: [] };
@@ -886,6 +887,7 @@ ${propList}`
       .mutation(async ({ input, ctx }) => {
         console.log(`[logSearch] userId=${ctx.user.id} query="${input.query}" count=${input.resultCount}`);
         await db.saveSearchLog(ctx.user.id, "keyword", input.query, input.resultCount);
+        db.logActivity(ctx.user.id, "search", `キーワード検索「${input.query}」(${input.resultCount}件)`, ctx.req.headers["user-agent"]).catch(() => {});
         return { ok: true };
       }),
 
@@ -1077,6 +1079,7 @@ ${propList}`
       .input(z.object({ propertyId: z.number(), content: z.string() }))
       .mutation(async ({ input, ctx }) => {
         await db.saveMemo(ctx.user.id, input.propertyId, input.content);
+        db.logActivity(ctx.user.id, "memo_save", `物件ID:${input.propertyId} の自分用メモを保存`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };
       }),
 
@@ -1108,7 +1111,9 @@ ${propList}`
     toggle: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
-        return db.toggleFavorite(ctx.user.id, input.propertyId);
+        const result = await db.toggleFavorite(ctx.user.id, input.propertyId);
+        db.logActivity(ctx.user.id, "favorite_toggle", `物件ID:${input.propertyId} を${result.favorited ? "お気に入り追加" : "お気に入り解除"}`, ctx.req.headers["user-agent"]).catch(() => {});
+        return result;
       }),
   }),
 
@@ -1221,6 +1226,7 @@ ${propList}`
           emailSubject: `【PropFlow】${senderName}さんが連絡先を共有しました`,
           emailHeading: "📇 連絡先が共有されました",
         });
+        db.logActivity(ctx.user.id, "contact_share", `相手ID:${input.partnerId} に連絡先を共有`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };
       }),
 
@@ -1261,6 +1267,7 @@ ${propList}`
         );
         if (ok) {
           await db.sendDirectMessage(ctx.user.id, input.partnerId, "📇 名刺付き情報メールを送りました", input.propertyId);
+          db.logActivity(ctx.user.id, "business_card_send", `相手ID:${input.partnerId} に名刺を送付`, ctx.req.headers["user-agent"]).catch(() => {});
         }
         return { success: ok } as const;
       }),
@@ -1326,6 +1333,16 @@ ${propList}`
           stations: input.stations ?? null,
           notes: input.notes ?? null,
         });
+        db.logActivity(ctx.user.id, "buyer_preference_save", "希望条件を保存", ctx.req.headers["user-agent"]).catch(() => {});
+        return { success: true };
+      }),
+  }),
+
+  simulation: router({
+    logStart: protectedProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        db.logActivity(ctx.user.id, "simulation_start", `物件ID:${input.propertyId} の収益シミュレーションを開始`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };
       }),
   }),
@@ -1339,7 +1356,8 @@ ${propList}`
         year: z.number().optional(),
         quarter: z.number().optional(),
       }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        db.logActivity(ctx.user.id, "land_price_search", `近隣取引事例を検索（${input.area}${input.address ? " " + input.address : ""}）`, ctx.req.headers["user-agent"]).catch(() => {});
         const apiKey = process.env.MLIT_API_KEY;
         if (!apiKey) {
           return { data: [], error: "MLIT_API_KEYが未設定です。Railwayの環境変数を確認してください。" };
@@ -1429,6 +1447,7 @@ ${propList}`
       }))
       .mutation(async ({ input, ctx }) => {
         await db.saveGeneratedDocument({ userId: ctx.user.id, ...input });
+        db.logActivity(ctx.user.id, "document_generate", `「${input.title}」の紹介資料PDFを作成`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };
       }),
 
