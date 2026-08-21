@@ -1183,7 +1183,7 @@ ${propList}`
       .query(async ({ input }) => {
         const user = await db.getUserById(input.userId);
         if (!user) return null;
-        return { name: user.name, company: user.company, verified: user.verified };
+        return { name: user.name, company: user.company, verified: user.verified, hasBusinessCard: !!user.businessCardBase64 };
       }),
 
     contactStatus: protectedProcedure
@@ -1203,7 +1203,11 @@ ${propList}`
       .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
       .mutation(async ({ input, ctx }) => {
         await db.shareContact(ctx.user.id, input.partnerId, input.propertyId);
-        const content = "📇 連絡先を共有しました";
+        const contactLines = [
+          ctx.user.phone ? `電話: ${ctx.user.phone}` : null,
+          `メール: ${ctx.user.email}`,
+        ].filter(Boolean).join("\n");
+        const content = `📇 連絡先を共有しました\n${contactLines}`;
         await db.sendDirectMessage(ctx.user.id, input.partnerId, content, input.propertyId);
         const senderName = ctx.user.name ?? "ユーザー";
         await sendDmNotifications({

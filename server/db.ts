@@ -1210,7 +1210,7 @@ export async function getDirectMessageThreads(userId: number) {
   const propertyIds = [...new Set(Array.from(threadMap.values()).map(t => t.propertyId).filter((id): id is number => id !== null))];
 
   const partners = partnerIds.length > 0 ? await db
-    .select({ id: users.id, name: users.name, company: users.company, verified: users.verified })
+    .select({ id: users.id, name: users.name, company: users.company, verified: users.verified, businessCardBase64: users.businessCardBase64 })
     .from(users)
     .where(sql`${users.id} IN (${sql.join(partnerIds.map(id => sql`${id}`), sql`, `)})`) : [];
 
@@ -1253,6 +1253,7 @@ export async function getDirectMessageThreads(userId: number) {
         partnerName: partner?.name ?? "不明",
         partnerCompany: partner?.company ?? null,
         partnerVerified: partner?.verified ?? 0,
+        partnerHasCard: !!partner?.businessCardBase64,
         propertyId: thread.propertyId,
         propertyName: prop?.name ?? null,
         messageCount: thread.count,

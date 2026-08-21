@@ -46,6 +46,7 @@ export default function DirectMessage() {
   const partnerName = partnerThread?.partnerName ?? partnerInfo?.name ?? null;
   const partnerCompany = partnerThread?.partnerCompany ?? partnerInfo?.company ?? null;
   const partnerVerified = (partnerThread as any)?.partnerVerified ?? partnerInfo?.verified ?? 0;
+  const partnerHasCard = (partnerThread as any)?.partnerHasCard ?? partnerInfo?.hasBusinessCard ?? false;
   const isFlagged = partnerThread?.flagged ?? false;
 
   const sendMutation = trpc.dm.send.useMutation({ onSuccess: () => { refetch(); utils.dm.threads.invalidate(); } });
@@ -409,7 +410,6 @@ export default function DirectMessage() {
         const contact = contactStatus?.partnerContact;
         const title = `${partnerName ?? "相手"}さんの連絡先`;
         const company = partnerCompany;
-        const verified = partnerVerified === 1;
         const hasAny = contact && (contact.phone || contact.fax || contact.url || contact.email);
         return (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setContactModal(null)}>
@@ -426,8 +426,10 @@ export default function DirectMessage() {
                 {company && (
                   <p className="flex items-center gap-2 text-sm font-medium text-foreground"><Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" /><span className="truncate">{company}</span></p>
                 )}
-                {verified && (
+                {partnerHasCard ? (
                   <p className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />名刺登録済みの認証ユーザーです</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1"><X className="w-3.5 h-3.5 text-muted-foreground shrink-0" />名刺データはありません</p>
                 )}
                 {!hasAny && <p className="text-sm text-muted-foreground italic">登録されている情報がありません</p>}
                 {contact?.phone && (
