@@ -1195,7 +1195,7 @@ ${propList}`
           mineShared,
           partnerShared,
           myContact: { phone: ctx.user.phone, fax: ctx.user.fax, url: ctx.user.url, email: ctx.user.email },
-          partnerContact: partner ? { phone: partner.phone, fax: partner.fax, url: partner.url, email: partner.email } : null,
+          partnerContact: partner ? { phone: partner.phone, fax: partner.fax, url: partner.url, email: partner.email, businessCardBase64: partner.businessCardBase64 } : null,
         };
       }),
 

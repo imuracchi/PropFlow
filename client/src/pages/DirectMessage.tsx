@@ -454,6 +454,15 @@ export default function DirectMessage() {
                     </button>
                   </div>
                 )}
+                {(contact as any)?.businessCardBase64 && (
+                  <div className="pt-2 border-t border-border">
+                    <img
+                      src={`data:image/jpeg;base64,${(contact as any).businessCardBase64}`}
+                      alt="名刺"
+                      className="w-full rounded-lg border border-border object-contain max-h-40"
+                    />
+                  </div>
+                )}
                 {contact?.email && user?.businessCardBase64 && (
                   <div className="pt-2 border-t border-border">
                     <button
