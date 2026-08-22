@@ -245,6 +245,7 @@ export default function V2PropertyList({
   const filtered = useMemo(
     () =>
       (properties ?? []).filter((p: any) => {
+        if (collection !== "mine" && p.published === 0) return false;
         if (collection === "favorites" && !favSet.has(p.id)) return false;
         if (collection === "mine" && p.userId !== viewerId) return false;
         if (mode === "area" && prefecture && !p.address.includes(prefecture))
@@ -593,22 +594,25 @@ export default function V2PropertyList({
                   />
                   <div className="flex items-center gap-2 text-[13px] font-semibold text-[#5f6e82]">
                     <span>{p.type}</span>
-                    {p.userId !== user?.id && !readSet.has(p.id) && (
+                    {p.published === 0 && (
+                      <span className="bg-[#eef1f5] px-2 py-0.5 text-[#526176]">下書き</span>
+                    )}
+                    {p.published !== 0 && p.userId !== user?.id && !readSet.has(p.id) && (
                       <span className="bg-[#173f70] px-2 py-0.5 text-white">
                         新着・未読
                       </span>
                     )}
-                    {p.status === "negotiating" && (
+                    {p.published !== 0 && p.status === "negotiating" && (
                       <span className="bg-[#fff1b8] px-2 py-0.5 text-[#765500]">
                         商談中
                       </span>
                     )}
-                    {(p.inquiryCount ?? 0) >= 3 && (
+                    {p.published !== 0 && (p.inquiryCount ?? 0) >= 3 && (
                       <span className="bg-[#fde2d3] px-2 py-0.5 text-[#b43b16]">
                         注目
                       </span>
                     )}
-                    {p.status === "sold" && (
+                    {p.published !== 0 && p.status === "sold" && (
                       <span className="bg-[#eceff2] px-2 py-0.5 text-[#526176]">
                         成約済み
                       </span>
@@ -728,7 +732,7 @@ export default function V2PropertyList({
                         {priceLabel(p.price, p.priceNegotiable)}
                       </td>
                       <td className="px-3 py-3">
-                        {new Date(p.publishedAt ?? p.createdAt).toLocaleDateString("ja-JP")}
+                        {p.published === 0 ? "—" : new Date(p.publishedAt ?? p.createdAt).toLocaleDateString("ja-JP")}
                       </td>
                       <td className="px-3 py-3">
                         <span className="flex items-center gap-1">
@@ -738,25 +742,28 @@ export default function V2PropertyList({
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex min-w-[118px] flex-wrap gap-1.5">
-                        {p.userId !== user?.id && !readSet.has(p.id) && (
+                        {p.published === 0 && (
+                          <span className="bg-[#eef1f5] px-2 py-1 text-[12px] font-bold text-[#526176]">下書き</span>
+                        )}
+                        {p.published !== 0 && p.userId !== user?.id && !readSet.has(p.id) && (
                           <span className="bg-[#173f70] px-2 py-1 text-[12px] font-bold text-white">
                             新着・未読
                           </span>
                         )}
-                        {p.status === "negotiating" && (
+                        {p.published !== 0 && p.status === "negotiating" && (
                           <span className="bg-[#fff1b8] px-2 py-1 text-[12px] font-bold text-[#765500]">
                             商談中
                           </span>
                         )}
-                        {(p.inquiryCount ?? 0) >= 3 && (
+                        {p.published !== 0 && (p.inquiryCount ?? 0) >= 3 && (
                           <span className="bg-[#fde2d3] px-2 py-1 text-[12px] font-bold text-[#b43b16]">
                             注目
                           </span>
                         )}
-                        {p.status === "sold" && (
+                        {p.published !== 0 && p.status === "sold" && (
                           <span className="bg-[#eceff2] px-2 py-1 text-[12px] font-bold text-[#526176]">成約済み</span>
                         )}
-                        {p.status !== "negotiating" && p.status !== "sold" && p.userId === user?.id && (
+                        {p.published !== 0 && p.status !== "negotiating" && p.status !== "sold" && p.userId === user?.id && (
                           <span className="bg-[#f1f4f8] px-2 py-1 text-[12px] font-bold text-[#65748a]">公開中</span>
                         )}
                         </div>
