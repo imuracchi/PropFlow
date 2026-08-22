@@ -234,4 +234,259 @@
       max-width: 1280px;
     }
   }
+
+  /* 管理画面の一覧はスマホでは横長テーブルを情報カードへ変換する。 */
+  @media (max-width: 639px) {
+    .admin-mobile-table {
+      display: block;
+      min-width: 0 !important;
+      width: 100%;
+      font-size: 0.75rem;
+    }
+    .admin-mobile-table thead { display: none; }
+    .admin-mobile-table tbody { display: block; padding: 0.5rem; }
+    .admin-mobile-table tbody tr {
+      display: block;
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+      border: 1px solid hsl(var(--border));
+      border-radius: 0.5rem;
+      background: hsl(var(--card));
+    }
+    .admin-mobile-table tbody tr:last-child { margin-bottom: 0; }
+    .admin-mobile-table tbody td {
+      display: grid;
+      grid-template-columns: 5.25rem minmax(0, 1fr);
+      align-items: start;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: none !important;
+      padding: 0.45rem 0.65rem !important;
+      border-bottom: 1px solid hsl(var(--border) / 0.65);
+      white-space: normal !important;
+      overflow-wrap: anywhere;
+    }
+    .admin-mobile-table tbody td:last-child { border-bottom: 0; }
+    .admin-mobile-table tbody td::before {
+      color: hsl(var(--muted-foreground));
+      font-size: 0.6875rem;
+      font-weight: 600;
+      line-height: 1.25rem;
+    }
+    .admin-properties-table tbody td,
+    .admin-ranking-table tbody td,
+    .admin-dm-table tbody td {
+      font-size: 0.875rem !important;
+      line-height: 1.35rem;
+    }
+    .admin-properties-table tbody td::before,
+    .admin-ranking-table tbody td::before,
+    .admin-dm-table tbody td::before {
+      font-size: 0.75rem;
+    }
+    .admin-mobile-table tbody td[colspan] { display: block; text-align: center; }
+    .admin-mobile-table tbody td[colspan]::before { content: none; }
+
+    .admin-properties-table td:nth-child(1)::before { content: "ID"; }
+    .admin-properties-table td:nth-child(2)::before { content: "物件名"; }
+    .admin-properties-table td:nth-child(3)::before { content: "登録者"; }
+    .admin-properties-table td:nth-child(4)::before { content: "価格"; }
+    .admin-properties-table td:nth-child(5)::before { content: "表示"; }
+    .admin-properties-table td:nth-child(6)::before { content: "登録日"; }
+    .admin-properties-table td:nth-child(7)::before { content: "操作"; }
+    .admin-properties-table td:nth-child(n+3) { display: none; }
+    .admin-properties-table { display: table; table-layout: fixed; }
+    .admin-properties-table thead { display: table-header-group; }
+    .admin-properties-table thead th:nth-child(n+3) { display: none; }
+    .admin-properties-table tbody { display: table-row-group; padding: 0; }
+    .admin-properties-table tbody tr {
+      display: table-row;
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+    }
+    .admin-properties-table tbody td {
+      display: table-cell;
+      width: auto;
+      padding: 0.7rem 0.6rem !important;
+      border-bottom: 1px solid hsl(var(--border) / 0.75);
+      vertical-align: middle;
+    }
+    .admin-properties-table th {
+      padding: 0.55rem 0.6rem !important;
+      font-size: 0.75rem !important;
+    }
+    .admin-properties-table th:nth-child(1),
+    .admin-properties-table td:nth-child(1) { width: 4.25rem; }
+    .admin-properties-table tbody td::before { content: none !important; }
+    .admin-properties-table td:nth-child(2) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap !important;
+    }
+
+    .admin-ranking-table td:nth-child(1)::before,
+    .admin-search-ranking-table td:nth-child(1)::before { content: "順位"; }
+    .admin-ranking-table td:nth-child(2)::before { content: "物件名"; }
+    .admin-ranking-table td:nth-child(3)::before { content: "種別"; }
+    .admin-ranking-table td:nth-child(4)::before { content: "掲載者"; }
+    .admin-ranking-table td:nth-child(5)::before { content: "閲覧数"; }
+    .admin-ranking-table td:nth-child(6)::before { content: "公開"; }
+    .admin-ranking-table td:nth-child(3),
+    .admin-ranking-table td:nth-child(4),
+    .admin-ranking-table td:nth-child(6) { display: none; }
+    .admin-ranking-table { display: table; table-layout: fixed; }
+    .admin-ranking-table thead { display: table-header-group; }
+    .admin-ranking-table thead th:nth-child(3),
+    .admin-ranking-table thead th:nth-child(4),
+    .admin-ranking-table thead th:nth-child(6) { display: none; }
+    .admin-ranking-table tbody { display: table-row-group; padding: 0; }
+    .admin-ranking-table tbody tr {
+      display: table-row;
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+    }
+    .admin-ranking-table tbody td {
+      display: table-cell;
+      width: auto;
+      padding: 0.65rem 0.5rem !important;
+      border-bottom: 1px solid hsl(var(--border) / 0.75);
+      vertical-align: middle;
+    }
+    .admin-ranking-table th {
+      padding: 0.55rem 0.5rem !important;
+      font-size: 0.75rem !important;
+    }
+    .admin-ranking-table th:nth-child(1),
+    .admin-ranking-table td:nth-child(1) { width: 3.5rem; text-align: center; }
+    .admin-ranking-table th:nth-child(5),
+    .admin-ranking-table td:nth-child(5) { width: 5.75rem; text-align: right; }
+    .admin-ranking-table tbody td::before { content: none !important; }
+    .admin-ranking-table td:nth-child(2) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap !important;
+    }
+    .admin-ranking-table td:nth-child(5) > span { justify-content: flex-end; }
+
+    .admin-search-ranking-table td:nth-child(2)::before { content: "検索ワード"; }
+    .admin-search-ranking-table td:nth-child(3)::before { content: "種別"; }
+    .admin-search-ranking-table td:nth-child(4)::before { content: "検索回数"; }
+    .admin-search-ranking-table td:nth-child(5)::before { content: "平均ヒット数"; }
+
+    .admin-search-log-table,
+    .admin-activity-table { font-size: 0.6875rem; }
+    .admin-search-log-table td:nth-child(1)::before { content: "日時"; }
+    .admin-search-log-table td:nth-child(2)::before { content: "ユーザー"; }
+    .admin-search-log-table td:nth-child(3)::before { content: "種別"; }
+    .admin-search-log-table td:nth-child(4)::before { content: "検索ワード"; }
+    .admin-search-log-table td:nth-child(5)::before { content: "ヒット数"; }
+
+    .admin-dm-table td:nth-child(1)::before { content: "No."; }
+    .admin-dm-table td:nth-child(2)::before { content: "物件名"; }
+    .admin-dm-table td:nth-child(3)::before { content: "内容"; }
+    .admin-dm-table td:nth-child(4)::before { content: "発言者"; }
+    .admin-dm-table td:nth-child(5)::before { content: "日時"; }
+    .admin-dm-table td:nth-child(6)::before { content: "操作"; }
+    .admin-dm-table tbody { padding: 0.375rem; }
+    .admin-dm-table tbody tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      margin-bottom: 0.375rem;
+    }
+    .admin-dm-table tbody td { padding-block: 0.25rem !important; }
+    .admin-dm-table td:nth-child(1),
+    .admin-dm-table td:nth-child(6) { display: none; }
+    .admin-dm-table td:nth-child(2),
+    .admin-dm-table td:nth-child(3) {
+      display: block;
+      grid-column: 1 / -1;
+      width: 100%;
+    }
+    .admin-dm-table td:nth-child(2)::before,
+    .admin-dm-table td:nth-child(3)::before { content: none; }
+    .admin-dm-table td:nth-child(4),
+    .admin-dm-table td:nth-child(5) {
+      display: block;
+      border-bottom: 0;
+      padding-top: 0.35rem !important;
+      color: hsl(var(--muted-foreground));
+      font-size: 0.75rem !important;
+    }
+    .admin-dm-table td:nth-child(4)::before {
+      content: none;
+    }
+    .admin-dm-table td:nth-child(5)::before {
+      content: none;
+    }
+    .admin-dm-table td:nth-child(5) {
+      padding-left: 0 !important;
+      white-space: nowrap !important;
+    }
+    .admin-dm-table td:nth-child(4) { grid-column: 1 / -1; }
+    .admin-dm-table td:nth-child(5) { display: none; }
+    .admin-dm-party { display: flex; min-width: 0; align-items: baseline; }
+    .admin-dm-party-label {
+      width: 3.5rem;
+      flex: none;
+      color: hsl(var(--muted-foreground));
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+    .admin-dm-arrow { display: none; }
+    .admin-dm-mobile-date {
+      margin-left: auto;
+      padding-left: 0.5rem;
+      color: hsl(var(--muted-foreground));
+      font-size: 0.6875rem;
+      white-space: nowrap;
+    }
+
+    .admin-activity-table td:nth-child(1)::before { content: "No."; }
+    .admin-activity-table td:nth-child(2)::before { content: "日時"; }
+    .admin-activity-table td:nth-child(3)::before { content: "ユーザー"; }
+    .admin-activity-table td:nth-child(4)::before { content: "操作"; }
+    .admin-activity-table td:nth-child(5)::before { content: "端末"; }
+    .admin-activity-table td:nth-child(6)::before { content: "詳細"; }
+    .admin-activity-table tbody { padding: 0.375rem; }
+    .admin-activity-table tbody tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      margin-bottom: 0.375rem;
+    }
+    .admin-activity-table tbody td {
+      display: block;
+      padding-block: 0.25rem !important;
+      border-bottom: 1px solid hsl(var(--border) / 0.65);
+    }
+    .admin-activity-table tbody td::before {
+      display: inline;
+      margin-right: 0.35rem;
+      line-height: inherit;
+    }
+    .admin-activity-table td:nth-child(1) { display: none; }
+    .admin-activity-table td:nth-child(2),
+    .admin-activity-table td:nth-child(4) { border-right: 1px solid hsl(var(--border) / 0.65); }
+    .admin-activity-table td:nth-child(3) span { display: none; }
+    .admin-activity-table td:nth-child(3)::before { content: none; }
+    .admin-activity-table td:nth-child(5) { text-align: left; }
+    .admin-activity-table td:nth-child(5) svg { display: inline-block; margin-left: 0; vertical-align: -0.15rem; }
+    .admin-activity-table td:nth-child(6) {
+      grid-column: 1 / -1;
+      border-bottom: 0;
+    }
+
+    .admin-broadcast-table td:nth-child(1)::before { content: "送信日時"; }
+    .admin-broadcast-table td:nth-child(2)::before { content: "件名"; }
+    .admin-broadcast-table td:nth-child(3)::before { content: "メール"; }
+    .admin-broadcast-table td:nth-child(4)::before { content: "LINE"; }
+  }
+
+  @media (min-width: 640px) {
+    .admin-dm-party-label,
+    .admin-dm-mobile-date { display: none; }
+    .admin-dm-party,
+    .admin-dm-arrow { display: inline; }
+  }
 }

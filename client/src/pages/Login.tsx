@@ -111,32 +111,27 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/3 rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-[#f2f5f8] flex items-center justify-center px-4 py-8 relative overflow-hidden [&_.rounded-xl]:rounded-none [&_.rounded-lg]:rounded-none [&_.rounded-md]:rounded-none [&_.shadow-lg]:shadow-none [&_.shadow-md]:shadow-none [&_button]:rounded-none [&_select]:rounded-none [&_input]:text-[16px]">
 
-      <div className="w-full max-w-md relative z-10">
-        <div className="flex flex-col items-center mb-5">
-          <a href="/propflow-intro.html" target="_blank" rel="noopener noreferrer">
-            <img src="/logo1.png" alt="PropFlow" className="w-64 object-contain" />
-          </a>
-          <p className="text-xs text-muted-foreground mt-1 tracking-widest">不動産情報プラットフォーム</p>
-        </div>
-
-        <div className="text-center mb-5 space-y-1.5">
-          <p className="text-sm font-semibold text-foreground">業者間だけで流通する、表に出ない物件情報も。</p>
-          <p className="text-sm text-muted-foreground">気になったら直接DM。</p>
-          <p className="text-xs font-medium text-primary">現在、利用無料。</p>
-        </div>
-
-        <div className="text-center mb-4">
-          <a href="/propflow-intro.html" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-medium">PropFlowのご紹介ページ →</a>
+      <div className="relative z-10 w-full max-w-[1040px] overflow-hidden border border-[#d6dee8] bg-white shadow-[0_18px_55px_rgba(16,45,80,0.14)] lg:grid lg:min-h-[680px] lg:grid-cols-[0.92fr_1.08fr]">
+        <aside className="hidden bg-[#123b6d] p-12 text-white lg:flex lg:flex-col">
+          <div className="flex items-center gap-3"><Building2 size={30}/><span className="text-[25px] font-bold tracking-wide">PropFlow</span></div>
+          <div className="my-auto">
+            <p className="text-[12px] font-bold tracking-[0.22em] text-[#b8cce3]">PROPERTY NETWORK</p>
+            <h1 className="mt-5 text-[30px] font-bold leading-[1.55]">業者間の物件情報を、<br/>もっと速く、シンプルに。</h1>
+            <p className="mt-5 max-w-sm text-[14px] leading-7 text-[#d8e4f0]">物件の確認から商談、資料共有まで。日々の不動産取引をひとつの場所で進められます。</p>
+            <div className="mt-9 border-l-2 border-[#6f96c1] pl-5 text-[13px] leading-7 text-[#d8e4f0]"><p>不動産事業者専用</p><p>登録済みユーザーのみ利用可能</p></div>
+          </div>
+          <p className="text-[11px] text-[#9fb7d1]">PropFlow — 不動産情報プラットフォーム</p>
+        </aside>
+        <div className="w-full px-5 py-7 sm:px-10 lg:flex lg:flex-col lg:justify-center lg:px-16 lg:py-10">
+        <div className="flex flex-col items-center mb-7 lg:hidden">
+          <div className="flex items-center gap-2 text-[#173f70]"><Building2 size={28}/><span className="text-[25px] font-bold tracking-wide">PropFlow</span></div>
+          <p className="text-[12px] text-[#65748a] mt-2 tracking-[0.18em]">不動産情報プラットフォーム</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-5 bg-muted border border-border">
+          <TabsList className="grid h-12 w-full grid-cols-2 mb-0 bg-transparent border-b border-[#cbd5df] p-0">
             <TabsTrigger value="login">ログイン</TabsTrigger>
             <TabsTrigger value="register" className="gap-1.5 data-[state=inactive]:text-primary data-[state=inactive]:font-bold">
               新規登録
@@ -145,10 +140,10 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
           </TabsList>
 
           <TabsContent value="login">
-            <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
-              <div className="px-6 py-5 border-b border-border">
-                <h2 className="text-xl font-bold text-foreground">ログイン</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">登録済みのアカウントでログインしてください</p>
+            <div className="bg-white border border-[#cbd5df] border-t-0 shadow-sm overflow-hidden">
+              <div className="px-6 pt-7 pb-5 border-b border-[#dce3eb]">
+                <h2 className="text-[22px] font-bold text-[#102d50]">ログイン</h2>
+                <p className="text-[13px] text-[#65748a] mt-1">登録済みのアカウントでログインしてください</p>
               </div>
               <div className="p-6 space-y-4">
                 <div className="space-y-2">
@@ -168,7 +163,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
                 {loginError && (
                   <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{loginError}</p>
                 )}
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm" size="lg" onClick={handleLogin} disabled={loginMutation.isPending || !loginEmail || !loginPassword}>
+                <Button className="w-full h-12 bg-[#173f70] hover:bg-[#102f56] text-white text-[15px] font-bold shadow-none" size="lg" onClick={handleLogin} disabled={loginMutation.isPending || !loginEmail || !loginPassword}>
                   {loginMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   ログイン
                 </Button>
@@ -181,8 +176,8 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
 
           <TabsContent value="register">
             {regSent ? (
-              <div className="bg-card border border-border rounded-xl shadow-lg py-10 px-6 flex flex-col items-center gap-4 text-center">
-                <div className="w-16 h-16 bg-green-50 border border-green-200 rounded-full flex items-center justify-center">
+              <div className="bg-white border border-[#d6dee8] py-10 px-6 flex flex-col items-center gap-4 text-center">
+                <div className="grid size-14 place-items-center border border-[#b8d7c4] bg-[#edf7f0]">
                   <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
                 <h3 className="text-lg font-bold text-foreground">メールを送信しました</h3>
@@ -300,12 +295,13 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
               </div>
 
             ) : regMode === "self" ? (
-              <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
-                <div className="px-6 py-5 border-b border-border">
-                  <h2 className="text-xl font-bold text-foreground">メールで登録</h2>
-                  <p className="text-sm text-muted-foreground mt-0.5">メールアドレスを入力すると、登録用リンクが届きます</p>
+              <div className="bg-white border border-[#d6dee8] overflow-hidden">
+                <div className="px-6 py-6 border-b border-[#dce3eb]">
+                  <p className="text-[11px] font-bold tracking-[0.15em] text-[#5275a0]">NEW ACCOUNT</p>
+                  <h2 className="mt-1 text-[22px] font-bold text-[#102d50]">メールで新規登録</h2>
+                  <p className="text-[13px] text-[#65748a] mt-1">登録用リンクを受け取るメールアドレスを入力してください</p>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-5">
                   <div className="space-y-2">
                     <Label>メールアドレス</Label>
                     <div className="relative">
@@ -316,11 +312,11 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
                   {regError && (
                     <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{regError}</p>
                   )}
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm" size="lg" onClick={handleSendReg} disabled={sendRegMutation.isPending || !regEmail}>
+                  <Button className="w-full h-12 bg-[#173f70] hover:bg-[#102f56] text-white font-bold shadow-none" size="lg" onClick={handleSendReg} disabled={sendRegMutation.isPending || !regEmail}>
                     {sendRegMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                     登録用リンクを送信
                   </Button>
-                  <button className="w-full text-sm text-muted-foreground hover:text-primary" onClick={() => setRegMode(null)}>← 戻る</button>
+                  <button className="w-full text-[13px] font-semibold text-[#65748a] hover:text-[#173f70]" onClick={() => setRegMode(null)}>← 登録方法の選択へ戻る</button>
                 </div>
               </div>
 
@@ -328,21 +324,21 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
               <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
                 <div className="px-6 py-5 border-b border-border">
                   <h2 className="text-xl font-bold text-foreground">代理登録を依頼</h2>
-                  <p className="text-sm text-muted-foreground mt-0.5">LINEで名刺写真を送るだけで登録できます</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">専用フォームから名刺画像を送って登録を依頼できます</p>
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                     <p className="text-sm text-green-800 font-medium mb-2">以下の手順で代理登録ができます</p>
                     <ol className="text-sm text-green-700 text-left space-y-2 list-decimal list-inside">
-                      <li>下のボタンからPropFlow公式LINEを友だち追加</li>
-                      <li>LINEで「登録希望」とメッセージを送信</li>
-                      <li>名刺の写真を送信</li>
-                      <li>管理者が代理で登録し、ログイン情報をお伝えします</li>
+                      <li>専用フォームに氏名・会社名・メールアドレスを入力</li>
+                      <li>名刺の画像を選択して送信</li>
+                      <li>PropFlow運営が内容を確認して代理登録</li>
+                      <li>登録完了後、ログイン情報をメールでお知らせ</li>
                     </ol>
                     <p className="text-xs text-green-700/70 mt-2">登録にはお時間を頂く場合がございます。ご了承ください。</p>
                   </div>
-                  <a href="https://lin.ee/Ueg4j5Q" target="_blank" rel="noopener noreferrer" className="block bg-[#06C755] text-white rounded-lg p-3 text-center font-bold shadow-md hover:shadow-lg transition-shadow">
-                    公式LINEで代理登録を依頼する
+                  <a href="https://gspec.me/card-upload.html" target="_blank" rel="noopener noreferrer" className="block bg-[#173f70] text-white p-3 text-center font-bold hover:bg-[#102f56] transition-colors">
+                    名刺画像を送って代理登録を依頼する
                   </a>
                   <button className="w-full text-sm text-muted-foreground hover:text-primary" onClick={() => setRegMode(null)}>← 戻る</button>
                 </div>
@@ -378,7 +374,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
                       <Send className="w-6 h-6 text-[#06C755] shrink-0" />
                       <div>
                         <p className="font-bold text-foreground">代理登録を依頼する</p>
-                        <p className="text-sm text-muted-foreground mt-0.5">LINEで名刺写真を送るだけで登録できます</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">専用フォームから名刺画像を送信</p>
                       </div>
                     </div>
                   </button>
@@ -387,24 +383,11 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
             )}
           </TabsContent>
         </Tabs>
-        <p className="text-[10px] text-muted-foreground/50 text-center mt-4">現在β版として全機能を無料でご利用いただけます。</p>
-        <a href="/propflow-guide.html" target="_blank" rel="noopener noreferrer" className="block mt-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-shadow text-center">
-          <div className="flex items-center justify-center gap-2 text-lg font-bold">
-            <FileText className="w-5 h-5" />PropFlowのご案内資料
-          </div>
-          <p className="text-sm opacity-80 mt-1">初めての方はこちらをご覧ください</p>
-        </a>
-        <a href="https://lin.ee/Ueg4j5Q" target="_blank" rel="noopener noreferrer" className="block mt-3 bg-[#06C755] text-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow">
-          <div className="flex items-center gap-4">
-            <img src="/propflowQR.png" alt="LINE QR" className="w-20 h-20 rounded-lg bg-white p-1" />
-            <div>
-              <div className="font-bold text-lg">公式LINE 友だち追加</div>
-              <p className="text-xs opacity-80 mt-1">QRコードをスキャンまたは<br />タップして友だち追加できます</p>
-              <p className="text-xs opacity-80 mt-0.5">新着物件の通知を受け取れます</p>
-            </div>
-          </div>
-        </a>
-        <div className="flex items-center justify-center gap-4 mt-4">
+        <div className="mt-5 flex items-center justify-center gap-3 text-[11px] text-[#65748a]">
+          <a href="/propflow-guide.html" target="_blank" rel="noopener noreferrer" className="hover:text-[#173f70]">初めての方へ</a><span className="text-[#c5ced8]">|</span>
+          <a href="https://lin.ee/Ueg4j5Q" target="_blank" rel="noopener noreferrer" className="hover:text-[#173f70]">公式LINE</a>
+        </div>
+        <div className="flex items-center justify-center gap-4 mt-3">
           <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">利用規約</a>
           <span className="text-xs text-muted-foreground/30">|</span>
           <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">個人情報保護方針</a>
@@ -412,6 +395,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
         <p className="text-[10px] text-muted-foreground/40 text-center mt-3">
           運営：<a href="https://gspec.me/" target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline">G-Spec合同会社</a>
         </p>
+        </div>
       </div>
     </div>
   );

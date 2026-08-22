@@ -39,7 +39,7 @@ const userBottomNav = [
 const adminBottomNav = [
   { icon: List, label: "物件一覧", path: "/properties" },
   { icon: MessageCircle, label: "DM", path: "/dm-list" },
-  { icon: ShieldCheck, label: "管理", path: "/admin" },
+  { icon: ShieldCheck, label: "管理", path: "/v2/admin" },
   { icon: Building2, label: "自社物件", path: "/my-properties" },
   { icon: UserCircle, label: "マイページ", path: "/mypage" },
 ];
@@ -69,7 +69,7 @@ const baseSections: MenuSection[] = [
 ];
 
 const adminSection: MenuSection = { title: null, items: [
-  { icon: ShieldCheck, label: "管理画面", path: "/admin" },
+  { icon: ShieldCheck, label: "管理画面", path: "/v2/admin" },
   { icon: CalendarDays, label: "配信計画", path: "/broadcast-plan", href: "https://claude.ai/code/artifact/f588c3ad-6dcc-43d7-a1f0-4b65044981d4" },
 ] };
 

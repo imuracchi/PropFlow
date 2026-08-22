@@ -60,7 +60,7 @@ function exportPropertyCsv(
   URL.revokeObjectURL(url);
 }
 
-async function printProperty(
+export async function printProperty(
   p: {
     name: string; address: string; type: string; status: string;
     price: number | null; priceNegotiable: number;

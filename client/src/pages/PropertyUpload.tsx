@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 type FaqItem = { q: string; a: string };
 
@@ -17,7 +18,7 @@ const PROPERTY_TYPES = ["土地", "一棟マンション", "区分マンショ�
 
 type Step = "upload" | "form";
 
-export default function PropertyUpload() {
+export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>("upload");
   const [dragOver, setDragOver] = useState(false);
@@ -307,7 +308,8 @@ export default function PropertyUpload() {
           setNewPropertyId(result.id);
           setShowNotifyDialog(true);
         } else {
-          setLocation(`/property/${result.id}`);
+          toast.success("下書き保存しました");
+          setLocation(v2 ? `/v2/property/${result.id}` : `/property/${result.id}`);
         }
       } else {
         setSubmitting(false);
@@ -329,7 +331,7 @@ export default function PropertyUpload() {
               <Bell className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-xs text-green-700 font-medium">物件登録が完了しました</p>
+              <p className="text-xs text-green-700 font-medium">物件を公開しました</p>
               <h3 className="font-semibold text-foreground">新着として通知しますか？</h3>
             </div>
           </div>
@@ -356,7 +358,10 @@ export default function PropertyUpload() {
               disabled={notifyLineMutation.isPending}
               onClick={() => {
                 notifyLineMutation.mutate({ propertyId: newPropertyId }, {
-                  onSuccess: () => setLocation(`/property/${newPropertyId}`),
+                  onSuccess: () => {
+                    toast.success("物件を公開しました");
+                    setLocation(v2 ? `/v2/property/${newPropertyId}` : `/property/${newPropertyId}`);
+                  },
                 });
               }}
             >
@@ -367,7 +372,10 @@ export default function PropertyUpload() {
             </Button>
             <button
               className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline text-center py-1"
-              onClick={() => setLocation(`/property/${newPropertyId}`)}
+              onClick={() => {
+                toast.success("物件を公開しました");
+                setLocation(v2 ? `/v2/property/${newPropertyId}` : `/property/${newPropertyId}`);
+              }}
             >
               通知しないでスキップ
             </button>
@@ -380,7 +388,7 @@ export default function PropertyUpload() {
   // ── Step 1: PDF Upload ──
   if (step === "upload") {
     return (
-      <div className="space-y-6 max-w-4xl relative">
+      <div className={v2 ? "relative space-y-5 text-[#17211d]" : "space-y-6 max-w-4xl relative"}>
         {/* 解析中オーバーレイ */}
         {extracting && (
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -408,42 +416,42 @@ export default function PropertyUpload() {
           </div>
         )}
 
-        <div>
+        <div className={v2 ? "border-b-2 border-[#173f70] bg-white px-4 py-5 lg:px-6" : ""}>
           <button
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mb-4"
-            onClick={() => !extracting && setLocation("/properties")}
+            className={v2 ? "mb-4 flex items-center gap-1 text-[14px] font-bold text-[#173f70]" : "flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mb-4"}
+            onClick={() => !extracting && setLocation(v2 ? "/v2/properties" : "/properties")}
           >
             <ChevronLeft className="w-4 h-4" />
             物件一覧に戻る
           </button>
-          <h1 className="text-lg font-semibold text-foreground">物件情報の登録</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">PDFをアップロードしてAIが自動で情報を整理します</p>
+          <h1 className={v2 ? "text-[24px] font-bold text-[#102d50]" : "text-lg font-semibold text-foreground"}>物件情報の登録</h1>
+          <p className={v2 ? "mt-2 text-[14px] text-[#65748a]" : "text-xs text-muted-foreground mt-0.5"}>物件概要書を読み取るか、手動で情報を入力します</p>
         </div>
 
         {/* ステップインジケーター */}
-        <div className="flex items-center justify-center gap-8">
+        <div className={v2 ? "grid grid-cols-3 border border-[#d4dde7] bg-white" : "flex items-center justify-center gap-8"}>
           {[
             { num: 1, label: "資料アップロード", active: true },
             { num: 2, label: "内容確認・編集", active: false },
             { num: 3, label: "登録", active: false },
           ].map((s, i) => (
-            <div key={s.num} className="flex items-center gap-3">
+            <div key={s.num} className={v2 ? `flex min-w-0 items-center justify-center border-r border-[#d4dde7] px-2 py-4 last:border-r-0 ${s.active ? "border-b-4 border-b-[#173f70] bg-[#f2f5f8]" : ""}` : "flex items-center gap-3"}>
               <div className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold ${
+                <div className={`${v2 ? "grid size-7 shrink-0 place-items-center text-[13px] font-bold" : "w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold"} ${
                   s.active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 }`}>{s.num}</div>
-                <span className={`text-sm ${s.active ? "text-primary font-medium" : "text-muted-foreground"}`}>{s.label}</span>
+                <span className={`${v2 ? "hidden text-[13px] font-bold sm:inline" : "text-sm"} ${s.active ? "text-primary font-medium" : "text-muted-foreground"}`}>{s.label}</span>
               </div>
-              {i < 2 && <div className="w-16 h-px bg-border" />}
+              {!v2 && i < 2 && <div className="w-16 h-px bg-border" />}
             </div>
           ))}
         </div>
 
         {/* 推奨注釈 */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 space-y-1">
-          <p className="text-sm font-semibold text-blue-800">まず物件概要がわかる1枚をアップしてください</p>
-          <p className="text-xs text-blue-700">AIがそのファイルをもとに物件情報を自動入力します。登記簿謄本・間取り図などの追加資料は<span className="font-semibold">次のステップ（内容確認・編集）で追加できます。</span></p>
-          <p className="text-xs text-blue-600/80">※ 複数ファイルの一括アップは非推奨です（解析精度の低下・処理時間の増加につながります）</p>
+        <div className={v2 ? "border-l-4 border-[#173f70] bg-[#edf3fa] px-5 py-4" : "bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 space-y-1"}>
+          <p className={v2 ? "text-[15px] font-bold text-[#102d50]" : "text-sm font-semibold text-blue-800"}>まず物件概要がわかる1枚をアップしてください</p>
+          <p className={v2 ? "mt-1 text-[13px] leading-6 text-[#526176]" : "text-xs text-blue-700"}>AIがそのファイルをもとに物件情報を自動入力します。登記簿謄本・間取り図などの追加資料は<span className="font-semibold">次のステップ（内容確認・編集）で追加できます。</span></p>
+          <p className={v2 ? "text-[12px] text-[#65748a]" : "text-xs text-blue-600/80"}>※ 複数ファイルの一括アップは非推奨です</p>
         </div>
 
         {/* ドロップゾーン */}
@@ -456,7 +464,7 @@ export default function PropertyUpload() {
           onChange={e => { if (e.target.files) { handleFilesSelect(e.target.files); e.target.value = ""; } }}
         />
         <div
-          className={`border-2 border-dashed rounded-xl p-16 text-center transition-all cursor-pointer bg-card ${
+          className={`border-2 border-dashed text-center transition-all cursor-pointer bg-card ${v2 ? "min-h-[270px] p-10 lg:p-12" : "rounded-xl p-16"} ${
             dragOver ? "border-primary bg-primary/5" : pdfFiles.length > 1 ? "border-amber-400 bg-amber-50" : "border-border hover:border-primary/50"
           }`}
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
@@ -465,12 +473,12 @@ export default function PropertyUpload() {
           onClick={() => fileInputRef.current?.click()}
         >
           <div className="flex flex-col items-center gap-3">
-            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+            <div className={v2 ? "grid size-14 place-items-center bg-[#e7eef8]" : "w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center"}>
               <Upload className="w-7 h-7 text-primary" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">PDF・画像ファイルをドロップ</p>
-              <p className="text-sm text-muted-foreground mt-1">またはクリックしてファイルを選択</p>
+              <p className={v2 ? "text-[17px] font-bold text-[#102d50]" : "font-semibold text-foreground"}>PDF・画像ファイルをドロップ</p>
+              <p className={v2 ? "mt-1 text-[14px] text-[#65748a]" : "text-sm text-muted-foreground mt-1"}>またはクリックしてファイルを選択</p>
             </div>
             <p className="text-xs text-muted-foreground">物件概要書（PDF/JPG/PNG、最大20MB）<span className="text-primary font-medium ml-1">1枚推奨</span></p>
           </div>
@@ -503,12 +511,12 @@ export default function PropertyUpload() {
         )}
 
         {/* アクションボタン */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button variant="outline" className="h-12 text-base gap-2" disabled={extracting} onClick={() => setStep("form")}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Button variant="outline" className={v2 ? "h-12 rounded-none border-2 border-[#173f70] text-[15px] font-bold text-[#173f70]" : "h-12 text-base gap-2"} disabled={extracting} onClick={() => setStep("form")}>
             手動で入力する
           </Button>
           <Button
-            className="h-12 text-base gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+            className={v2 ? "h-12 gap-2 rounded-none bg-[#173f70] text-[15px] font-bold text-white" : "h-12 text-base gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"}
             disabled={pdfFiles.length === 0 || extracting}
             onClick={handleExtract}
           >
@@ -516,7 +524,7 @@ export default function PropertyUpload() {
           </Button>
         </div>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm space-y-1.5">
+        <div className={v2 ? "border border-[#e2c36d] bg-[#fffaf0] p-4 text-[13px]" : "bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm space-y-1.5"}>
           <p className="font-semibold text-amber-800">【ご注意ください】</p>
           <ul className="text-amber-700 space-y-1 text-xs list-disc list-inside">
             <li>AIで情報を抽出する場合は、必ず手動で内容を確認してください。</li>
@@ -531,7 +539,7 @@ export default function PropertyUpload() {
 
   // ── Step 2: Form ──
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className={v2 ? "space-y-5 text-[#17211d] [&_.bg-card]:rounded-none [&_.bg-card]:bg-white [&_.border-border]:border-[#d4dde7] [&_h2]:text-[17px] [&_h2]:font-bold [&_h2]:text-[#102d50] [&_input]:rounded-none [&_input]:border-[#becbd8] [&_input]:text-[15px] [&_textarea]:rounded-none [&_textarea]:border-[#becbd8] [&_textarea]:text-[15px]" : "space-y-6 max-w-4xl"}>
       {submitting && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-card border border-border rounded-xl shadow-lg p-8 max-w-md w-full mx-4 text-center space-y-4">
@@ -544,35 +552,35 @@ export default function PropertyUpload() {
           </div>
         </div>
       )}
-      <div>
+      <div className={v2 ? "border-b-2 border-[#173f70] bg-white px-4 py-5 lg:px-6" : ""}>
         <button
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mb-4"
+          className={v2 ? "mb-4 flex items-center gap-1 text-[14px] font-bold text-[#173f70]" : "flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mb-4"}
           onClick={() => setStep("upload")}
         >
           <ChevronLeft className="w-4 h-4" />
           アップロードに戻る
         </button>
-        <h1 className="text-lg font-semibold text-foreground">物件情報の確認・編集</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <h1 className={v2 ? "text-[24px] font-bold text-[#102d50]" : "text-lg font-semibold text-foreground"}>物件情報の確認・編集</h1>
+        <p className={v2 ? "mt-2 text-[14px] text-[#65748a]" : "text-xs text-muted-foreground mt-0.5"}>
           {pdfFiles.length > 0 ? "AIが抽出した情報を確認・修正してください" : "物件の基本情報を入力してください"}
         </p>
       </div>
 
       {/* ステップインジケーター */}
-      <div className="flex items-center justify-center gap-8">
+      <div className={v2 ? "grid grid-cols-3 border border-[#d4dde7] bg-white" : "flex items-center justify-center gap-8"}>
         {[
           { num: 1, label: "資料アップロード", active: false, done: true },
           { num: 2, label: "内容確認・編集", active: true },
           { num: 3, label: "登録", active: false },
         ].map((s, i) => (
-          <div key={s.num} className="flex items-center gap-3">
+          <div key={s.num} className={v2 ? `flex min-w-0 items-center justify-center border-r border-[#d4dde7] px-2 py-4 last:border-r-0 ${s.active ? "border-b-4 border-b-[#173f70] bg-[#f2f5f8]" : ""}` : "flex items-center gap-3"}>
             <div className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold ${
+              <div className={`${v2 ? "grid size-7 shrink-0 place-items-center text-[13px] font-bold" : "w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold"} ${
                 s.active ? "bg-primary text-primary-foreground" : s.done ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"
               }`}>{s.done && !s.active ? "✓" : s.num}</div>
-              <span className={`text-sm ${s.active ? "text-primary font-medium" : "text-muted-foreground"}`}>{s.label}</span>
+              <span className={`${v2 ? "hidden text-[13px] font-bold sm:inline" : "text-sm"} ${s.active ? "text-primary font-medium" : "text-muted-foreground"}`}>{s.label}</span>
             </div>
-            {i < 2 && <div className="w-16 h-px bg-border" />}
+            {!v2 && i < 2 && <div className="w-16 h-px bg-border" />}
           </div>
         ))}
       </div>
@@ -612,11 +620,11 @@ export default function PropertyUpload() {
       )}
 
       {/* 物件概要 */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-5 py-4 border-b border-border">
+      <div className="overflow-hidden border border-[#d4dde7] bg-white">
+        <div className={v2 ? "border-b border-[#d4dde7] bg-[#edf1f5] px-5 py-4" : "px-5 py-4 border-b border-border"}>
           <h2 className="font-semibold text-foreground">物件概要</h2>
         </div>
-        <div className="divide-y divide-border">
+        <div className={v2 ? "grid grid-cols-1 gap-x-6 gap-y-5 p-5 lg:grid-cols-2 lg:p-6" : "divide-y divide-border"}>
           {[
             { label: "物件名", required: true, input: <Input value={name} onChange={e => setName(e.target.value)} placeholder="例: 港区南青山4" /> },
             { label: "所在地", required: true, input: <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="例: 東京都港区南青山4丁目5番27号" /> },
@@ -664,11 +672,11 @@ export default function PropertyUpload() {
             { label: "その他制限", input: <Textarea className="min-h-[2.5rem]" rows={2} value={otherRestrictions} onChange={e => setOtherRestrictions(e.target.value)} placeholder="例: 日影規制：3h-2h（測定面4m）" /> },
             { label: "備考", input: <Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="その他の特記事項" rows={2} /> },
           ].map(row => (
-            <div key={row.label} className="flex flex-col md:flex-row px-5 py-3 gap-1 md:gap-0">
-              <span className="w-36 shrink-0 text-sm text-muted-foreground pt-2">
+            <div key={row.label} className={v2 ? `${["物件名", "所在地", "交通", "接道", "用途地域", "その他制限", "備考"].includes(row.label) ? "lg:col-span-2" : ""}` : "flex flex-col md:flex-row px-5 py-3 gap-1 md:gap-0"}>
+              <span className={v2 ? "mb-2 block text-[14px] font-bold text-[#526176]" : "w-36 shrink-0 text-sm text-muted-foreground pt-2"}>
                 {row.label}{row.required && <span className="text-red-500 ml-0.5">*</span>}
               </span>
-              <div className="flex-1">{row.input}</div>
+              <div className={v2 ? "[&_button]:rounded-none [&_input]:h-11 [&_input]:rounded-none [&_input]:border-[#becbd8] [&_textarea]:rounded-none [&_textarea]:border-[#becbd8]" : "flex-1"}>{row.input}</div>
             </div>
           ))}
         </div>
@@ -686,8 +694,8 @@ export default function PropertyUpload() {
       </div>
 
       {/* 紹介コメント */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+      <div className="overflow-hidden border border-[#d4dde7] bg-white">
+        <div className={v2 ? "flex items-center justify-between border-b border-[#d4dde7] bg-[#edf1f5] px-5 py-4" : "flex items-center justify-between px-5 py-4 border-b border-border"}>
           <h2 className="font-semibold text-foreground">紹介コメント</h2>
           <Button
             variant="outline"
@@ -903,15 +911,15 @@ export default function PropertyUpload() {
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <HelpCircle className="w-4 h-4 text-muted-foreground" />
+            <HelpCircle className={v2 ? "size-4 text-[#173f70]" : "w-4 h-4 text-muted-foreground"} />
             <span className="font-semibold text-foreground text-sm">よくある質問</span>
             <span className="text-xs text-muted-foreground">（任意）</span>
           </div>
         </div>
         {faqs.length === 0 ? (
-          <div className="p-6 text-center">
-            <p className="text-sm text-muted-foreground mb-3">買い手からよく聞かれる質問と回答を登録できます</p>
-            <Button variant="outline" className="gap-2" onClick={addFaq}><Plus className="w-4 h-4" />質問を追加</Button>
+          <div className={v2 ? "flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center" : "p-6 text-center"}>
+            <p className={v2 ? "flex-1 text-[14px] text-[#65748a]" : "text-sm text-muted-foreground mb-3"}>買い手からよく聞かれる質問と回答を登録できます</p>
+            <Button variant="outline" className={v2 ? "h-10 rounded-none border-[#173f70] px-4 font-bold text-[#173f70]" : "gap-2"} onClick={addFaq}><Plus className="w-4 h-4" />質問を追加</Button>
           </div>
         ) : (
           <div>
@@ -943,18 +951,22 @@ export default function PropertyUpload() {
       )}
 
       {/* 閲覧制限 */}
-      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-        <p className="text-sm font-semibold text-red-600 flex items-center gap-2">
-          <UserX className="w-4 h-4" />閲覧制限
-          <span className="text-xs font-normal text-muted-foreground">（設定したユーザーには非表示になります）</span>
-        </p>
+      <div className={v2 ? "border border-[#d4dde7] bg-white" : "bg-card border border-border rounded-lg p-4 space-y-3"}>
+        <div className={v2 ? "flex items-center gap-2 border-b border-[#d4dde7] bg-[#edf1f5] px-5 py-4" : ""}>
+          <p className={v2 ? "flex items-center gap-2 text-[17px] font-bold text-[#102d50]" : "text-sm font-semibold text-red-600 flex items-center gap-2"}>
+            <UserX className={v2 ? "size-4 text-[#173f70]" : "w-4 h-4"} />閲覧制限
+          </p>
+        </div>
+        <div className={v2 ? "flex flex-col gap-3 p-5" : "contents"}>
+        <p className={v2 ? "text-[13px] text-[#65748a]" : "text-xs text-muted-foreground"}>設定したユーザーには、この物件を表示しません。</p>
         {excludedUsers.length > 0 && (
           <div className="space-y-1.5">
             {excludedUsers.map(u => (
-              <div key={u.id} className="flex items-center justify-between py-1.5 px-3 bg-muted/40 rounded-lg">
+              <div key={u.id} className={v2 ? "flex items-center justify-between border border-[#d4dde7] bg-[#f7f9fb] px-3 py-2.5" : "flex items-center justify-between py-1.5 px-3 bg-muted/40 rounded-lg"}>
                 <span className="text-sm">
                   {u.name ?? "—"}
                   {u.company && <span className="text-xs text-muted-foreground ml-1.5">({u.company})</span>}
+                  {v2 && <span className="ml-2 bg-[#eceff2] px-2 py-0.5 text-[11px] font-bold text-[#526176]">閲覧不可</span>}
                 </span>
                 <button className="text-muted-foreground hover:text-red-500" onClick={() => setExcludedUsers(v => v.filter(x => x.id !== u.id))}>
                   <X className="w-3.5 h-3.5" />
@@ -964,16 +976,16 @@ export default function PropertyUpload() {
           </div>
         )}
         {!excludePicker ? (
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => { setExcludePicker(true); setExcludeSearch(""); }}>
-            <Plus className="w-3.5 h-3.5" />ユーザーを追加
+          <Button variant="outline" size="sm" className={v2 ? "h-10 self-start rounded-none border-[#173f70] px-4 text-[13px] font-bold text-[#173f70] sm:self-end" : "gap-1.5 text-xs"} onClick={() => { setExcludePicker(true); setExcludeSearch(""); }}>
+            <UserX className="w-3.5 h-3.5" />閲覧できないユーザーを選ぶ
           </Button>
         ) : (
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <Input
                 autoFocus
-                placeholder="名前・会社名で検索..."
-                className="h-8 text-sm max-w-64"
+                placeholder="名前・会社名で検索"
+                className={v2 ? "h-11 max-w-md rounded-none text-[14px]" : "h-8 text-sm max-w-64"}
                 value={excludeSearch}
                 onChange={e => setExcludeSearch(e.target.value)}
               />
@@ -982,7 +994,7 @@ export default function PropertyUpload() {
               </button>
             </div>
             {excludeSearch.trim() && (
-              <div className="bg-card border border-border rounded-lg shadow-md max-h-48 overflow-y-auto">
+              <div className={v2 ? "max-h-56 overflow-y-auto border border-[#d4dde7] bg-white" : "bg-card border border-border rounded-lg shadow-md max-h-48 overflow-y-auto"}>
                 {(allUsers ?? [])
                   .filter(u => {
                     const q = excludeSearch.toLowerCase();
@@ -992,7 +1004,7 @@ export default function PropertyUpload() {
                   .map(u => (
                     <button
                       key={u.id}
-                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors border-b border-border last:border-0"
+                      className={v2 ? "w-full border-b border-[#e1e6ec] px-4 py-3 text-left text-[14px] transition-colors last:border-0 hover:bg-[#f2f5f8]" : "w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors border-b border-border last:border-0"}
                       onClick={() => { setExcludedUsers(v => [...v, u]); setExcludePicker(false); setExcludeSearch(""); }}
                     >
                       {u.name ?? "—"}
@@ -1011,14 +1023,15 @@ export default function PropertyUpload() {
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* 公開 / 下書き 選択 */}
-      <div className="flex gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={() => setPublishMode("publish")}
-          className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+          className={`flex min-h-[72px] items-center gap-3 border px-4 py-3 text-[14px] font-bold transition-colors ${
             publishMode === "publish"
               ? "border-primary bg-primary/5 text-primary"
               : "border-border text-muted-foreground hover:bg-muted/50"
@@ -1033,7 +1046,7 @@ export default function PropertyUpload() {
         <button
           type="button"
           onClick={() => setPublishMode("draft")}
-          className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+          className={`flex min-h-[72px] items-center gap-3 border px-4 py-3 text-[14px] font-bold transition-colors ${
             publishMode === "draft"
               ? "border-amber-500 bg-amber-50 text-amber-700"
               : "border-border text-muted-foreground hover:bg-muted/50"
@@ -1047,10 +1060,10 @@ export default function PropertyUpload() {
         </button>
       </div>
 
-      <div className="flex gap-4">
-        <Button variant="outline" className="h-11 px-8" onClick={() => setStep("upload")}>戻る</Button>
+      <div className="flex flex-col-reverse gap-3 border-t border-[#d4dde7] pt-5 sm:flex-row sm:justify-end">
+        <Button variant="outline" className={v2 ? "h-12 rounded-none border-[#173f70] px-8 text-[14px] font-bold text-[#173f70]" : "h-11 px-8"} onClick={() => setStep("upload")}>戻る</Button>
         <Button
-          className="h-11 px-12 bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shadow-sm"
+          className={v2 ? "h-12 gap-2 rounded-none bg-[#173f70] px-12 text-[14px] font-bold text-white" : "h-11 px-12 bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shadow-sm"}
           onClick={handleSubmit}
           disabled={createMutation.isPending}
         >

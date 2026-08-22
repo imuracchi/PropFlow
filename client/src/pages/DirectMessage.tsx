@@ -21,8 +21,6 @@ export default function DirectMessage() {
     { id: propertyId! },
     { enabled: !!propertyId }
   );
-  const propertyDeleted = !!propertyId && propertyFetched && !property;
-  const isClosed = propertyDeleted || property?.status === "sold";
   const isPropertyOwner = !!property && !!user && property.userId === user.id;
 
   const { data: messages, isLoading, refetch } = trpc.dm.messages.useQuery(
@@ -39,6 +37,9 @@ export default function DirectMessage() {
   const utils = trpc.useUtils();
   const { data: threads } = trpc.dm.threads.useQuery();
   const partnerThread = threads?.find(t => t.partnerId === partnerId && t.propertyId === (propertyId ?? null));
+  const isRestricted = !!(partnerThread as any)?.propertyRestricted;
+  const propertyDeleted = !!propertyId && propertyFetched && !property && !isRestricted;
+  const isClosed = propertyDeleted || isRestricted || property?.status === "sold";
   const { data: partnerInfo } = trpc.dm.partnerInfo.useQuery(
     { userId: partnerId },
     { enabled: !!partnerId && !partnerThread }
@@ -136,7 +137,12 @@ export default function DirectMessage() {
       </div>
 
       {/* 物件情報バナー */}
-      {propertyDeleted ? (
+      {isRestricted ? (
+        <div className="flex items-center gap-1.5 px-1 py-2.5 bg-amber-50 border-y border-amber-200">
+          <Home className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+          <p className="text-xs font-medium text-amber-800">閲覧制限中・過去の商談履歴のみ確認できます</p>
+        </div>
+      ) : propertyDeleted ? (
         <div className="flex items-center gap-1.5 px-1 py-2.5">
           <Home className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           <p className="text-xs text-muted-foreground">この物件は削除されました</p>
@@ -203,7 +209,7 @@ export default function DirectMessage() {
           <button
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
             onClick={() => { setIncludeCardWithContact(false); setIncludePropertyLink(true); setShowShareModal(true); }}
-            disabled={shareContactMutation.isPending || propertyDeleted}
+            disabled={shareContactMutation.isPending || propertyDeleted || isRestricted}
           >
             {shareContactMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <IdCard className="w-3.5 h-3.5" />}
             連絡先を送る
@@ -211,7 +217,7 @@ export default function DirectMessage() {
           <button
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
             onClick={() => setContactModal("partner")}
-            disabled={!(contactStatus?.partnerShared && contactStatus.partnerContact) || propertyDeleted}
+            disabled={!(contactStatus?.partnerShared && contactStatus.partnerContact) || propertyDeleted || isRestricted}
           >
             <IdCard className="w-3.5 h-3.5" />相手の連絡先
           </button>
@@ -222,7 +228,7 @@ export default function DirectMessage() {
                 : "text-muted-foreground border-border hover:border-amber-300 hover:text-amber-600"
             }`}
             onClick={() => flagMutation.mutate({ partnerId, propertyId: propertyId ?? null, flagged: !isFlagged })}
-            disabled={flagMutation.isPending || propertyDeleted}
+            disabled={flagMutation.isPending || propertyDeleted || isRestricted}
           >
             <Bookmark className={`w-3.5 h-3.5 ${isFlagged ? "fill-amber-400" : ""}`} />
             {isFlagged ? "要返信中" : "要返信"}
@@ -230,7 +236,7 @@ export default function DirectMessage() {
         </div>
         {isClosed ? (
           <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-3xl bg-muted/50 text-xs text-muted-foreground">
-            {propertyDeleted ? "この物件は削除されたため、これ以上メッセージを送信できません" : "この物件は成約済みのため、これ以上メッセージを送信できません"}
+            {isRestricted ? "この物件は閲覧制限中です。過去の商談履歴のみ確認できます" : propertyDeleted ? "この物件は削除されたため、これ以上メッセージを送信できません" : "この物件は成約済みのため、これ以上メッセージを送信できません"}
           </div>
         ) : (
           <div className="flex items-end gap-2">

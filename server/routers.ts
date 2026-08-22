@@ -8,6 +8,35 @@ import * as db from "./db";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
+async function canViewProperty(propertyId: number, user: { id: number; role: string }) {
+  const property = await db.getPropertyById(propertyId);
+  if (!property) return false;
+  if (property.userId === user.id || user.role === "admin") return true;
+  if (property.deleted === 1 || property.published === 0) return false;
+  const exclusions = await db.getPropertyExclusions(propertyId);
+  return !exclusions.some(exclusion => exclusion.userId === user.id);
+}
+
+async function isPropertyExcluded(propertyId: number, userId: number) {
+  const exclusions = await db.getPropertyExclusions(propertyId);
+  return exclusions.some(exclusion => exclusion.userId === userId);
+}
+
+async function requirePropertyAccess(propertyId: number, user: { id: number; role: string }) {
+  if (!(await canViewProperty(propertyId, user))) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "物件が見つかりません" });
+  }
+}
+
+async function requirePropertyOwner(propertyId: number, user: { id: number; role: string }, allowAdmin = true) {
+  const property = await db.getPropertyById(propertyId);
+  if (!property) throw new TRPCError({ code: "NOT_FOUND", message: "物件が見つかりません" });
+  if (property.userId !== user.id && !(allowAdmin && user.role === "admin")) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "この物件の変更権限がありません" });
+  }
+  return property;
+}
+
 async function sendDmNotifications(opts: {
   senderId: number;
   senderName: string;
@@ -162,9 +191,7 @@ export const appRouter = router({
         if (!valid) {
           return { success: false, error: "メールアドレスまたはパスワードが正しくありません" } as const;
         }
-        if (user.status === "pending") {
-          return { success: false, error: "アカウントは承認待ちです。管理者の承認をお待ちください" } as const;
-        }
+        if (user.status === "pending") await db.updateUserStatus(user.id, "active");
         if (user.status === "suspended") {
           return { success: false, error: "アカウントが停止されています。管理者にお問い合わせください" } as const;
         }
@@ -515,10 +542,7 @@ JSONのみ返してください。` },
       .query(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.id);
         if (!prop) return null;
-        if (prop.userId !== ctx.user.id && ctx.user.role !== "admin") {
-          const exclusions = await db.getPropertyExclusions(input.id);
-          if (exclusions.some(e => e.userId === ctx.user.id)) return null;
-        }
+        if (!(await canViewProperty(input.id, ctx.user))) return null;
         return prop;
       }),
 
@@ -542,6 +566,9 @@ JSONのみ返してください。` },
           console.warn(`[addExclusion] ownership mismatch: prop.userId=${prop.userId} ctx.user.id=${ctx.user.id}`);
           return { success: false };
         }
+        if (input.userId === prop.userId) return { success: false };
+        const target = await db.getUserById(input.userId);
+        if (!target || target.role === "admin") return { success: false };
         await db.addPropertyExclusion(input.propertyId, input.userId);
         return { success: true };
       }),
@@ -589,6 +616,7 @@ JSONのみ返してください。` },
           const result = await db.createProperty({
             userId: ctx.user.id,
             published: input.published === false ? 0 : 1,
+            publishedAt: input.published === false ? null : new Date(),
             name: input.name,
             address: input.address,
             lotNumber: input.lotNumber ?? null,
@@ -659,8 +687,9 @@ JSONのみ返してください。` },
         faqs: z.array(z.object({ q: z.string(), a: z.string() })).nullable().optional(),
         files: z.array(z.object({ name: z.string(), size: z.number() })).nullable().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { id, priceNegotiable, ...rest } = input;
+        await requirePropertyOwner(id, ctx.user);
         return db.updateProperty(id, {
           ...rest,
           ...(priceNegotiable !== undefined ? { priceNegotiable: priceNegotiable ? 1 : 0 } : {}),
@@ -740,13 +769,14 @@ JSONのみ返してください。` },
         }
 
         await db.ownerDeleteProperty(input.propertyId);
-        db.logActivity(ctx.user.id, "property_delete_own", `物件「${prop.name}」を完全削除`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(ctx.user.id, "property_delete_own", `物件「${prop.name}」を削除（30日間復元可能）`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };
       }),
 
     listFiles: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .query(async ({ input, ctx }) => {
+        await requirePropertyAccess(input.propertyId, ctx.user);
         const files = await db.listPropertyFiles(input.propertyId);
         const prop = await db.getPropertyById(input.propertyId);
         const isOwner = !!prop && (prop.userId === ctx.user.id || ctx.user.role === "admin");
@@ -763,7 +793,11 @@ JSONのみ返してください。` },
         category: z.enum(["document", "photo"]).optional(),
         visible: z.boolean().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.propertyId);
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "追加権限がありません" });
+        }
         const { visible, ...rest } = input;
         await db.addPropertyFile({ ...rest, category: input.category ?? "document", visible: visible ?? true });
         return { success: true };
@@ -787,6 +821,7 @@ JSONのみ返してください。` },
       .query(async ({ input, ctx }) => {
         const file = await db.getPropertyFileContent(input.fileId);
         if (!file) return null;
+        await requirePropertyAccess(file.propertyId, ctx.user);
         if (file.visible === 0) {
           const prop = await db.getPropertyById(file.propertyId);
           const isOwner = !!prop && (prop.userId === ctx.user.id || ctx.user.role === "admin");
@@ -797,7 +832,13 @@ JSONのみ返してください。` },
 
     deleteFile: protectedProcedure
       .input(z.object({ fileId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const file = await db.getPropertyFileContent(input.fileId);
+        if (!file) return { success: false };
+        const prop = await db.getPropertyById(file.propertyId);
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "削除権限がありません" });
+        }
         await db.deletePropertyFile(input.fileId);
         return { success: true };
       }),
@@ -805,13 +846,15 @@ JSONのみ返してください。` },
     markRead: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
+        await requirePropertyAccess(input.propertyId, ctx.user);
         await db.markPropertyRead(ctx.user.id, input.propertyId);
         return { success: true };
       }),
 
     incrementView: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await requirePropertyAccess(input.propertyId, ctx.user);
         await db.incrementViewCount(input.propertyId);
         return { success: true };
       }),
@@ -923,9 +966,8 @@ ${propList}`
 
     notifyLine: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
-      .mutation(async ({ input }) => {
-        const prop = await db.getPropertyById(input.propertyId);
-        if (!prop) return { success: false };
+      .mutation(async ({ input, ctx }) => {
+        const prop = await requirePropertyOwner(input.propertyId, ctx.user);
         if (prop.lineNotifiedAt) return { success: false, alreadySent: true };
 
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
@@ -1071,6 +1113,7 @@ ${propList}`
     get: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .query(async ({ input, ctx }) => {
+        await requirePropertyAccess(input.propertyId, ctx.user);
         const memo = await db.getMemo(ctx.user.id, input.propertyId);
         return memo?.content ?? null;
       }),
@@ -1078,6 +1121,7 @@ ${propList}`
     save: protectedProcedure
       .input(z.object({ propertyId: z.number(), content: z.string() }))
       .mutation(async ({ input, ctx }) => {
+        await requirePropertyAccess(input.propertyId, ctx.user);
         await db.saveMemo(ctx.user.id, input.propertyId, input.content);
         db.logActivity(ctx.user.id, "memo_save", `物件ID:${input.propertyId} の自分用メモを保存`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };
@@ -1111,6 +1155,7 @@ ${propList}`
     toggle: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
+        await requirePropertyAccess(input.propertyId, ctx.user);
         const result = await db.toggleFavorite(ctx.user.id, input.propertyId);
         db.logActivity(ctx.user.id, "favorite_toggle", `物件ID:${input.propertyId} を${result.favorited ? "お気に入り追加" : "お気に入り解除"}`, ctx.req.headers["user-agent"]).catch(() => {});
         return result;
@@ -1133,20 +1178,45 @@ ${propList}`
       return db.getDeletedPropertiesByUserId(ctx.user.id);
     }),
     restoreProperty: protectedProcedure
-      .input(z.object({ id: z.number() }))
+      .input(z.object({
+        id: z.number(),
+        notifyPartners: z.boolean().optional().default(false),
+        message: z.string().max(2000).optional(),
+      }))
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.id);
-        if (!prop || prop.userId !== ctx.user.id) {
+        if (!prop || prop.userId !== ctx.user.id || prop.deleted !== 1) {
           return { success: false };
         }
+        if (prop.ownerDeletedAt && Date.now() - new Date(prop.ownerDeletedAt).getTime() >= 30 * 24 * 60 * 60 * 1000) {
+          await db.hardDeleteProperty(input.id);
+          return { success: false, expired: true };
+        }
         await db.restoreProperty(input.id);
-        return { success: true };
+        let notifiedCount = 0;
+        if (input.notifyPartners) {
+          const partnerIds = await db.getDmPartnersForProperty(input.id, ctx.user.id);
+          const message = input.message?.trim() || `「${prop.name}」を再公開しました。引き続きご検討いただけます。`;
+          const fullMessage = `【物件「${prop.name}」について】\n${message}`;
+          for (const partnerId of partnerIds) {
+            await db.sendDirectMessage(ctx.user.id, partnerId, fullMessage, input.id);
+          }
+          notifiedCount = partnerIds.length;
+        }
+        db.logActivity(ctx.user.id, "property_restore", `物件「${prop.name}」を復元${input.notifyPartners ? `・商談相手${notifiedCount}名へ通知` : ""}`, ctx.req.headers["user-agent"]).catch(() => {});
+        return { success: true, notifiedCount };
       }),
   }),
 
   dm: router({
     threads: protectedProcedure.query(async ({ ctx }) => {
-      return db.getDirectMessageThreads(ctx.user.id);
+      const threads = await db.getDirectMessageThreads(ctx.user.id);
+      return Promise.all(threads.map(async thread => ({
+        ...thread,
+        propertyRestricted: thread.propertyId
+          ? await isPropertyExcluded(thread.propertyId, ctx.user.id)
+          : false,
+      })));
     }),
 
     messages: protectedProcedure
@@ -1158,6 +1228,11 @@ ${propList}`
     send: protectedProcedure
       .input(z.object({ receiverId: z.number(), content: z.string().min(1), propertyId: z.number().nullable().optional() }))
       .mutation(async ({ input, ctx }) => {
+        if (input.propertyId) {
+          await requirePropertyAccess(input.propertyId, ctx.user);
+          const property = await db.getPropertyById(input.propertyId);
+          if (property?.status === "sold") throw new TRPCError({ code: "BAD_REQUEST", message: "成約済み物件にはメッセージを送信できません" });
+        }
         await db.rejoinDm(ctx.user.id, input.receiverId, input.propertyId ?? null);
         await db.sendDirectMessage(ctx.user.id, input.receiverId, input.content, input.propertyId ?? null);
         db.logActivity(ctx.user.id, "dm_send", `DM送信 (相手ID:${input.receiverId})`, ctx.req.headers["user-agent"]).catch(() => {});
@@ -1180,6 +1255,20 @@ ${propList}`
           db.updateProperty(propInfo.id, { status: "negotiating" }).catch(() => {});
         }
 
+        return { success: true };
+      }),
+
+    deleteOwnMessage: protectedProcedure
+      .input(z.object({ messageId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const message = await db.getDirectMessageById(input.messageId);
+        if (!message || message.senderId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "このメッセージは削除できません" });
+        }
+        if (message.propertyId) await requirePropertyAccess(message.propertyId, ctx.user);
+        const success = await db.deleteOwnDirectMessage(input.messageId, ctx.user.id);
+        if (!success) throw new TRPCError({ code: "FORBIDDEN", message: "このメッセージは削除できません" });
+        db.logActivity(ctx.user.id, "dm_delete", `DMメッセージID:${input.messageId} を削除`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };
       }),
 
@@ -1207,6 +1296,11 @@ ${propList}`
     shareContact: protectedProcedure
       .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
       .mutation(async ({ input, ctx }) => {
+        if (input.propertyId) {
+          await requirePropertyAccess(input.propertyId, ctx.user);
+          const property = await db.getPropertyById(input.propertyId);
+          if (property?.status === "sold") throw new TRPCError({ code: "BAD_REQUEST", message: "成約済み物件では連絡先を共有できません" });
+        }
         await db.shareContact(ctx.user.id, input.partnerId, input.propertyId);
         const contactLines = [
           ctx.user.phone ? `電話: ${ctx.user.phone}` : null,
@@ -1233,6 +1327,11 @@ ${propList}`
     sendBusinessCard: protectedProcedure
       .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable(), includePropertyLink: z.boolean().optional() }))
       .mutation(async ({ input, ctx }) => {
+        if (input.propertyId) {
+          await requirePropertyAccess(input.propertyId, ctx.user);
+          const property = await db.getPropertyById(input.propertyId);
+          if (property?.status === "sold") throw new TRPCError({ code: "BAD_REQUEST", message: "成約済み物件では名刺を送信できません" });
+        }
         if (!ctx.user.businessCardBase64) {
           return { success: false, error: "名刺画像が登録されていません" } as const;
         }
@@ -1360,7 +1459,8 @@ ${propList}`
         db.logActivity(ctx.user.id, "land_price_search", `近隣取引事例を検索（${input.area}${input.address ? " " + input.address : ""}）`, ctx.req.headers["user-agent"]).catch(() => {});
         const apiKey = process.env.MLIT_API_KEY;
         if (!apiKey) {
-          return { data: [], error: "MLIT_API_KEYが未設定です。Railwayの環境変数を確認してください。" };
+          console.warn("[landPrice.search] MLIT_API_KEY is not configured");
+          return { data: [], error: "参考坪単価を現在取得できません。時間をおいて再度お試しください。" };
         }
 
         let cityCode = input.city;
@@ -1379,8 +1479,8 @@ ${propList}`
         }
 
         const now = new Date();
-        let currentYear = now.getFullYear();
-        let currentQuarter = Math.ceil(now.getMonth() / 3);
+        let currentYear = input.year ?? now.getFullYear();
+        let currentQuarter = input.quarter ?? (Math.floor(now.getMonth() / 3) + 1);
 
         const parseItems = (data: any[]) => data
           .filter((d: any) => d.Type === "宅地(土地)" || d.Type === "宅地(土地と建物)")
@@ -1446,6 +1546,7 @@ ${propList}`
         attachmentIds: z.array(z.number()),
       }))
       .mutation(async ({ input, ctx }) => {
+        await requirePropertyAccess(input.propertyId, ctx.user);
         await db.saveGeneratedDocument({ userId: ctx.user.id, ...input });
         db.logActivity(ctx.user.id, "document_generate", `「${input.title}」の紹介資料PDFを作成`, ctx.req.headers["user-agent"]).catch(() => {});
         return { success: true };

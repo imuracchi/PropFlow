@@ -49,9 +49,9 @@ const COST_ITEMS = [
 
 type CostKey = typeof COST_ITEMS[number]["key"];
 
-export default function Simulation() {
+export default function Simulation({ v2 = false }: { v2?: boolean }) {
   const [, setLocation] = useLocation();
-  const [, params] = useRoute("/simulation/:id");
+  const [, params] = useRoute(v2 ? "/v2/simulation/:id" : "/simulation/:id");
   const propertyId = Number(params?.id);
 
   const saveDocMutation = trpc.document.save.useMutation({
@@ -123,6 +123,7 @@ export default function Simulation() {
   const salesPrice = ceil1000(numVal(pricePerTsubo) * numVal(tsubo));
   const profit = salesPrice - totalCost;
   const profitRate = salesPrice > 0 ? (profit / salesPrice) * 100 : 0;
+  const profitTone = profit > 0 ? "text-[#27613c]" : profit < 0 ? "text-[#b42318]" : "text-[#102d50]";
 
   const handlePrint = () => {
     const html = `<!DOCTYPE html>
@@ -211,44 +212,45 @@ ${COST_ITEMS.map(item => {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors" onClick={() => setLocation(`/property/${propertyId}`)}>
+    <div className={v2 ? "space-y-5 text-[#17211d]" : "space-y-6 max-w-4xl"}>
+      <button className={v2 ? "flex items-center gap-1 text-[14px] font-bold text-[#173f70]" : "flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"} onClick={() => setLocation(v2 ? `/v2/property/${propertyId}` : `/property/${propertyId}`)}>
         <ChevronLeft className="w-4 h-4" />物件詳細に戻る
       </button>
 
-      <div>
-        <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <Calculator className="w-5 h-5 text-primary" />
+      <div className={v2 ? "border-b-2 border-[#173f70] bg-white px-4 py-5 lg:px-6" : ""}>
+        <h1 className={v2 ? "flex items-center gap-2 text-[24px] font-bold text-[#102d50]" : "text-lg font-semibold text-foreground flex items-center gap-2"}>
+          <Calculator className={v2 ? "size-5 text-[#173f70]" : "w-5 h-5 text-primary"} />
           利益シミュレーション
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">{property?.name} / {property?.address}</p>
+        <p className={v2 ? "mt-2 text-[14px] text-[#65748a]" : "text-xs text-muted-foreground mt-0.5"}>{property?.name} / {property?.address}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(390px,.85fr)]">
         {/* 左: 原価入力 */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="px-5 py-3 border-b border-border bg-muted/50">
-            <h2 className="font-semibold text-foreground">原価明細</h2>
+        <div className={v2 ? "overflow-hidden border border-[#d3dce6] bg-white" : "bg-card border border-border rounded-lg overflow-hidden"}>
+          <div className={v2 ? "border-b border-[#d3dce6] bg-[#edf1f5] px-5 py-4" : "px-5 py-3 border-b border-border bg-muted/50"}>
+            <h2 className={v2 ? "text-[17px] font-bold text-[#102d50]" : "font-semibold text-foreground"}>原価明細</h2>
           </div>
           <div className="p-5 space-y-3">
             {COST_ITEMS.map(item => (
               <div key={item.key}>
-                <div className="flex items-center gap-3">
-                  <Label className="w-32 sm:w-40 shrink-0 text-sm">{item.label}</Label>
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                  <Label className={v2 ? "shrink-0 text-[14px] font-semibold sm:w-44" : "w-32 sm:w-40 shrink-0 text-sm"}>{item.label}</Label>
                   <div className="flex-1 relative min-w-0">
                     <Input
                       type="text"
                       value={fmtNum(costs[item.key])}
                       onChange={e => handleNumInput(item.key, e.target.value)}
                       placeholder="0"
-                      className={`text-right pr-8 ${item.key === "brokerageBuy" || item.key === "brokerageSell" ? "bg-muted/50" : ""}`}
+                      className={`text-right pr-8 ${v2 ? "h-11 rounded-none border-[#bfcbd8] text-[16px]" : ""} ${item.key === "brokerageBuy" || item.key === "brokerageSell" ? "bg-muted/50" : ""}`}
                       readOnly={item.key === "brokerageBuy" || item.key === "brokerageSell"}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">円</span>
                   </div>
                 </div>
                 {item.key === "brokerageBuy" && (
-                  <div className="ml-0 sm:ml-32 md:ml-40 mt-2 mb-1 bg-muted/40 rounded-lg p-2.5 text-xs text-muted-foreground">
+                  <div className={v2 ? "mb-2 mt-2 border-l-4 border-[#173f70] bg-[#f2f5f8] p-3 text-[13px] text-[#526176] sm:ml-44" : "ml-0 sm:ml-32 md:ml-40 mt-2 mb-1 bg-muted/40 rounded-lg p-2.5 text-xs text-muted-foreground"}>
+                    <p className="mb-2 font-bold text-[#173f70]">計算条件（変更できます）</p>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="shrink-0">( 土地代金 ×</span>
                       <input type="text" value={buyRate} onChange={e => setBuyRate(e.target.value)} className="w-14 text-center border border-border rounded px-1.5 py-1 bg-white" />
@@ -261,7 +263,8 @@ ${COST_ITEMS.map(item => {
                   </div>
                 )}
                 {item.key === "brokerageSell" && (
-                  <div className="ml-0 sm:ml-32 md:ml-40 mt-2 mb-1 bg-muted/40 rounded-lg p-2.5 text-xs text-muted-foreground">
+                  <div className={v2 ? "mb-2 mt-2 border-l-4 border-[#173f70] bg-[#f2f5f8] p-3 text-[13px] text-[#526176] sm:ml-44" : "ml-0 sm:ml-32 md:ml-40 mt-2 mb-1 bg-muted/40 rounded-lg p-2.5 text-xs text-muted-foreground"}>
+                    <p className="mb-2 font-bold text-[#173f70]">計算条件（変更できます）</p>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="shrink-0">( 売買価格 ×</span>
                       <input type="text" value={sellRate} onChange={e => setSellRate(e.target.value)} className="w-14 text-center border border-border rounded px-1.5 py-1 bg-white" />
@@ -276,79 +279,79 @@ ${COST_ITEMS.map(item => {
               </div>
             ))}
             <div className="flex items-center gap-3 pt-3 border-t border-border">
-              <span className="w-32 sm:w-40 shrink-0 font-semibold text-primary">原価合計</span>
-              <span className="flex-1 text-right text-base sm:text-lg font-bold text-primary break-all">{totalCost.toLocaleString()} 円</span>
+              <span className={v2 ? "w-32 shrink-0 font-bold text-[#173f70] sm:w-44" : "w-32 sm:w-40 shrink-0 font-semibold text-primary"}>原価合計</span>
+              <span className={v2 ? "flex-1 break-all text-right text-[18px] font-bold text-[#102d50]" : "flex-1 text-right text-base sm:text-lg font-bold text-primary break-all"}>{totalCost.toLocaleString()} 円</span>
             </div>
           </div>
         </div>
 
         {/* 右: 売買価格 + 結果 */}
         <div className="space-y-6">
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-5 py-3 border-b border-border bg-muted/50">
-              <h2 className="font-semibold text-foreground">売買価格</h2>
+          <div className={v2 ? "overflow-hidden border border-[#d3dce6] bg-white" : "bg-card border border-border rounded-lg overflow-hidden"}>
+            <div className={v2 ? "border-b border-[#d3dce6] bg-[#edf1f5] px-5 py-4" : "px-5 py-3 border-b border-border bg-muted/50"}>
+              <h2 className={v2 ? "text-[17px] font-bold text-[#102d50]" : "font-semibold text-foreground"}>売買価格</h2>
             </div>
             <div className="p-5 space-y-3">
-              <div className="flex items-center gap-3">
-                <Label className="w-40 shrink-0 text-sm">1坪あたり単価</Label>
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                <Label className={v2 ? "shrink-0 text-[14px] font-semibold sm:w-40" : "w-40 shrink-0 text-sm"}>1坪あたり単価</Label>
                 <div className="flex-1 relative">
                   <Input
                     type="text"
                     value={fmtNum(pricePerTsubo)}
                     onChange={e => setPricePerTsubo(e.target.value.replace(/,/g, ""))}
                     placeholder="0"
-                    className="text-right pr-8"
+                    className={v2 ? "h-11 rounded-none border-[#bfcbd8] pr-8 text-right text-[16px]" : "text-right pr-8"}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">円</span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Label className="w-40 shrink-0 text-sm">坪数</Label>
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                <Label className={v2 ? "shrink-0 text-[14px] font-semibold sm:w-40" : "w-40 shrink-0 text-sm"}>坪数</Label>
                 <div className="flex-1 relative">
                   <Input
                     type="text"
                     value={tsubo}
                     onChange={e => setTsubo(e.target.value)}
                     placeholder="0"
-                    className="text-right pr-8"
+                    className={v2 ? "h-11 rounded-none border-[#bfcbd8] pr-8 text-right text-[16px]" : "text-right pr-8"}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">坪</span>
                 </div>
               </div>
               <div className="flex items-center gap-3 pt-3 border-t border-border">
-                <span className="w-32 sm:w-40 shrink-0 font-semibold text-primary">売買価格</span>
-                <span className="flex-1 text-right text-base sm:text-lg font-bold text-primary break-all">{salesPrice.toLocaleString()} 円</span>
+                <span className={v2 ? "w-32 shrink-0 font-bold text-[#173f70] sm:w-40" : "w-32 sm:w-40 shrink-0 font-semibold text-primary"}>売買価格</span>
+                <span className={v2 ? "flex-1 break-all text-right text-[18px] font-bold text-[#102d50]" : "flex-1 text-right text-base sm:text-lg font-bold text-primary break-all"}>{salesPrice.toLocaleString()} 円</span>
               </div>
             </div>
           </div>
 
           {/* 参考坪単価 */}
-          <ReferencePrice address={property?.address ?? ""} onApply={(price) => setPricePerTsubo(String(price))} />
+          <ReferencePrice address={property?.address ?? ""} onApply={(price) => setPricePerTsubo(String(price))} v2={v2} />
 
           {/* 結果 */}
-          <div className="bg-card border-2 border-primary rounded-lg overflow-hidden">
-            <div className="px-5 py-3 bg-primary text-primary-foreground">
+          <div className={v2 ? "overflow-hidden border-2 border-[#173f70] bg-white" : "bg-card border-2 border-primary rounded-lg overflow-hidden"}>
+            <div className={v2 ? "bg-[#173f70] px-5 py-4 text-white" : "px-5 py-3 bg-primary text-primary-foreground"}>
               <h2 className="font-semibold">シミュレーション結果</h2>
             </div>
             <div className="p-5 space-y-4">
               <div className="flex justify-between items-center gap-2">
                 <span className="text-muted-foreground shrink-0">原価合計</span>
-                <span className="font-bold text-base sm:text-lg text-right break-all">{totalCost.toLocaleString()} 円</span>
+                <span className={v2 ? "break-all text-right text-[17px] font-bold text-[#102d50]" : "font-bold text-base sm:text-lg text-right break-all"}>{totalCost.toLocaleString()} 円</span>
               </div>
               <div className="flex justify-between items-center gap-2">
                 <span className="text-muted-foreground shrink-0">売買価格</span>
-                <span className="font-bold text-base sm:text-lg text-right break-all">{salesPrice.toLocaleString()} 円</span>
+                <span className={v2 ? "break-all text-right text-[17px] font-bold text-[#102d50]" : "font-bold text-base sm:text-lg text-right break-all"}>{salesPrice.toLocaleString()} 円</span>
               </div>
               <div className="border-t-2 border-border pt-4">
                 <div className="flex justify-between items-center gap-2">
                   <span className="font-semibold text-base sm:text-lg shrink-0">利益</span>
-                  <span className={`font-bold text-lg sm:text-xl text-right break-all ${profit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {profit >= 0 ? "+" : ""}{profit.toLocaleString()} 円
+                  <span className={`break-all text-right text-lg font-bold sm:text-xl ${v2 ? profitTone : profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {profit > 0 ? "+" : ""}{profit.toLocaleString()} 円
                   </span>
                 </div>
                 <div className="flex justify-between items-center gap-2 mt-2">
                   <span className="font-semibold text-base sm:text-lg shrink-0">利益率</span>
-                  <span className={`font-bold text-lg sm:text-xl ${profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  <span className={`text-lg font-bold sm:text-xl ${v2 ? profitTone : profit >= 0 ? "text-green-600" : "text-red-600"}`}>
                     {profitRate.toFixed(1)}%
                   </span>
                 </div>
@@ -356,7 +359,7 @@ ${COST_ITEMS.map(item => {
             </div>
           </div>
 
-          <Button className="w-auto px-8 gap-2" onClick={handlePrint}>
+          <Button className={v2 ? "h-12 w-full gap-2 rounded-none bg-[#173f70] px-8 text-[14px] font-bold" : "w-auto px-8 gap-2"} onClick={handlePrint}>
             <Printer className="w-4 h-4" />PDF保存
           </Button>
         </div>
@@ -365,7 +368,7 @@ ${COST_ITEMS.map(item => {
   );
 }
 
-function ReferencePrice({ address, onApply }: { address: string; onApply: (price: number) => void }) {
+function ReferencePrice({ address, onApply, v2 = false }: { address: string; onApply: (price: number) => void; v2?: boolean }) {
   const prefCode = detectPrefCode(address);
   const [searched, setSearched] = useState(false);
 
@@ -388,18 +391,20 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
   const periods = [...new Set(items.map(d => d.period).filter(Boolean))];
 
   return (
-    <div className="bg-card border border-amber-200 rounded-lg overflow-hidden">
-      <div className="px-5 py-3 border-b border-amber-200 bg-amber-50">
-        <h2 className="font-semibold text-amber-800 flex items-center gap-2">
-          <MapPin className="w-4 h-4" />参考坪単価（近隣取引事例）
+    <div className={v2 ? "overflow-hidden border border-[#d3dce6] bg-white" : "bg-card border border-amber-200 rounded-lg overflow-hidden"}>
+      <div className={v2 ? "border-b border-[#d3dce6] bg-[#edf1f5] px-5 py-4" : "px-5 py-3 border-b border-amber-200 bg-amber-50"}>
+        <h2 className={v2 ? "flex items-center gap-2 text-[17px] font-bold text-[#102d50]" : "font-semibold text-amber-800 flex items-center gap-2"}>
+          <MapPin className="w-4 h-4" />参考坪単価
         </h2>
       </div>
       <div className="p-5 space-y-3">
-        <div>
-          <Button size="sm" className="gap-1.5" onClick={handleSearch} disabled={isLoading || !prefCode}>
+        <p className="text-[13px] leading-6 text-[#65748a]">国土交通省の近隣取引事例から、参考となる坪単価を確認できます。</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button size="sm" variant={v2 ? "outline" : "default"} className={v2 ? "h-10 gap-1.5 rounded-none border-[#173f70] px-4 font-bold text-[#173f70]" : "gap-1.5"} onClick={handleSearch} disabled={isLoading || !prefCode}>
             {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-            近隣の取引事例を検索
+            取引事例を検索
           </Button>
+          <a href="https://system.reins.jp/login/main/KG/GKG001200" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] font-bold text-[#173f70] hover:underline"><ExternalLink className="size-3"/>REINSで確認</a>
         </div>
 
         {!prefCode && (
@@ -407,7 +412,7 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
         )}
 
         {data?.error && (
-          <p className="text-xs text-red-500">{data.error}</p>
+          <p className="border-l-2 border-[#9aa8b8] bg-[#f5f7f9] px-3 py-2 text-[12px] text-[#65748a]">{data.error}</p>
         )}
 
         {searched && items.length > 0 && (
@@ -455,25 +460,13 @@ function ReferencePrice({ address, onApply }: { address: string; onApply: (price
           <p className="text-sm text-muted-foreground">該当する取引事例が見つかりませんでした。時期を変更して再検索してください。</p>
         )}
 
-        <div className="pt-3 border-t border-border space-y-2">
+        <div className="border-t border-border pt-3">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-muted-foreground">
               データ出典：国土交通省「不動産情報ライブラリ」不動産取引価格情報
             </span>
             <a href="https://www.reinfolib.mlit.go.jp/" target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
               <ExternalLink className="w-2.5 h-2.5" />詳細
-            </a>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
-            <p className="text-xs text-blue-700 font-medium mb-1">最新の成約価格を確認するには</p>
-            <p className="text-xs text-blue-600">上記は過去の取引データです。最新の成約価格はREINSで確認できます。</p>
-            <a
-              href="https://system.reins.jp/login/main/KG/GKG001200"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-blue-700 hover:underline"
-            >
-              <ExternalLink className="w-3 h-3" />REINS 成約価格検索を開く
             </a>
           </div>
         </div>

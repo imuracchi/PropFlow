@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Building2, Lock, User, Phone, Globe, Loader2, CheckCircle, AlertCircle, Camera, X } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import AuthPageShell from "@/components/v2/AuthPageShell";
 
 export default function Register() {
   const [, params] = useRoute("/register/:token");
@@ -116,49 +117,45 @@ export default function Register() {
 
   if (!tokenInfo?.valid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-md w-full bg-card border border-border rounded-xl p-8 text-center space-y-4">
+      <AuthPageShell>
+        <div className="w-full border border-[#d6dee8] bg-white p-8 text-center space-y-4">
           <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
           <h2 className="text-xl font-bold text-foreground">無効なリンクです</h2>
           <p className="text-sm text-muted-foreground">このリンクは有効期限切れか、既に使用されています。</p>
-          <Button onClick={() => setLocation("/")}>ログインページへ</Button>
+          <Button className="h-11 bg-[#173f70] px-6 font-bold text-white" onClick={() => setLocation("/")}>ログインページへ</Button>
         </div>
-      </div>
+      </AuthPageShell>
     );
   }
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-md w-full bg-card border border-border rounded-xl p-8 text-center space-y-4">
+      <AuthPageShell>
+        <div className="w-full border border-[#d6dee8] bg-white p-8 text-center space-y-4">
           <CheckCircle className="w-12 h-12 mx-auto text-green-500" />
           <h2 className="text-xl font-bold text-foreground">登録が完了しました</h2>
           <p className="text-sm text-muted-foreground">登録したメールアドレスとパスワードでログインできます。</p>
-          <Button onClick={() => setLocation("/")}>ログインする</Button>
+          <Button className="h-11 bg-[#173f70] px-6 font-bold text-white" onClick={() => setLocation("/")}>ログインする</Button>
         </div>
-      </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="max-w-lg w-full">
-        <div className="flex flex-col items-center mb-6">
-          <img src="/logo1.png" alt="PropFlow" className="w-48 object-contain" />
-        </div>
-
-        <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-5 border-b border-border">
-            <h2 className="text-xl font-bold text-foreground">新規登録</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
+    <AuthPageShell wide>
+      <div className="w-full">
+        <div className="bg-white border border-[#d6dee8] overflow-hidden">
+          <div className="px-6 py-6 border-b border-[#dce3eb]">
+            <h2 className="text-[22px] font-bold text-[#102d50]">新規登録</h2>
+            <p className="text-[13px] text-[#65748a] mt-1">
               <span className="text-primary font-medium">{tokenInfo.email}</span> で登録します
             </p>
           </div>
           <div className="p-6 space-y-4">
 
             {/* 名刺読み取りセクション */}
-            <div className="border-2 border-primary/40 rounded-lg overflow-hidden">
-              <div className="bg-primary px-4 py-2.5 flex items-center gap-2">
+            <div className="border border-[#b8c8da] overflow-hidden">
+              <div className="bg-[#173f70] px-4 py-2.5 flex items-center gap-2">
                 <Camera className="w-4 h-4 text-white shrink-0" />
                 <p className="text-sm font-semibold text-white">名刺を登録して信頼度アップ</p>
               </div>
@@ -206,7 +203,7 @@ export default function Register() {
                     <Button
                       type="button"
                       size="sm"
-                      className="gap-2 bg-primary hover:bg-primary/90 text-white"
+                      className="gap-2 bg-[#173f70] hover:bg-[#102f56] text-white"
                       onClick={() => cardInputRef.current?.click()}
                     >
                       <Camera className="w-4 h-4" />名刺を撮影 / 選択する
@@ -290,7 +287,7 @@ export default function Register() {
             )}
 
             <Button
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm"
+              className="w-full h-12 bg-[#173f70] hover:bg-[#102f56] text-white font-bold shadow-none"
               size="lg"
               onClick={handleSubmit}
               disabled={registerMutation.isPending || cardReading}
@@ -302,6 +299,6 @@ export default function Register() {
         </div>
         <p className="text-[10px] text-muted-foreground/40 text-center mt-3">運営：G-Spec合同会社</p>
       </div>
-    </div>
+    </AuthPageShell>
   );
 }

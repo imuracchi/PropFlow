@@ -1,4 +1,4 @@
-import { bigint, double, int, json, longtext, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { bigint, datetime, double, int, json, longtext, mysqlEnum, mysqlTable, text, timestamp, tinyint, varchar } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -21,7 +21,7 @@ export const users = mysqlTable("users", {
   businessCardBase64: longtext("businessCardBase64"),
   role: mysqlEnum("role", ["user", "admin", "management"]).default("user").notNull(),
   plan: mysqlEnum("plan", ["standard", "gold", "platinum"]).default("standard").notNull(),
-  status: mysqlEnum("status", ["pending", "active", "suspended"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "active", "suspended"]).default("active").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -74,7 +74,9 @@ export const properties = mysqlTable("properties", {
   viewCount: int("viewCount").default(0).notNull(),
   dealPrice: bigint("dealPrice", { mode: "number" }),
   deleted: int("deleted").default(0).notNull(),
+  ownerDeletedAt: timestamp("ownerDeletedAt"),
   published: int("published").default(1).notNull(),
+  publishedAt: timestamp("publishedAt"),
   lineNotifiedAt: timestamp("lineNotifiedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -226,4 +228,32 @@ export const broadcastLogs = mysqlTable("broadcast_logs", {
   emailTotal: int("emailTotal").notNull().default(0),
   lineSent: int("lineSent").notNull().default(0),
   sentAt: timestamp("sentAt").defaultNow().notNull(),
+});
+
+export const propertyNameSnapshots = mysqlTable("property_name_snapshots", {
+  propertyId: int("propertyId").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  deletedAt: timestamp("deletedAt").defaultNow().notNull(),
+});
+
+export const searchLogs = mysqlTable("search_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  searchType: varchar("searchType", { length: 10 }).notNull(),
+  query: varchar("query", { length: 500 }).notNull(),
+  resultCount: int("resultCount").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const broadcastSchedules = mysqlTable("broadcast_schedules", {
+  id: int("id").autoincrement().primaryKey(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  message: text("message").notNull(),
+  lineMessage: text("lineMessage"),
+  imageUrl: varchar("imageUrl", { length: 500 }),
+  skipLine: tinyint("skipLine").notNull().default(0),
+  skipEmail: tinyint("skipEmail").notNull().default(0),
+  scheduledAt: datetime("scheduledAt").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

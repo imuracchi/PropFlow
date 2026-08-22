@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Loader2, CheckCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import AuthPageShell from "@/components/v2/AuthPageShell";
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
@@ -25,24 +26,24 @@ export default function ResetPassword() {
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-lg p-8 flex flex-col items-center gap-4 text-center">
+      <AuthPageShell>
+        <div className="w-full border border-[#d6dee8] bg-white p-8 flex flex-col items-center gap-4 text-center">
           <CheckCircle className="w-12 h-12 text-green-500" />
           <h2 className="text-lg font-bold text-foreground">パスワードを変更しました</h2>
           <p className="text-sm text-muted-foreground">新しいパスワードでログインしてください。</p>
-          <Button className="mt-2 bg-primary" onClick={() => setLocation("/")}>ログイン画面へ</Button>
+          <Button className="mt-2 h-11 bg-[#173f70] px-6 font-bold text-white" onClick={() => setLocation("/")}>ログイン画面へ</Button>
         </div>
-      </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-5 border-b border-border">
-            <h2 className="text-xl font-bold text-foreground">新しいパスワードを設定</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">8文字以上で入力してください</p>
+    <AuthPageShell>
+      <div className="w-full">
+        <div className="bg-white border border-[#d6dee8] overflow-hidden">
+          <div className="px-6 py-6 border-b border-[#dce3eb]">
+            <h2 className="text-[22px] font-bold text-[#102d50]">新しいパスワードを設定</h2>
+            <p className="text-[13px] text-[#65748a] mt-1">8文字以上で入力してください</p>
           </div>
           <div className="p-6 space-y-4">
             <div className="space-y-2">
@@ -62,7 +63,7 @@ export default function ResetPassword() {
             </div>
             {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
             <Button
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              className="w-full h-12 bg-[#173f70] hover:bg-[#102f56] text-white font-bold"
               size="lg"
               onClick={() => mutation.mutate({ token, password })}
               disabled={mutation.isPending || password.length < 8 || password !== confirm}
@@ -73,6 +74,6 @@ export default function ResetPassword() {
           </div>
         </div>
       </div>
-    </div>
+    </AuthPageShell>
   );
 }

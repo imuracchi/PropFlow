@@ -18,12 +18,25 @@ export async function getDb() {
   return _db;
 }
 
+export async function checkDatabaseHealth() {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    await db.execute(sql`SELECT 1`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function runStartupMigrations() {
   if (_migrationsDone || !process.env.DATABASE_URL) return;
   _migrationsDone = true;
 
   const stmts = [
     "ALTER TABLE `properties` ADD COLUMN `published` int NOT NULL DEFAULT 1",
+    "ALTER TABLE `properties` ADD COLUMN `publishedAt` timestamp NULL",
+    "UPDATE `properties` SET `publishedAt` = `createdAt` WHERE `published` = 1 AND `publishedAt` IS NULL",
     "ALTER TABLE `properties` ADD COLUMN `lineNotifiedAt` timestamp NULL",
     "ALTER TABLE `properties` MODIFY COLUMN `landArea` double NULL",
     "ALTER TABLE `users` ADD COLUMN `showCompany` int NOT NULL DEFAULT 1",
@@ -90,6 +103,9 @@ export async function runStartupMigrations() {
     )`,
     "ALTER TABLE `activity_logs` ADD COLUMN `deviceType` varchar(10) NULL",
     "ALTER TABLE `properties` ADD COLUMN `dealPrice` bigint NULL",
+    "ALTER TABLE `properties` ADD COLUMN `ownerDeletedAt` timestamp NULL",
+    "ALTER TABLE `users` MODIFY COLUMN `status` ENUM('pending','active','suspended') NOT NULL DEFAULT 'active'",
+    "UPDATE `users` SET `status` = 'active' WHERE `status` = 'pending'",
   ];
 
   let conn: mysql.Connection | null = null;
@@ -354,10 +370,11 @@ export async function listProperties(viewerUserId?: number) {
       negotiation: properties.negotiation,
       remarks: properties.remarks,
       viewCount: properties.viewCount,
+      publishedAt: properties.publishedAt,
       createdAt: properties.createdAt,
       userName: users.name,
       userCompany: users.company,
-      userVerified: users.verified,
+      userVerified: sql<number>`CASE WHEN ${users.verified} = 1 AND ${users.businessCardBase64} IS NOT NULL THEN 1 ELSE 0 END`.as("userVerified"),
       favoriteCount: sql<number>`COALESCE(${favCountSub.cnt}, 0)`.as("favoriteCount"),
       inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as("inquiryCount"),
     })
@@ -451,7 +468,9 @@ export async function getPropertyById(id: number) {
       faqs: properties.faqs,
       files: properties.files,
       deleted: properties.deleted,
+      ownerDeletedAt: properties.ownerDeletedAt,
       published: properties.published,
+      publishedAt: properties.publishedAt,
       lineNotifiedAt: properties.lineNotifiedAt,
       createdAt: properties.createdAt,
       updatedAt: properties.updatedAt,
@@ -463,7 +482,7 @@ export async function getPropertyById(id: number) {
       userFax: users.fax,
       userUrl: users.url,
       userEmail: users.email,
-      userVerified: users.verified,
+      userVerified: sql<number>`CASE WHEN ${users.verified} = 1 AND ${users.businessCardBase64} IS NOT NULL THEN 1 ELSE 0 END`.as("userVerified"),
       showCompany: users.showCompany,
       showPhone: users.showPhone,
       showFax: users.showFax,
@@ -496,7 +515,10 @@ export async function createProperty(data: Omit<InsertProperty, "id" | "createdA
 export async function setPropertyPublished(id: number, published: 0 | 1) {
   const db = await getDb();
   if (!db) return;
-  await db.update(properties).set({ published }).where(eq(properties.id, id));
+  await db.update(properties).set({
+    published,
+    ...(published === 1 ? { publishedAt: sql`COALESCE(${properties.publishedAt}, CURRENT_TIMESTAMP)` } : {}),
+  }).where(eq(properties.id, id));
 }
 
 export async function updateProperty(id: number, data: Partial<InsertProperty>) {
@@ -515,7 +537,7 @@ export async function deleteProperty(id: number) {
 export async function restoreProperty(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(properties).set({ deleted: 0 }).where(eq(properties.id, id));
+  await db.update(properties).set({ deleted: 0, ownerDeletedAt: null }).where(eq(properties.id, id));
 }
 
 export async function hardDeleteProperty(id: number) {
@@ -552,23 +574,19 @@ export async function getDmPartnersForProperty(propertyId: number, ownerId: numb
 export async function ownerDeleteProperty(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  await db.update(properties).set({ deleted: 1, ownerDeletedAt: new Date() }).where(eq(properties.id, id));
+}
 
-  // 物件名をスナップショットとして保存（DM一覧での表示用）
-  const prop = await getPropertyById(id);
-  if (prop) {
-    await db.execute(sql`INSERT INTO property_name_snapshots (propertyId, name) VALUES (${id}, ${prop.name}) ON DUPLICATE KEY UPDATE name = ${prop.name}`);
-  }
-
-  await db.delete(propertyExclusions).where(eq(propertyExclusions.propertyId, id));
-  await db.delete(propertyReads).where(eq(propertyReads.propertyId, id));
-  await db.delete(propertyMemos).where(eq(propertyMemos.propertyId, id));
-  await db.delete(generatedDocuments).where(eq(generatedDocuments.propertyId, id));
-  await db.delete(chatExits).where(eq(chatExits.propertyId, id));
-  await db.delete(propertyFiles).where(eq(propertyFiles.propertyId, id));
-  await db.delete(favorites).where(eq(favorites.propertyId, id));
-  await db.delete(messages).where(eq(messages.propertyId, id));
-  await db.delete(properties).where(eq(properties.id, id));
-  // directMessages と dmReadStatus はDMスレッドを残すため削除しない
+export async function purgeExpiredOwnerDeletedProperties() {
+  const db = await getDb();
+  if (!db) return 0;
+  const expiry = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const expired = await db
+    .select({ id: properties.id })
+    .from(properties)
+    .where(and(eq(properties.deleted, 1), lt(properties.ownerDeletedAt, expiry)));
+  for (const property of expired) await hardDeleteProperty(property.id);
+  return expired.length;
 }
 
 export async function listAllPropertiesAdmin() {
@@ -586,6 +604,7 @@ export async function listAllPropertiesAdmin() {
       priceNegotiable: properties.priceNegotiable,
       deleted: properties.deleted,
       published: properties.published,
+      publishedAt: properties.publishedAt,
       createdAt: properties.createdAt,
       userName: users.name,
       userCompany: users.company,
@@ -620,6 +639,7 @@ export async function getMyProperties(userId: number) {
       published: properties.published,
       viewCount: properties.viewCount,
       inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as("inquiryCount"),
+      publishedAt: properties.publishedAt,
       createdAt: properties.createdAt,
     })
     .from(properties)
@@ -631,6 +651,7 @@ export async function getMyProperties(userId: number) {
 export async function getDeletedPropertiesByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
+  await purgeExpiredOwnerDeletedProperties();
   return db
     .select({
       id: properties.id,
@@ -640,6 +661,7 @@ export async function getDeletedPropertiesByUserId(userId: number) {
       status: properties.status,
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,
+      ownerDeletedAt: properties.ownerDeletedAt,
       createdAt: properties.createdAt,
     })
     .from(properties)
@@ -776,14 +798,26 @@ export async function deleteMemo(userId: number, propertyId: number) {
 export async function getMemoPropertyIds(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  const result = await db.select({ propertyId: propertyMemos.propertyId }).from(propertyMemos).where(eq(propertyMemos.userId, userId));
+  const result = await db.select({ propertyId: propertyMemos.propertyId })
+    .from(propertyMemos)
+    .innerJoin(properties, eq(propertyMemos.propertyId, properties.id))
+    .where(and(
+      eq(propertyMemos.userId, userId),
+      sql`NOT EXISTS (SELECT 1 FROM property_exclusions pe WHERE pe.propertyId = ${properties.id} AND pe.userId = ${userId})`,
+    ));
   return result.map(r => r.propertyId);
 }
 
 export async function getAllMemos(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select({ propertyId: propertyMemos.propertyId, content: propertyMemos.content }).from(propertyMemos).where(eq(propertyMemos.userId, userId));
+  return db.select({ propertyId: propertyMemos.propertyId, content: propertyMemos.content })
+    .from(propertyMemos)
+    .innerJoin(properties, eq(propertyMemos.propertyId, properties.id))
+    .where(and(
+      eq(propertyMemos.userId, userId),
+      sql`NOT EXISTS (SELECT 1 FROM property_exclusions pe WHERE pe.propertyId = ${properties.id} AND pe.userId = ${userId})`,
+    ));
 }
 
 // ---- Favorites ----
@@ -804,20 +838,40 @@ export async function getFavoritesByUserId(userId: number) {
     })
     .from(favorites)
     .leftJoin(properties, eq(favorites.propertyId, properties.id))
-    .where(eq(favorites.userId, userId))
+    .where(and(
+      eq(favorites.userId, userId),
+      ne(properties.userId, userId),
+      sql`NOT EXISTS (
+        SELECT 1 FROM property_exclusions pe
+        WHERE pe.propertyId = ${properties.id} AND pe.userId = ${userId}
+      )`,
+    ))
     .orderBy(desc(favorites.createdAt));
 }
 
 export async function getFavoritePropertyIds(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  const result = await db.select({ propertyId: favorites.propertyId }).from(favorites).where(eq(favorites.userId, userId));
+  const result = await db.select({ propertyId: favorites.propertyId })
+    .from(favorites)
+    .innerJoin(properties, eq(favorites.propertyId, properties.id))
+    .where(and(
+      eq(favorites.userId, userId),
+      ne(properties.userId, userId),
+      sql`NOT EXISTS (
+        SELECT 1 FROM property_exclusions pe
+        WHERE pe.propertyId = ${properties.id} AND pe.userId = ${userId}
+      )`,
+    ));
   return result.map(r => r.propertyId);
 }
 
 export async function toggleFavorite(userId: number, propertyId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  const target = await db.select({ userId: properties.userId }).from(properties).where(eq(properties.id, propertyId)).limit(1);
+  if (!target.length) throw new Error("物件が見つかりません");
+  if (target[0].userId === userId) throw new Error("自社物件はお気に入りに追加できません");
   const existing = await db.select().from(favorites)
     .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)))
     .limit(1);
@@ -1101,6 +1155,17 @@ export async function getDirectMessages(userId1: number, userId2: number, proper
     .orderBy(directMessages.createdAt);
 }
 
+export async function getDirectMessageById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({ id: directMessages.id, senderId: directMessages.senderId, receiverId: directMessages.receiverId, propertyId: directMessages.propertyId })
+    .from(directMessages)
+    .where(eq(directMessages.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function getAnnouncementCount(propertyId: number): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
@@ -1177,6 +1242,16 @@ export async function sendDirectMessage(senderId: number, receiverId: number, co
   await db.insert(directMessages).values({ senderId, receiverId, content, propertyId });
 }
 
+export async function deleteOwnDirectMessage(messageId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const message = await db.select({ id: directMessages.id }).from(directMessages)
+    .where(and(eq(directMessages.id, messageId), eq(directMessages.senderId, userId))).limit(1);
+  if (!message.length) return false;
+  await db.delete(directMessages).where(and(eq(directMessages.id, messageId), eq(directMessages.senderId, userId)));
+  return true;
+}
+
 export async function getDirectMessageThreads(userId: number) {
   const db = await getDb();
   if (!db) return [];
@@ -1194,15 +1269,16 @@ export async function getDirectMessageThreads(userId: number) {
 
   if (allDms.length === 0) return [];
 
-  const threadMap = new Map<string, { partnerId: number; propertyId: number | null; lastAt: Date; count: number }>();
+  const threadMap = new Map<string, { partnerId: number; propertyId: number | null; lastAt: Date; count: number; firstMessageId: number; initiatedByMe: boolean }>();
   for (const dm of allDms) {
     const partnerId = dm.senderId === userId ? dm.receiverId : dm.senderId;
     const key = `${partnerId}-${dm.propertyId ?? 0}`;
     const existing = threadMap.get(key);
     if (!existing) {
-      threadMap.set(key, { partnerId, propertyId: dm.propertyId, lastAt: dm.createdAt, count: 1 });
+      threadMap.set(key, { partnerId, propertyId: dm.propertyId, lastAt: dm.createdAt, count: 1, firstMessageId: dm.id, initiatedByMe: dm.senderId === userId });
     } else {
-      threadMap.set(key, { ...existing, count: existing.count + 1, lastAt: dm.createdAt > existing.lastAt ? dm.createdAt : existing.lastAt });
+      const isEarlier = dm.id < existing.firstMessageId;
+      threadMap.set(key, { ...existing, count: existing.count + 1, lastAt: dm.createdAt > existing.lastAt ? dm.createdAt : existing.lastAt, firstMessageId: isEarlier ? dm.id : existing.firstMessageId, initiatedByMe: isEarlier ? dm.senderId === userId : existing.initiatedByMe });
     }
   }
 
@@ -1226,7 +1302,7 @@ export async function getDirectMessageThreads(userId: number) {
     const snapshots = await db.execute<{ propertyId: number; name: string }>(
       sql`SELECT propertyId, name FROM property_name_snapshots WHERE propertyId IN (${sql.join(missingPropIds.map(id => sql`${id}`), sql`, `)})`
     );
-    for (const row of (snapshots[0] as any[])) {
+    for (const row of (snapshots[0] as unknown as Array<{ propertyId: number; name: string }>)) {
       props.push({ id: row.propertyId, name: `${row.name}（削除済み）` });
     }
   }
@@ -1257,6 +1333,7 @@ export async function getDirectMessageThreads(userId: number) {
         propertyId: thread.propertyId,
         propertyName: prop?.name ?? null,
         messageCount: thread.count,
+        initiatedByMe: thread.initiatedByMe,
         lastMessageAt: thread.lastAt,
         flagged: flagMap.get(`${thread.partnerId}-${thread.propertyId ?? 0}`) ?? false,
         lastReadAt: readAtMap.get(`${thread.partnerId}-${thread.propertyId ?? 0}`) ?? null,
@@ -1368,7 +1445,7 @@ export async function getInterestedUsersForMyProperties(userId: number) {
   if (!db) return [];
 
   // 自分が登録した物件のID
-  const myProps = await db.select({ id: properties.id, name: properties.name })
+  const myProps = await db.select({ id: properties.id, name: properties.name, status: properties.status })
     .from(properties)
     .where(and(eq(properties.userId, userId), eq(properties.deleted, 0)));
 
@@ -1396,8 +1473,31 @@ export async function getInterestedUsersForMyProperties(userId: number) {
     .from(propertyMemos)
     .where(sql`${propertyMemos.propertyId} IN (${sql.join(propIds.map(id => sql`${id}`), sql`, `)}) AND ${propertyMemos.userId} != ${userId}`);
 
+  // DMのやり取りがある相手は「商談中」として表示する
+  const dmSenders = await db
+    .select({
+      propertyId: directMessages.propertyId,
+      userId: directMessages.senderId,
+      type: sql<string>`'dm'`,
+    })
+    .from(directMessages)
+    .where(sql`${directMessages.propertyId} IN (${sql.join(propIds.map(id => sql`${id}`), sql`, `)}) AND ${directMessages.senderId} != ${userId}`);
+  const dmReceivers = await db
+    .select({
+      propertyId: directMessages.propertyId,
+      userId: directMessages.receiverId,
+      type: sql<string>`'dm'`,
+    })
+    .from(directMessages)
+    .where(sql`${directMessages.propertyId} IN (${sql.join(propIds.map(id => sql`${id}`), sql`, `)}) AND ${directMessages.receiverId} != ${userId}`);
+
   // ユニークなユーザーID
-  const allEntries = [...favUsers, ...memoUsers];
+  const allEntries = [
+    ...favUsers,
+    ...memoUsers,
+    ...dmSenders.map(entry => ({ ...entry, propertyId: entry.propertyId! })),
+    ...dmReceivers.map(entry => ({ ...entry, propertyId: entry.propertyId! })),
+  ];
   const userIdSet = new Set(allEntries.map(e => e.userId));
   if (userIdSet.size === 0) return [];
 
@@ -1406,13 +1506,13 @@ export async function getInterestedUsersForMyProperties(userId: number) {
     .select({
       id: users.id, name: users.name, company: users.company,
       email: users.email, phone: users.phone, fax: users.fax, license: users.license,
-      showCompany: users.showCompany,
+      showCompany: users.showCompany, verified: users.verified, businessCardBase64: users.businessCardBase64,
     })
     .from(users)
     .where(sql`${users.id} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`);
 
   // 物件ごと・ユーザーごとにグループ化
-  const result: { propertyId: number; propertyName: string; userId: number; userName: string | null; userCompany: string | null; userEmail: string; userPhone: string | null; userFax: string | null; userLicense: string | null; showCompany: number; types: string[] }[] = [];
+  const result: { propertyId: number; propertyName: string; propertyStatus: "available" | "negotiating" | "sold"; userId: number; userName: string | null; userCompany: string | null; userEmail: string; userPhone: string | null; userFax: string | null; userLicense: string | null; showCompany: number; verified: number; types: string[] }[] = [];
 
   for (const entry of allEntries) {
     const u = userList.find(u => u.id === entry.userId);
@@ -1426,6 +1526,7 @@ export async function getInterestedUsersForMyProperties(userId: number) {
       result.push({
         propertyId: entry.propertyId,
         propertyName: prop.name,
+        propertyStatus: prop.status,
         userId: u.id,
         userName: u.name,
         userCompany: u.company,
@@ -1434,6 +1535,7 @@ export async function getInterestedUsersForMyProperties(userId: number) {
         userFax: u.fax,
         userLicense: u.license,
         showCompany: u.showCompany,
+        verified: u.verified === 1 && !!u.businessCardBase64 ? 1 : 0,
         types: [entry.type],
       });
     }
@@ -1594,6 +1696,7 @@ export async function getAllDmMessagesAdmin(limit = 200, from?: Date, to?: Date)
     senderName: userMap.get(r.senderId)?.name ?? null,
     senderCompany: userMap.get(r.senderId)?.company ?? null,
     receiverName: userMap.get(r.receiverId)?.name ?? null,
+    receiverCompany: userMap.get(r.receiverId)?.company ?? null,
     propertyId: r.propertyId,
     propertyName: r.propertyId ? propMap.get(r.propertyId)?.name ?? null : null,
     content: r.content,
@@ -1650,7 +1753,10 @@ export async function listGeneratedDocuments(userId: number) {
     })
     .from(generatedDocuments)
     .leftJoin(properties, eq(generatedDocuments.propertyId, properties.id))
-    .where(eq(generatedDocuments.userId, userId))
+    .where(and(
+      eq(generatedDocuments.userId, userId),
+      sql`NOT EXISTS (SELECT 1 FROM property_exclusions pe WHERE pe.propertyId = ${properties.id} AND pe.userId = ${userId})`,
+    ))
     .orderBy(desc(generatedDocuments.createdAt));
 
   const allIds = docs.flatMap(d => (d.attachmentIds as number[] | null) ?? []);
@@ -1669,7 +1775,15 @@ export async function listGeneratedDocuments(userId: number) {
 export async function getGeneratedDocumentHtml(id: number, userId: number) {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db.select({ htmlContent: generatedDocuments.htmlContent }).from(generatedDocuments).where(and(eq(generatedDocuments.id, id), eq(generatedDocuments.userId, userId))).limit(1);
+  const rows = await db.select({ htmlContent: generatedDocuments.htmlContent })
+    .from(generatedDocuments)
+    .innerJoin(properties, eq(generatedDocuments.propertyId, properties.id))
+    .where(and(
+      eq(generatedDocuments.id, id),
+      eq(generatedDocuments.userId, userId),
+      sql`NOT EXISTS (SELECT 1 FROM property_exclusions pe WHERE pe.propertyId = ${properties.id} AND pe.userId = ${userId})`,
+    ))
+    .limit(1);
   return rows[0]?.htmlContent ?? null;
 }
 

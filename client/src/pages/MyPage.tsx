@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Building2, Mail, Phone, FileText, Shield, MapPin, EyeOff, RotateCcw, Loader2, Upload, Trash2, ImageIcon,
+  Building2, Mail, Phone, FileText, Shield, MapPin, Eye, EyeOff, RotateCcw, Loader2, Upload, Trash2, ImageIcon,
   Send, MessageSquare, Bug, Lightbulb, AlertTriangle, HelpCircle, UserX, UserCog, CheckCircle2, Smartphone, Download, Lock,
-  Globe, Clock, Pencil, Check, X, CalendarOff, ChevronDown, ChevronUp, Heart, StickyNote, Users, Camera
+  Globe, Clock, Pencil, Check, X, CalendarOff, ChevronDown, ChevronUp, ChevronRight, Heart, StickyNote, Users, Camera
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   sold: { label: "売却済", cls: "bg-gray-100 text-gray-500 border border-gray-200" },
 };
 
-export default function MyPage() {
+export default function MyPage({ v2 = false }: { v2?: boolean }) {
   const [, setLocation] = useLocation();
   const { user, refresh } = useAuth();
   const utils = trpc.useUtils();
@@ -45,11 +45,11 @@ export default function MyPage() {
   });
   const readCardMutation = trpc.auth.readBusinessCard.useMutation();
 
-
-  if (!user) return null;
-
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [restoreTarget, setRestoreTarget] = useState<any>(null);
+  const [notifyRestore, setNotifyRestore] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState("");
 
   useEffect(() => {
     if (window.matchMedia("(display-mode: standalone)").matches) {
@@ -68,14 +68,22 @@ export default function MyPage() {
     setInstallPrompt(null);
   };
 
+  if (!user) {
+    return (
+      <div className="grid min-h-[320px] place-items-center">
+        <Loader2 className="size-7 animate-spin text-[#173f70]" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className={v2 ? "max-w-none space-y-5" : "space-y-6 max-w-4xl"}>
       <h1 className="text-lg font-semibold text-foreground">マイページ</h1>
 
-      <PropertyRegisterNudgeBanner />
+      {!v2 && <PropertyRegisterNudgeBanner />}
 
       {/* PWAインストール案内（スマホのみ上部） */}
-      {!isInstalled && (
+      {!v2 && !isInstalled && (
         <div className="md:hidden bg-primary/5 border border-primary/20 rounded-lg overflow-hidden">
           <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -140,14 +148,42 @@ export default function MyPage() {
       )}
 
       {/* プロフィールカード */}
-      <ProfileCard user={user} refresh={refresh} logoMutation={logoMutation} />
+      <ProfileCard user={user} refresh={refresh} logoMutation={logoMutation} v2={v2} />
+
+      {/* V2スマホで下部メニューに収めない機能への導線 */}
+      {v2 && (
+        <section className="border border-[#d4dde7] bg-white lg:hidden">
+          <div className="border-b border-[#d4dde7] bg-[#edf1f5] px-4 py-3">
+            <h2 className="text-[14px] font-bold text-[#102d50]">その他の機能</h2>
+          </div>
+          {[
+            { label: "ダウンロード資料", path: "/v2/documents", icon: Download },
+            { label: "興味者リスト", path: "/v2/interested", icon: Users },
+            { label: "物件を登録", path: "/v2/upload", icon: Building2 },
+            ...((user.role === "admin" || user.role === "management")
+              ? [{ label: "管理画面", path: "/v2/admin", icon: Shield }]
+              : []),
+          ].map(item => (
+            <button
+              key={item.path}
+              type="button"
+              onClick={() => setLocation(item.path)}
+              className="flex min-h-14 w-full items-center border-b border-[#e2e7ec] px-4 text-left last:border-b-0"
+            >
+              <item.icon className="size-[18px] shrink-0 text-[#173f70]" />
+              <span className="ml-3 text-[14px] font-bold text-[#263b58]">{item.label}</span>
+              <ChevronRight className="ml-auto size-4 text-[#8a96a5]" />
+            </button>
+          ))}
+        </section>
+      )}
 
       {/* 会社ロゴ */}
-      <div className="bg-card border border-border rounded-lg p-4">
+      <div className={v2 ? "border border-[#d4dde7] bg-white p-5" : "bg-card border border-border rounded-lg p-4"}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
           <div className="flex items-center gap-4">
-            <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <ImageIcon className="w-4 h-4 text-muted-foreground" />
+            <div className={v2 ? "flex items-center gap-2 text-[15px] font-bold text-[#102d50]" : "text-sm font-medium text-foreground flex items-center gap-1.5"}>
+              <ImageIcon className={v2 ? "size-4 text-[#173f70]" : "w-4 h-4 text-muted-foreground"} />
               会社ロゴ
             </div>
             {user.logoBase64 ? (
@@ -157,7 +193,7 @@ export default function MyPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs border border-border rounded-md px-3 py-1.5 hover:border-primary hover:text-primary transition-colors">
+            <label className={v2 ? "inline-flex h-10 cursor-pointer items-center gap-2 border border-[#173f70] px-4 text-[13px] font-bold text-[#173f70]" : "cursor-pointer inline-flex items-center gap-1.5 text-xs border border-border rounded-md px-3 py-1.5 hover:border-primary hover:text-primary transition-colors"}>
               <input type="file" accept="image/*" className="hidden" onChange={e => {
                 const file = e.target.files?.[0];
                 if (!file) return;
@@ -184,11 +220,11 @@ export default function MyPage() {
       </div>
 
       {/* 名刺 */}
-      <div className="bg-card border border-border rounded-lg p-4">
+      <div className={v2 ? "border border-[#d4dde7] bg-white p-5" : "bg-card border border-border rounded-lg p-4"}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <Camera className="w-4 h-4 text-muted-foreground" />
+            <div className={v2 ? "flex items-center gap-2 text-[15px] font-bold text-[#102d50]" : "text-sm font-medium text-foreground flex items-center gap-1.5"}>
+              <Camera className={v2 ? "size-4 text-[#173f70]" : "w-4 h-4 text-muted-foreground"} />
               名刺
             </div>
             {(user as any).businessCardBase64 ? (
@@ -198,7 +234,7 @@ export default function MyPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs border border-border rounded-md px-3 py-1.5 hover:border-primary hover:text-primary transition-colors">
+            <label className={v2 ? "inline-flex h-10 cursor-pointer items-center gap-2 border border-[#173f70] px-4 text-[13px] font-bold text-[#173f70]" : "cursor-pointer inline-flex items-center gap-1.5 text-xs border border-border rounded-md px-3 py-1.5 hover:border-primary hover:text-primary transition-colors"}>
               <input type="file" accept="image/*" className="hidden" onChange={async e => {
                 const file = e.target.files?.[0];
                 if (!file) return;
@@ -217,10 +253,12 @@ export default function MyPage() {
             )}
           </div>
         </div>
-        {(user as any).verified ? (
+        {(user as any).verified && (user as any).businessCardBase64 ? (
           <p className="text-xs text-primary font-medium mt-2 flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />認証済み業者として表示されています
           </p>
+        ) : (user as any).verified ? (
+          <p className="mt-2 flex items-center gap-1 text-xs font-medium text-[#65748a]"><CheckCircle2 className="size-3.5" />名刺を登録すると、認証済み業者として表示されます</p>
         ) : (user as any).businessCardBase64 ? (
           <p className="text-xs text-muted-foreground mt-2">名刺を確認後、管理者が認証マークを付与します</p>
         ) : (
@@ -231,34 +269,41 @@ export default function MyPage() {
       {/* LINE連携（非表示）*/}
 
       {/* 情報公開設定 */}
-      <VisibilitySettings />
+      <VisibilitySettings v2={v2} />
 
       {/* メール通知設定 */}
-      <NotifySettings />
+      <NotifySettings v2={v2} />
 
       {/* パスワード変更 */}
-      <ChangePasswordForm />
+      <ChangePasswordForm v2={v2} />
 
       {/* 管理者への連絡 */}
-      <AdminContactForm userEmail={user.email} userName={user.name ?? ""} />
+      <AdminContactForm userEmail={user.email} userName={user.name ?? ""} v2={v2} />
 
       {/* 非表示物件 */}
-      <div>
-        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-          <EyeOff className="w-5 h-5 text-muted-foreground" />
-          非表示にした物件
-        </h2>
+      <div className={v2 ? "overflow-hidden border border-[#d4dde7] bg-white" : ""}>
+        <div className={v2 ? "border-b border-[#d4dde7] bg-[#edf1f5] px-5 py-4" : ""}>
+          <h2 className={v2 ? "flex items-center gap-2 text-[15px] font-bold text-[#102d50]" : "mb-4 flex items-center gap-2 text-lg font-semibold text-foreground"}>
+            <EyeOff className={v2 ? "size-4 text-[#173f70]" : "w-5 h-5 text-muted-foreground"} />
+            削除した物件
+          </h2>
+          {v2 && <p className="mt-1 text-[12px] text-[#65748a]">削除して一覧から取り下げた自社物件を復元できます</p>}
+        </div>
+        <div className={v2 ? "p-4 lg:p-5" : ""}>
         {deletedLoading ? (
           <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
         ) : !deletedProperties || deletedProperties.length === 0 ? (
-          <div className="bg-card border border-border rounded-lg py-10 text-center">
-            <p className="text-sm text-muted-foreground">非表示の物件はありません</p>
+          <div className={v2 ? "border border-[#e2e7ec] py-8 text-center" : "bg-card border border-border rounded-lg py-10 text-center"}>
+            <p className="text-sm text-muted-foreground">削除した物件はありません</p>
           </div>
         ) : (
           <div className="space-y-3">
             {deletedProperties.map(prop => {
+              const remainingDays = prop.ownerDeletedAt
+                ? Math.max(0, Math.ceil((new Date(prop.ownerDeletedAt).getTime() + 30 * 86400000 - Date.now()) / 86400000))
+                : null;
               return (
-                <div key={prop.id} className="bg-card border border-border rounded-lg p-4 opacity-70">
+                <div key={prop.id} className={v2 ? "border border-[#d9e0e8] p-4" : "bg-card border border-border rounded-lg p-4 opacity-70"}>
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center shrink-0">
                       <EyeOff className="w-5 h-5 text-muted-foreground" />
@@ -270,6 +315,7 @@ export default function MyPage() {
                       <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                         <MapPin className="w-3 h-3" />{prop.address}
                       </p>
+                      {remainingDays !== null && <p className="mt-1 text-[11px] font-bold text-[#a35f0a]">完全削除まで残り{remainingDays}日</p>}
                     </div>
                     <div className="text-right shrink-0 flex items-center gap-3">
                       <div>
@@ -279,9 +325,13 @@ export default function MyPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1.5 text-xs"
+                        className={v2 ? "h-10 gap-1.5 rounded-none border-[#173f70] px-4 text-xs font-bold text-[#173f70]" : "gap-1.5 text-xs"}
                         disabled={restoreMutation.isPending}
-                        onClick={() => restoreMutation.mutate({ id: prop.id })}
+                        onClick={() => {
+                          setRestoreTarget(prop);
+                          setNotifyRestore(false);
+                          setRestoreMessage(`「${prop.name}」を再公開しました。引き続きご検討いただけます。`);
+                        }}
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         復元
@@ -293,10 +343,11 @@ export default function MyPage() {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* PWAインストール案内（PCのみ下部） */}
-      {!isInstalled && (
+      {!v2 && !isInstalled && (
         <div className="hidden md:block bg-primary/5 border border-primary/20 rounded-lg overflow-hidden">
           <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -341,6 +392,43 @@ export default function MyPage() {
           </div>
         </div>
       )}
+      {restoreTarget && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-4" onClick={() => setRestoreTarget(null)}>
+          <div className="w-full bg-white p-5 sm:max-w-md sm:border-t-4 sm:border-t-[#173f70]" onClick={event => event.stopPropagation()}>
+            <h3 className="text-[19px] font-bold text-[#102d50]">物件を復元</h3>
+            <p className="mt-2 text-[13px] leading-6 text-[#526176]">「{restoreTarget.name}」を物件一覧へ戻します。</p>
+            <label className="mt-4 flex cursor-pointer items-start gap-3 border-y border-[#e1e6ec] py-4 text-[13px] font-bold text-[#263b58]">
+              <input type="checkbox" checked={notifyRestore} onChange={event => setNotifyRestore(event.target.checked)} className="mt-0.5 size-4 accent-[#173f70]" />
+              過去の商談相手へ再公開を知らせる
+            </label>
+            {notifyRestore && (
+              <label className="mt-4 block text-[12px] font-bold text-[#526176]">
+                送信するメッセージ
+                <textarea value={restoreMessage} onChange={event => setRestoreMessage(event.target.value)} rows={4} className="mt-2 w-full resize-y border border-[#cbd5df] p-3 text-[13px] font-normal text-[#263b58] outline-none focus:border-[#173f70]" />
+              </label>
+            )}
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setRestoreTarget(null)} className="h-11 flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]">キャンセル</button>
+              <button
+                disabled={restoreMutation.isPending || (notifyRestore && !restoreMessage.trim())}
+                onClick={async () => {
+                  const result = await restoreMutation.mutateAsync({ id: restoreTarget.id, notifyPartners: notifyRestore, message: notifyRestore ? restoreMessage.trim() : undefined });
+                  if (!result.success) {
+                    alert(result.expired ? "復元期限の30日を過ぎたため、この物件は完全に削除されました" : "物件を復元できませんでした");
+                    setRestoreTarget(null);
+                    return;
+                  }
+                  setRestoreTarget(null);
+                  if (notifyRestore && result.notifiedCount) alert(`${result.notifiedCount}名の商談相手へ再公開を通知しました`);
+                }}
+                className="h-11 flex-[1.2] bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50"
+              >
+                {restoreMutation.isPending ? "復元中…" : "復元する"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -354,7 +442,7 @@ const CONTACT_CATEGORIES = [
   { value: "other", label: "その他", icon: HelpCircle },
 ];
 
-function AdminContactForm({ userEmail, userName }: { userEmail: string; userName: string }) {
+function AdminContactForm({ userEmail, userName, v2 = false }: { userEmail: string; userName: string; v2?: boolean }) {
   const [category, setCategory] = useState("");
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
@@ -379,7 +467,7 @@ function AdminContactForm({ userEmail, userName }: { userEmail: string; userName
 
   if (sent) {
     return (
-      <div className="bg-card border border-border rounded-lg p-8 text-center">
+      <div className={v2 ? "border border-[#d4dde7] bg-white p-8 text-center" : "bg-card border border-border rounded-lg p-8 text-center"}>
         <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-green-500" />
         <h3 className="font-semibold text-foreground">メールアプリが開きました</h3>
         <p className="text-sm text-muted-foreground mt-1">内容を確認して送信してください。</p>
@@ -388,8 +476,8 @@ function AdminContactForm({ userEmail, userName }: { userEmail: string; userName
   }
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="px-5 py-3 border-b border-border bg-muted/40">
+    <div className={v2 ? "overflow-hidden border border-[#d4dde7] bg-white" : "bg-card border border-border rounded-lg overflow-hidden"}>
+      <div className={v2 ? "border-b border-[#d4dde7] bg-[#edf1f5] px-5 py-4" : "px-5 py-3 border-b border-border bg-muted/40"}>
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-primary" />
           管理者への連絡
@@ -423,7 +511,7 @@ function AdminContactForm({ userEmail, userName }: { userEmail: string; userName
         </div>
         <div className="flex justify-end">
           <Button
-            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+            className={v2 ? "h-11 gap-2 rounded-none bg-[#173f70] px-6 text-[14px] font-bold text-white" : "gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"}
             disabled={!category || !message.trim()}
             onClick={handleSend}
           >
@@ -436,7 +524,7 @@ function AdminContactForm({ userEmail, userName }: { userEmail: string; userName
   );
 }
 
-function VisibilitySettings() {
+function VisibilitySettings({ v2 = false }: { v2?: boolean }) {
   const { data: settings, isLoading } = trpc.auth.getVisibilitySettings.useQuery();
   const mutation = trpc.auth.updateVisibilitySettings.useMutation();
   const utils = trpc.useUtils();
@@ -465,10 +553,10 @@ function VisibilitySettings() {
   ];
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="px-5 py-3 border-b border-border bg-muted/40">
+    <div className={v2 ? "overflow-hidden border border-[#d4dde7] bg-white" : "bg-card border border-border rounded-lg overflow-hidden"}>
+      <div className={v2 ? "border-b border-[#d4dde7] bg-[#edf1f5] px-5 py-4" : "px-5 py-3 border-b border-border bg-muted/40"}>
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          👁 情報公開設定
+          <Eye className="w-4 h-4 text-primary" />情報公開設定
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">他のユーザーに表示する情報を選択できます</p>
       </div>
@@ -485,7 +573,7 @@ function VisibilitySettings() {
   );
 }
 
-function NotifySettings() {
+function NotifySettings({ v2 = false }: { v2?: boolean }) {
   const { data: settings, isLoading } = trpc.auth.getNotifySettings.useQuery();
   const mutation = trpc.auth.updateNotifySettings.useMutation();
   const utils = trpc.useUtils();
@@ -515,10 +603,10 @@ function NotifySettings() {
   if (isLoading) return null;
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="px-5 py-3 border-b border-border bg-muted/40">
+    <div className={v2 ? "overflow-hidden border border-[#d4dde7] bg-white" : "bg-card border border-border rounded-lg overflow-hidden"}>
+      <div className={v2 ? "border-b border-[#d4dde7] bg-[#edf1f5] px-5 py-4" : "px-5 py-3 border-b border-border bg-muted/40"}>
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          📩 メール通知設定
+          <Mail className="w-4 h-4 text-primary" />メール通知設定
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">チェックを入れた項目のメール通知を受け取ります</p>
       </div>
@@ -542,7 +630,7 @@ function NotifySettings() {
   );
 }
 
-function ChangePasswordForm() {
+function ChangePasswordForm({ v2 = false }: { v2?: boolean }) {
   const [open, setOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -569,8 +657,8 @@ function ChangePasswordForm() {
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <button className="w-full px-5 py-3 flex items-center justify-between text-left bg-muted/40" onClick={() => setOpen(!open)}>
+    <div className={v2 ? "overflow-hidden border border-[#d4dde7] bg-white" : "bg-card border border-border rounded-lg overflow-hidden"}>
+      <button className={v2 ? "flex w-full items-center justify-between bg-[#edf1f5] px-5 py-4 text-left" : "w-full px-5 py-3 flex items-center justify-between text-left bg-muted/40"} onClick={() => setOpen(!open)}>
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Lock className="w-4 h-4 text-primary" />
           パスワード変更
@@ -619,7 +707,7 @@ function ChangePasswordForm() {
   );
 }
 
-function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () => void; logoMutation: any }) {
+function ProfileCard({ user, refresh, logoMutation, v2 = false }: { user: any; refresh: () => void; logoMutation: any; v2?: boolean }) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -659,16 +747,16 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
   ];
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 md:p-6 space-y-4">
-      <div className="flex items-start justify-between">
+    <div className={v2 ? "overflow-hidden border border-[#d4dde7] bg-white" : "bg-card border border-border rounded-lg p-4 md:p-6 space-y-4"}>
+      <div className={v2 ? "flex items-start justify-between bg-[#173f70] p-5 text-white sm:p-6" : "flex items-start justify-between"}>
         <div className="flex items-start gap-3 md:gap-5">
-          <div className="w-12 h-12 md:w-16 md:h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-xl md:text-2xl font-bold text-primary">{(user.name ?? "?").charAt(0)}</span>
+          <div className={v2 ? "grid size-14 shrink-0 place-items-center bg-white/15" : "w-12 h-12 md:w-16 md:h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0"}>
+            <span className={v2 ? "text-[22px] font-bold text-white" : "text-xl md:text-2xl font-bold text-primary"}>{(user.name ?? "?").charAt(0)}</span>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">{user.name}</h2>
+            <h2 className={v2 ? "text-[21px] font-bold text-white" : "text-lg font-semibold text-foreground"}>{user.name}</h2>
             <div className="flex items-center gap-3 mt-1">
-              <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary">
+              <span className={v2 ? "bg-white/15 px-2 py-1 text-[11px] font-bold text-white" : "text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary"}>
                 {PLAN_MAP[user.plan] ?? "スタンダード"}
               </span>
               {user.role === "admin" && (
@@ -680,14 +768,14 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
           </div>
         </div>
         {!editing && (
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={startEdit}>
+          <Button variant="outline" size="sm" className={v2 ? "h-10 rounded-none border-white/60 bg-transparent px-4 font-bold text-white hover:bg-white/10 hover:text-white" : "gap-1.5"} onClick={startEdit}>
             <Pencil className="w-3.5 h-3.5" />編集
           </Button>
         )}
       </div>
 
       {editing ? (
-        <div className="space-y-4 pt-2 border-t border-border">
+        <div className={v2 ? "space-y-4 p-5 sm:p-6" : "space-y-4 pt-2 border-t border-border"}>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5"><Label>氏名</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="山田 太郎" /></div>
             <div className="space-y-1.5"><Label>会社名</Label><Input value={form.company} onChange={e => setForm(p => ({ ...p, company: e.target.value }))} placeholder="株式会社〇〇不動産" /></div>
@@ -715,9 +803,9 @@ function ProfileCard({ user, refresh, logoMutation }: { user: any; refresh: () =
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm pt-2 border-t border-border">
+        <div className={v2 ? "grid grid-cols-1 gap-x-8 gap-y-0 p-5 text-[14px] sm:grid-cols-2 sm:p-6" : "grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm pt-2 border-t border-border"}>
           {infoItems.map(item => (
-            <div key={item.label} className="flex items-center gap-2 text-muted-foreground">
+            <div key={item.label} className={v2 ? "flex min-w-0 items-center gap-2 border-b border-[#e1e6ec] py-3 text-[#526176]" : "flex items-center gap-2 text-muted-foreground"}>
               <item.icon className="w-4 h-4 shrink-0" />
               <span className="text-xs text-muted-foreground/60">{item.label}:</span>
               <span className={item.value ? "" : "text-muted-foreground/40 text-xs"}>{item.value || "未設定"}</span>

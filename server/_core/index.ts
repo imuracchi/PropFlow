@@ -35,6 +35,12 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  app.get("/healthz", async (_req, res) => {
+    const { checkDatabaseHealth } = await import("../db");
+    const database = await checkDatabaseHealth();
+    res.status(database ? 200 : 503).json({ ok: database, database });
+  });
+
   // Run DB migrations for columns added without migration files
   const { runStartupMigrations } = await import("../db");
   await runStartupMigrations().catch(e => console.warn("[migration] Failed:", e));
@@ -46,7 +52,7 @@ async function startServer() {
   app.get("/api/files/raw/:fileId", async (req, res) => {
     try {
       const { getSessionCookie, verifySessionToken } = await import("./auth");
-      const { getUserById, getPropertyFileContent, getPropertyById } = await import("../db");
+      const { getUserById, getPropertyFileContent, getPropertyById, getPropertyExclusions } = await import("../db");
 
       const cookie = getSessionCookie(req);
       if (!cookie) { res.status(401).end(); return; }
@@ -61,9 +67,19 @@ async function startServer() {
       const file = await getPropertyFileContent(fileId);
       if (!file) { res.status(404).end(); return; }
 
+      const prop = await getPropertyById(file.propertyId);
+      if (!prop) { res.status(404).end(); return; }
+      const isOwner = prop.userId === user.id || user.role === "admin";
+      if (!isOwner) {
+        const exclusions = await getPropertyExclusions(file.propertyId);
+        if (prop.deleted === 1 || prop.published === 0 || exclusions.some(item => item.userId === user.id)) {
+          res.status(404).end();
+          return;
+        }
+      }
+
       if (file.visible === 0) {
-        const prop = await getPropertyById(file.propertyId);
-        if (!prop || (prop.userId !== user.id && user.role !== "admin")) {
+        if (!isOwner) {
           res.status(403).end();
           return;
         }
@@ -214,6 +230,18 @@ async function startServer() {
     }
   });
   console.log("[CRON] Expired document cleanup scheduled at 0:00 JST daily");
+
+  // 毎日深夜0時（JST）に、物件登録者が削除して30日を超えた物件を完全削除
+  cron.schedule("0 15 * * *", async () => {
+    try {
+      const db = await import("../db");
+      const deleted = await db.purgeExpiredOwnerDeletedProperties();
+      console.log(`[CRON] Permanently deleted ${deleted} expired owner-deleted properties`);
+    } catch (e) {
+      console.error("[CRON] purgeExpiredOwnerDeletedProperties error:", e);
+    }
+  });
+  console.log("[CRON] Owner-deleted property cleanup scheduled at 0:00 JST daily");
 
   // 毎分：予約配信チェック
   cron.schedule("* * * * *", async () => {

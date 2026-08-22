@@ -9,14 +9,14 @@ import {
   Search, MessageCircle, ScrollText, Shield,
   MoreHorizontal, ArrowUpRight, Loader2, UserPlus, FileText, Ban, UserCheck,
   Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin, Send,
-  Sparkles, BarChart2, Smartphone, Monitor
+  Sparkles, BarChart2, Smartphone, Monitor, ChevronDown
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
 const PLAN_MAP: Record<string, { label: string; cls: string }> = {
@@ -31,7 +31,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   sold: { label: "売却済", cls: "bg-gray-400 text-white" },
 };
 
-export default function Admin() {
+export default function Admin({ v2 = false }: { v2?: boolean }) {
   const { user: currentUser } = useAuth();
   const isManagement = currentUser?.role === "management";
   const [, setLocation] = useLocation();
@@ -44,10 +44,17 @@ export default function Admin() {
   const [dmDateFrom, setDmDateFrom] = useState("");
   const [dmDateTo, setDmDateTo] = useState("");
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [activeSection, setActiveSection] = useState("users");
+  const [mobileAdminMenuOpen, setMobileAdminMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!v2) return;
+    const selectSection = (event: Event) => setActiveSection((event as CustomEvent<string>).detail);
+    window.addEventListener("v2-admin-section", selectSection);
+    return () => window.removeEventListener("v2-admin-section", selectSection);
+  }, [v2]);
 
   const utils = trpc.useUtils();
   const { data: stats, isLoading: statsLoading } = trpc.admin.stats.useQuery();
-  const { data: pendingUsers, isLoading: pendingLoading } = trpc.admin.pendingUsers.useQuery();
   const { data: allUsers, isLoading: usersLoading } = trpc.admin.allUsers.useQuery();
   const { data: adminProperties } = trpc.admin.allProperties.useQuery();
   const { data: activityLogs } = trpc.admin.activityLogs.useQuery();
@@ -60,8 +67,6 @@ export default function Admin() {
   const { data: searchRanking } = trpc.property.searchRanking.useQuery({});
   const clearSearchLogsMutation = trpc.property.clearSearchLogs.useMutation({ onSuccess: () => refetchSearchLogs() });
 
-  const approveMutation = trpc.admin.approveUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
-  const rejectMutation = trpc.admin.rejectUser.useMutation({ onSuccess: () => { utils.admin.pendingUsers.invalidate(); utils.admin.stats.invalidate(); } });
   const suspendMutation = trpc.admin.suspendUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
   const activateMutation = trpc.admin.activateUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
   const deleteUserMutation = trpc.admin.deleteUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); utils.admin.stats.invalidate(); } });
@@ -105,8 +110,6 @@ export default function Admin() {
     totalMessages: number;
   } | null>(null);
 
-  const pendingCount = pendingUsers?.length ?? 0;
-
   const filteredUsers = (allUsers ?? []).filter(u => {
     if (!userSearch) return true;
     const q = userSearch.toLowerCase();
@@ -124,7 +127,6 @@ export default function Admin() {
   const statCards = [
     { label: "登録業者数", value: stats ? `${stats.activeUsers}社` : "—", icon: Users, accent: "text-primary bg-primary/10" },
     { label: "表示中物件数", value: stats ? `${stats.totalProperties}件` : "—", icon: Building2, accent: "text-green-600 bg-green-50" },
-    { label: "承認待ち", value: stats ? `${stats.pendingUsers}件` : "—", icon: Clock, accent: stats?.pendingUsers ? "text-amber-600 bg-amber-50" : "text-muted-foreground bg-muted" },
   ];
 
   if (statsLoading) {
@@ -132,22 +134,23 @@ export default function Admin() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={v2 ? "space-y-5" : "space-y-6"}>
       <div>
-        <h1 className="text-lg font-semibold text-foreground">管理画面</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">プラットフォーム全体の管理・監視</p>
+        <p className={v2 ? "text-[12px] font-bold tracking-wider text-[#5275a0]" : "hidden"}>ADMINISTRATION</p>
+        <h1 className={v2 ? "mt-1 text-[27px] font-bold text-[#102d50]" : "text-lg font-semibold text-foreground"}>管理ダッシュボード</h1>
+        <p className={v2 ? "mt-1 text-[14px] text-[#65748a]" : "text-xs text-muted-foreground mt-0.5"}>PropFlow全体の利用状況と運営機能</p>
       </div>
 
       {/* サマリーカード */}
-      <div className={`grid gap-4 ${isManagement ? "grid-cols-2" : "grid-cols-3"}`}>
-        {statCards.filter(s => !isManagement || s.label !== "承認待ち").map(stat => (
-          <div key={stat.label} className="bg-card border border-border rounded-lg p-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {statCards.map(stat => (
+          <div key={stat.label} className={v2 ? "border border-[#d4dde7] border-t-[3px] border-t-[#173f70] bg-white p-5" : "bg-card border border-border rounded-lg p-5"}>
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
                 <p className="text-2xl font-bold text-foreground">{stat.value}</p>
               </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.accent}`}>
+              <div className={v2 ? "flex size-10 items-center justify-center bg-[#e8eef5] text-[#173f70]" : `w-10 h-10 rounded-lg flex items-center justify-center ${stat.accent}`}>
                 <stat.icon className="w-5 h-5" />
               </div>
             </div>
@@ -156,8 +159,23 @@ export default function Admin() {
       </div>
 
       {/* タブ */}
-      <Tabs defaultValue="users">
-        <TabsList className="bg-muted flex-wrap h-auto gap-1 p-1">
+      <Tabs value={activeSection} onValueChange={(section) => { setActiveSection(section); setMobileAdminMenuOpen(false); }}>
+        {v2 && (
+          <button
+            type="button"
+            onClick={() => setMobileAdminMenuOpen(open => !open)}
+            className="flex h-12 w-full items-center border border-[#d4dde7] bg-white px-4 text-left lg:hidden"
+            aria-expanded={mobileAdminMenuOpen}
+          >
+            <span className="text-[11px] font-bold text-[#65748a]">管理メニュー</span>
+            <span className="ml-auto mr-2 text-[13px] font-bold text-[#173f70]">{{
+              users: "業者一覧", properties: "物件一覧", ranking: "物件ランキング", search: "検索ログ",
+              dm: "DM管理", logs: "操作ログ", broadcast: "一斉配信", ai: "AI分析",
+            }[activeSection]}</span>
+            <ChevronDown className={`h-4 w-4 text-[#173f70] transition-transform ${mobileAdminMenuOpen ? "rotate-180" : ""}`} />
+          </button>
+        )}
+        <TabsList className={v2 ? `${mobileAdminMenuOpen ? "grid" : "hidden"} h-auto w-full grid-cols-2 gap-px rounded-none border-x border-b border-[#d4dde7] bg-[#d4dde7] p-0 sm:grid-cols-4 lg:hidden [&>button]:h-14 [&>button]:rounded-none [&>button]:bg-white [&>button]:px-2 [&>button]:text-[12px] [&>button]:font-bold [&>button]:text-[#526176] [&>button[data-state=active]]:bg-[#173f70] [&>button[data-state=active]]:text-white` : "bg-muted flex-wrap h-auto gap-1 p-1"}>
           <TabsTrigger value="users" className="gap-1.5">
             <Users className="w-3.5 h-3.5" />
             業者一覧
@@ -198,13 +216,13 @@ export default function Admin() {
 
         {/* 業者管理タブ */}
         <TabsContent value="users" className="mt-4 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
+          <div className="grid gap-2 sm:flex sm:items-center sm:gap-3">
+            <div className="relative min-w-0 flex-1 sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="業者名・メールで検索..." className="pl-10 bg-card border-border" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
             </div>
             {!isManagement && (
-              <Button size="sm" className="gap-1.5" onClick={() => setShowCreateUser(true)}>
+              <Button size="sm" className="w-full gap-1.5 sm:w-auto" onClick={() => setShowCreateUser(true)}>
                 <UserPlus className="w-3.5 h-3.5" />代理登録
               </Button>
             )}
@@ -219,7 +237,50 @@ export default function Admin() {
               <p className="text-muted-foreground">登録業者はまだいません</p>
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-lg overflow-hidden overflow-x-auto">
+            <>
+            <div className="space-y-3 sm:hidden">
+              {filteredUsers.map(user => {
+                const planInfo = PLAN_MAP[user.plan] ?? PLAN_MAP.standard;
+                return (
+                  <article key={user.id} className="border border-[#d4dde7] bg-white p-4">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-[#e8eef5] text-[12px] font-bold text-[#173f70]">{(user.name ?? "?").charAt(0)}</AvatarFallback></Avatar>
+                      <button onClick={() => setSelectedUserId(user.id)} className="min-w-0 flex-1 text-left">
+                        <p className="text-[15px] font-bold text-[#102d50]">{user.name}</p>
+                        <p className="mt-0.5 break-words text-[12px] text-[#65748a]">{user.company || "会社名未設定"}</p>
+                      </button>
+                      <span className={`shrink-0 px-2 py-1 text-[10px] font-bold ${user.status === "active" ? "bg-[#e8f3ec] text-[#27613c]" : "bg-[#fff0f0] text-[#a72e2e]"}`}>{user.status === "active" ? "有効" : "停止中"}</span>
+                    </div>
+                    <dl className="mt-3 divide-y divide-[#e2e7ec] border-y border-[#e2e7ec] text-[12px]">
+                      <div className="grid grid-cols-[76px_minmax(0,1fr)] items-center py-2">
+                        <dt className="text-[#758194]">メール</dt>
+                        <dd className="min-w-0 break-all text-[#263b58]">{user.email}</dd>
+                      </div>
+                      <div className="grid grid-cols-[76px_minmax(0,1fr)] items-center py-2">
+                        <dt className="text-[#758194]">登録・プラン</dt>
+                        <dd className="flex min-w-0 flex-wrap items-center gap-2 text-[#263b58]">
+                          <span>{user.loginMethod === "email" ? "自己登録" : "代理登録"}</span>
+                          <span className={`px-2 py-0.5 text-[10px] font-bold ${planInfo.cls}`}>{planInfo.label}</span>
+                        </dd>
+                      </div>
+                      <div className="grid grid-cols-[76px_minmax(0,1fr)] items-center py-2">
+                        <dt className="text-[#758194]">登録日・名刺</dt>
+                        <dd className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[#263b58]">
+                          <span>{fmtDate(user.createdAt)}</span>
+                          <span className="text-[#aeb7c3]">／</span>
+                          <span>{(user as any).hasBusinessCard ? ((user as any).verified ? "名刺登録済み・認証済み" : "名刺登録済み") : "名刺未登録"}</span>
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={() => setSelectedUserId(user.id)} className="h-10 flex-1 border border-[#173f70] text-[12px] font-bold text-[#173f70]">詳細を見る</button>
+                      {!isManagement && <button onClick={() => user.status === "active" ? suspendMutation.mutate({id:user.id}) : activateMutation.mutate({id:user.id})} className={`h-10 flex-1 border text-[12px] font-bold ${user.status === "active" ? "border-[#a72e2e] text-[#a72e2e]" : "border-[#27613c] text-[#27613c]"}`}>{user.status === "active" ? "利用を停止" : "利用を再開"}</button>}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            <div className="hidden bg-card border border-border rounded-lg overflow-hidden overflow-x-auto sm:block">
               <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
@@ -395,6 +456,7 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </TabsContent>
 
@@ -411,7 +473,7 @@ export default function Admin() {
             </div>
           ) : (
             <div className="bg-card border border-border rounded-lg overflow-hidden overflow-x-auto">
-              <table className="w-full text-sm min-w-[500px]">
+              <table className="admin-mobile-table admin-properties-table w-full text-sm min-w-[500px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     {["ID", "物件名", "登録者", "価格", "表示", "登録日", ...(!isManagement ? ["操作"] : [])].map(h => (
@@ -426,7 +488,13 @@ export default function Admin() {
                     return (
                       <tr key={prop.id} className={`hover:bg-muted/30 transition-colors ${isHidden ? "opacity-50" : ""}`}>
                         <td className="px-4 py-3 text-xs text-muted-foreground">#{prop.id}</td>
-                        <td className="px-4 py-3 font-medium text-primary text-xs"><a href={`/property/${prop.id}`} className="hover:underline">{prop.name}</a></td>
+                        <td className="px-4 py-3 font-medium text-primary text-xs">
+                          <a href={`/property/${prop.id}`} className="block hover:underline">{prop.name}</a>
+                          <span className="mt-1 hidden text-[12px] font-normal text-muted-foreground max-sm:block">
+                            {(prop as any).userName ?? "ユーザー名未設定"}
+                            {(prop as any).userCompany ? `　${(prop as any).userCompany}` : "　企業名未設定"}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{prop.userCompany ?? "—"}</td>
                         <td className="px-4 py-3 text-foreground text-xs font-semibold">{prop.price?.toLocaleString() ?? "応相談"}</td>
                         <td className="px-4 py-3">
@@ -489,10 +557,10 @@ export default function Admin() {
               <h3 className="text-sm font-semibold">閲覧数ランキング（上位20件）</h3>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[500px]">
+              <table className="admin-mobile-table admin-ranking-table w-full text-sm min-w-[500px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    {["順位", "物件名", "種別", "掲載者", "閲覧数", "公開"].map(h => (
+                    {["順位", "物件情報", "種別", "掲載者", "閲覧数", "公開"].map(h => (
                       <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground whitespace-nowrap uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -505,7 +573,13 @@ export default function Admin() {
                           <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white ${i === 0 ? "bg-yellow-400" : i === 1 ? "bg-gray-400" : "bg-amber-600"}`}>{i + 1}</span>
                         ) : i + 1}
                       </td>
-                      <td className="px-4 py-3 font-medium max-w-[200px] truncate">{p.name}</td>
+                      <td className="px-4 py-3 font-medium max-w-[200px] truncate">
+                        <span className="block truncate">{p.name}</span>
+                        <span className="mt-1 hidden truncate text-[12px] font-normal text-muted-foreground max-sm:block">
+                          {(p as any).ownerName ?? "ユーザー名未設定"}
+                          {(p as any).ownerCompany ? `　${(p as any).ownerCompany}` : "　会社名未設定"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{p.type}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground max-w-[140px] truncate">{(p as any).ownerCompany ?? (p as any).ownerName ?? "-"}</td>
                       <td className="px-4 py-3 font-bold text-primary whitespace-nowrap">
@@ -534,7 +608,7 @@ export default function Admin() {
               <h3 className="text-sm font-semibold">検索キーワードランキング（上位20件）</h3>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[400px]">
+              <table className="admin-mobile-table admin-search-ranking-table w-full text-sm min-w-[400px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
                     {["順位", "検索ワード", "種別", "検索回数", "平均ヒット数"].map(h => (
@@ -583,7 +657,7 @@ export default function Admin() {
               )}
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[500px]">
+              <table className="admin-mobile-table admin-search-log-table w-full text-sm min-w-[500px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
                     {["日時", "ユーザー", "種別", "検索ワード", "ヒット数"].map(h => (
@@ -635,12 +709,12 @@ export default function Admin() {
           ) : (
             <div className="bg-card border border-border rounded-lg overflow-hidden overflow-x-auto">
               <div className="max-h-[600px] overflow-y-auto">
-                <table className="w-full text-sm min-w-[900px]">
+                <table className="admin-mobile-table admin-dm-table w-full text-sm min-w-[900px]">
                   <thead className="sticky top-0 bg-card"><tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">№</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">物件名</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">内容</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">発言者</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">送信者 → 送信先</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">日時</th>
                     {!isManagement && (
                       <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground">操作</th>
@@ -659,8 +733,18 @@ export default function Admin() {
                             {m.content}
                           </td>
                           <td className="px-4 py-2.5 text-sm whitespace-nowrap">
-                            {m.senderName ?? "?"}
-                            {m.senderCompany && <span className="text-xs text-muted-foreground ml-1">({m.senderCompany})</span>}
+                            <span className="admin-dm-party admin-dm-sender">
+                              <span className="admin-dm-party-label">送信者</span>
+                              {m.senderName ?? "?"}
+                              {m.senderCompany && <span className="text-xs text-muted-foreground ml-1">({m.senderCompany})</span>}
+                            </span>
+                            <span className="admin-dm-arrow mx-2 text-muted-foreground">→</span>
+                            <span className="admin-dm-party admin-dm-receiver">
+                              <span className="admin-dm-party-label">受信者</span>
+                              {m.receiverName ?? "?"}
+                              {m.receiverCompany && <span className="text-xs text-muted-foreground ml-1">({m.receiverCompany})</span>}
+                              <span className="admin-dm-mobile-date">{fmtDateTime(m.createdAt)}</span>
+                            </span>
                           </td>
                           <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTime(m.createdAt)}</td>
                           {!isManagement && (
@@ -797,7 +881,7 @@ export default function Admin() {
           ) : (
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <div className="max-h-[600px] overflow-y-auto">
-                <table className="w-full text-sm">
+                <table className="admin-mobile-table admin-activity-table w-full text-sm">
                   <thead className="sticky top-0 bg-card"><tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">№</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">日時</th>
@@ -991,7 +1075,7 @@ export default function Admin() {
               )}
               {broadcastLogsQuery.data && broadcastLogsQuery.data.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="admin-mobile-table admin-broadcast-table w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-muted-foreground text-left">
                         <th className="pb-2 pr-4 whitespace-nowrap">送信日時</th>
@@ -1125,7 +1209,16 @@ export default function Admin() {
 
       {/* 業者詳細モーダル */}
       {selectedUserId && (
-        <UserDetailModal userId={selectedUserId} onClose={() => setSelectedUserId(null)} />
+        <UserDetailModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+          canDelete={!isManagement && selectedUserId !== currentUser?.id}
+          isDeleting={deleteUserMutation.isPending}
+          onDelete={(userName) => {
+            if (!confirm(`${userName}を完全に削除しますか？\nこの操作は取り消せません。`)) return;
+            deleteUserMutation.mutate({ id: selectedUserId }, { onSuccess: () => setSelectedUserId(null) });
+          }}
+        />
       )}
 
       {/* DM内容モーダル */}
@@ -1138,6 +1231,9 @@ export default function Admin() {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {viewDm.senderName ?? "?"}
                   {viewDm.senderCompany && <span className="ml-1">({viewDm.senderCompany})</span>}
+                  <span className="mx-2">→</span>
+                  {viewDm.receiverName ?? "?"}
+                  {viewDm.receiverCompany && <span className="ml-1">({viewDm.receiverCompany})</span>}
                   <span className="ml-2">{fmtDateTime(viewDm.createdAt)}</span>
                 </p>
               </div>
@@ -1155,7 +1251,19 @@ export default function Admin() {
 
 const PLAN_LABEL: Record<string, string> = { standard: "スタンダード", gold: "ゴールド", platinum: "プラチナ" };
 
-function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => void }) {
+function UserDetailModal({
+  userId,
+  onClose,
+  canDelete,
+  isDeleting,
+  onDelete,
+}: {
+  userId: number;
+  onClose: () => void;
+  canDelete: boolean;
+  isDeleting: boolean;
+  onDelete: (userName: string) => void;
+}) {
   const { data: user, isLoading } = trpc.admin.getUserDetail.useQuery({ id: userId });
 
   if (isLoading) {
@@ -1239,6 +1347,17 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
             <p>登録日: {fmtDate(user.createdAt)}</p>
             <p>最終ログイン: {fmtDate(user.lastSignedIn)}</p>
           </div>
+          {canDelete && (
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => onDelete(user.name ?? user.email)}
+              className="flex h-11 w-full items-center justify-center gap-2 border border-red-300 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {isDeleting ? "削除中…" : "アカウントを削除"}
+            </button>
+          )}
         </div>
       </div>
     </div>
