@@ -3,6 +3,7 @@ import {
   Building2,
   Download,
   Heart,
+  LayoutGrid,
   List,
   LogOut,
   MessageCircle,
@@ -10,8 +11,9 @@ import {
   ShieldCheck,
   UserRound,
   Users,
+  X,
 } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -34,7 +36,8 @@ export default function V2Layout({
 }) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
-  const mobileNav = [nav[0], nav[1], nav[2], nav[3], nav[6]];
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const mobileNav = [nav[0], nav[1], nav[2], nav[3]];
   const sellerNav = [nav[3], nav[2], nav[4]];
   const destination = (path: string) => {
     if (!preview && !location.startsWith("/v2/preview")) return path;
@@ -162,6 +165,40 @@ export default function V2Layout({
         </header>
         <div className="pb-20 lg:pb-0">{children}</div>
       </div>
+      {mobileMoreOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onClick={() => setMobileMoreOpen(false)}>
+          <section className="absolute inset-x-0 bottom-0 bg-white px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-4" onClick={event => event.stopPropagation()}>
+            <div className="flex items-center border-b border-[#dfe4ea] pb-3">
+              <div>
+                <p className="text-[11px] font-bold tracking-wider text-[#5275a0]">MENU</p>
+                <h2 className="text-[18px] font-bold text-[#102d50]">その他の機能</h2>
+              </div>
+              <button onClick={() => setMobileMoreOpen(false)} className="ml-auto grid size-10 place-items-center" aria-label="メニューを閉じる"><X size={20}/></button>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {[
+                { icon: UserRound, label: "マイページ", path: "/v2/mypage" },
+                { icon: Download, label: "ダウンロード資料", path: "/v2/documents" },
+                { icon: Users, label: "興味者リスト", path: "/v2/interested" },
+                { icon: Plus, label: "物件を登録", path: "/v2/upload" },
+                { icon: Bell, label: "お知らせ", path: "/v2/announcements" },
+                ...((user?.role === "admin" || user?.role === "management")
+                  ? [{ icon: ShieldCheck, label: "管理画面", path: "/v2/admin" }]
+                  : []),
+              ].map(item => (
+                <button
+                  key={item.path}
+                  onClick={() => { setMobileMoreOpen(false); setLocation(destination(item.path)); }}
+                  className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
+                >
+                  <item.icon size={23}/>
+                  <span className="mt-2 text-[11px] font-bold leading-4">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dfe3e8] bg-white pb-[max(7px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
         <div className="mx-auto flex max-w-md justify-around">
           {mobileNav.map(item => (
@@ -174,6 +211,13 @@ export default function V2Layout({
               {item.label}
             </button>
           ))}
+          <button
+            onClick={() => setMobileMoreOpen(true)}
+            className={`flex w-16 flex-col items-center gap-1 text-[10px] ${mobileMoreOpen ? "font-bold text-[#173f70]" : "text-[#718096]"}`}
+          >
+            <LayoutGrid size={21}/>
+            その他
+          </button>
         </div>
       </nav>
     </div>

@@ -147,9 +147,6 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
         </div>
       )}
 
-      {/* プロフィールカード */}
-      <ProfileCard user={user} refresh={refresh} logoMutation={logoMutation} v2={v2} />
-
       {/* V2スマホで下部メニューに収めない機能への導線 */}
       {v2 && (
         <section className="border border-[#d4dde7] bg-white lg:hidden">
@@ -177,6 +174,9 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
           ))}
         </section>
       )}
+
+      {/* プロフィールカード */}
+      <ProfileCard user={user} refresh={refresh} logoMutation={logoMutation} v2={v2} />
 
       {/* 会社ロゴ */}
       <div className={v2 ? "border border-[#d4dde7] bg-white p-5" : "bg-card border border-border rounded-lg p-4"}>
