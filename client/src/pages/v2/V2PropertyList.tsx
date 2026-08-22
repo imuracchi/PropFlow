@@ -647,20 +647,19 @@ export default function V2PropertyList({
                       })}
                     </span>
                   </div>
-                  <div className="mt-2 flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-[18px] font-bold">{p.name}</h2>
-                      <p className="mt-1 text-[14px] leading-6 text-[#65748a]">
-                        {p.address}
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <p className="whitespace-nowrap text-[19px] font-bold">
+                  <div className="mt-2 min-w-0">
+                    <h2 className="text-[18px] font-bold leading-7 text-[#102d50]">{p.name}</h2>
+                    <p className="mt-1 text-[14px] leading-6 text-[#65748a]">
+                      {p.address}
+                    </p>
+                    <div className="mt-3 flex items-center border-t border-[#edf0ee] pt-3">
+                      <span className="text-[12px] font-bold text-[#65748a]">販売価格</span>
+                      <p className="ml-auto whitespace-nowrap text-[20px] font-bold text-[#102d50]">
                         {priceLabel(p.price, p.priceNegotiable)}
                       </p>
-                      {p.userId !== user?.id && <button onClick={e => toggleFavorite(p.id, e)}>
+                      {p.userId !== user?.id && <button className="ml-3" onClick={e => toggleFavorite(p.id, e)}>
                         <Heart
-                          size={20}
+                          size={21}
                           fill={favSet.has(p.id) ? "currentColor" : "none"}
                           className={
                             favSet.has(p.id)
