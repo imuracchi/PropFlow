@@ -370,6 +370,7 @@ export async function listProperties(viewerUserId?: number) {
       negotiation: properties.negotiation,
       remarks: properties.remarks,
       viewCount: properties.viewCount,
+      published: properties.published,
       publishedAt: properties.publishedAt,
       createdAt: properties.createdAt,
       userName: users.name,

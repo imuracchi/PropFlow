@@ -220,7 +220,8 @@ try {
   const ownerDraft = await query("property.getById", sellerCookie, { id: draftCreated.data.id });
   assert(ownerDraft?.published === 0, "property registrant can open own draft");
   const sellerPropertyList = await query("property.list", sellerCookie);
-  assert(sellerPropertyList.some((item: any) => item.id === draftCreated.data.id), "property registrant sees own draft in self-property list data");
+  const listedDraft = sellerPropertyList.find((item: any) => item.id === draftCreated.data.id);
+  assert(listedDraft?.published === 0, "property registrant sees own draft with unpublished state in self-property list data");
   const buyerPropertyList = await query("property.list", buyerCookie);
   assert(!buyerPropertyList.some((item: any) => item.id === draftCreated.data.id), "draft remains absent from other users' property list data");
   const buyerDraft = await query("property.getById", buyerCookie, { id: draftCreated.data.id });
