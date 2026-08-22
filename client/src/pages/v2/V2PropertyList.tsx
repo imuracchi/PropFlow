@@ -6,6 +6,7 @@ import {
   Heart,
   ListFilter,
   Loader2,
+  Plus,
   Search,
   Sparkles,
   StickyNote,
@@ -196,6 +197,7 @@ export default function V2PropertyList({
   const [maxArea, setMaxArea] = useState("");
   const [newOnly, setNewOnly] = useState(false);
   const [hotOnly, setHotOnly] = useState(false);
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
@@ -248,6 +250,7 @@ export default function V2PropertyList({
         if (collection !== "mine" && p.published === 0) return false;
         if (collection === "favorites" && !favSet.has(p.id)) return false;
         if (collection === "mine" && p.userId !== viewerId) return false;
+        if (favoriteOnly && !favSet.has(p.id)) return false;
         if (mode === "area" && prefecture && !p.address.includes(prefecture))
           return false;
         if (mode === "keyword" && appliedKeyword.trim()) {
@@ -353,6 +356,7 @@ export default function V2PropertyList({
     setMaxArea("");
     setNewOnly(false);
     setHotOnly(false);
+    setFavoriteOnly(false);
   };
   const activeFilters = [
     type !== "all",
@@ -362,6 +366,7 @@ export default function V2PropertyList({
     maxArea,
     newOnly,
     hotOnly,
+    favoriteOnly,
   ].filter(Boolean).length;
 
   const pageTitle =
@@ -393,6 +398,15 @@ export default function V2PropertyList({
             </strong>
           </p>
         </div>
+        {collection === "mine" && (
+          <button
+            onClick={() => setLocation(preview ? "/v2/preview/upload" : "/v2/upload")}
+            className="mt-3 flex h-11 w-full items-center justify-center gap-2 bg-[#173f70] text-[13px] font-bold text-white lg:hidden"
+          >
+            <Plus size={17}/>
+            物件を登録する
+          </button>
+        )}
         <section className="mt-4 border border-[#d9e0e8] bg-white p-3 lg:p-4">
           <div className="grid grid-cols-3 bg-[#edf1f5] p-1 lg:flex lg:w-fit">
             {[
@@ -502,6 +516,15 @@ export default function V2PropertyList({
             >
               注目のみ
             </button>
+            {collection === "all" && (
+              <button
+                onClick={() => setFavoriteOnly(!favoriteOnly)}
+                className={`flex items-center gap-1 border px-3 py-2 text-[11px] font-bold lg:hidden ${favoriteOnly ? "border-[#9b3850] bg-[#fff0f3] text-[#9b3850]" : "border-[#cbd5df] text-[#65748a]"}`}
+              >
+                <Heart size={14} fill={favoriteOnly ? "currentColor" : "none"}/>
+                お気に入りのみ
+              </button>
+            )}
           </div>
           {filtersOpen && (
             <div className="mt-3 grid gap-3 border-t border-[#e1e6ec] pt-3 sm:grid-cols-3">

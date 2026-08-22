@@ -37,7 +37,7 @@ export default function V2Layout({
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
-  const mobileNav = [nav[0], nav[1], nav[2], nav[3]];
+  const mobileNav = [nav[0], nav[3], nav[2]];
   const sellerNav = [nav[3], nav[2], nav[4]];
   const destination = (path: string) => {
     if (!preview && !location.startsWith("/v2/preview")) return path;
@@ -177,7 +177,6 @@ export default function V2Layout({
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
               {[
-                { icon: UserRound, label: "マイページ", path: "/v2/mypage" },
                 { icon: Download, label: "ダウンロード資料", path: "/v2/documents" },
                 { icon: Users, label: "興味者リスト", path: "/v2/interested" },
                 { icon: Plus, label: "物件を登録", path: "/v2/upload" },
@@ -217,6 +216,13 @@ export default function V2Layout({
           >
             <LayoutGrid size={21}/>
             その他
+          </button>
+          <button
+            onClick={() => setLocation(destination(nav[6].path))}
+            className={`flex w-16 flex-col items-center gap-1 text-[10px] ${location === destination(nav[6].path) ? "font-bold text-[#173f70]" : "text-[#718096]"}`}
+          >
+            <UserRound size={21}/>
+            マイページ
           </button>
         </div>
       </nav>

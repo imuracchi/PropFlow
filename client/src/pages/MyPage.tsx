@@ -147,34 +147,6 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
         </div>
       )}
 
-      {/* V2スマホで下部メニューに収めない機能への導線 */}
-      {v2 && (
-        <section className="border border-[#d4dde7] bg-white lg:hidden">
-          <div className="border-b border-[#d4dde7] bg-[#edf1f5] px-4 py-3">
-            <h2 className="text-[14px] font-bold text-[#102d50]">その他の機能</h2>
-          </div>
-          {[
-            { label: "ダウンロード資料", path: "/v2/documents", icon: Download },
-            { label: "興味者リスト", path: "/v2/interested", icon: Users },
-            { label: "物件を登録", path: "/v2/upload", icon: Building2 },
-            ...((user.role === "admin" || user.role === "management")
-              ? [{ label: "管理画面", path: "/v2/admin", icon: Shield }]
-              : []),
-          ].map(item => (
-            <button
-              key={item.path}
-              type="button"
-              onClick={() => setLocation(item.path)}
-              className="flex min-h-14 w-full items-center border-b border-[#e2e7ec] px-4 text-left last:border-b-0"
-            >
-              <item.icon className="size-[18px] shrink-0 text-[#173f70]" />
-              <span className="ml-3 text-[14px] font-bold text-[#263b58]">{item.label}</span>
-              <ChevronRight className="ml-auto size-4 text-[#8a96a5]" />
-            </button>
-          ))}
-        </section>
-      )}
-
       {/* プロフィールカード */}
       <ProfileCard user={user} refresh={refresh} logoMutation={logoMutation} v2={v2} />
 
