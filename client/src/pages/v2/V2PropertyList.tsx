@@ -598,14 +598,14 @@ export default function V2PropertyList({
                         新着・未読
                       </span>
                     )}
-                    {(p.inquiryCount ?? 0) >= 3 && (
-                      <span className="bg-[#fde2d3] px-2 py-0.5 text-[#b43b16]">
-                        注目
-                      </span>
-                    )}
                     {p.status === "negotiating" && (
                       <span className="bg-[#fff1b8] px-2 py-0.5 text-[#765500]">
                         商談中
+                      </span>
+                    )}
+                    {(p.inquiryCount ?? 0) >= 3 && (
+                      <span className="bg-[#fde2d3] px-2 py-0.5 text-[#b43b16]">
+                        注目
                       </span>
                     )}
                     {p.status === "sold" && (
@@ -743,14 +743,14 @@ export default function V2PropertyList({
                             新着・未読
                           </span>
                         )}
-                        {(p.inquiryCount ?? 0) >= 3 && (
-                          <span className="bg-[#fde2d3] px-2 py-1 text-[12px] font-bold text-[#b43b16]">
-                            注目
-                          </span>
-                        )}
                         {p.status === "negotiating" && (
                           <span className="bg-[#fff1b8] px-2 py-1 text-[12px] font-bold text-[#765500]">
                             商談中
+                          </span>
+                        )}
+                        {(p.inquiryCount ?? 0) >= 3 && (
+                          <span className="bg-[#fde2d3] px-2 py-1 text-[12px] font-bold text-[#b43b16]">
+                            注目
                           </span>
                         )}
                         {p.status === "sold" && (

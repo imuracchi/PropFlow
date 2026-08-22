@@ -337,8 +337,8 @@ export async function listProperties(viewerUserId?: number) {
   const baseWhere = eq(properties.deleted, 0);
   const visibilityFilter = viewerUserId
     ? sql`(
-        ${properties.published} = 1
-        AND (${properties.userId} = ${viewerUserId} OR NOT EXISTS (
+        ${properties.userId} = ${viewerUserId}
+        OR (${properties.published} = 1 AND NOT EXISTS (
           SELECT 1 FROM property_exclusions pe
           WHERE pe.propertyId = ${properties.id} AND pe.userId = ${viewerUserId}
         ))

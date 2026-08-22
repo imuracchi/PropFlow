@@ -315,7 +315,6 @@ export default function V2PropertyDetail({
             ["接道", property.access || "—"],
             ["地番", property.lotNumber || "—"],
             ["その他制限", property.otherRestrictions || "—"],
-            ["備考", property.remarks || "—"],
           ]
         : [],
     [property]
@@ -736,6 +735,12 @@ export default function V2PropertyDetail({
                     </dd>
                   </div>
                 ))}
+                <div className="grid grid-cols-[110px_1fr] border-b border-[#e5e9ee] py-3 text-[13px] lg:col-span-2 lg:grid-cols-[120px_1fr] lg:border-r lg:py-0 lg:text-[14px]">
+                  <dt className="text-[#6d798b] lg:bg-[#edf1f5] lg:p-3">備考</dt>
+                  <dd className="whitespace-pre-wrap font-semibold leading-7 text-[#263b58] lg:min-h-24 lg:p-3">
+                    {property.remarks || "—"}
+                  </dd>
+                </div>
               </dl>
               {property.comment && (
                 <>

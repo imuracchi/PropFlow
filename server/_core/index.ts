@@ -115,7 +115,15 @@ async function startServer() {
       if (!html || typeof html !== "string") { res.status(400).json({ error: "html required" }); return; }
 
       const { default: puppeteer } = await import("puppeteer");
+      const { existsSync } = await import("node:fs");
+      const systemBrowser = [
+        process.env.PUPPETEER_EXECUTABLE_PATH,
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+      ].find((path): path is string => !!path && existsSync(path));
       const browser = await puppeteer.launch({
+        headless: true,
+        ...(systemBrowser ? { executablePath: systemBrowser } : {}),
         args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
       });
       try {
