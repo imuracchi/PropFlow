@@ -250,7 +250,9 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
       <ChangePasswordForm v2={v2} />
 
       {/* 管理者への連絡 */}
-      <AdminContactForm userEmail={user.email} userName={user.name ?? ""} v2={v2} />
+      <div id="admin-report" className="scroll-mt-20">
+        <AdminContactForm userEmail={user.email} userName={user.name ?? ""} v2={v2} />
+      </div>
 
       {/* 非表示物件 */}
       <div className={v2 ? "overflow-hidden border border-[#d4dde7] bg-white" : ""}>
@@ -419,7 +421,7 @@ function AdminContactForm({ userEmail, userName, v2 = false }: { userEmail: stri
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
 
-  const adminEmail = "admin@propflow.jp";
+  const adminEmail = "propflow@gspec.me";
   const categoryLabel = CONTACT_CATEGORIES.find(c => c.value === category)?.label ?? "";
 
   const handleSend = () => {

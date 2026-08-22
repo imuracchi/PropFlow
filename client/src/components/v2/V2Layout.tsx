@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Plus,
   ShieldCheck,
+  TriangleAlert,
   UserRound,
   Users,
   X,
@@ -51,6 +52,13 @@ export default function V2Layout({
     if (path === "/v2/upload") return "/v2/preview/upload";
     if (path === "/v2/announcements") return "/v2/preview/announcements";
     return path;
+  };
+  const openAdminReport = () => {
+    setMobileMoreOpen(false);
+    setLocation(`${destination("/v2/mypage")}#admin-report`);
+    window.setTimeout(() => {
+      document.getElementById("admin-report")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#17211d]">
@@ -116,6 +124,13 @@ export default function V2Layout({
               {item.label}
             </button>
           ))}
+          <button
+            onClick={openAdminReport}
+            className="mb-1 flex h-10 w-full items-center gap-3 px-3 text-[13px] text-white/65 hover:bg-white/10"
+          >
+            <TriangleAlert size={17} />
+            障害報告
+          </button>
         </nav>
         <div className="border-t border-white/10 p-4">
           {(user?.role === "admin" || user?.role === "management") && (
@@ -194,6 +209,13 @@ export default function V2Layout({
                   <span className="mt-2 text-[11px] font-bold leading-4">{item.label}</span>
                 </button>
               ))}
+              <button
+                onClick={openAdminReport}
+                className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
+              >
+                <TriangleAlert size={23}/>
+                <span className="mt-2 text-[11px] font-bold leading-4">障害報告</span>
+              </button>
             </div>
           </section>
         </div>
