@@ -1568,7 +1568,7 @@ export default function V2PropertySearch() {
                     />
                   </label>
                   <label className="block text-[12px] font-bold">
-                    希望エリア
+                    希望エリア <span className="ml-1 bg-[#b42318] px-1.5 py-0.5 text-[10px] font-bold text-white">必須</span>
                     <input
                       value={form.areas}
                       onChange={e =>
@@ -1580,7 +1580,7 @@ export default function V2PropertySearch() {
                     />
                   </label>
                   <div>
-                    <p className="text-[12px] font-bold">物件種別</p>
+                    <p className="text-[12px] font-bold">物件種別 <span className="ml-1 bg-[#b42318] px-1.5 py-0.5 text-[10px] font-bold text-white">必須</span></p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {TYPES.map(type => (
                         <button
