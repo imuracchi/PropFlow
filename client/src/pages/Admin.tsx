@@ -436,7 +436,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                                 <DropdownMenuItem className="gap-2 text-xs text-primary" onClick={() => {
                                   if (confirm(`${user.name}として代理ログインしますか？`)) {
                                     loginAsMutation.mutate({ userId: user.id }, {
-                                      onSuccess: () => { window.location.href = "/properties"; },
+                                      onSuccess: () => { window.location.href = v2 ? "/v2/properties" : "/properties"; },
                                     });
                                   }
                                 }}>
@@ -489,7 +489,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       <tr key={prop.id} className={`hover:bg-muted/30 transition-colors ${isHidden ? "opacity-50" : ""}`}>
                         <td className="px-4 py-3 text-xs text-muted-foreground">#{prop.id}</td>
                         <td className="px-4 py-3 font-medium text-primary text-xs">
-                          <a href={`/property/${prop.id}`} className="block hover:underline">{prop.name}</a>
+                          <a href={v2 ? `/v2/property/${prop.id}` : `/property/${prop.id}`} className="block hover:underline">{prop.name}</a>
                           <span className="mt-1 hidden text-[12px] font-normal text-muted-foreground max-sm:block">
                             {(prop as any).userName ?? "ユーザー名未設定"}
                             {(prop as any).userCompany ? `　${(prop as any).userCompany}` : "　企業名未設定"}
@@ -567,7 +567,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {(topViewed ?? []).map((p, i) => (
-                    <tr key={p.id} className="hover:bg-accent/30 cursor-pointer" onClick={() => setLocation(`/property/${p.id}`)}>
+                    <tr key={p.id} className="hover:bg-accent/30 cursor-pointer" onClick={() => setLocation(v2 ? `/v2/property/${p.id}` : `/property/${p.id}`)}>
                       <td className="px-4 py-3 font-bold text-muted-foreground w-12">
                         {i < 3 ? (
                           <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white ${i === 0 ? "bg-yellow-400" : i === 1 ? "bg-gray-400" : "bg-amber-600"}`}>{i + 1}</span>
