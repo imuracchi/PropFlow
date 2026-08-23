@@ -157,7 +157,7 @@ td.num{text-align:right;font-family:monospace;font-size:14px}
 @media print{.toolbar{display:none}.spacer{display:none}}
 @media screen{body{background:#cbd5e1;padding:20px}.page{width:210mm;background:#fff;margin:0 auto;padding:15mm;box-shadow:0 2px 12px rgba(0,0,0,.18)}}
 </style></head><body>
-<div class="toolbar"><span class="ttl">利益シミュレーション</span><button onclick="window.print()">🖨 印刷 / PDF保存</button></div>
+<div class="toolbar"><span class="ttl">利益シミュレーション</span><button onclick="window.print()">🖨 印刷 / PDFダウンロード</button></div>
 <div class="spacer" style="height:52px"></div>
 <div class="page">
 <div class="title">利益シミュレーション</div>
@@ -360,7 +360,7 @@ ${COST_ITEMS.map(item => {
           </div>
 
           <Button className={v2 ? "h-12 w-full gap-2 rounded-none bg-[#173f70] px-8 text-[14px] font-bold" : "w-auto px-8 gap-2"} onClick={handlePrint}>
-            <Printer className="w-4 h-4" />PDF保存
+            <Printer className="w-4 h-4" />PDFダウンロード
           </Button>
         </div>
       </div>

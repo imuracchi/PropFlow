@@ -881,42 +881,6 @@ export default function V2PropertyDetail({
                 </div>
               )}
             </section>
-            <section className="border border-[#e0c98e] bg-white">
-              <div className="flex items-center border-b border-[#ead9ad] bg-[#fff8e8] px-4 py-3 lg:px-5">
-                <StickyNote size={18} className="text-[#9a650a]" />
-                <div className="ml-2">
-                  <h2 className="text-[15px] font-bold text-[#102d50]">自分用メモ</h2>
-                  <p className="text-[10px] text-[#758194]">この内容は他のユーザーには表示されません</p>
-                </div>
-                {!memoEditing && (
-                  <button
-                    onClick={beginMemoEditing}
-                    className="ml-auto border border-[#9a650a] px-3 py-2 text-[11px] font-bold text-[#815307]"
-                  >
-                    {memo ? "編集" : "メモを追加"}
-                  </button>
-                )}
-              </div>
-              {memoEditing ? (
-                <div className="p-4 lg:p-5">
-                  <textarea
-                    value={memoDraft}
-                    onChange={event => setMemoDraft(event.target.value)}
-                    rows={4}
-                    placeholder="検討状況、確認事項などを記入"
-                    className="w-full resize-y border border-[#cbd5df] p-3 text-[14px] outline-none focus:border-[#173f70]"
-                  />
-                  <div className="mt-3 flex justify-end gap-2">
-                    <button onClick={() => setMemoEditing(false)} className="h-10 border border-[#9aabc0] px-4 text-[12px] font-bold text-[#526176]">キャンセル</button>
-                    <button onClick={commitMemo} disabled={saveMemo.isPending || deleteMemo.isPending} className="h-10 bg-[#173f70] px-5 text-[12px] font-bold text-white disabled:opacity-50">保存する</button>
-                  </div>
-                </div>
-              ) : (
-                <p className={`px-4 py-4 text-[14px] leading-6 lg:px-5 ${memo ? "whitespace-pre-wrap text-[#35465b]" : "text-[#8a96a5]"}`}>
-                  {memo || "メモはまだありません。"}
-                </p>
-              )}
-            </section>
             <section className="min-w-0 overflow-hidden bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:border-t-[3px] lg:border-t-[#173f70] lg:p-6">
               <div className="flex min-w-0 flex-wrap items-center gap-y-2">
                 <h2 className="text-[18px] font-bold text-[#102d50]">
@@ -964,7 +928,7 @@ export default function V2PropertyDetail({
                 className="mt-4 flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-[14px] font-bold text-white disabled:bg-[#9aa7b6]"
               >
                 <Download size={18} />
-                {downloading === "all" ? "保存中…" : "資料を一括ダウンロード"}
+                {downloading === "all" ? "ダウンロード中…" : "資料を一括ダウンロード"}
               </button>
               <div className="mt-3 border-t border-[#dce3eb]">
                 {files.map(file => (
@@ -995,7 +959,7 @@ export default function V2PropertyDetail({
                         className="ml-2 flex items-center gap-1 border border-[#173f70] px-2.5 py-1.5 text-[11px] font-bold text-[#173f70]"
                       >
                         <Download size={13} />
-                        {downloading === file.id ? "保存中" : "保存"}
+                        {downloading === file.id ? "DL中" : "DL"}
                       </button>
                     )}
                     {isOwner && (
@@ -1149,6 +1113,42 @@ export default function V2PropertyDetail({
                   )}
                 </div>
               </details>
+            </section>
+            <section className="border border-[#e0c98e] bg-white">
+              <div className="flex items-center border-b border-[#ead9ad] bg-[#fff8e8] px-4 py-3 lg:px-5">
+                <StickyNote size={18} className="text-[#9a650a]" />
+                <div className="ml-2">
+                  <h2 className="text-[15px] font-bold text-[#102d50]">自分用メモ</h2>
+                  <p className="text-[10px] text-[#758194]">この内容は他のユーザーには表示されません</p>
+                </div>
+                {!memoEditing && (
+                  <button
+                    onClick={beginMemoEditing}
+                    className="ml-auto border border-[#9a650a] px-3 py-2 text-[11px] font-bold text-[#815307]"
+                  >
+                    {memo ? "編集" : "メモを追加"}
+                  </button>
+                )}
+              </div>
+              {memoEditing ? (
+                <div className="p-4 lg:p-5">
+                  <textarea
+                    value={memoDraft}
+                    onChange={event => setMemoDraft(event.target.value)}
+                    rows={4}
+                    placeholder="検討状況、確認事項などを記入"
+                    className="w-full resize-y border border-[#cbd5df] p-3 text-[14px] outline-none focus:border-[#173f70]"
+                  />
+                  <div className="mt-3 flex justify-end gap-2">
+                    <button onClick={() => setMemoEditing(false)} className="h-10 border border-[#9aabc0] px-4 text-[12px] font-bold text-[#526176]">キャンセル</button>
+                    <button onClick={commitMemo} disabled={saveMemo.isPending || deleteMemo.isPending} className="h-10 bg-[#173f70] px-5 text-[12px] font-bold text-white disabled:opacity-50">保存する</button>
+                  </div>
+                </div>
+              ) : (
+                <p className={`px-4 py-4 text-[14px] leading-6 lg:px-5 ${memo ? "whitespace-pre-wrap text-[#35465b]" : "text-[#8a96a5]"}`}>
+                  {memo || "メモはまだありません。"}
+                </p>
+              )}
             </section>
           </div>
           <aside className="space-y-5 lg:sticky lg:top-[88px] lg:self-start">

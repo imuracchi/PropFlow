@@ -200,7 +200,7 @@ table.ct th{background:#f0f5fa;color:#334155;font-weight:600;width:72px}
 </head><body>
 <div class="toolbar">
 <span class="title">紹介資料プレビュー</span>
-<button onclick="window.print()">🖨 印刷 / PDF保存</button>
+<button onclick="window.print()">🖨 印刷 / PDFダウンロード</button>
 </div>
 <div style="height:52px"></div>
 
@@ -356,7 +356,7 @@ function IntroDocModal({ pdfBlob, title, onClose }: { pdfBlob: Blob; title: stri
           className="flex items-center gap-1 bg-white rounded-md font-semibold shrink-0"
           style={{ color: "#2b5c94", fontSize: 13, padding: "6px 14px", border: "none", cursor: "pointer" }}
         >
-          ⬇ 保存
+          ⬇ ダウンロード
         </button>
       </div>
       <div className="flex-1 overflow-auto relative">

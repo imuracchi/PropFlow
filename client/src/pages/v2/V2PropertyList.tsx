@@ -782,7 +782,7 @@ export default function V2PropertyList({
                       <td className="px-3 py-3 font-semibold">
                         {p.buildingArea ? `${p.buildingArea}㎡` : "—"}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 font-semibold">
+                      <td className="break-words px-3 py-3 font-semibold leading-5 [overflow-wrap:anywhere]">
                         {buildingAgeListLabel(p.buildingAge)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 font-bold">
