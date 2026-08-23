@@ -115,8 +115,9 @@ export default function DocumentList({ v2 = false }: { v2?: boolean }) {
     tab.document.title = title;
     tab.document.body.innerHTML = '<p style="font-family:sans-serif;padding:24px">PDFを準備しています…</p>';
     setLoadingDocId(docId);
+    let html: string | null = null;
     try {
-      const html = await utils.document.getHtml.fetch({ id: docId });
+      html = await utils.document.getHtml.fetch({ id: docId });
       if (!html) throw new Error("資料の読み込みに失敗しました");
       const response = await fetch("/api/generate-pdf", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ html }) });
       if (!response.ok) throw new Error("PDFの生成に失敗しました");
@@ -124,7 +125,15 @@ export default function DocumentList({ v2 = false }: { v2?: boolean }) {
       tab.location.href = url;
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error) {
-      tab.document.body.innerHTML = `<p style="font-family:sans-serif;padding:24px">${error instanceof Error ? error.message : "PDFを表示できませんでした"}</p>`;
+      if (html) {
+        // 保存済み資料はHTML本体を保持している。サーバーでの再PDF化が
+        // 一時的に失敗しても、別タブ表示とブラウザからのPDF出力を可能にする。
+        tab.document.open();
+        tab.document.write(html);
+        tab.document.close();
+      } else {
+        tab.document.body.innerHTML = `<p style="font-family:sans-serif;padding:24px">${error instanceof Error ? error.message : "資料を表示できませんでした"}</p>`;
+      }
     } finally {
       setLoadingDocId(null);
     }
