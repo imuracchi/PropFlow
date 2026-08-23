@@ -110,8 +110,11 @@ export default function V2PropertySearch() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const utils = trpc.useUtils();
+  const [proposalFor, setProposalFor] = useState<any>(null);
   const requestsQuery = trpc.propertySearch.list.useQuery();
-  const propertiesQuery = trpc.property.list.useQuery();
+  const propertiesQuery = trpc.property.list.useQuery(undefined, {
+    enabled: !!proposalFor,
+  });
   const analyze = trpc.propertySearch.analyze.useMutation();
   const create = trpc.propertySearch.create.useMutation({
     onSuccess: () => requestsQuery.refetch(),
@@ -135,7 +138,6 @@ export default function V2PropertySearch() {
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
-  const [proposalFor, setProposalFor] = useState<any>(null);
   const [detailFor, setDetailFor] = useState<any>(null);
   const [proposalPropertyId, setProposalPropertyId] = useState("");
   const [proposalMessage, setProposalMessage] = useState("");
@@ -1936,9 +1938,14 @@ export default function V2PropertySearch() {
                   <select
                     value={proposalPropertyId}
                     onChange={e => setProposalPropertyId(e.target.value)}
+                    disabled={propertiesQuery.isLoading}
                     className="mt-1 h-11 w-full border bg-white px-3"
                   >
-                    <option value="">未掲載物件・物件を指定しない</option>
+                    <option value="">
+                      {propertiesQuery.isLoading
+                        ? "自社物件を読み込み中…"
+                        : "未掲載物件・物件を指定しない"}
+                    </option>
                     {myProperties.map((p: any) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
