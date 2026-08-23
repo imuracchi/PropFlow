@@ -1564,7 +1564,7 @@ export default function V2PropertySearch() {
                   </button>
                 </>
               ) : step === "confirm" ? (
-                <div className="relative mt-5 space-y-4 lg:pr-[405px] xl:pr-[445px]">
+                <div className="mt-5 space-y-4">
                   <label className="block text-[12px] font-bold">
                     募集タイトル
                     <input
@@ -1925,7 +1925,7 @@ export default function V2PropertySearch() {
                       </small>
                     </span>
                   </label>
-                  <section className="border border-[#9fb4ca] border-t-4 border-t-[#173f70] bg-[#eef4fa] p-4 shadow-sm sm:p-5 lg:absolute lg:right-0 lg:top-0 lg:w-[375px] lg:p-6 xl:w-[415px]">
+                  <section className="border border-[#9fb4ca] border-t-4 border-t-[#173f70] bg-[#eef4fa] p-4 shadow-sm sm:p-5">
                     <div className="flex items-start gap-3">
                       <span className="grid size-10 shrink-0 place-items-center bg-[#173f70] text-white"><Search size={20} /></span>
                       <div className="min-w-0 flex-1">
@@ -1950,16 +1950,11 @@ export default function V2PropertySearch() {
                           </div>
                         ) : matchingWarnings.length > 0 && matchingTotal === 0 ? (
                           <p className="mt-2 text-[12px] leading-5 text-[#65748a]">条件を修正すると候補物件を検索します。募集内容の入力はそのまま続けられます。</p>
-                        ) : matchingTotal > 0 ? (
-                          <>
-                            <p className="mt-2 text-[18px] font-bold text-[#173f70]">一致度70%以上の掲載物件が{matchingTotal}件あります</p>
-                            <p className="mt-1 text-[12px] text-[#526176]">一致度が高い順に候補を確認できます。</p>
-                            <button type="button" onClick={() => { setMatchesOpen(true); logMatchEvent.mutate({ event: "results_open", resultCount: matchingTotal }); }} className="mt-4 h-12 w-full bg-[#173f70] px-7 text-[14px] font-bold text-white hover:bg-[#102d50] sm:w-auto">候補物件を見る</button>
-                          </>
                         ) : (
                           <>
-                            <p className="mt-1 text-[13px] font-bold text-[#526176]">現在、一致度70%以上の掲載物件はありません</p>
-                            <p className="mt-1 text-[12px] leading-5 text-[#65748a]">一致度70%未満の物件は候補に表示していません。募集を開始すると、まだ掲載されていない物件を持つ業者からも提案を受けられます。</p>
+                            <p className="mt-2 text-[13px] text-[#526176]">募集条件に合う掲載物件があるか、募集前に確認できます。</p>
+                            <button type="button" disabled={!form.propertyTypes.length || (!form.areaAgnostic && !form.areas.trim())} onClick={() => { setMatchesOpen(true); logMatchEvent.mutate({ event: "results_open", resultCount: matchingTotal }); }} className="mt-3 h-11 w-full border border-[#173f70] bg-white px-7 text-[13px] font-bold text-[#173f70] hover:bg-[#e7eef6] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto">掲載物件も確認する</button>
+                            <p className="mt-3 border-l-4 border-[#173f70] bg-white px-3 py-2 text-[13px] font-bold leading-6 text-[#173f70]">候補を確認した後も募集を開始できます。未掲載物件からの提案を受けるため、募集の開始をおすすめします。</p>
                           </>
                         )}
                       </div>
@@ -2223,12 +2218,18 @@ export default function V2PropertySearch() {
             <header className="flex shrink-0 items-start border-b border-[#d9e0e8] px-4 py-4 sm:px-6">
               <div>
                 <h2 className="text-[18px] font-bold text-[#102d50]">条件に近い掲載物件</h2>
-                <p className="mt-1 text-[12px] text-[#65748a]">一致度70%以上の物件を、近い順に最大10件表示しています</p>
+                <p className="mt-1 text-[12px] text-[#65748a]">一致度70%以上の掲載物件：{matchingTotal}件（最大10件表示）</p>
                 <p className="mt-3 border-l-4 border-[#b7791f] bg-[#fff8e8] px-3 py-2 text-[12px] font-bold leading-5 text-[#7a4b0b]">一致度は、希望エリア・物件種別・予算・面積の入力内容を基に算出した参考値です。物件の適合性や成約可能性を保証するものではありません。</p>
               </div>
               <button type="button" onClick={() => setMatchesOpen(false)} aria-label="閉じる" className="ml-auto grid size-9 place-items-center text-[#526176]"><X size={20} /></button>
             </header>
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-4 sm:p-5">
+              {matchingProperties.length === 0 && (
+                <div className="border border-[#d4dde7] bg-[#f7f9fb] px-4 py-8 text-center">
+                  <p className="text-[14px] font-bold text-[#526176]">現在、一致度70%以上の掲載物件はありません</p>
+                  <p className="mt-2 text-[12px] leading-5 text-[#65748a]">一致度70%未満の物件は表示していません。募集を開始すると、まだ掲載されていない物件を持つ業者からも提案を受けられます。</p>
+                </div>
+              )}
               {matchingProperties.map(property => {
                 const displayArea = property.type === "土地" ? property.landArea : property.buildingArea ?? property.landArea;
                 return (
