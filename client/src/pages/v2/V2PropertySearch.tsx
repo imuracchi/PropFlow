@@ -1928,6 +1928,7 @@ export default function V2PropertySearch() {
                           <h3 className="text-[16px] font-bold text-[#102d50]">掲載中の物件を確認</h3>
                           <span className="bg-white px-2 py-1 text-[10px] font-bold tracking-wide text-[#173f70]">自動マッチング</span>
                         </div>
+                        <p className="mt-2 text-[12px] leading-5 text-[#526176]">希望エリア・物件種別・予算・面積から一致度を算出します。</p>
                         {matchingWarnings.map(warning => (
                           <p key={warning} className="mt-2 border-l-4 border-[#b7791f] bg-[#fff8e8] px-3 py-2 text-[12px] font-bold leading-5 text-[#8a5a13]">{warning}</p>
                         ))}
@@ -2218,7 +2219,7 @@ export default function V2PropertySearch() {
               <div>
                 <h2 className="text-[18px] font-bold text-[#102d50]">条件に近い掲載物件</h2>
                 <p className="mt-1 text-[12px] text-[#65748a]">一致度70%以上の物件を、近い順に最大10件表示しています</p>
-                <p className="mt-3 border-l-4 border-[#b7791f] bg-[#fff8e8] px-3 py-2 text-[12px] font-bold leading-5 text-[#7a4b0b]">一致度は入力された条件を基に算出した参考値です。物件の適合性や成約可能性を保証するものではありません。</p>
+                <p className="mt-3 border-l-4 border-[#b7791f] bg-[#fff8e8] px-3 py-2 text-[12px] font-bold leading-5 text-[#7a4b0b]">一致度は、希望エリア・物件種別・予算・面積の入力内容を基に算出した参考値です。物件の適合性や成約可能性を保証するものではありません。</p>
               </div>
               <button type="button" onClick={() => setMatchesOpen(false)} aria-label="閉じる" className="ml-auto grid size-9 place-items-center text-[#526176]"><X size={20} /></button>
             </header>
