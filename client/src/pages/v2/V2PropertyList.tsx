@@ -389,17 +389,17 @@ export default function V2PropertyList({
         : "物件一覧";
   const pageDescription =
     collection === "favorites"
-      ? "保存した物件を確認・比較"
+      ? "お気に入りに保存した物件を確認・比較できます。"
       : collection === "mine"
-        ? "自社で登録した物件を管理"
-        : "登録物件を検索・比較";
+        ? "自社で登録した物件を確認・管理できます。"
+        : "登録された物件を検索・比較できます。";
   return (
     <V2Layout preview={preview}>
-      <main className="mx-auto max-w-[1500px] p-4 lg:p-7">
+      <main className="w-full max-w-[1500px] p-4 lg:p-7">
         <div className="flex items-end justify-between">
           <div>
             <p className="text-[14px] text-[#758194]">{pageDescription}</p>
-            <h1 className="mt-1 text-[26px] font-bold text-[#102d50]">
+            <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
               {pageTitle}
             </h1>
           </div>

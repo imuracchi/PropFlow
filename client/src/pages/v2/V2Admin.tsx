@@ -56,7 +56,7 @@ export default function V2Admin() {
           <div className="flex items-center gap-2"><Building2 size={19} className="text-[#173f70] lg:hidden"/><span className="text-[15px] font-bold text-[#102d50] lg:text-[13px]">PropFlow 管理画面</span></div>
           <button onClick={() => setLocation("/v2/properties")} className="ml-auto flex h-9 items-center gap-1.5 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70]"><ArrowLeft size={14}/>ユーザー画面</button>
         </header>
-        <main className="mx-auto max-w-[1600px] p-4 pb-12 lg:p-7">
+        <main className="w-full max-w-[1600px] p-4 pb-12 lg:p-7">
           <div className="v2-admin-console [&_.rounded-lg]:rounded-none [&_.rounded-xl]:rounded-none [&_.rounded-md]:rounded-none [&_.bg-card]:bg-white [&_.border-border]:border-[#d9e0e8] [&_.text-lg]:text-[21px] [&_.text-sm]:text-[14px] [&_.text-xs]:text-[12px] [&_table]:text-[13px] [&_input]:rounded-none [&_textarea]:rounded-none">
             <Admin v2 />
           </div>

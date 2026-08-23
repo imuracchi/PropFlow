@@ -25,8 +25,8 @@ export default function InterestedUsers({ v2 = false }: { v2?: boolean }) {
   return (
     <div className={v2 ? "space-y-5" : "space-y-5 max-w-4xl"}>
       <div>
-        <h1 className={v2 ? "text-[24px] font-bold text-[#102d50]" : "text-lg font-semibold text-foreground"}>興味者リスト</h1>
-        <p className={v2 ? "mt-1 text-[14px] text-[#65748a]" : "text-xs text-muted-foreground mt-0.5"}>あなたの物件に興味を示したユーザーを、物件ごとに確認できます</p>
+        <p className={v2 ? "text-[14px] text-[#758194]" : "text-xs text-muted-foreground mt-0.5"}>あなたの物件に興味を示したユーザーを、物件ごとに確認できます。</p>
+        <h1 className={v2 ? "mt-1 text-[24px] font-bold text-[#102d50]" : "text-lg font-semibold text-foreground"}>興味者リスト</h1>
       </div>
 
       {byProperty.size === 0 ? (

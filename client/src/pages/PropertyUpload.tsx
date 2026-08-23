@@ -582,24 +582,24 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
             <ChevronLeft className="w-4 h-4" />
             物件一覧に戻る
           </button>
+          <p
+            className={
+              v2
+                ? "text-[14px] text-[#758194]"
+                : "text-xs text-muted-foreground mt-0.5"
+            }
+          >
+            物件概要書を読み取るか、手動で物件情報を入力できます。
+          </p>
           <h1
             className={
               v2
-                ? "text-[24px] font-bold text-[#102d50]"
+                ? "mt-1 text-[24px] font-bold text-[#102d50]"
                 : "text-lg font-semibold text-foreground"
             }
           >
             物件情報の登録
           </h1>
-          <p
-            className={
-              v2
-                ? "mt-2 text-[14px] text-[#65748a]"
-                : "text-xs text-muted-foreground mt-0.5"
-            }
-          >
-            物件概要書を読み取るか、手動で情報を入力します
-          </p>
         </div>
 
         {/* ステップインジケーター */}

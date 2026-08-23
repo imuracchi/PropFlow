@@ -42,21 +42,18 @@ export default function V2IssueReport() {
 
   return (
     <V2Layout>
-      <main className="mx-auto max-w-[1000px] p-4 pb-24 lg:p-7 lg:pb-10">
+      <main className="w-full max-w-[1000px] p-4 pb-24 lg:p-7 lg:pb-10">
         <div className="flex items-start gap-3">
           <div className="grid size-11 shrink-0 place-items-center bg-[#e8eef5] text-[#173f70]">
             <TriangleAlert size={22} />
           </div>
           <div>
-            <p className="text-[12px] font-bold tracking-wider text-[#5275a0]">
-              SUPPORT
-            </p>
-            <h1 className="mt-1 text-[24px] font-bold text-[#102d50] lg:text-[27px]">
-              管理者への連絡
-            </h1>
-            <p className="mt-1 text-[13px] leading-6 text-[#65748a]">
+            <p className="text-[14px] leading-6 text-[#758194]">
               不具合報告のほか、使い方の質問やユーザー間のトラブルも連絡できます。
             </p>
+            <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
+              管理者への連絡
+            </h1>
           </div>
         </div>
 

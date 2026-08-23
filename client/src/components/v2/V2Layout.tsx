@@ -104,7 +104,7 @@ export default function V2Layout({
             </button>
           ))}
           <p className="mt-5 px-3 pb-2 text-[10px] font-bold tracking-widest text-white/40">
-            募集案件
+            物件を募集する
           </p>
           <button
             onClick={() => setLocation(destination("/v2/property-search"))}
@@ -119,7 +119,13 @@ export default function V2Layout({
             )}
           </button>
           <button
-            onClick={() => setLocation(destination("/v2/property-search?new=1"))}
+            onClick={() => {
+              if (location.startsWith("/v2/property-search")) {
+                window.dispatchEvent(new CustomEvent("v2-open-property-search"));
+                return;
+              }
+              setLocation(destination("/v2/property-search?new=1"));
+            }}
             className="mt-3 flex h-10 w-full items-center justify-center gap-2 bg-white text-[12px] font-bold text-[#173f70]"
           >
             <Plus size={16} />

@@ -816,7 +816,7 @@ export default function V2PropertyDetail({
 
   return (
     <V2Layout preview={preview}>
-      <main className="mx-auto min-w-0 max-w-[1600px] overflow-x-hidden pb-20 lg:overflow-visible lg:p-7 lg:pb-10">
+      <main className="min-w-0 w-full max-w-[1600px] overflow-x-hidden pb-20 lg:overflow-visible lg:p-7 lg:pb-10">
         {!isRegistrant && (
           <div className="flex h-12 items-center bg-white px-3 lg:bg-transparent lg:px-0">
             <button
@@ -862,7 +862,7 @@ export default function V2PropertyDetail({
                 </span>
               </div>
               <div className="mt-4 flex items-start gap-3">
-                <h1 className="min-w-0 flex-1 text-[23px] font-bold text-[#102d50] lg:text-[27px]">
+                <h1 className="min-w-0 flex-1 text-[24px] font-bold text-[#102d50]">
                   {property.name}
                 </h1>
                 {isOwner && (

@@ -179,7 +179,7 @@ export default function DocumentList({ v2 = false }: { v2?: boolean }) {
   if (v2) {
     const filteredDocs = (docs ?? []).filter((doc: any) => `${doc.title} ${doc.propertyName ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()));
     return <div className="space-y-5 text-[#17211d]">
-      <div><h1 className="flex items-center gap-2 text-[24px] font-bold text-[#102d50]"><Download className="size-5 text-[#173f70]"/>ダウンロード資料</h1><p className="mt-1 text-[14px] text-[#65748a]">作成した紹介資料・利益シミュレーションを確認できます。作成後{DOC_EXPIRE_DAYS}日間保存されます。</p></div>
+      <div><p className="text-[14px] text-[#758194]">作成した紹介資料・利益シミュレーションを確認できます。作成後{DOC_EXPIRE_DAYS}日間保存されます。</p><h1 className="mt-1 flex items-center gap-2 text-[24px] font-bold text-[#102d50]"><Download className="size-5 text-[#173f70]"/>ダウンロード資料</h1></div>
       <div className="border border-[#d4dde7] bg-white p-4">
         <label className="flex h-11 max-w-xl items-center border border-[#becbd8] px-3"><Search className="size-4 text-[#65748a]"/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="物件名・資料名で検索" className="ml-2 min-w-0 flex-1 text-[14px] outline-none"/></label>
         <p className="mt-4 border-t border-[#e1e6ec] pt-3 text-[13px] font-bold text-[#526176]">保存済み {filteredDocs.length}件</p>

@@ -156,9 +156,8 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   return (
     <div className={v2 ? "space-y-5" : "space-y-6"}>
       <div>
-        <p className={v2 ? "text-[12px] font-bold tracking-wider text-[#5275a0]" : "hidden"}>ADMINISTRATION</p>
-        <h1 className={v2 ? "mt-1 text-[27px] font-bold text-[#102d50]" : "text-lg font-semibold text-foreground"}>管理ダッシュボード</h1>
-        <p className={v2 ? "mt-1 text-[14px] text-[#65748a]" : "text-xs text-muted-foreground mt-0.5"}>PropFlow全体の利用状況と運営機能</p>
+        <p className={v2 ? "text-[14px] text-[#758194]" : "text-xs text-muted-foreground mt-0.5"}>PropFlow全体の利用状況と運営機能を確認できます。</p>
+        <h1 className={v2 ? "mt-1 text-[24px] font-bold text-[#102d50]" : "text-lg font-semibold text-foreground"}>管理ダッシュボード</h1>
       </div>
 
       {/* サマリーカード */}

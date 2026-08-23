@@ -326,7 +326,7 @@ function AppContent() {
               <Route path="/v2/interested">
                 {() => (
                   <V2Layout>
-                    <main className="mx-auto max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10">
+                    <main className="w-full max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10">
                       <InterestedUsers v2 />
                     </main>
                   </V2Layout>
@@ -335,7 +335,7 @@ function AppContent() {
               <Route path="/v2/upload">
                 {() => (
                   <V2Layout>
-                    <main className="mx-auto max-w-[1400px] p-4 pb-24 lg:p-7 lg:pb-10">
+                    <main className="w-full max-w-[1400px] p-4 pb-24 lg:p-7 lg:pb-10">
                       <div className="[&>div]:max-w-none [&_.rounded-lg]:rounded-none [&_.rounded-xl]:rounded-none">
                         <PropertyUpload v2 />
                       </div>
@@ -346,7 +346,7 @@ function AppContent() {
               <Route path="/v2/announcements">
                 {() => (
                   <V2Layout>
-                    <main className="mx-auto max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10">
+                    <main className="w-full max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10">
                       <div className="[&>div]:max-w-none [&_.rounded-lg]:rounded-none">
                         <AnnounceArchive />
                       </div>
@@ -357,7 +357,7 @@ function AppContent() {
               <Route path="/v2/simulation/:id">
                 {() => (
                   <V2Layout>
-                    <main className="mx-auto max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10">
+                    <main className="w-full max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10">
                       <div className="[&>div]:max-w-none [&_.rounded-lg]:rounded-none">
                         <Simulation v2 />
                       </div>

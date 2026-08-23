@@ -427,6 +427,12 @@ export default function V2PropertySearch() {
     openCreate();
   }, [location]);
 
+  useEffect(() => {
+    const handleOpenCreate = () => openCreate();
+    window.addEventListener("v2-open-property-search", handleOpenCreate);
+    return () => window.removeEventListener("v2-open-property-search", handleOpenCreate);
+  }, [user?.verified]);
+
   const runAi = async () => {
     const data: any = await analyze.mutateAsync({ text: aiText });
     const analyzedTypes = Array.isArray(data.propertyTypes)
@@ -772,18 +778,15 @@ export default function V2PropertySearch() {
 
   return (
     <V2Layout>
-      <main className="mx-auto max-w-[1500px] p-4 pb-40 lg:p-7 lg:pb-10">
+      <main className="w-full max-w-[1500px] p-4 pb-40 lg:p-7 lg:pb-10">
         <div className="flex flex-wrap items-stretch gap-4 sm:items-end">
           <div>
-            <p className="text-[12px] font-bold tracking-wider text-[#5275a0]">
-              BUY REQUESTS
+            <p className="text-[14px] text-[#758194]">
+              不動産業者が募集している売買物件の条件を確認できます。
             </p>
             <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
               物件募集一覧
             </h1>
-            <p className="mt-1 text-[13px] text-[#65748a]">
-              不動産業者が探している売買物件の条件を掲載しています。
-            </p>
           </div>
           <button
             onClick={openCreate}
@@ -1088,7 +1091,7 @@ export default function V2PropertySearch() {
               <Bell size={18} />
             </button>
           </div>
-          <section className="mx-auto min-h-full w-full max-w-[1500px] bg-[#f3f5f7]">
+          <section className="min-h-full w-full max-w-[1500px] bg-[#f3f5f7]">
             <header className="flex h-12 items-center bg-white px-3 lg:bg-transparent lg:px-7">
               <button
                 onClick={() => setDetailFor(null)}
@@ -1123,7 +1126,7 @@ export default function V2PropertySearch() {
                   )}
                 </div>
                 <div className="mt-4 flex items-start gap-3">
-                  <h1 className="min-w-0 flex-1 text-[23px] font-bold text-[#102d50] lg:text-[27px]">
+                  <h1 className="min-w-0 flex-1 text-[24px] font-bold text-[#102d50]">
                     {cleanTitle(detailFor.title)}
                   </h1>
                   {detailFor.userId === user?.id && (
@@ -1496,7 +1499,7 @@ export default function V2PropertySearch() {
       )}
       {createOpen && (
         <div className="fixed inset-x-0 bottom-20 top-0 z-[35] overflow-y-auto overscroll-y-contain bg-[#f3f5f7] lg:bottom-0 lg:left-60 lg:top-[68px] lg:z-20">
-          <section className="mx-auto min-h-full w-full max-w-[1500px] bg-[#f3f5f7] p-4 lg:p-7">
+          <section className="min-h-full w-full max-w-[1400px] bg-[#f3f5f7] p-4 lg:p-7">
             <header className="border-b-2 border-[#173f70] bg-white px-4 py-5 lg:px-6">
               <button
                 onClick={() => closeCreate()}
@@ -1506,12 +1509,12 @@ export default function V2PropertySearch() {
                 <ArrowLeft size={18} />
                 物件募集一覧に戻る
               </button>
-              <h1 className="text-[24px] font-bold text-[#102d50]">
+              <p className="text-[14px] text-[#758194]">
+                探している売買物件の条件をAIで整理するか、手動で入力できます。
+              </p>
+              <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
                 物件募集の登録
               </h1>
-              <p className="mt-2 text-[14px] text-[#65748a]">
-                探している売買物件の条件をAIで整理するか、手動で入力します
-              </p>
             </header>
             <div className="grid grid-cols-3 border border-[#d4dde7] bg-white">
               {["希望内容を入力", "条件を確認・編集", "募集開始"].map(

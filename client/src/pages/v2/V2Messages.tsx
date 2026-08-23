@@ -97,10 +97,10 @@ export default function V2Messages({ preview = false }: { preview?: boolean }) {
 
   return (
     <V2Layout preview={preview}>
-      <main className="mx-auto max-w-[1250px] p-4 lg:p-7">
+      <main className="w-full max-w-[1250px] p-4 lg:p-7">
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-[12px] text-[#758194]">物件に関する商談とやり取り</p>
+            <p className="text-[14px] text-[#758194]">物件に関する商談とやり取りを確認できます。</p>
             <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
               商談一覧
             </h1>
