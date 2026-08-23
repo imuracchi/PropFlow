@@ -280,7 +280,22 @@ export default function V2PropertyDetail({
   const isOwner =
     !!property &&
     (preview || user?.id === property.userId || user?.role === "admin");
-  const canInquire = preview || (!!user && !!property && user.id !== property.userId);
+  const isRegistrant = !!property && !!user && user.id === property.userId;
+  const canInquire = preview || (!!user && !!property && !isRegistrant);
+  const toggleCurrentFavorite = async () => {
+    if (preview) {
+      setPreviewFavoriteIds(current => {
+        const next = current.includes(propertyId)
+          ? current.filter(id => id !== propertyId)
+          : [...current, propertyId];
+        sessionStorage.setItem(PREVIEW_FAVORITES_KEY, JSON.stringify(next));
+        return next;
+      });
+      return;
+    }
+    await toggleFavorite.mutateAsync({ propertyId });
+    await utils.favorite.ids.invalidate();
+  };
   const exclusionCount = preview
     ? previewExclusions.length
     : (exclusionsQuery.data?.length ?? 0);
@@ -651,8 +666,8 @@ export default function V2PropertyDetail({
   return (
     <V2Layout preview={preview}>
       <main className="mx-auto min-w-0 max-w-[1600px] overflow-x-hidden pb-20 lg:overflow-visible lg:p-7 lg:pb-10">
-        <div className="flex h-12 items-center bg-white px-3 lg:bg-transparent lg:px-0">
-          {!isOwner && <button
+        {!isRegistrant && <div className="flex h-12 items-center bg-white px-3 lg:bg-transparent lg:px-0">
+          <button
             onClick={() =>
               setLocation(preview ? "/v2/preview" : "/v2/properties")
             }
@@ -660,21 +675,10 @@ export default function V2PropertyDetail({
           >
             <ArrowLeft size={18} />
             物件一覧
-          </button>}
+          </button>
           <button
-            onClick={async () => {
-              if (preview) {
-                setPreviewFavoriteIds(current => {
-                  const next = current.includes(propertyId) ? current.filter(id => id !== propertyId) : [...current, propertyId];
-                  sessionStorage.setItem(PREVIEW_FAVORITES_KEY, JSON.stringify(next));
-                  return next;
-                });
-                return;
-              }
-              await toggleFavorite.mutateAsync({ propertyId });
-              utils.favorite.ids.invalidate();
-            }}
-            className={`ml-auto flex h-10 items-center gap-1.5 border px-3 text-[12px] font-bold ${isFavorite ? "border-[#a13b50] bg-[#fff1f4] text-[#a13b50]" : "border-[#9aabc0] bg-white text-[#526176]"}`}
+            onClick={toggleCurrentFavorite}
+            className={`ml-auto hidden h-10 items-center gap-1.5 border px-3 text-[12px] font-bold lg:flex ${isFavorite ? "border-[#a13b50] bg-[#fff1f4] text-[#a13b50]" : "border-[#9aabc0] bg-white text-[#526176]"}`}
             aria-label={isFavorite ? "お気に入りから外す" : "お気に入りに入れる"}
           >
             <Heart
@@ -684,7 +688,7 @@ export default function V2PropertyDetail({
             />
             {isFavorite ? "お気に入り済み" : "お気に入りに入れる"}
           </button>
-        </div>
+        </div>}
         <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
           <div className="min-w-0 space-y-2 lg:space-y-5">
             <section className="min-w-0 overflow-hidden bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:p-6">
@@ -720,27 +724,39 @@ export default function V2PropertyDetail({
                 <MapPin size={16} className="mt-0.5 shrink-0" />
                 {property.address}
               </p>
-              <p className="mt-5 text-[11px] text-[#758194] lg:hidden">
-                販売価格
-              </p>
-              <p className="text-[27px] font-bold text-[#102d50] lg:hidden">
-                {priceLabel(property.price, property.priceNegotiable)}
-              </p>
-              {!isOwner && (negotiationStatus.mine || negotiationStatus.others) && (
+              <div className="mt-5 flex items-end gap-3 lg:hidden">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-[#758194]">販売価格</p>
+                  <p className="text-[27px] font-bold text-[#102d50]">
+                    {priceLabel(property.price, property.priceNegotiable)}
+                  </p>
+                </div>
+                {!isRegistrant && (
+                  <button
+                    onClick={toggleCurrentFavorite}
+                    className={`flex h-10 shrink-0 items-center gap-1.5 border px-2.5 text-[11px] font-bold ${isFavorite ? "border-[#a13b50] bg-[#fff1f4] text-[#a13b50]" : "border-[#9aabc0] bg-white text-[#526176]"}`}
+                    aria-label={isFavorite ? "お気に入りから外す" : "お気に入りに入れる"}
+                  >
+                    <Heart size={18} fill={isFavorite ? "currentColor" : "none"}/>
+                    {isFavorite ? "お気に入り済み" : "お気に入りに入れる"}
+                  </button>
+                )}
+              </div>
+              {!isRegistrant && (negotiationStatus.mine || negotiationStatus.others) && (
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-[#e1e6ec] pt-4">
                   {negotiationStatus.mine && (
-                    <span className="bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
+                    <span className="bg-[#e8f0f8] px-3 py-2 text-[12px] font-bold text-[#173f70]">
                       あなたが商談中です
                     </span>
                   )}
                   {negotiationStatus.others && (
-                    <span className="bg-[#f3f0e8] px-3 py-2 text-[12px] font-bold text-[#6b5a35]">
+                    <span className="bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
                       他の方が商談中です
                     </span>
                   )}
                 </div>
               )}
-              {isOwner && negotiationStatus.others && (
+              {isRegistrant && negotiationStatus.others && (
                 <div className="mt-4 border-t border-[#e1e6ec] pt-4">
                   <span className="inline-block bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
                     他の方が商談中です
