@@ -197,6 +197,7 @@ export default function V2PropertyList({
   const [maxArea, setMaxArea] = useState("");
   const [newOnly, setNewOnly] = useState(false);
   const [hotOnly, setHotOnly] = useState(false);
+  const [negotiatingOnly, setNegotiatingOnly] = useState(false);
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
@@ -275,6 +276,7 @@ export default function V2PropertyList({
         if (newOnly && (p.userId === user?.id || readSet.has(p.id)))
           return false;
         if (hotOnly && (p.inquiryCount ?? 0) < 3) return false;
+        if (negotiatingOnly && p.status !== "negotiating") return false;
         return true;
       }),
     [
@@ -293,6 +295,8 @@ export default function V2PropertyList({
       maxArea,
       newOnly,
       hotOnly,
+      negotiatingOnly,
+      favoriteOnly,
       user?.id,
       readSet,
     ]
@@ -356,6 +360,7 @@ export default function V2PropertyList({
     setMaxArea("");
     setNewOnly(false);
     setHotOnly(false);
+    setNegotiatingOnly(false);
     setFavoriteOnly(false);
   };
   const activeFilters = [
@@ -366,6 +371,7 @@ export default function V2PropertyList({
     maxArea,
     newOnly,
     hotOnly,
+    negotiatingOnly,
     favoriteOnly,
   ].filter(Boolean).length;
 
@@ -508,13 +514,19 @@ export default function V2PropertyList({
               onClick={() => setNewOnly(!newOnly)}
               className={`border px-3 py-2 text-[11px] font-bold ${newOnly ? "border-[#173f70] bg-[#edf3f9] text-[#173f70]" : "border-[#cbd5df] text-[#65748a]"}`}
             >
-              未読のみ
+              未読
             </button>
             <button
               onClick={() => setHotOnly(!hotOnly)}
               className={`border px-3 py-2 text-[11px] font-bold ${hotOnly ? "border-[#b67b12] bg-[#fff0c9] text-[#8b5a08]" : "border-[#cbd5df] text-[#65748a]"}`}
             >
-              注目のみ
+              注目
+            </button>
+            <button
+              onClick={() => setNegotiatingOnly(!negotiatingOnly)}
+              className={`border px-3 py-2 text-[11px] font-bold ${negotiatingOnly ? "border-[#d5ad54] bg-[#fff1b8] text-[#765500]" : "border-[#cbd5df] text-[#65748a]"}`}
+            >
+              商談中
             </button>
             {collection === "all" && (
               <button
@@ -522,7 +534,7 @@ export default function V2PropertyList({
                 className={`flex items-center gap-1 border px-3 py-2 text-[11px] font-bold lg:hidden ${favoriteOnly ? "border-[#9b3850] bg-[#fff0f3] text-[#9b3850]" : "border-[#cbd5df] text-[#65748a]"}`}
               >
                 <Heart size={14} fill={favoriteOnly ? "currentColor" : "none"}/>
-                お気に入りのみ
+                お気に入り
               </button>
             )}
           </div>
@@ -670,14 +682,14 @@ export default function V2PropertyList({
                       </button>}
                     </div>
                   </div>
-                  <div className="mt-2 flex items-center gap-1.5 border-y border-[#edf0ee] py-2 text-[12px] font-semibold text-[#4f5f72]">
-                    <span>土地 {p.landArea ? `${p.landArea}㎡` : "—"}</span>
-                    <span className="text-[#c1c8d0]">｜</span>
-                    <span>
+                  <div className="mt-2 flex items-start gap-1.5 border-y border-[#edf0ee] py-2 text-[12px] font-semibold text-[#4f5f72]">
+                    <span className="shrink-0 whitespace-nowrap">土地 {p.landArea ? `${p.landArea}㎡` : "—"}</span>
+                    <span className="shrink-0 text-[#c1c8d0]">｜</span>
+                    <span className="shrink-0 whitespace-nowrap">
                       建物 {p.buildingArea ? `${p.buildingArea}㎡` : "—"}
                     </span>
-                    <span className="text-[#c1c8d0]">｜</span>
-                    <span>{p.buildingAge || "—"}</span>
+                    <span className="shrink-0 text-[#c1c8d0]">｜</span>
+                    <span className="min-w-0 break-words">{p.buildingAge || "—"}</span>
                   </div>
                   <div className="mt-2 flex items-center">
                     <span className="flex items-center gap-1 text-[12px] text-[#6f7d90]">
@@ -699,7 +711,7 @@ export default function V2PropertyList({
               ))}
             </section>
             <section className="mt-4 hidden overflow-x-auto border border-[#d9e0e8] bg-white lg:block">
-              <table className="w-full min-w-[1000px]">
+              <table className="w-full min-w-[1120px]">
                 <thead className="bg-[#edf1f5] text-[13px] font-bold text-[#65748a]">
                   <tr>
                     {[
@@ -707,6 +719,7 @@ export default function V2PropertyList({
                       "種別",
                       "土地面積",
                       "建物面積",
+                      "築年数",
                       "価格",
                       "公開日",
                       "閲覧",
@@ -749,6 +762,9 @@ export default function V2PropertyList({
                       </td>
                       <td className="px-3 py-3 font-semibold">
                         {p.buildingArea ? `${p.buildingArea}㎡` : "—"}
+                      </td>
+                      <td className="px-3 py-3 font-semibold">
+                        {p.buildingAge || "—"}
                       </td>
                       <td className="px-3 py-3 font-bold">
                         {priceLabel(p.price, p.priceNegotiable)}
