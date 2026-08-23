@@ -134,6 +134,26 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
     bottomRef.current?.scrollIntoView();
   }, [messages.length]);
   useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    const previous = {
+      rootOverflow: root.style.overflow,
+      rootOverscroll: root.style.overscrollBehavior,
+      bodyOverflow: body.style.overflow,
+      bodyOverscroll: body.style.overscrollBehavior,
+    };
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    return () => {
+      root.style.overflow = previous.rootOverflow;
+      root.style.overscrollBehavior = previous.rootOverscroll;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.overscrollBehavior = previous.bodyOverscroll;
+    };
+  }, []);
+  useEffect(() => {
     if (!preview && partnerId) markRead.mutate({ partnerId, propertyId });
   }, [partnerId, propertyId, messages.length]);
   const sendMessage = async () => {
@@ -208,13 +228,18 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
           >
             <ArrowLeft size={20} />
           </button>
-          <div className="ml-2 min-w-0">
-            <h1 className="truncate text-[15px] font-bold text-[#102d50]">
+          <div className="ml-2 flex min-w-0 flex-1 items-center gap-2">
+            <h1 className="max-w-[42%] shrink-0 truncate text-[14px] font-bold text-[#102d50] lg:text-[15px]">
               {thread?.partnerName ?? `ユーザー #${partnerId}`}
             </h1>
-            <p className="truncate text-[11px] text-[#758194]">
-              {thread?.partnerCompany ?? ""}
-            </p>
+            {thread?.partnerCompany && (
+              <p className="min-w-0 truncate text-[11px] text-[#758194] lg:text-[12px]">
+                {thread.partnerCompany}
+              </p>
+            )}
+            {thread?.partnerVerified === 1 && (
+              <CheckCircle2 size={15} className="shrink-0 text-[#2763a3]" aria-label="認証済み" />
+            )}
           </div>
         </header>
         {(property || (isRestricted && thread?.propertyName)) && (
@@ -234,7 +259,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             </div>
           </button>
         )}
-        <section className="flex-1 overflow-y-auto bg-[#f5f7f9] px-4 py-4 lg:px-8">
+        <section className="flex-1 overflow-y-auto overscroll-contain bg-[#f5f7f9] px-4 py-4 lg:px-8">
           {messagesQuery.isLoading && !preview ? (
             <div className="grid h-full place-items-center">
               <Loader2 className="animate-spin text-[#173f70]" />

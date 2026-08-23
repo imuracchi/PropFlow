@@ -97,6 +97,12 @@ function priceLabel(price: number | null, negotiable?: boolean | null) {
   return `${man.toLocaleString()}万円`;
 }
 
+function buildingAgeListLabel(value: unknown) {
+  const label = String(value ?? "").trim();
+  if (!label) return "—";
+  return /^新築(?:\s|[（(])/.test(label) ? "新築" : label;
+}
+
 const PREVIEW_PROPERTIES = [
   {
     id: 901,
@@ -531,10 +537,11 @@ export default function V2PropertyList({
             {collection === "all" && (
               <button
                 onClick={() => setFavoriteOnly(!favoriteOnly)}
-                className={`flex items-center gap-1 border px-3 py-2 text-[11px] font-bold lg:hidden ${favoriteOnly ? "border-[#9b3850] bg-[#fff0f3] text-[#9b3850]" : "border-[#cbd5df] text-[#65748a]"}`}
+                className={`grid size-[34px] place-items-center border lg:hidden ${favoriteOnly ? "border-[#9b3850] bg-[#fff0f3] text-[#9b3850]" : "border-[#cbd5df] text-[#65748a]"}`}
+                aria-label="お気に入りで絞り込む"
+                title="お気に入り"
               >
-                <Heart size={14} fill={favoriteOnly ? "currentColor" : "none"}/>
-                お気に入り
+                <Heart size={16} fill={favoriteOnly ? "currentColor" : "none"}/>
               </button>
             )}
           </div>
@@ -689,7 +696,7 @@ export default function V2PropertyList({
                       建物 {p.buildingArea ? `${p.buildingArea}㎡` : "—"}
                     </span>
                     <span className="shrink-0 text-[#c1c8d0]">｜</span>
-                    <span className="min-w-0 break-words">{p.buildingAge || "—"}</span>
+                    <span className="min-w-0 break-words">{buildingAgeListLabel(p.buildingAge)}</span>
                   </div>
                   <div className="mt-2 flex items-center">
                     <span className="flex items-center gap-1 text-[12px] text-[#6f7d90]">
@@ -711,7 +718,19 @@ export default function V2PropertyList({
               ))}
             </section>
             <section className="mt-4 hidden overflow-x-auto border border-[#d9e0e8] bg-white lg:block">
-              <table className="w-full min-w-[1120px]">
+              <table className="w-full min-w-[1250px] table-fixed">
+                <colgroup>
+                  <col className="w-[280px]" />
+                  <col className="w-[115px]" />
+                  <col className="w-[105px]" />
+                  <col className="w-[105px]" />
+                  <col className="w-[175px]" />
+                  <col className="w-[160px]" />
+                  <col className="w-[105px]" />
+                  <col className="w-[65px]" />
+                  <col className="w-[105px]" />
+                  <col className="w-[40px]" />
+                </colgroup>
                 <thead className="bg-[#edf1f5] text-[13px] font-bold text-[#65748a]">
                   <tr>
                     {[
@@ -728,7 +747,7 @@ export default function V2PropertyList({
                     ].map(label => (
                       <th
                         key={label}
-                        className="border-b border-[#d9e0e8] px-3 py-3 text-left"
+                        className="whitespace-nowrap border-b border-[#d9e0e8] px-3 py-3 text-left"
                       >
                         {label}
                       </th>
@@ -744,7 +763,7 @@ export default function V2PropertyList({
                     >
                       <td className="px-3 py-4">
                         <div className="flex items-center gap-2">
-                          <p className="text-[16px] font-bold text-[#102d50]">{p.name}</p>
+                          <p className="min-w-0 truncate text-[16px] font-bold text-[#102d50]">{p.name}</p>
                           {memoSet.has(p.id) && (
                             <span title="自分用メモあり" className="flex shrink-0 items-center gap-1 bg-[#fff8e8] px-2 py-1 text-[11px] font-bold text-[#815307]">
                               <StickyNote size={13} />
@@ -752,21 +771,21 @@ export default function V2PropertyList({
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 text-[13px] text-[#758194]">
+                        <p className="mt-1 truncate text-[13px] text-[#758194]">
                           {p.address}
                         </p>
                       </td>
-                      <td className="px-3 py-3">{p.type}</td>
+                      <td className="whitespace-nowrap px-3 py-3">{p.type}</td>
                       <td className="px-3 py-3 font-semibold">
                         {p.landArea ? `${p.landArea}㎡` : "—"}
                       </td>
                       <td className="px-3 py-3 font-semibold">
                         {p.buildingArea ? `${p.buildingArea}㎡` : "—"}
                       </td>
-                      <td className="px-3 py-3 font-semibold">
-                        {p.buildingAge || "—"}
+                      <td className="whitespace-nowrap px-3 py-3 font-semibold">
+                        {buildingAgeListLabel(p.buildingAge)}
                       </td>
-                      <td className="px-3 py-3 font-bold">
+                      <td className="whitespace-nowrap px-3 py-3 font-bold">
                         {priceLabel(p.price, p.priceNegotiable)}
                       </td>
                       <td className="px-3 py-3">
