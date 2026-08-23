@@ -269,6 +269,15 @@ export default function V2PropertySearch() {
     )
   );
 
+  const openCreate = () => {
+    if (user?.verified !== 1) {
+      window.alert("物件募集を行えるのは認証ユーザーのみです");
+      navigate("/v2/mypage");
+      return;
+    }
+    setCreateOpen(true);
+  };
+
   const runAi = async () => {
     const data: any = await analyze.mutateAsync({ text: aiText });
     setForm({
@@ -306,6 +315,12 @@ export default function V2PropertySearch() {
     setStep("confirm");
   };
   const publish = async (status: "draft" | "active") => {
+    if (user?.verified !== 1) {
+      window.alert("物件募集を行えるのは認証ユーザーのみです");
+      closeCreate();
+      navigate("/v2/mypage");
+      return;
+    }
     const areas = form.areas
       .split(/[、,\n]/)
       .map(x => x.trim())
@@ -364,6 +379,12 @@ export default function V2PropertySearch() {
     }
   };
   const resumeDraft = (item: any) => {
+    if (user?.verified !== 1) {
+      window.alert("物件募集を行えるのは認証ユーザーのみです");
+      setDetailFor(null);
+      navigate("/v2/mypage");
+      return false;
+    }
     const conditions = item.conditions ?? {};
     setForm({
       title: cleanTitle(item.title),
@@ -396,9 +417,10 @@ export default function V2PropertySearch() {
     setStep("confirm");
     setDetailFor(null);
     setCreateOpen(true);
+    return true;
   };
   const duplicateRequest = (item: any) => {
-    resumeDraft(item);
+    if (!resumeDraft(item)) return;
     setEditingDraftId(null);
     setEditingPublished(false);
   };
@@ -569,7 +591,7 @@ export default function V2PropertySearch() {
             </p>
           </div>
           <button
-            onClick={() => setCreateOpen(true)}
+            onClick={openCreate}
             className="group ml-auto hidden h-14 items-center justify-center gap-3 border border-[#0f3158] bg-[#173f70] px-6 text-[15px] font-bold text-white shadow-[0_4px_12px_rgba(23,63,112,0.22)] transition-colors hover:bg-[#0f3158] sm:flex sm:min-w-[250px]"
           >
             <span className="grid size-8 place-items-center bg-white/15 transition-colors group-hover:bg-white/20">
@@ -838,7 +860,7 @@ export default function V2PropertySearch() {
       {!detailFor && !createOpen && !proposalFor && !closeOpen && (
         <div className="fixed inset-x-0 bottom-[65px] z-30 border-t border-[#d9e0e8] bg-white p-2.5 lg:hidden">
           <button
-            onClick={() => setCreateOpen(true)}
+            onClick={openCreate}
             className="flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] px-5 text-[14px] font-bold text-white"
           >
             <Plus size={19} />

@@ -2152,6 +2152,12 @@ ${propList}`,
         })
       )
       .mutation(async ({ input, ctx }) => {
+        if (ctx.user.verified !== 1) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "物件募集を行えるのは認証ユーザーのみです",
+          });
+        }
         if (
           input.status === "active" &&
           (!input.areas.length || !input.propertyTypes.length)
@@ -2194,6 +2200,12 @@ ${propList}`,
         })
       )
       .mutation(async ({ input, ctx }) => {
+        if (ctx.user.verified !== 1) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "物件募集を行えるのは認証ユーザーのみです",
+          });
+        }
         if (
           input.status === "active" &&
           (!input.areas.length || !input.propertyTypes.length)
