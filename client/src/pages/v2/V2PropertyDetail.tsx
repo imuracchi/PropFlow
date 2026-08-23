@@ -1286,7 +1286,17 @@ export default function V2PropertyDetail({
                 await saveDocument.mutateAsync({ propertyId, title: `${property.name} - ${new Date().toLocaleDateString("ja-JP")}`, htmlContent: html, attachmentIds: [...introAttachments] });
                 setIntroOpen(false);
               } catch (error) {
-                tab.document.body.innerHTML = `<p style="font-family:sans-serif;padding:24px">${error instanceof Error ? error.message : "紹介資料を作成できませんでした"}</p>`;
+                // サーバー側のPDFエンジンが一時的に利用できない場合でも、
+                // 従来どおり別タブの印刷機能からPDF保存できるようにする。
+                tab.document.open();
+                tab.document.write(html);
+                tab.document.close();
+                try {
+                  await saveDocument.mutateAsync({ propertyId, title: `${property.name} - ${new Date().toLocaleDateString("ja-JP")}`, htmlContent: html, attachmentIds: [...introAttachments] });
+                } catch (saveError) {
+                  console.error("紹介資料の保存に失敗しました", saveError);
+                }
+                setIntroOpen(false);
               } finally { setIntroGenerating(false); }
             }} className="flex h-11 flex-[1.4] items-center justify-center gap-2 bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50">{introGenerating ? <Loader2 size={16} className="animate-spin"/> : <FileOutput size={16}/>}作成して表示</button></div>
           </div>

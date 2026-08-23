@@ -120,16 +120,37 @@ async function startServer() {
         process.env.PUPPETEER_EXECUTABLE_PATH,
         "/usr/bin/chromium",
         "/usr/bin/chromium-browser",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/google-chrome",
       ].find((path): path is string => !!path && existsSync(path));
       const browser = await puppeteer.launch({
         headless: true,
         ...(systemBrowser ? { executablePath: systemBrowser } : {}),
         args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+        timeout: 30000,
       });
       try {
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: "load", timeout: 30000 });
-        const pdf = await page.pdf({ format: "A4", printBackground: true });
+        // Google Maps やWebフォントの一部が応答しなくても、紹介資料全体の
+        // 生成を失敗させない。画像は最大12秒だけ待ち、読めたものをPDF化する。
+        await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.evaluate(async () => {
+          const images = Array.from(document.images);
+          const imageReady = Promise.all(images.map(image => {
+            if (image.complete) return Promise.resolve();
+            return new Promise<void>(resolve => {
+              image.addEventListener("load", () => resolve(), { once: true });
+              image.addEventListener("error", () => resolve(), { once: true });
+            });
+          }));
+          const fontsReady = document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve();
+          await Promise.race([
+            Promise.all([imageReady, fontsReady]),
+            new Promise(resolve => window.setTimeout(resolve, 12000)),
+          ]);
+        });
+        await page.emulateMediaType("print");
+        const pdf = await page.pdf({ format: "A4", printBackground: true, timeout: 60000 });
         await browser.close();
         res.setHeader("Content-Type", "application/pdf");
         res.send(Buffer.from(pdf));
