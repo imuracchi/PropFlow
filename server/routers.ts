@@ -552,7 +552,36 @@ JSONのみ返してください。`,
       .input(z.object({ businessCardBase64: z.string().nullable() }))
       .mutation(async ({ input, ctx }) => {
         await db.updateUserBusinessCard(ctx.user.id, input.businessCardBase64);
-        return { success: true };
+        if (!input.businessCardBase64) return { success: true, emailSent: false };
+
+        const escapeHtml = (value: unknown) =>
+          String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(
+          /\/$/,
+          ""
+        );
+        const { sendMail } = await import("./_core/mail");
+        const emailSent = await sendMail(
+          "propflow@gspec.me",
+          "認証依頼が届きました。",
+          `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+            <h2 style="color:#1e3a5f;">認証依頼が届きました。</h2>
+            <p>マイページから名刺画像が登録されました。管理画面で内容を確認し、ユーザー認証を行ってください。</p>
+            <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+              <tr><th style="width:120px;text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">氏名</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(ctx.user.name || "未設定")}</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">会社名</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(ctx.user.company || "未設定")}</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">メール</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(ctx.user.email)}</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">ユーザーID</th><td style="padding:8px;border:1px solid #d8e0e8;">${ctx.user.id}</td></tr>
+            </table>
+            <a href="${siteUrl}/v2/admin" style="display:inline-block;background:#173f70;color:white;padding:10px 24px;text-decoration:none;font-weight:600;">管理画面で確認する</a>
+          </div>`
+        );
+        return { success: true, emailSent };
       }),
 
     updateProfile: protectedProcedure
@@ -2155,7 +2184,8 @@ ${propList}`,
         if (ctx.user.verified !== 1) {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "物件募集を行えるのは認証ユーザーのみです",
+            message:
+              "物件募集を行えるのは認証ユーザーのみです。マイページから名刺画像登録を行ってください。",
           });
         }
         if (
@@ -2203,7 +2233,8 @@ ${propList}`,
         if (ctx.user.verified !== 1) {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "物件募集を行えるのは認証ユーザーのみです",
+            message:
+              "物件募集を行えるのは認証ユーザーのみです。マイページから名刺画像登録を行ってください。",
           });
         }
         if (

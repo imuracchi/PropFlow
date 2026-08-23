@@ -88,9 +88,12 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
     },
   });
   const cardMutation = trpc.auth.saveBusinessCard.useMutation({
-    onSuccess: () => {
+    onSuccess: result => {
       utils.auth.me.invalidate();
       refresh();
+      if (result.emailSent) {
+        window.alert("名刺画像を登録し、認証依頼を送信しました。");
+      }
     },
   });
   const readCardMutation = trpc.auth.readBusinessCard.useMutation();

@@ -271,7 +271,9 @@ export default function V2PropertySearch() {
 
   const openCreate = () => {
     if (user?.verified !== 1) {
-      window.alert("物件募集を行えるのは認証ユーザーのみです");
+      window.alert(
+        "物件募集を行えるのは認証ユーザーのみです。マイページから名刺画像登録を行ってください。"
+      );
       navigate("/v2/mypage");
       return;
     }
@@ -316,7 +318,9 @@ export default function V2PropertySearch() {
   };
   const publish = async (status: "draft" | "active") => {
     if (user?.verified !== 1) {
-      window.alert("物件募集を行えるのは認証ユーザーのみです");
+      window.alert(
+        "物件募集を行えるのは認証ユーザーのみです。マイページから名刺画像登録を行ってください。"
+      );
       closeCreate();
       navigate("/v2/mypage");
       return;
@@ -380,7 +384,9 @@ export default function V2PropertySearch() {
   };
   const resumeDraft = (item: any) => {
     if (user?.verified !== 1) {
-      window.alert("物件募集を行えるのは認証ユーザーのみです");
+      window.alert(
+        "物件募集を行えるのは認証ユーザーのみです。マイページから名刺画像登録を行ってください。"
+      );
       setDetailFor(null);
       navigate("/v2/mypage");
       return false;
