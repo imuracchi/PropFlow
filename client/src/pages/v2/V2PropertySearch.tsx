@@ -162,7 +162,7 @@ const isNewRequest = (
 };
 
 export default function V2PropertySearch() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { user } = useAuth();
   const utils = trpc.useUtils();
   const [proposalFor, setProposalFor] = useState<any>(null);
@@ -419,6 +419,13 @@ export default function V2PropertySearch() {
     }
     setCreateOpen(true);
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") !== "1") return;
+    window.history.replaceState({}, "", "/v2/property-search");
+    openCreate();
+  }, [location]);
 
   const runAi = async () => {
     const data: any = await analyze.mutateAsync({ text: aiText });

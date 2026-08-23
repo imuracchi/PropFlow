@@ -89,7 +89,7 @@ export default function V2Layout({
             </p>
           </div>
         </button>
-        <nav className="flex-1 px-3 py-5">
+        <nav className="flex-1 overflow-y-auto px-3 py-5">
           <p className="px-3 pb-2 text-[10px] font-bold tracking-widest text-white/40">
             物件を探す
           </p>
@@ -108,15 +108,22 @@ export default function V2Layout({
           </p>
           <button
             onClick={() => setLocation(destination("/v2/property-search"))}
-            className={`mb-1 flex h-10 w-full items-center gap-3 px-3 text-[13px] ${location === destination("/v2/property-search") ? "bg-white/15 font-bold text-white" : "text-white/65 hover:bg-white/10"}`}
+            className={`mb-1 flex h-10 w-full items-center gap-3 px-3 text-[13px] ${location.startsWith(destination("/v2/property-search")) ? "bg-white/15 font-bold text-white" : "text-white/65 hover:bg-white/10"}`}
           >
             <Target size={17} />
-            物件募集
+            物件募集一覧
             {unreadProposalCount > 0 && (
               <span className="ml-auto rounded-full bg-[#d95532] px-2 py-0.5 text-[10px] font-bold text-white">
                 {unreadProposalCount > 99 ? "99+" : unreadProposalCount}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setLocation(destination("/v2/property-search?new=1"))}
+            className="mt-3 flex h-10 w-full items-center justify-center gap-2 bg-white text-[12px] font-bold text-[#173f70]"
+          >
+            <Plus size={16} />
+            物件を募集
           </button>
           <p className="mt-5 px-3 pb-2 text-[10px] font-bold tracking-widest text-white/40">
             物件を出す
