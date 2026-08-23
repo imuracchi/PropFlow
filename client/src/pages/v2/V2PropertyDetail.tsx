@@ -32,6 +32,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
 import { printProperty } from "@/pages/PropertyDetail";
 
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "";
+
 const previewProperty: any = {
   id: 901,
   userId: 99,
@@ -984,12 +986,14 @@ export default function V2PropertyDetail({
                   <div className="relative overflow-hidden border border-[#d9e0e8]">
                     <iframe
                       title={`${property.name}の所在地地図`}
-                      src={`https://www.google.com/maps?q=${encodeURIComponent(property.address)}&z=17&output=embed`}
+                      src={GOOGLE_MAPS_API_KEY
+                        ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&q=${encodeURIComponent(property.address)}&zoom=17`
+                        : `https://www.google.com/maps?q=${encodeURIComponent(property.address)}&z=17&output=embed`}
                       className="h-64 w-full lg:h-80"
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
                     />
-                    <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 border border-[#d64242] bg-white/95 px-3 py-2 text-[12px] font-bold text-[#9f2525] shadow-sm">
+                    <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5 border border-[#d64242] bg-white/95 px-3 py-2 text-[12px] font-bold text-[#9f2525] shadow-sm">
                       <MapPin size={16} fill="#d64242" className="text-[#d64242]" />
                       物件所在地
                     </div>
