@@ -1946,14 +1946,14 @@ export default function V2PropertySearch() {
                           <p className="mt-2 text-[12px] leading-5 text-[#65748a]">条件を修正すると候補物件を検索します。募集内容の入力はそのまま続けられます。</p>
                         ) : matchingTotal > 0 ? (
                           <>
-                            <p className="mt-2 text-[18px] font-bold text-[#173f70]">条件に近い物件が{matchingTotal}件あります</p>
-                            <p className="mt-1 text-[12px] text-[#526176]">希望条件に近い順に候補を確認できます。</p>
+                            <p className="mt-2 text-[18px] font-bold text-[#173f70]">一致度70%以上の掲載物件が{matchingTotal}件あります</p>
+                            <p className="mt-1 text-[12px] text-[#526176]">一致度が高い順に候補を確認できます。</p>
                             <button type="button" onClick={() => { setMatchesOpen(true); logMatchEvent.mutate({ event: "results_open", resultCount: matchingTotal }); }} className="mt-4 h-12 w-full bg-[#173f70] px-7 text-[14px] font-bold text-white hover:bg-[#102d50] sm:w-auto">候補物件を見る</button>
                           </>
                         ) : (
                           <>
-                            <p className="mt-1 text-[13px] font-bold text-[#526176]">現在、条件に近い掲載物件はありません</p>
-                            <p className="mt-1 text-[12px] leading-5 text-[#65748a]">募集を開始すると、まだ掲載されていない物件を持つ業者からも提案を受けられます。</p>
+                            <p className="mt-1 text-[13px] font-bold text-[#526176]">現在、一致度70%以上の掲載物件はありません</p>
+                            <p className="mt-1 text-[12px] leading-5 text-[#65748a]">一致度70%未満の物件は候補に表示していません。募集を開始すると、まだ掲載されていない物件を持つ業者からも提案を受けられます。</p>
                           </>
                         )}
                       </div>
