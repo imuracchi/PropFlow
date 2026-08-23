@@ -76,6 +76,7 @@ async function sendDmNotifications(opts: {
   emailHeading: string;
   path?: string;
   ctaLabel?: string | null;
+  skipEmailAndLine?: boolean;
 }) {
   const propInfo = opts.propertyId
     ? await db.getPropertyById(opts.propertyId)
@@ -96,7 +97,9 @@ async function sendDmNotifications(opts: {
     dmPath
   ).catch(() => {});
 
-  const receiverEmail = await db.getUserEmailIfNotify(opts.receiverId, "dm");
+  const receiverEmail = opts.skipEmailAndLine
+    ? null
+    : await db.getUserEmailIfNotify(opts.receiverId, "dm");
   if (receiverEmail) {
     const { sendMail } = await import("./_core/mail");
     const mailHtml = `
@@ -116,7 +119,9 @@ async function sendDmNotifications(opts: {
     sendMail(receiverEmail, opts.emailSubject, mailHtml).catch(() => {});
   }
 
-  const receiverLineUserId = await db.getLineUserIdByUserId(opts.receiverId);
+  const receiverLineUserId = opts.skipEmailAndLine
+    ? null
+    : await db.getLineUserIdByUserId(opts.receiverId);
   if (receiverLineUserId) {
     const { sendLinePush } = await import("./_core/line");
     const lineText = [
@@ -1784,6 +1789,12 @@ ${propList}`,
         ).catch(() => {});
 
         const senderName = ctx.user.name ?? "ユーザー";
+        const notificationBatch = await db.queueDmNotificationBatch(
+          ctx.user.id,
+          input.receiverId,
+          input.propertyId ?? null,
+          input.content
+        );
         const propInfo = await sendDmNotifications({
           senderId: ctx.user.id,
           senderName,
@@ -1794,6 +1805,7 @@ ${propList}`,
           title: `💬 ${senderName}さんからDM`,
           emailSubject: `【PropFlow】${senderName}さんからDMが届きました`,
           emailHeading: "💬 DMが届きました",
+          skipEmailAndLine: !notificationBatch.sendImmediately,
         });
 
         // 物件オーナー以外からの問い合わせが入ったら自動で商談中に

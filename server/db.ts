@@ -14,7 +14,7 @@ import {
   inArray,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
+import mysql, { type RowDataPacket } from "mysql2/promise";
 import {
   InsertUser,
   users,
@@ -145,6 +145,19 @@ export async function runStartupMigrations() {
       \`scheduledAt\` datetime NOT NULL,
       \`status\` varchar(20) NOT NULL DEFAULT 'pending',
       \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS \`dm_notification_batches\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`senderId\` int NOT NULL,
+      \`receiverId\` int NOT NULL,
+      \`propertyKey\` int NOT NULL DEFAULT 0,
+      \`messages\` json NOT NULL,
+      \`dueAt\` datetime NOT NULL,
+      \`status\` varchar(20) NOT NULL DEFAULT 'pending',
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY \`uq_dm_notification_batch\` (\`senderId\`, \`receiverId\`, \`propertyKey\`),
+      KEY \`idx_dm_notification_due\` (\`status\`, \`dueAt\`)
     )`,
     `CREATE TABLE IF NOT EXISTS \`property_search_requests\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -1935,6 +1948,128 @@ export async function sendDirectMessage(
     .values({ senderId, receiverId, content, propertyId });
 }
 
+export async function queueDmNotificationBatch(
+  senderId: number,
+  receiverId: number,
+  propertyId: number | null,
+  content: string
+) {
+  if (!process.env.DATABASE_URL) return { sendImmediately: true };
+  const connection = await mysql.createConnection(process.env.DATABASE_URL);
+  const propertyKey = propertyId ?? 0;
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.query<Array<RowDataPacket & { id: number }>>(
+      `SELECT id FROM dm_notification_batches
+       WHERE senderId = ? AND receiverId = ? AND propertyKey = ? FOR UPDATE`,
+      [senderId, receiverId, propertyKey]
+    );
+    if (rows.length === 0) {
+      await connection.query(
+        `INSERT INTO dm_notification_batches
+          (senderId, receiverId, propertyKey, messages, dueAt, status)
+         VALUES (?, ?, ?, JSON_ARRAY(?), DATE_ADD(NOW(), INTERVAL 3 MINUTE), 'pending')`,
+        [senderId, receiverId, propertyKey, content]
+      );
+      await connection.commit();
+      return { sendImmediately: false };
+    }
+    await connection.query(
+      `UPDATE dm_notification_batches
+       SET messages = JSON_ARRAY_APPEND(messages, '$', ?),
+           dueAt = DATE_ADD(NOW(), INTERVAL 3 MINUTE), status = 'pending'
+       WHERE id = ?`,
+      [content, rows[0].id]
+    );
+    await connection.commit();
+    return { sendImmediately: false };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    await connection.end();
+  }
+}
+
+export async function claimDueDmNotificationBatches() {
+  if (!process.env.DATABASE_URL) return [];
+  const connection = await mysql.createConnection(process.env.DATABASE_URL);
+  try {
+    await connection.beginTransaction();
+    await connection.query(
+      `DELETE FROM dm_notification_batches
+       WHERE status = 'pending' AND dueAt <= NOW() AND JSON_LENGTH(messages) = 0`
+    );
+    const [rows] = await connection.query<
+      Array<RowDataPacket & {
+        id: number;
+        senderId: number;
+        receiverId: number;
+        propertyKey: number;
+        messages: string | string[];
+      }>
+    >(
+      `SELECT id, senderId, receiverId, propertyKey, messages
+       FROM dm_notification_batches
+       WHERE status = 'pending' AND dueAt <= NOW() AND JSON_LENGTH(messages) > 0
+       ORDER BY dueAt ASC LIMIT 50 FOR UPDATE`
+    );
+    if (rows.length) {
+      await connection.query(
+        `UPDATE dm_notification_batches SET status = 'sending', messages = JSON_ARRAY()
+         WHERE id IN (${rows.map(() => "?").join(",")})`,
+        rows.map(row => row.id)
+      );
+    }
+    await connection.commit();
+    return rows.map(row => {
+      const messages: string[] =
+        typeof row.messages === "string"
+          ? JSON.parse(row.messages)
+          : row.messages;
+      return {
+        id: row.id,
+        senderId: row.senderId,
+        receiverId: row.receiverId,
+        propertyId: row.propertyKey || null,
+        messages,
+      };
+    });
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    await connection.end();
+  }
+}
+
+export async function completeDmNotificationBatch(
+  id: number,
+  sent: boolean,
+  messages: string[] = []
+) {
+  if (!process.env.DATABASE_URL) return;
+  const connection = await mysql.createConnection(process.env.DATABASE_URL);
+  try {
+    if (sent) {
+      await connection.query(
+        `DELETE FROM dm_notification_batches WHERE id = ? AND status = 'sending'`,
+        [id]
+      );
+    } else {
+      await connection.query(
+        `UPDATE dm_notification_batches
+         SET status = 'pending', messages = ?,
+             dueAt = DATE_ADD(NOW(), INTERVAL 3 MINUTE)
+         WHERE id = ? AND status = 'sending'`,
+        [JSON.stringify(messages), id]
+      );
+    }
+  } finally {
+    await connection.end();
+  }
+}
+
 export async function deleteOwnDirectMessage(
   messageId: number,
   userId: number
@@ -3443,6 +3578,12 @@ export async function markDmAsRead(
       .insert(dmReadStatus)
       .values({ userId, partnerId, propertyId, lastReadAt: new Date() });
   }
+  await db.execute(sql`
+    DELETE FROM dm_notification_batches
+    WHERE receiverId = ${userId}
+      AND senderId = ${partnerId}
+      AND propertyKey = ${propertyId ?? 0}
+  `);
 }
 
 export async function getUnreadDmCounts(): Promise<

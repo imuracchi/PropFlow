@@ -55,6 +55,7 @@ try {
     "property_search_requests",
     "property_search_proposals",
     "property_search_digest_deliveries",
+    "dm_notification_batches",
   ];
   const [tableRows] = await connection.query<Array<{ tableName: string }>>(
     "SELECT TABLE_NAME AS tableName FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?",

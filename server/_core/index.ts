@@ -292,6 +292,94 @@ async function startServer() {
 
   // 毎日19時（JST）に未読DM通知メールを送信
   const cron = await import("node-cron");
+
+  // 毎分：最後のDMから3分経過した会話をメール・LINEでまとめて通知
+  cron.schedule("*/15 * * * * *", async () => {
+    try {
+      const db = await import("../db");
+      const batches = await db.claimDueDmNotificationBatches();
+      if (!batches.length) return;
+      const { sendMail } = await import("./mail");
+      const { sendLinePush } = await import("./line");
+      const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(
+        /\/$/,
+        ""
+      );
+      const escapeHtml = (value: unknown) =>
+        String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+
+      for (const batch of batches) {
+        let completed = false;
+        try {
+          const sender = await db.getUserById(batch.senderId);
+          if (!sender) {
+            await db.completeDmNotificationBatch(batch.id, true);
+            continue;
+          }
+          const property = batch.propertyId
+            ? await db.getPropertyById(batch.propertyId)
+            : null;
+          const senderName = sender.name ?? "ユーザー";
+          const path = batch.propertyId
+            ? `/v2/chat/${batch.senderId}/${batch.propertyId}`
+            : "/v2/messages";
+          const url = `${siteUrl}${path}`;
+          const lines = batch.messages.map(message => `・${message}`);
+          const receiverEmail = await db.getUserEmailIfNotify(
+            batch.receiverId,
+            "dm"
+          );
+          const receiverLineUserId = await db.getLineUserIdByUserId(
+            batch.receiverId
+          );
+          const emailOk = receiverEmail
+            ? await sendMail(
+                receiverEmail,
+                `【PropFlow】${senderName}さんから${batch.messages.length}件のDMが届きました`,
+                `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+                  <h2 style="color:#1e3a5f;">💬 ${escapeHtml(senderName)}さんから新着メッセージ</h2>
+                  ${property ? `<p style="color:#64748b;">対象物件：${escapeHtml(property.name)}</p>` : ""}
+                  <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:16px;margin:16px 0;">
+                    ${batch.messages.map(message => `<p style="margin:6px 0;white-space:pre-wrap;">${escapeHtml(message)}</p>`).join("")}
+                  </div>
+                  <a href="${url}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;text-decoration:none;font-weight:600;">DMを確認・返信する</a>
+                </div>`
+              )
+            : true;
+          const lineOk = receiverLineUserId
+            ? await sendLinePush(
+                receiverLineUserId,
+                [
+                  `💬 ${senderName}さんから${batch.messages.length}件のDM`,
+                  property ? `📋 ${property.name}` : null,
+                  ...lines,
+                  url,
+                ]
+                  .filter(Boolean)
+                  .join("\n")
+              )
+            : true;
+          completed = emailOk && lineOk;
+        } catch (error) {
+          console.error("[CRON] DMまとめ通知エラー:", error);
+        }
+        await db.completeDmNotificationBatch(
+          batch.id,
+          completed,
+          batch.messages
+        );
+      }
+    } catch (error) {
+      console.error("[CRON] DMまとめ通知取得エラー:", error);
+    }
+  });
+  console.log("[CRON] DM grouped notifications scheduled every 15 seconds");
+
   cron.schedule("0 10 * * *", async () => {
     // UTC 10:00 = JST 19:00
     console.log("[CRON] Checking unread DMs...");
