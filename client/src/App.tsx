@@ -46,11 +46,12 @@ import V2PropertyList from "./pages/v2/V2PropertyList";
 import V2PropertyDetail from "./pages/v2/V2PropertyDetail";
 import V2Messages from "./pages/v2/V2Messages";
 import V2Chat from "./pages/v2/V2Chat";
+import V2PropertySearch from "./pages/v2/V2PropertySearch";
 import V2MyPage from "./pages/v2/V2MyPage";
 import V2Documents from "./pages/v2/V2Documents";
 import V2Admin from "./pages/v2/V2Admin";
+import V2IssueReport from "./pages/v2/V2IssueReport";
 
-const V2_DEFAULT = import.meta.env.VITE_V2_DEFAULT === "true";
 import V2Layout from "./components/v2/V2Layout";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
@@ -215,25 +216,67 @@ function AppContent() {
       </Route>
       <Route path="/v2/preview/chat">{() => <V2Chat preview />}</Route>
       <Route path="/v2/preview/mypage">
-        {() => <V2Layout preview><div className="[&>div>header]:hidden [&>div>nav]:hidden [&>div]:pb-0"><DesignMyPage /></div></V2Layout>}
+        {() => (
+          <V2Layout preview>
+            <div className="[&>div>header]:hidden [&>div>nav]:hidden [&>div]:pb-0">
+              <DesignMyPage />
+            </div>
+          </V2Layout>
+        )}
       </Route>
       <Route path="/v2/preview/documents">
-        {() => <V2Layout preview><div className="[&>div>header]:hidden"><DesignDocuments /></div></V2Layout>}
+        {() => (
+          <V2Layout preview>
+            <div className="[&>div>header]:hidden">
+              <DesignDocuments />
+            </div>
+          </V2Layout>
+        )}
       </Route>
       <Route path="/v2/preview/interested">
-        {() => <V2Layout preview><div className="[&>div>header]:hidden [&>div>nav]:hidden"><DesignInterested /></div></V2Layout>}
+        {() => (
+          <V2Layout preview>
+            <div className="[&>div>header]:hidden [&>div>nav]:hidden">
+              <DesignInterested />
+            </div>
+          </V2Layout>
+        )}
       </Route>
       <Route path="/v2/preview/announcements">
-        {() => <V2Layout preview><div className="[&>div>header]:hidden [&>div>nav]:hidden"><DesignAnnouncements /></div></V2Layout>}
+        {() => (
+          <V2Layout preview>
+            <div className="[&>div>header]:hidden [&>div>nav]:hidden">
+              <DesignAnnouncements />
+            </div>
+          </V2Layout>
+        )}
       </Route>
       <Route path="/v2/preview/features">
-        {() => <V2Layout preview><div className="[&>div>header]:hidden [&>div>nav]:hidden"><DesignFeatures /></div></V2Layout>}
+        {() => (
+          <V2Layout preview>
+            <div className="[&>div>header]:hidden [&>div>nav]:hidden">
+              <DesignFeatures />
+            </div>
+          </V2Layout>
+        )}
       </Route>
       <Route path="/v2/preview/upload">
-        {() => <V2Layout preview><div className="[&>div>header]:hidden [&_.max-w-3xl]:max-w-[1200px] lg:[&_footer]:left-60"><DesignUpload /></div></V2Layout>}
+        {() => (
+          <V2Layout preview>
+            <div className="[&>div>header]:hidden [&_.max-w-3xl]:max-w-[1200px] lg:[&_footer]:left-60">
+              <DesignUpload />
+            </div>
+          </V2Layout>
+        )}
       </Route>
       <Route path="/v2/preview/simulation">
-        {() => <V2Layout preview><div className="[&>div>header]:hidden"><DesignSimulation /></div></V2Layout>}
+        {() => (
+          <V2Layout preview>
+            <div className="[&>div>header]:hidden">
+              <DesignSimulation />
+            </div>
+          </V2Layout>
+        )}
       </Route>
       <Route path="/v2/preview">{() => <V2PropertyList preview />}</Route>
       <Route path="/register/:token">{() => <Register />}</Route>
@@ -252,14 +295,21 @@ function AppContent() {
           <AuthGuard>
             <Switch>
               <Route path="/properties">
-                {() => (
-                  <DashboardLayout>
-                    <PropertyList />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/properties");
+                  return null;
+                }}
               </Route>
               <Route path="/v2/properties">{() => <V2PropertyList />}</Route>
-              <Route path="/v2">{() => { setLocation("/v2/properties"); return null; }}</Route>
+              <Route path="/v2/property-search">
+                {() => <V2PropertySearch />}
+              </Route>
+              <Route path="/v2">
+                {() => {
+                  setLocation("/v2/properties");
+                  return null;
+                }}
+              </Route>
               <Route path="/v2/property/:id">
                 {() => <V2PropertyDetail />}
               </Route>
@@ -271,113 +321,131 @@ function AppContent() {
                 {() => <V2PropertyList collection="mine" />}
               </Route>
               <Route path="/v2/mypage">{() => <V2MyPage />}</Route>
+              <Route path="/v2/issue-report">{() => <V2IssueReport />}</Route>
               <Route path="/v2/documents">{() => <V2Documents />}</Route>
               <Route path="/v2/interested">
-                {() => <V2Layout><main className="mx-auto max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10"><InterestedUsers v2 /></main></V2Layout>}
+                {() => (
+                  <V2Layout>
+                    <main className="mx-auto max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10">
+                      <InterestedUsers v2 />
+                    </main>
+                  </V2Layout>
+                )}
               </Route>
               <Route path="/v2/upload">
-                {() => <V2Layout><main className="mx-auto max-w-[1400px] p-4 pb-24 lg:p-7 lg:pb-10"><div className="[&>div]:max-w-none [&_.rounded-lg]:rounded-none [&_.rounded-xl]:rounded-none"><PropertyUpload v2 /></div></main></V2Layout>}
+                {() => (
+                  <V2Layout>
+                    <main className="mx-auto max-w-[1400px] p-4 pb-24 lg:p-7 lg:pb-10">
+                      <div className="[&>div]:max-w-none [&_.rounded-lg]:rounded-none [&_.rounded-xl]:rounded-none">
+                        <PropertyUpload v2 />
+                      </div>
+                    </main>
+                  </V2Layout>
+                )}
               </Route>
               <Route path="/v2/announcements">
-                {() => <V2Layout><main className="mx-auto max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10"><div className="[&>div]:max-w-none [&_.rounded-lg]:rounded-none"><AnnounceArchive /></div></main></V2Layout>}
+                {() => (
+                  <V2Layout>
+                    <main className="mx-auto max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10">
+                      <div className="[&>div]:max-w-none [&_.rounded-lg]:rounded-none">
+                        <AnnounceArchive />
+                      </div>
+                    </main>
+                  </V2Layout>
+                )}
               </Route>
               <Route path="/v2/simulation/:id">
-                {() => <V2Layout><main className="mx-auto max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10"><div className="[&>div]:max-w-none [&_.rounded-lg]:rounded-none"><Simulation v2 /></div></main></V2Layout>}
+                {() => (
+                  <V2Layout>
+                    <main className="mx-auto max-w-[1200px] p-4 pb-24 lg:p-7 lg:pb-10">
+                      <div className="[&>div]:max-w-none [&_.rounded-lg]:rounded-none">
+                        <Simulation v2 />
+                      </div>
+                    </main>
+                  </V2Layout>
+                )}
               </Route>
               <Route path="/v2/chat/:partnerId/:propertyId">
                 {() => <V2Chat />}
               </Route>
               <Route path="/v2/admin">{() => <AdminRoute v2 />}</Route>
               <Route path="/property/:id">
-                {() => (
-                  <DashboardLayout>
-                    <PropertyDetail />
-                  </DashboardLayout>
-                )}
+                {(params: { id: string }) => {
+                  setLocation(`/v2/property/${params.id}`);
+                  return null;
+                }}
               </Route>
               <Route path="/upload">
-                {() => (
-                  <DashboardLayout>
-                    <PropertyUpload />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/upload");
+                  return null;
+                }}
               </Route>
               <Route path="/dm/:id/:propertyId">
-                {() => (
-                  <DashboardLayout>
-                    <DirectMessage />
-                  </DashboardLayout>
-                )}
+                {(params: { id: string; propertyId: string }) => {
+                  setLocation(`/v2/chat/${params.id}/${params.propertyId}`);
+                  return null;
+                }}
               </Route>
               <Route path="/dm/:id">
-                {() => (
-                  <DashboardLayout>
-                    <DirectMessage />
-                  </DashboardLayout>
-                )}
+                {(params: { id: string }) => {
+                  setLocation(`/v2/chat/${params.id}/0`);
+                  return null;
+                }}
               </Route>
               <Route path="/dm-sell">
-                {() => (
-                  <DashboardLayout>
-                    <ChatList mode="owner-dm" />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/messages");
+                  return null;
+                }}
               </Route>
               <Route path="/dm-list">
-                {() => (
-                  <DashboardLayout>
-                    <ChatList />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/messages");
+                  return null;
+                }}
               </Route>
               <Route path="/simulation/:id">
-                {() => (
-                  <DashboardLayout>
-                    <Simulation />
-                  </DashboardLayout>
-                )}
+                {(params: { id: string }) => {
+                  setLocation(`/v2/simulation/${params.id}`);
+                  return null;
+                }}
               </Route>
               <Route path="/documents">
-                {() => (
-                  <DashboardLayout>
-                    <DocumentList />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/documents");
+                  return null;
+                }}
               </Route>
               <Route path="/buyer-preference">
-                {() => (
-                  <DashboardLayout>
-                    <BuyerPreference />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/property-search");
+                  return null;
+                }}
               </Route>
               <Route path="/my-properties">
-                {() => (
-                  <DashboardLayout>
-                    <PropertyList mode="mine" />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/my-properties");
+                  return null;
+                }}
               </Route>
               <Route path="/favorites">
-                {() => (
-                  <DashboardLayout>
-                    <Favorites />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/favorites");
+                  return null;
+                }}
               </Route>
               <Route path="/mypage">
-                {() => (
-                  <DashboardLayout>
-                    <MyPage key="mypage" />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/mypage");
+                  return null;
+                }}
               </Route>
               <Route path="/interested">
-                {() => (
-                  <DashboardLayout>
-                    <InterestedUsers />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/interested");
+                  return null;
+                }}
               </Route>
               <Route path="/features">
                 {() => (
@@ -387,22 +455,13 @@ function AppContent() {
                 )}
               </Route>
               <Route path="/announce-archive">
-                {() => (
-                  <DashboardLayout>
-                    <AnnounceArchive />
-                  </DashboardLayout>
-                )}
+                {() => {
+                  setLocation("/v2/announcements");
+                  return null;
+                }}
               </Route>
               <Route path="/admin">{() => <AdminRoute v2 />}</Route>
-              <Route path="/">
-                {() => V2_DEFAULT ? (
-                  <V2PropertyList />
-                ) : (
-                  <DashboardLayout>
-                    <PropertyList />
-                  </DashboardLayout>
-                )}
-              </Route>
+              <Route path="/">{() => <V2PropertyList />}</Route>
               <Route component={NotFound} />
             </Switch>
           </AuthGuard>

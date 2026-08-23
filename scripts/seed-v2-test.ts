@@ -24,6 +24,26 @@ try {
   const oldUserIds = oldUsers.map(user => user.id);
   if (oldUserIds.length) {
     const ids = oldUserIds.map(() => "?").join(",");
+    const [oldRequests] = await connection.query<any[]>(
+      `SELECT id FROM property_search_requests WHERE userId IN (${ids})`,
+      oldUserIds
+    );
+    const oldRequestIds = oldRequests.map(request => request.id);
+    if (oldRequestIds.length) {
+      const requestIds = oldRequestIds.map(() => "?").join(",");
+      await connection.query(
+        `DELETE FROM property_search_proposals WHERE requestId IN (${requestIds})`,
+        oldRequestIds
+      );
+      await connection.query(
+        `DELETE FROM property_search_requests WHERE id IN (${requestIds})`,
+        oldRequestIds
+      );
+    }
+    await connection.query(
+      `DELETE FROM property_search_proposals WHERE userId IN (${ids})`,
+      oldUserIds
+    );
     const [oldProperties] = await connection.query<any[]>(`SELECT id FROM properties WHERE userId IN (${ids})`, oldUserIds);
     const oldPropertyIds = oldProperties.map(property => property.id);
     if (oldPropertyIds.length) {
@@ -63,6 +83,25 @@ try {
   await connection.execute("INSERT INTO direct_messages (senderId,receiverId,propertyId,content,createdAt) VALUES (?,?,?,?,NOW())", [buyerId, sellerId, propertyId, "資料を確認しました。詳細条件をご相談できますか？"]);
   await connection.execute("INSERT INTO direct_messages (senderId,receiverId,propertyId,content,createdAt) VALUES (?,?,?,?,DATE_ADD(NOW(), INTERVAL 1 MINUTE))", [sellerId, buyerId, propertyId, "お問い合わせありがとうございます。ご相談可能です。"]);
   await connection.execute("INSERT INTO dm_read_status (userId,partnerId,propertyId,lastReadAt,flagged) VALUES (?,?,?,?,1)", [sellerId, buyerId, propertyId, new Date()]);
+  await connection.execute(
+    `INSERT INTO property_search_requests
+      (userId,title,areas,propertyTypes,minPrice,maxPrice,minArea,maxArea,purpose,purchaseTiming,conditions,notes,anonymous,status,publishedAt,expiresAt)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,'active',NOW(),DATE_ADD(NOW(), INTERVAL 30 DAY))`,
+    [
+      buyerId,
+      "テスト用 足立区 事業用地募集（募集中）",
+      JSON.stringify(["東京都足立区"]),
+      JSON.stringify(["土地"]),
+      null,
+      600000000,
+      500,
+      null,
+      "開発用地",
+      "年内",
+      JSON.stringify({ priorityConditions: "容積率は必須、引渡し時期は相談可" }),
+      "提案操作を確認するための募集中データです。",
+    ]
+  );
   await connection.commit();
   console.log(`Seed complete: ${parsed.pathname.slice(1)}`);
   console.log(`Password for all accounts: ${password}`);

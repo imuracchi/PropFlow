@@ -39,10 +39,16 @@ function loadGoogleMaps(): Promise<void> {
   if ((window as any).google?.maps) return Promise.resolve();
   if (googleMapsPromise) return googleMapsPromise;
   googleMapsPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>('script[data-propflow-google-maps]');
+    const existing = document.querySelector<HTMLScriptElement>(
+      "script[data-propflow-google-maps]"
+    );
     if (existing) {
       existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Google Mapsを読み込めませんでした")), { once: true });
+      existing.addEventListener(
+        "error",
+        () => reject(new Error("Google Mapsを読み込めませんでした")),
+        { once: true }
+      );
       return;
     }
     const script = document.createElement("script");
@@ -50,13 +56,20 @@ function loadGoogleMaps(): Promise<void> {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&v=weekly`;
     script.async = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Google Mapsを読み込めませんでした"));
+    script.onerror = () =>
+      reject(new Error("Google Mapsを読み込めませんでした"));
     document.head.appendChild(script);
   });
   return googleMapsPromise;
 }
 
-function PropertyLocationMap({ name, address }: { name: string; address: string }) {
+function PropertyLocationMap({
+  name,
+  address,
+}: {
+  name: string;
+  address: string;
+}) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapError, setMapError] = useState("");
 
@@ -66,47 +79,65 @@ function PropertyLocationMap({ name, address }: { name: string; address: string 
       setMapError("Googleマップを表示できませんでした");
       return;
     }
-    loadGoogleMaps().then(() => {
-      if (cancelled || !mapRef.current) return;
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address }, (results, status) => {
+    loadGoogleMaps()
+      .then(() => {
         if (cancelled || !mapRef.current) return;
-        if (status !== "OK" || !results?.[0]) {
-          setMapError("住所から物件位置を特定できませんでした");
-          return;
-        }
-        const position = results[0].geometry.location;
-        const map = new google.maps.Map(mapRef.current, {
-          center: position,
-          zoom: 17,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: true,
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address }, (results, status) => {
+          if (cancelled || !mapRef.current) return;
+          if (status !== "OK" || !results?.[0]) {
+            setMapError("住所から物件位置を特定できませんでした");
+            return;
+          }
+          const position = results[0].geometry.location;
+          const map = new google.maps.Map(mapRef.current, {
+            center: position,
+            zoom: 17,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true,
+          });
+          const marker = new google.maps.Marker({
+            map,
+            position,
+            title: `物件所在地：${name}`,
+            label: {
+              text: "物",
+              color: "#ffffff",
+              fontSize: "12px",
+              fontWeight: "700",
+            },
+          });
+          const content = document.createElement("div");
+          const title = document.createElement("strong");
+          title.textContent = name;
+          const location = document.createElement("div");
+          location.textContent = address;
+          location.style.marginTop = "3px";
+          content.append(title, location);
+          new google.maps.InfoWindow({ content }).open({ map, anchor: marker });
         });
-        const marker = new google.maps.Marker({
-          map,
-          position,
-          title: `物件所在地：${name}`,
-          label: { text: "物", color: "#ffffff", fontSize: "12px", fontWeight: "700" },
-        });
-        const content = document.createElement("div");
-        const title = document.createElement("strong");
-        title.textContent = name;
-        const location = document.createElement("div");
-        location.textContent = address;
-        location.style.marginTop = "3px";
-        content.append(title, location);
-        new google.maps.InfoWindow({ content }).open({ map, anchor: marker });
+      })
+      .catch(error => {
+        if (!cancelled)
+          setMapError(
+            error instanceof Error
+              ? error.message
+              : "Googleマップを表示できませんでした"
+          );
       });
-    }).catch(error => {
-      if (!cancelled) setMapError(error instanceof Error ? error.message : "Googleマップを表示できませんでした");
-    });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [address, name]);
 
   return mapError ? (
-    <div className="grid h-64 place-items-center bg-[#f2f5f8] px-4 text-center text-[13px] text-[#65748a] lg:h-80">{mapError}</div>
-  ) : <div ref={mapRef} className="h-64 w-full lg:h-80" />;
+    <div className="grid h-64 place-items-center bg-[#f2f5f8] px-4 text-center text-[13px] text-[#65748a] lg:h-80">
+      {mapError}
+    </div>
+  ) : (
+    <div ref={mapRef} className="h-64 w-full lg:h-80" />
+  );
 }
 
 const previewProperty: any = {
@@ -175,7 +206,13 @@ function saveBase64(name: string, contentBase64: string) {
 }
 
 function escapeHtml(value: unknown) {
-  return String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    character =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        character
+      ]!
+  );
 }
 
 function PropertyPhoto({
@@ -273,7 +310,9 @@ export default function V2PropertyDetail({
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
       return saved ? JSON.parse(saved) : [902];
-    } catch { return [902]; }
+    } catch {
+      return [902];
+    }
   });
   const [previewFileList, setPreviewFileList] = useState<any[]>(previewFiles);
   const [previewPhotoList, setPreviewPhotoList] = useState<any[]>([
@@ -346,8 +385,17 @@ export default function V2PropertyDetail({
   const [previewExclusions, setPreviewExclusions] = useState<any[]>([]);
   const [introOpen, setIntroOpen] = useState(false);
   const [introGenerating, setIntroGenerating] = useState(false);
-  const [introAttachments, setIntroAttachments] = useState<Set<number>>(new Set());
-  const [introPages, setIntroPages] = useState({ summary: true, map: true, streetview: true, photos: true, route: true, attachments: true });
+  const [introAttachments, setIntroAttachments] = useState<Set<number>>(
+    new Set()
+  );
+  const [introPages, setIntroPages] = useState({
+    summary: true,
+    map: true,
+    streetview: true,
+    photos: true,
+    route: true,
+    attachments: true,
+  });
   const usersQuery = trpc.user.list.useQuery(undefined, {
     enabled: !preview && dialog === "restrict",
   });
@@ -358,6 +406,7 @@ export default function V2PropertyDetail({
     !!property &&
     (preview || user?.id === property.userId || user?.role === "admin");
   const isRegistrant = !!property && !!user && user.id === property.userId;
+  const isOperator = user?.role === "admin" || user?.role === "management";
   const canInquire = preview || (!!user && !!property && !isRegistrant);
   const toggleCurrentFavorite = async () => {
     if (preview) {
@@ -450,18 +499,29 @@ export default function V2PropertyDetail({
   };
   const previewPdf = async (file: any) => {
     const tab = window.open("", "_blank");
-    if (!tab) { alert("別タブを開けませんでした。ポップアップを許可してください。"); return; }
+    if (!tab) {
+      alert("別タブを開けませんでした。ポップアップを許可してください。");
+      return;
+    }
     tab.opener = null;
     tab.document.title = file.name;
     if (preview) {
       tab.document.body.innerHTML = `<div style="max-width:760px;margin:32px auto;padding:48px;font-family:sans-serif;color:#102d50"><p style="color:#173f70;font-weight:bold">PropFlow 関連資料</p><h1 style="border-bottom:2px solid #173f70;padding-bottom:16px">${file.name.replace(/\.pdf$/i, "")}</h1><p>確認用モックのPDFプレビューです。実画面では登録されたPDF本文が表示されます。</p></div>`;
       return;
     }
-    tab.document.body.innerHTML = '<p style="font-family:sans-serif;padding:24px">PDFを読み込んでいます…</p>';
+    tab.document.body.innerHTML =
+      '<p style="font-family:sans-serif;padding:24px">PDFを読み込んでいます…</p>';
     const result = await utils.property.downloadFile.fetch({ fileId: file.id });
-    if (!result) { tab.close(); return; }
-    const bytes = Uint8Array.from(atob(result.contentBase64), c => c.charCodeAt(0));
-    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    if (!result) {
+      tab.close();
+      return;
+    }
+    const bytes = Uint8Array.from(atob(result.contentBase64), c =>
+      c.charCodeAt(0)
+    );
+    const url = URL.createObjectURL(
+      new Blob([bytes], { type: "application/pdf" })
+    );
     tab.location.href = url;
     window.setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
@@ -622,11 +682,15 @@ export default function V2PropertyDetail({
     }
     setTransportError("");
     if (preview) {
-      setEditForm(current => ({ ...current, transport: "京王井の頭線「下北沢」駅 徒歩8分" }));
+      setEditForm(current => ({
+        ...current,
+        transport: "京王井の頭線「下北沢」駅 徒歩8分",
+      }));
       return;
     }
     const result = await analyzeTransport.mutateAsync({ address });
-    if (result.transport) setEditForm(current => ({ ...current, transport: result.transport! }));
+    if (result.transport)
+      setEditForm(current => ({ ...current, transport: result.transport! }));
     else setTransportError(result.error ?? "交通情報を取得できませんでした");
   };
   const runCommentGeneration = async () => {
@@ -639,7 +703,10 @@ export default function V2PropertyDetail({
     }
     setCommentError("");
     if (preview) {
-      setEditForm(current => ({ ...current, comment: `${address}に位置する${propertyType}です。関連資料をご確認のうえ、お気軽にお問い合わせください。` }));
+      setEditForm(current => ({
+        ...current,
+        comment: `${address}に位置する${propertyType}です。関連資料をご確認のうえ、お気軽にお問い合わせください。`,
+      }));
       return;
     }
     const result = await generateComment.mutateAsync({
@@ -648,11 +715,14 @@ export default function V2PropertyDetail({
       type: propertyType,
       price: Number(editForm.price || 0),
       landArea: editForm.landArea ? Number(editForm.landArea) : null,
-      buildingArea: editForm.buildingArea ? Number(editForm.buildingArea) : null,
+      buildingArea: editForm.buildingArea
+        ? Number(editForm.buildingArea)
+        : null,
       zoning: String(editForm.zoning ?? "") || undefined,
       access: String(editForm.access ?? "") || undefined,
     });
-    if (result.comment) setEditForm(current => ({ ...current, comment: result.comment! }));
+    if (result.comment)
+      setEditForm(current => ({ ...current, comment: result.comment! }));
     else setCommentError("紹介コメントを生成できませんでした");
   };
   const saveEditing = async () => {
@@ -712,7 +782,11 @@ export default function V2PropertyDetail({
     setEditing(false);
   };
   const startFaqEditing = () => {
-    setEditFaqs(Array.isArray(property.faqs) ? property.faqs.map((faq: any) => ({ q: faq.q, a: faq.a })) : []);
+    setEditFaqs(
+      Array.isArray(property.faqs)
+        ? property.faqs.map((faq: any) => ({ q: faq.q, a: faq.a }))
+        : []
+    );
     setFaqEditing(true);
   };
   const saveFaqEditing = async () => {
@@ -743,29 +817,33 @@ export default function V2PropertyDetail({
   return (
     <V2Layout preview={preview}>
       <main className="mx-auto min-w-0 max-w-[1600px] overflow-x-hidden pb-20 lg:overflow-visible lg:p-7 lg:pb-10">
-        {!isRegistrant && <div className="flex h-12 items-center bg-white px-3 lg:bg-transparent lg:px-0">
-          <button
-            onClick={() =>
-              setLocation(preview ? "/v2/preview" : "/v2/properties")
-            }
-            className="flex items-center gap-1 text-[12px] font-bold text-[#173f70]"
-          >
-            <ArrowLeft size={18} />
-            物件一覧
-          </button>
-          <button
-            onClick={toggleCurrentFavorite}
-            className={`ml-auto hidden h-10 items-center gap-1.5 border px-3 text-[12px] font-bold lg:flex ${isFavorite ? "border-[#a13b50] bg-[#fff1f4] text-[#a13b50]" : "border-[#9aabc0] bg-white text-[#526176]"}`}
-            aria-label={isFavorite ? "お気に入りから外す" : "お気に入りに入れる"}
-          >
-            <Heart
-              size={21}
-              fill={isFavorite ? "currentColor" : "none"}
-              className={isFavorite ? "text-[#a13b50]" : "text-[#64748b]"}
-            />
-            {isFavorite ? "お気に入り済み" : "お気に入りに入れる"}
-          </button>
-        </div>}
+        {!isRegistrant && (
+          <div className="flex h-12 items-center bg-white px-3 lg:bg-transparent lg:px-0">
+            <button
+              onClick={() =>
+                setLocation(preview ? "/v2/preview" : "/v2/properties")
+              }
+              className="flex items-center gap-1 text-[12px] font-bold text-[#173f70]"
+            >
+              <ArrowLeft size={18} />
+              物件一覧
+            </button>
+            <button
+              onClick={toggleCurrentFavorite}
+              className={`ml-auto hidden h-10 items-center gap-1.5 border px-3 text-[12px] font-bold lg:flex ${isFavorite ? "border-[#a13b50] bg-[#fff1f4] text-[#a13b50]" : "border-[#9aabc0] bg-white text-[#526176]"}`}
+              aria-label={
+                isFavorite ? "お気に入りから外す" : "お気に入りに入れる"
+              }
+            >
+              <Heart
+                size={21}
+                fill={isFavorite ? "currentColor" : "none"}
+                className={isFavorite ? "text-[#a13b50]" : "text-[#64748b]"}
+              />
+              {isFavorite ? "お気に入り済み" : "お気に入りに入れる"}
+            </button>
+          </div>
+        )}
         <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
           <div className="min-w-0 space-y-2 lg:space-y-5">
             <section className="min-w-0 overflow-hidden bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:p-6">
@@ -801,6 +879,23 @@ export default function V2PropertyDetail({
                 <MapPin size={16} className="mt-0.5 shrink-0" />
                 {property.address}
               </p>
+              {isOperator && (
+                <div className="mt-4 border-l-4 border-[#173f70] bg-[#edf3f8] px-4 py-3">
+                  <p className="text-[11px] font-bold text-[#65748a]">物件登録者（運営のみ表示）</p>
+                  <p className="mt-1 text-[13px] font-bold text-[#102d50]">
+                    {property.userName ?? "氏名未設定"}　{property.userCompany ?? "会社名未設定"}
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-[#526176]">{property.userEmail ?? "メール未設定"}</p>
+                </div>
+              )}
+              {isRegistrant && property.visibilityScope === "proposal" && (
+                <div className="mt-4 border-l-4 border-[#173f70] bg-[#e8f0f8] px-4 py-3 text-[#173f70]">
+                  <p className="text-[13px] font-bold">提案先限定の物件です</p>
+                  <p className="mt-1 text-[12px] leading-5">
+                    この物件は「{property.proposalRequestTitle ?? "物件募集"}」への提案物件として、提案先のみに公開されています。
+                  </p>
+                </div>
+              )}
               <div className="mt-5 flex items-end gap-3 lg:hidden">
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] text-[#758194]">販売価格</p>
@@ -812,27 +907,33 @@ export default function V2PropertyDetail({
                   <button
                     onClick={toggleCurrentFavorite}
                     className={`flex h-10 shrink-0 items-center gap-1.5 border px-2.5 text-[11px] font-bold ${isFavorite ? "border-[#a13b50] bg-[#fff1f4] text-[#a13b50]" : "border-[#9aabc0] bg-white text-[#526176]"}`}
-                    aria-label={isFavorite ? "お気に入りから外す" : "お気に入りに入れる"}
+                    aria-label={
+                      isFavorite ? "お気に入りから外す" : "お気に入りに入れる"
+                    }
                   >
-                    <Heart size={18} fill={isFavorite ? "currentColor" : "none"}/>
+                    <Heart
+                      size={18}
+                      fill={isFavorite ? "currentColor" : "none"}
+                    />
                     {isFavorite ? "お気に入り済み" : "お気に入りに入れる"}
                   </button>
                 )}
               </div>
-              {!isRegistrant && (negotiationStatus.mine || negotiationStatus.others) && (
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-[#e1e6ec] pt-4">
-                  {negotiationStatus.mine && (
-                    <span className="bg-[#e8f0f8] px-3 py-2 text-[12px] font-bold text-[#173f70]">
-                      あなたが商談中です
-                    </span>
-                  )}
-                  {negotiationStatus.others && (
-                    <span className="bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
-                      他の方が商談中です
-                    </span>
-                  )}
-                </div>
-              )}
+              {!isRegistrant &&
+                (negotiationStatus.mine || negotiationStatus.others) && (
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-[#e1e6ec] pt-4">
+                    {negotiationStatus.mine && (
+                      <span className="bg-[#e8f0f8] px-3 py-2 text-[12px] font-bold text-[#173f70]">
+                        あなたが商談中です
+                      </span>
+                    )}
+                    {negotiationStatus.others && (
+                      <span className="bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
+                        他の方が商談中です
+                      </span>
+                    )}
+                  </div>
+                )}
               {isRegistrant && negotiationStatus.others && (
                 <div className="mt-4 border-t border-[#e1e6ec] pt-4">
                   <span className="inline-block bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
@@ -858,7 +959,9 @@ export default function V2PropertyDetail({
                   </div>
                 ))}
                 <div className="grid min-w-0 grid-cols-[96px_minmax(0,1fr)] border-b border-[#e5e9ee] py-3 text-[13px] sm:grid-cols-[110px_minmax(0,1fr)] lg:col-span-2 lg:grid-cols-[120px_minmax(0,1fr)] lg:border-r lg:py-0 lg:text-[14px]">
-                  <dt className="text-[#6d798b] lg:bg-[#edf1f5] lg:p-3">備考</dt>
+                  <dt className="text-[#6d798b] lg:bg-[#edf1f5] lg:p-3">
+                    備考
+                  </dt>
                   <dd className="min-w-0 whitespace-pre-wrap break-words font-semibold leading-7 text-[#263b58] [overflow-wrap:anywhere] lg:min-h-24 lg:p-3">
                     {property.remarks || "—"}
                   </dd>
@@ -877,7 +980,9 @@ export default function V2PropertyDetail({
               {property.transactionFlow && (
                 <div className="mt-4 grid min-w-0 grid-cols-[80px_minmax(0,1fr)] border-y border-[#dfe4ea] py-3 text-[13px] sm:grid-cols-[90px_minmax(0,1fr)] lg:text-[14px]">
                   <span className="text-[#6d798b]">商流</span>
-                  <strong className="min-w-0 break-words [overflow-wrap:anywhere]">{property.transactionFlow}</strong>
+                  <strong className="min-w-0 break-words [overflow-wrap:anywhere]">
+                    {property.transactionFlow}
+                  </strong>
                 </div>
               )}
             </section>
@@ -928,7 +1033,9 @@ export default function V2PropertyDetail({
                 className="mt-4 flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-[14px] font-bold text-white disabled:bg-[#9aa7b6]"
               >
                 <Download size={18} />
-                {downloading === "all" ? "ダウンロード中…" : "資料を一括ダウンロード"}
+                {downloading === "all"
+                  ? "ダウンロード中…"
+                  : "資料を一括ダウンロード"}
               </button>
               <div className="mt-3 border-t border-[#dce3eb]">
                 {files.map(file => (
@@ -1023,12 +1130,25 @@ export default function V2PropertyDetail({
                     </div>
                   )}
                   <div className="overflow-hidden border border-[#d9e0e8]">
-                    <PropertyLocationMap name={property.name} address={property.address} />
+                    <PropertyLocationMap
+                      name={property.name}
+                      address={property.address}
+                    />
                   </div>
                   <div className="mt-2 flex items-start gap-2 text-[12px] text-[#65748a]">
-                    <MapPin size={14} className="mt-0.5 shrink-0 text-[#d64242]" />
+                    <MapPin
+                      size={14}
+                      className="mt-0.5 shrink-0 text-[#d64242]"
+                    />
                     <p className="min-w-0 flex-1">{property.address}</p>
-                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address)}`} target="_blank" rel="noreferrer" className="shrink-0 font-bold text-[#173f70] underline underline-offset-2">Googleマップで確認</a>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 font-bold text-[#173f70] underline underline-offset-2"
+                    >
+                      Googleマップで確認
+                    </a>
                   </div>
                   {photos.length > 0 && (
                     <div className="mt-4 grid grid-cols-3 gap-2">
@@ -1118,8 +1238,12 @@ export default function V2PropertyDetail({
               <div className="flex items-center border-b border-[#ead9ad] bg-[#fff8e8] px-4 py-3 lg:px-5">
                 <StickyNote size={18} className="text-[#9a650a]" />
                 <div className="ml-2">
-                  <h2 className="text-[15px] font-bold text-[#102d50]">自分用メモ</h2>
-                  <p className="text-[10px] text-[#758194]">この内容は他のユーザーには表示されません</p>
+                  <h2 className="text-[15px] font-bold text-[#102d50]">
+                    自分用メモ
+                  </h2>
+                  <p className="text-[10px] text-[#758194]">
+                    この内容は他のユーザーには表示されません
+                  </p>
                 </div>
                 {!memoEditing && (
                   <button
@@ -1140,12 +1264,25 @@ export default function V2PropertyDetail({
                     className="w-full resize-y border border-[#cbd5df] p-3 text-[14px] outline-none focus:border-[#173f70]"
                   />
                   <div className="mt-3 flex justify-end gap-2">
-                    <button onClick={() => setMemoEditing(false)} className="h-10 border border-[#9aabc0] px-4 text-[12px] font-bold text-[#526176]">キャンセル</button>
-                    <button onClick={commitMemo} disabled={saveMemo.isPending || deleteMemo.isPending} className="h-10 bg-[#173f70] px-5 text-[12px] font-bold text-white disabled:opacity-50">保存する</button>
+                    <button
+                      onClick={() => setMemoEditing(false)}
+                      className="h-10 border border-[#9aabc0] px-4 text-[12px] font-bold text-[#526176]"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      onClick={commitMemo}
+                      disabled={saveMemo.isPending || deleteMemo.isPending}
+                      className="h-10 bg-[#173f70] px-5 text-[12px] font-bold text-white disabled:opacity-50"
+                    >
+                      保存する
+                    </button>
                   </div>
                 </div>
               ) : (
-                <p className={`px-4 py-4 text-[14px] leading-6 lg:px-5 ${memo ? "whitespace-pre-wrap text-[#35465b]" : "text-[#8a96a5]"}`}>
+                <p
+                  className={`px-4 py-4 text-[14px] leading-6 lg:px-5 ${memo ? "whitespace-pre-wrap text-[#35465b]" : "text-[#8a96a5]"}`}
+                >
                   {memo || "メモはまだありません。"}
                 </p>
               )}
@@ -1190,8 +1327,21 @@ export default function V2PropertyDetail({
               </h2>
               <button
                 onClick={() => {
-                  setIntroPages({ summary: true, map: true, streetview: true, photos: true, route: true, attachments: true });
-                  setIntroAttachments(new Set(visibleFiles.filter(file => /\.pdf$/i.test(file.name)).map(file => file.id)));
+                  setIntroPages({
+                    summary: true,
+                    map: true,
+                    streetview: true,
+                    photos: true,
+                    route: true,
+                    attachments: true,
+                  });
+                  setIntroAttachments(
+                    new Set(
+                      visibleFiles
+                        .filter(file => /\.pdf$/i.test(file.name))
+                        .map(file => file.id)
+                    )
+                  );
                   setIntroOpen(true);
                 }}
                 className="mt-4 flex h-12 w-full items-center gap-3 bg-[#173f70] px-4 text-[14px] font-bold text-white"
@@ -1230,9 +1380,17 @@ export default function V2PropertyDetail({
                 <div className="mt-4 border-y border-[#e2e7ec] py-3">
                   <div className="flex items-center">
                     <div>
-                      <p className="text-[12px] font-bold text-[#526176]">公開設定</p>
-                      <span className={`mt-1 inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold ${property.published === 0 ? "bg-[#fff0c9] text-[#8b5a08]" : "bg-[#e8f3ec] text-[#27613c]"}`}>
-                        {property.published === 0 ? <EyeOff size={13} /> : <Eye size={13} />}
+                      <p className="text-[12px] font-bold text-[#526176]">
+                        公開設定
+                      </p>
+                      <span
+                        className={`mt-1 inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold ${property.published === 0 ? "bg-[#fff0c9] text-[#8b5a08]" : "bg-[#e8f3ec] text-[#27613c]"}`}
+                      >
+                        {property.published === 0 ? (
+                          <EyeOff size={13} />
+                        ) : (
+                          <Eye size={13} />
+                        )}
                         {property.published === 0 ? "非公開・下書き" : "公開中"}
                       </span>
                     </div>
@@ -1241,14 +1399,37 @@ export default function V2PropertyDetail({
                       onClick={async () => {
                         const nextPublished = property.published === 0;
                         if (preview) {
-                          setPreviewOverride({ ...property, published: nextPublished ? 1 : 0 });
+                          setPreviewOverride({
+                            ...property,
+                            published: nextPublished ? 1 : 0,
+                          });
                         } else {
-                          await setPublished.mutateAsync({ propertyId, published: nextPublished });
+                          await setPublished.mutateAsync({
+                            propertyId,
+                            published: nextPublished,
+                          });
+                          if (
+                            nextPublished &&
+                            property.proposalRequestId &&
+                            property.visibilityScope === "public"
+                          ) {
+                            setLocation(
+                              `/v2/property-search?proposalRequestId=${property.proposalRequestId}&propertyId=${propertyId}`
+                            );
+                          }
                         }
                       }}
                       className="ml-auto h-10 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50"
                     >
-                      {setPublished.isPending ? "変更中…" : property.published === 0 ? "公開する" : "非公開にする"}
+                      {setPublished.isPending
+                        ? "変更中…"
+                        : property.published === 0 &&
+                            property.proposalRequestId &&
+                            property.visibilityScope === "public"
+                          ? "公開して提案へ戻る"
+                          : property.published === 0
+                            ? "公開する"
+                            : "非公開にする"}
                     </button>
                   </div>
                 </div>
@@ -1316,94 +1497,347 @@ export default function V2PropertyDetail({
         </div>
       </div>
       {introOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-4" onClick={() => setIntroOpen(false)}>
-          <div className="w-full bg-white p-5 sm:max-w-lg sm:border-t-4 sm:border-t-[#173f70] sm:p-6" onClick={event => event.stopPropagation()}>
-            <div className="flex items-center"><div><p className="text-[12px] font-bold text-[#5275a0]">物件ツール</p><h3 className="text-[20px] font-bold text-[#102d50]">紹介資料を作成</h3></div><button onClick={() => setIntroOpen(false)} className="ml-auto grid size-9 place-items-center"><X size={19}/></button></div>
-            <p className="mt-3 text-[13px] leading-6 text-[#65748a]">従来の紹介資料と同じ構成です。PDFに含めるページを選択してください。</p>
-            <div className="mt-4 border-y border-[#dce3eb] py-2">
-              {([{key:"summary",label:"物件概要書"},{key:"map",label:"所在地地図"},{key:"streetview",label:"ストリートビュー"},{key:"photos",label:"現場写真"},{key:"route",label:"交通アクセス（徒歩ルート）"}] as const).map(item => <label key={item.key} className="flex cursor-pointer items-center border-b border-[#edf0f3] px-2 py-3 text-[14px] font-semibold"><input type="checkbox" checked={introPages[item.key]} onChange={() => setIntroPages(current => ({...current,[item.key]:!current[item.key]}))} className="size-4 accent-[#173f70]"/><span className="ml-3">{item.label}</span></label>)}
-              {visibleFiles.some(file => /\.pdf$/i.test(file.name)) && <label className="flex cursor-pointer items-center px-2 py-3 text-[14px] font-semibold"><input type="checkbox" checked={introPages.attachments} onChange={() => setIntroPages(current => ({...current,attachments:!current.attachments}))} className="size-4 accent-[#173f70]"/><span className="ml-3">資料一覧</span></label>}
-              {introPages.attachments && visibleFiles.some(file => /\.pdf$/i.test(file.name)) && <div className="ml-7 border-l-2 border-[#dce3eb] pl-3">{visibleFiles.filter(file => /\.pdf$/i.test(file.name)).map(file => <label key={file.id} className="flex cursor-pointer items-center py-2 text-[13px] text-[#526176]"><input type="checkbox" checked={introAttachments.has(file.id)} onChange={() => setIntroAttachments(current => { const next = new Set(current); next.has(file.id) ? next.delete(file.id) : next.add(file.id); return next; })} className="size-4 accent-[#173f70]"/><FileText size={15} className="ml-3 text-[#173f70]"/><span className="ml-2 truncate">{file.name}</span></label>)}</div>}
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-4"
+          onClick={() => setIntroOpen(false)}
+        >
+          <div
+            className="w-full bg-white p-5 sm:max-w-lg sm:border-t-4 sm:border-t-[#173f70] sm:p-6"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="flex items-center">
+              <div>
+                <p className="text-[12px] font-bold text-[#5275a0]">
+                  物件ツール
+                </p>
+                <h3 className="text-[20px] font-bold text-[#102d50]">
+                  紹介資料を作成
+                </h3>
+              </div>
+              <button
+                onClick={() => setIntroOpen(false)}
+                className="ml-auto grid size-9 place-items-center"
+              >
+                <X size={19} />
+              </button>
             </div>
-            <div className="mt-5 flex gap-3"><button onClick={() => setIntroOpen(false)} className="h-11 flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]">キャンセル</button><button disabled={introGenerating || !Object.values(introPages).some(Boolean)} onClick={async () => {
-              const tab = window.open("", "_blank");
-              if (!tab) { alert("別タブを開けませんでした。ポップアップを許可してください。"); return; }
-              tab.opener = null;
-              tab.document.body.innerHTML = '<p style="font-family:sans-serif;padding:24px">紹介資料を作成しています…</p>';
-              let photoUrls: string[] = [];
-              if (!preview && introPages.photos) {
-                const results = await Promise.all(photos.map(photo => utils.property.downloadFile.fetch({fileId: photo.id}).then(download => {
-                  if (!download) return null;
-                  const ext = photo.name.split(".").pop()?.toLowerCase();
-                  const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
-                  return `data:${mime};base64,${(download as any).contentBase64}`;
-                })));
-                photoUrls = results.filter((url): url is string => !!url);
-              }
-              const selectedFiles = introPages.attachments ? visibleFiles.filter(file => introAttachments.has(file.id)) : [];
-              const currentUser: any = user;
-              const html = await printProperty(property, new Date(property.createdAt ?? Date.now()).toLocaleDateString("ja-JP"), currentUser?.logoBase64, currentUser ? {name:currentUser.name,company:currentUser.company,email:currentUser.email,phone:currentUser.phone,fax:currentUser.fax,url:currentUser.url,license:currentUser.license} : null, photoUrls, introPages, selectedFiles.map(file => file.name));
-              if (preview) {
-                tab.document.open(); tab.document.write(html); tab.document.close();
-                setIntroOpen(false);
-                return;
-              }
-              setIntroGenerating(true);
-              try {
-                const response = await fetch("/api/generate-pdf", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ html }) });
-                if (!response.ok) throw new Error("PDFの生成に失敗しました");
-                const url = URL.createObjectURL(await response.blob());
-                tab.location.href = url;
-                window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-                await saveDocument.mutateAsync({ propertyId, title: `${property.name} - ${new Date().toLocaleDateString("ja-JP")}`, htmlContent: html, attachmentIds: [...introAttachments] });
-                setIntroOpen(false);
-              } catch (error) {
-                // サーバー側のPDFエンジンが一時的に利用できない場合でも、
-                // 従来どおり別タブの印刷機能からPDF保存できるようにする。
-                tab.document.open();
-                tab.document.write(html);
-                tab.document.close();
-                try {
-                  await saveDocument.mutateAsync({ propertyId, title: `${property.name} - ${new Date().toLocaleDateString("ja-JP")}`, htmlContent: html, attachmentIds: [...introAttachments] });
-                } catch (saveError) {
-                  console.error("紹介資料の保存に失敗しました", saveError);
+            <p className="mt-3 text-[13px] leading-6 text-[#65748a]">
+              従来の紹介資料と同じ構成です。PDFに含めるページを選択してください。
+            </p>
+            <div className="mt-4 border-y border-[#dce3eb] py-2">
+              {(
+                [
+                  { key: "summary", label: "物件概要書" },
+                  { key: "map", label: "所在地地図" },
+                  { key: "streetview", label: "ストリートビュー" },
+                  { key: "photos", label: "現場写真" },
+                  { key: "route", label: "交通アクセス（徒歩ルート）" },
+                ] as const
+              ).map(item => (
+                <label
+                  key={item.key}
+                  className="flex cursor-pointer items-center border-b border-[#edf0f3] px-2 py-3 text-[14px] font-semibold"
+                >
+                  <input
+                    type="checkbox"
+                    checked={introPages[item.key]}
+                    onChange={() =>
+                      setIntroPages(current => ({
+                        ...current,
+                        [item.key]: !current[item.key],
+                      }))
+                    }
+                    className="size-4 accent-[#173f70]"
+                  />
+                  <span className="ml-3">{item.label}</span>
+                </label>
+              ))}
+              {visibleFiles.some(file => /\.pdf$/i.test(file.name)) && (
+                <label className="flex cursor-pointer items-center px-2 py-3 text-[14px] font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={introPages.attachments}
+                    onChange={() =>
+                      setIntroPages(current => ({
+                        ...current,
+                        attachments: !current.attachments,
+                      }))
+                    }
+                    className="size-4 accent-[#173f70]"
+                  />
+                  <span className="ml-3">資料一覧</span>
+                </label>
+              )}
+              {introPages.attachments &&
+                visibleFiles.some(file => /\.pdf$/i.test(file.name)) && (
+                  <div className="ml-7 border-l-2 border-[#dce3eb] pl-3">
+                    {visibleFiles
+                      .filter(file => /\.pdf$/i.test(file.name))
+                      .map(file => (
+                        <label
+                          key={file.id}
+                          className="flex cursor-pointer items-center py-2 text-[13px] text-[#526176]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={introAttachments.has(file.id)}
+                            onChange={() =>
+                              setIntroAttachments(current => {
+                                const next = new Set(current);
+                                next.has(file.id)
+                                  ? next.delete(file.id)
+                                  : next.add(file.id);
+                                return next;
+                              })
+                            }
+                            className="size-4 accent-[#173f70]"
+                          />
+                          <FileText size={15} className="ml-3 text-[#173f70]" />
+                          <span className="ml-2 truncate">{file.name}</span>
+                        </label>
+                      ))}
+                  </div>
+                )}
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setIntroOpen(false)}
+                className="h-11 flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]"
+              >
+                キャンセル
+              </button>
+              <button
+                disabled={
+                  introGenerating || !Object.values(introPages).some(Boolean)
                 }
-                setIntroOpen(false);
-              } finally { setIntroGenerating(false); }
-            }} className="flex h-11 flex-[1.4] items-center justify-center gap-2 bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50">{introGenerating ? <Loader2 size={16} className="animate-spin"/> : <FileOutput size={16}/>}作成して表示</button></div>
+                onClick={async () => {
+                  const tab = window.open("", "_blank");
+                  if (!tab) {
+                    alert(
+                      "別タブを開けませんでした。ポップアップを許可してください。"
+                    );
+                    return;
+                  }
+                  tab.opener = null;
+                  tab.document.body.innerHTML =
+                    '<p style="font-family:sans-serif;padding:24px">紹介資料を作成しています…</p>';
+                  let photoUrls: string[] = [];
+                  if (!preview && introPages.photos) {
+                    const results = await Promise.all(
+                      photos.map(photo =>
+                        utils.property.downloadFile
+                          .fetch({ fileId: photo.id })
+                          .then(download => {
+                            if (!download) return null;
+                            const ext = photo.name
+                              .split(".")
+                              .pop()
+                              ?.toLowerCase();
+                            const mime =
+                              ext === "png"
+                                ? "image/png"
+                                : ext === "webp"
+                                  ? "image/webp"
+                                  : "image/jpeg";
+                            return `data:${mime};base64,${(download as any).contentBase64}`;
+                          })
+                      )
+                    );
+                    photoUrls = results.filter((url): url is string => !!url);
+                  }
+                  const selectedFiles = introPages.attachments
+                    ? visibleFiles.filter(file => introAttachments.has(file.id))
+                    : [];
+                  const currentUser: any = user;
+                  const html = await printProperty(
+                    property,
+                    new Date(
+                      property.createdAt ?? Date.now()
+                    ).toLocaleDateString("ja-JP"),
+                    currentUser?.logoBase64,
+                    currentUser
+                      ? {
+                          name: currentUser.name,
+                          company: currentUser.company,
+                          email: currentUser.email,
+                          phone: currentUser.phone,
+                          fax: currentUser.fax,
+                          url: currentUser.url,
+                          license: currentUser.license,
+                        }
+                      : null,
+                    photoUrls,
+                    introPages,
+                    selectedFiles.map(file => file.name)
+                  );
+                  if (preview) {
+                    tab.document.open();
+                    tab.document.write(html);
+                    tab.document.close();
+                    setIntroOpen(false);
+                    return;
+                  }
+                  setIntroGenerating(true);
+                  try {
+                    const response = await fetch("/api/generate-pdf", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      credentials: "same-origin",
+                      body: JSON.stringify({ html }),
+                    });
+                    if (!response.ok)
+                      throw new Error("PDFの生成に失敗しました");
+                    const url = URL.createObjectURL(await response.blob());
+                    tab.location.href = url;
+                    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+                    await saveDocument.mutateAsync({
+                      propertyId,
+                      title: `${property.name} - ${new Date().toLocaleDateString("ja-JP")}`,
+                      htmlContent: html,
+                      attachmentIds: [...introAttachments],
+                    });
+                    setIntroOpen(false);
+                  } catch (error) {
+                    // サーバー側のPDFエンジンが一時的に利用できない場合でも、
+                    // 従来どおり別タブの印刷機能からPDF保存できるようにする。
+                    tab.document.open();
+                    tab.document.write(html);
+                    tab.document.close();
+                    try {
+                      await saveDocument.mutateAsync({
+                        propertyId,
+                        title: `${property.name} - ${new Date().toLocaleDateString("ja-JP")}`,
+                        htmlContent: html,
+                        attachmentIds: [...introAttachments],
+                      });
+                    } catch (saveError) {
+                      console.error("紹介資料の保存に失敗しました", saveError);
+                    }
+                    setIntroOpen(false);
+                  } finally {
+                    setIntroGenerating(false);
+                  }
+                }}
+                className="flex h-11 flex-[1.4] items-center justify-center gap-2 bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50"
+              >
+                {introGenerating ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <FileOutput size={16} />
+                )}
+                作成して表示
+              </button>
+            </div>
           </div>
         </div>
       )}
       {faqEditing && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/45 p-0 sm:p-5" onClick={() => setFaqEditing(false)}>
-          <div className="mx-auto min-h-full w-full bg-white p-5 sm:min-h-0 sm:max-w-2xl sm:border-t-4 sm:border-t-[#173f70]" onClick={event => event.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/45 p-0 sm:p-5"
+          onClick={() => setFaqEditing(false)}
+        >
+          <div
+            className="mx-auto min-h-full w-full bg-white p-5 sm:min-h-0 sm:max-w-2xl sm:border-t-4 sm:border-t-[#173f70]"
+            onClick={event => event.stopPropagation()}
+          >
             <div className="flex items-center">
               <div>
                 <p className="text-[12px] font-bold text-[#5275a0]">物件情報</p>
-                <h3 className="text-[20px] font-bold text-[#102d50]">よくあるご質問を編集</h3>
+                <h3 className="text-[20px] font-bold text-[#102d50]">
+                  よくあるご質問を編集
+                </h3>
               </div>
-              <button onClick={() => setFaqEditing(false)} className="ml-auto grid size-10 place-items-center" aria-label="閉じる"><X size={20}/></button>
+              <button
+                onClick={() => setFaqEditing(false)}
+                className="ml-auto grid size-10 place-items-center"
+                aria-label="閉じる"
+              >
+                <X size={20} />
+              </button>
             </div>
             <div className="mt-5 space-y-4">
               {editFaqs.map((faq, index) => (
                 <div key={index} className="border border-[#d6dee8] p-4">
                   <div className="flex items-start gap-2">
-                    <span className="pt-3 text-[13px] font-bold text-[#173f70]">Q.</span>
-                    <input value={faq.q} onChange={event => setEditFaqs(items => items.map((item, i) => i === index ? {...item, q: event.target.value} : item))} placeholder="質問を入力" className="h-11 min-w-0 flex-1 border border-[#c5d0dc] px-3 text-[15px]"/>
-                    <button onClick={() => setEditFaqs(items => items.filter((_, i) => i !== index))} className="grid size-11 place-items-center text-[#a72e2e]" aria-label="削除"><Trash2 size={18}/></button>
+                    <span className="pt-3 text-[13px] font-bold text-[#173f70]">
+                      Q.
+                    </span>
+                    <input
+                      value={faq.q}
+                      onChange={event =>
+                        setEditFaqs(items =>
+                          items.map((item, i) =>
+                            i === index
+                              ? { ...item, q: event.target.value }
+                              : item
+                          )
+                        )
+                      }
+                      placeholder="質問を入力"
+                      className="h-11 min-w-0 flex-1 border border-[#c5d0dc] px-3 text-[15px]"
+                    />
+                    <button
+                      onClick={() =>
+                        setEditFaqs(items =>
+                          items.filter((_, i) => i !== index)
+                        )
+                      }
+                      className="grid size-11 place-items-center text-[#a72e2e]"
+                      aria-label="削除"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                   <div className="mt-3 flex items-start gap-2">
-                    <span className="pt-3 text-[13px] font-bold text-[#9a5907]">A.</span>
-                    <textarea value={faq.a} onChange={event => setEditFaqs(items => items.map((item, i) => i === index ? {...item, a: event.target.value} : item))} placeholder="回答を入力" rows={3} className="min-w-0 flex-1 border border-[#c5d0dc] p-3 text-[15px]"/>
+                    <span className="pt-3 text-[13px] font-bold text-[#9a5907]">
+                      A.
+                    </span>
+                    <textarea
+                      value={faq.a}
+                      onChange={event =>
+                        setEditFaqs(items =>
+                          items.map((item, i) =>
+                            i === index
+                              ? { ...item, a: event.target.value }
+                              : item
+                          )
+                        )
+                      }
+                      placeholder="回答を入力"
+                      rows={3}
+                      className="min-w-0 flex-1 border border-[#c5d0dc] p-3 text-[15px]"
+                    />
                   </div>
                 </div>
               ))}
-              {!editFaqs.length && <p className="border border-dashed border-[#c5d0dc] p-6 text-center text-[14px] text-[#65748a]">質問はまだ登録されていません。</p>}
-              <button onClick={() => setEditFaqs(items => [...items, {q: "", a: ""}])} className="h-11 w-full border-2 border-[#173f70] text-[14px] font-bold text-[#173f70]">＋ 質問を追加</button>
+              {!editFaqs.length && (
+                <p className="border border-dashed border-[#c5d0dc] p-6 text-center text-[14px] text-[#65748a]">
+                  質問はまだ登録されていません。
+                </p>
+              )}
+              <button
+                onClick={() =>
+                  setEditFaqs(items => [...items, { q: "", a: "" }])
+                }
+                className="h-11 w-full border-2 border-[#173f70] text-[14px] font-bold text-[#173f70]"
+              >
+                ＋ 質問を追加
+              </button>
             </div>
             <div className="mt-6 flex gap-3 border-t border-[#dce3eb] pt-5">
-              <button onClick={() => setFaqEditing(false)} className="h-12 flex-1 border border-[#173f70] text-[14px] font-bold text-[#173f70]">キャンセル</button>
-              <button onClick={saveFaqEditing} disabled={updateProperty.isPending} className="h-12 flex-[1.4] bg-[#173f70] text-[14px] font-bold text-white disabled:opacity-50">{updateProperty.isPending ? "保存中…" : "変更を保存"}</button>
+              <button
+                onClick={() => setFaqEditing(false)}
+                className="h-12 flex-1 border border-[#173f70] text-[14px] font-bold text-[#173f70]"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={saveFaqEditing}
+                disabled={updateProperty.isPending}
+                className="h-12 flex-[1.4] bg-[#173f70] text-[14px] font-bold text-white disabled:opacity-50"
+              >
+                {updateProperty.isPending ? "保存中…" : "変更を保存"}
+              </button>
             </div>
           </div>
         </div>
@@ -1477,7 +1911,12 @@ export default function V2PropertyDetail({
                 <div className="mt-1 flex gap-2">
                   <textarea
                     value={String(editForm.transport ?? "")}
-                    onChange={event => setEditForm(current => ({ ...current, transport: event.target.value }))}
+                    onChange={event =>
+                      setEditForm(current => ({
+                        ...current,
+                        transport: event.target.value,
+                      }))
+                    }
                     rows={2}
                     placeholder="例：東京メトロ銀座線「外苑前」駅 徒歩7分"
                     className="min-w-0 flex-1 border border-[#cbd5df] p-3 text-[13px] font-normal text-[#17211d] outline-none focus:border-[#173f70]"
@@ -1488,11 +1927,19 @@ export default function V2PropertyDetail({
                     disabled={analyzeTransport.isPending}
                     className="flex h-11 shrink-0 items-center gap-1.5 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50"
                   >
-                    {analyzeTransport.isPending ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                    {analyzeTransport.isPending ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={14} />
+                    )}
                     AI分析
                   </button>
                 </div>
-                {transportError && <span className="mt-1 block text-[11px] text-[#a72e2e]">{transportError}</span>}
+                {transportError && (
+                  <span className="mt-1 block text-[11px] text-[#a72e2e]">
+                    {transportError}
+                  </span>
+                )}
               </label>
               <label className="flex items-center gap-2 text-[12px] font-bold">
                 <input
@@ -1528,9 +1975,20 @@ export default function V2PropertyDetail({
                   />
                   {key === "comment" && (
                     <span className="mt-2 flex items-center justify-between gap-3">
-                      <span className="text-[11px] font-normal text-[#a72e2e]">{commentError}</span>
-                      <button type="button" onClick={runCommentGeneration} disabled={generateComment.isPending} className="ml-auto flex h-9 shrink-0 items-center gap-1.5 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50">
-                        {generateComment.isPending ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                      <span className="text-[11px] font-normal text-[#a72e2e]">
+                        {commentError}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={runCommentGeneration}
+                        disabled={generateComment.isPending}
+                        className="ml-auto flex h-9 shrink-0 items-center gap-1.5 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50"
+                      >
+                        {generateComment.isPending ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Sparkles size={14} />
+                        )}
                         AIで生成
                       </button>
                     </span>
@@ -1646,7 +2104,8 @@ export default function V2PropertyDetail({
             {dialog === "sold" && (
               <div className="mt-4 space-y-4">
                 <p className="text-[13px] leading-6 text-[#526176]">
-                  「{property.name}」を成約済みにします。やり取りしていた相手には、商談画面で自動的にお知らせします。
+                  「{property.name}
+                  」を成約済みにします。やり取りしていた相手には、商談画面で自動的にお知らせします。
                 </p>
                 <label className="block text-[12px] font-bold text-[#526176]">
                   成約金額（円）
@@ -1659,13 +2118,28 @@ export default function V2PropertyDetail({
                   />
                 </label>
                 <label className="flex cursor-pointer items-start gap-3 border-t border-[#e1e6ec] pt-4 text-[13px] leading-5 text-[#263b58]">
-                  <input type="checkbox" checked={announcePublic} onChange={event => setAnnouncePublic(event.target.checked)} className="mt-0.5 size-4 accent-[#173f70]"/>
-                  <span>この成約を公式LINE・メールでPropFlow全体にお知らせする</span>
+                  <input
+                    type="checkbox"
+                    checked={announcePublic}
+                    onChange={event => setAnnouncePublic(event.target.checked)}
+                    className="mt-0.5 size-4 accent-[#173f70]"
+                  />
+                  <span>
+                    この成約を公式LINE・メールでPropFlow全体にお知らせする
+                  </span>
                 </label>
                 {announcePublic && (
                   <div className="border-l-4 border-[#173f70] bg-[#f2f5f8] px-3 py-3">
-                    <p className="text-[11px] font-bold text-[#65748a]">送信されるお知らせ文</p>
-                    <p className="mt-1 text-[13px] text-[#263b58]">「{property.name}」が{dealPrice.trim() ? `${Number(dealPrice).toLocaleString()}円で` : ""}成約しました！</p>
+                    <p className="text-[11px] font-bold text-[#65748a]">
+                      送信されるお知らせ文
+                    </p>
+                    <p className="mt-1 text-[13px] text-[#263b58]">
+                      「{property.name}」が
+                      {dealPrice.trim()
+                        ? `${Number(dealPrice).toLocaleString()}円で`
+                        : ""}
+                      成約しました！
+                    </p>
                   </div>
                 )}
               </div>
@@ -1690,38 +2164,135 @@ export default function V2PropertyDetail({
                 </label>
                 {deleteMessage.trim() && (
                   <div className="border-l-4 border-[#173f70] bg-[#f2f5f8] px-3 py-3">
-                    <p className="text-[11px] font-bold text-[#65748a]">送信されるメッセージ</p>
-                    <p className="mt-1 whitespace-pre-wrap text-[13px] leading-5 text-[#263b58]">{deleteMessage.trim()}</p>
+                    <p className="text-[11px] font-bold text-[#65748a]">
+                      送信されるメッセージ
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-[13px] leading-5 text-[#263b58]">
+                      {deleteMessage.trim()}
+                    </p>
                   </div>
                 )}
               </div>
             )}
             {dialog === "restrict" && (
               <div className="mt-4">
-                <p className="text-[12px] leading-5 text-[#65748a]">設定したユーザーには、物件一覧・詳細の両方が表示されません。</p>
+                <p className="text-[12px] leading-5 text-[#65748a]">
+                  設定したユーザーには、物件一覧・詳細の両方が表示されません。
+                </p>
                 <div className="mt-3 space-y-2">
-                  {(preview ? previewExclusions : (exclusionsQuery.data ?? [])).map((item: any) => (
-                    <div key={item.userId} className="flex items-center bg-[#f3f5f7] px-3 py-2.5">
-                      <div className="min-w-0 flex-1"><p className="truncate text-[13px] font-bold">{item.userName ?? item.name ?? "—"}</p><p className="truncate text-[11px] text-[#758194]">{item.userCompany ?? item.company ?? ""}</p></div>
-                      <button onClick={() => preview ? setPreviewExclusions(current => current.filter(user => user.userId !== item.userId)) : removeExclusion.mutate({ propertyId, userId: item.userId })} className="grid size-8 place-items-center text-[#a72e2e]" aria-label="閲覧制限を解除"><X size={16}/></button>
+                  {(preview
+                    ? previewExclusions
+                    : (exclusionsQuery.data ?? [])
+                  ).map((item: any) => (
+                    <div
+                      key={item.userId}
+                      className="flex items-center bg-[#f3f5f7] px-3 py-2.5"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-bold">
+                          {item.userName ?? item.name ?? "—"}
+                        </p>
+                        <p className="truncate text-[11px] text-[#758194]">
+                          {item.userCompany ?? item.company ?? ""}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() =>
+                          preview
+                            ? setPreviewExclusions(current =>
+                                current.filter(
+                                  user => user.userId !== item.userId
+                                )
+                              )
+                            : removeExclusion.mutate({
+                                propertyId,
+                                userId: item.userId,
+                              })
+                        }
+                        className="grid size-8 place-items-center text-[#a72e2e]"
+                        aria-label="閲覧制限を解除"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
                   ))}
                 </div>
-                <label className="mt-3 flex h-10 items-center border border-[#cbd5df] px-3"><Search size={15} className="text-[#758194]"/><input value={excludeSearch} onChange={event => setExcludeSearch(event.target.value)} placeholder="名前・会社名で検索" className="ml-2 min-w-0 flex-1 text-[13px] outline-none"/></label>
-                {excludeSearch.trim() && <div className="mt-2 max-h-44 overflow-y-auto border border-[#d9e0e8]">
-                  {(preview ? [
-                    { id: 31, name: "高橋 直樹", company: "大和土地企画" },
-                    { id: 32, name: "鈴木 美咲", company: "山手不動産株式会社" },
-                  ] : (usersQuery.data ?? [])).filter((candidate: any) => {
-                    const query = excludeSearch.toLowerCase();
-                    const excluded = (preview ? previewExclusions : (exclusionsQuery.data ?? [])).some((item: any) => item.userId === candidate.id);
-                    return !excluded && ((candidate.name ?? "").toLowerCase().includes(query) || (candidate.company ?? "").toLowerCase().includes(query));
-                  }).map((candidate: any) => <button key={candidate.id} onClick={() => {
-                    if (preview) setPreviewExclusions(current => [...current, { userId: candidate.id, userName: candidate.name, userCompany: candidate.company }]);
-                    else addExclusion.mutate({ propertyId, userId: candidate.id });
-                    setExcludeSearch("");
-                  }} className="flex w-full items-center border-b border-[#e2e7ec] px-3 py-2.5 text-left last:border-0 hover:bg-[#f6f8fa]"><Plus size={14} className="mr-2 text-[#173f70]"/><span className="text-[13px] font-bold">{candidate.name ?? "—"}</span><span className="ml-2 truncate text-[11px] text-[#758194]">{candidate.company ?? ""}</span></button>)}
-                </div>}
+                <label className="mt-3 flex h-10 items-center border border-[#cbd5df] px-3">
+                  <Search size={15} className="text-[#758194]" />
+                  <input
+                    value={excludeSearch}
+                    onChange={event => setExcludeSearch(event.target.value)}
+                    placeholder="名前・会社名で検索"
+                    className="ml-2 min-w-0 flex-1 text-[13px] outline-none"
+                  />
+                </label>
+                {excludeSearch.trim() && (
+                  <div className="mt-2 max-h-44 overflow-y-auto border border-[#d9e0e8]">
+                    {(preview
+                      ? [
+                          {
+                            id: 31,
+                            name: "高橋 直樹",
+                            company: "大和土地企画",
+                          },
+                          {
+                            id: 32,
+                            name: "鈴木 美咲",
+                            company: "山手不動産株式会社",
+                          },
+                        ]
+                      : (usersQuery.data ?? [])
+                    )
+                      .filter((candidate: any) => {
+                        const query = excludeSearch.toLowerCase();
+                        const excluded = (
+                          preview
+                            ? previewExclusions
+                            : (exclusionsQuery.data ?? [])
+                        ).some((item: any) => item.userId === candidate.id);
+                        return (
+                          !excluded &&
+                          ((candidate.name ?? "")
+                            .toLowerCase()
+                            .includes(query) ||
+                            (candidate.company ?? "")
+                              .toLowerCase()
+                              .includes(query))
+                        );
+                      })
+                      .map((candidate: any) => (
+                        <button
+                          key={candidate.id}
+                          onClick={() => {
+                            if (preview)
+                              setPreviewExclusions(current => [
+                                ...current,
+                                {
+                                  userId: candidate.id,
+                                  userName: candidate.name,
+                                  userCompany: candidate.company,
+                                },
+                              ]);
+                            else
+                              addExclusion.mutate({
+                                propertyId,
+                                userId: candidate.id,
+                              });
+                            setExcludeSearch("");
+                          }}
+                          className="flex w-full items-center border-b border-[#e2e7ec] px-3 py-2.5 text-left last:border-0 hover:bg-[#f6f8fa]"
+                        >
+                          <Plus size={14} className="mr-2 text-[#173f70]" />
+                          <span className="text-[13px] font-bold">
+                            {candidate.name ?? "—"}
+                          </span>
+                          <span className="ml-2 truncate text-[11px] text-[#758194]">
+                            {candidate.company ?? ""}
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="mt-5 flex gap-3">

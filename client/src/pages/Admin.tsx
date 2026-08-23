@@ -9,7 +9,7 @@ import {
   Search, MessageCircle, ScrollText, Shield,
   MoreHorizontal, ArrowUpRight, Loader2, UserPlus, FileText, Ban, UserCheck,
   Trash2, EyeOff, Eye, RotateCcw, AlertTriangle, X, Mail, Phone, Globe, MapPin, Send,
-  Sparkles, BarChart2, Smartphone, Monitor, ChevronDown
+  Sparkles, BarChart2, Smartphone, Monitor, ChevronDown, Target
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -38,6 +38,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
 
   const [userSearch, setUserSearch] = useState("");
   const [propSearch, setPropSearch] = useState("");
+  const [requestSearch, setRequestSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [viewDm, setViewDm] = useState<any | null>(null);
@@ -57,6 +58,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const { data: stats, isLoading: statsLoading } = trpc.admin.stats.useQuery();
   const { data: allUsers, isLoading: usersLoading } = trpc.admin.allUsers.useQuery();
   const { data: adminProperties } = trpc.admin.allProperties.useQuery();
+  const { data: adminRequests } = trpc.propertySearch.list.useQuery();
   const { data: activityLogs } = trpc.admin.activityLogs.useQuery();
   const { data: adminDmMessages } = trpc.admin.allDmMessages.useQuery({
     from: dmDateFrom ? `${dmDateFrom}T00:00:00+09:00` : undefined,
@@ -76,6 +78,12 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const hidePropMutation = trpc.admin.hideProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const restorePropMutation = trpc.admin.restoreProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); } });
   const hardDeleteMutation = trpc.admin.hardDeleteProperty.useMutation({ onSuccess: () => { utils.admin.allProperties.invalidate(); utils.admin.stats.invalidate(); setDeleteTarget(null); } });
+  const deleteRequestMutation = trpc.admin.deletePropertySearchRequest.useMutation({
+    onSuccess: () => utils.propertySearch.list.invalidate(),
+  });
+  const hideRequestMutation = trpc.admin.setPropertySearchRequestHidden.useMutation({
+    onSuccess: () => utils.propertySearch.list.invalidate(),
+  });
   const deleteDmMutation = trpc.admin.deleteDm.useMutation({ onSuccess: () => { utils.admin.allDmMessages.invalidate(); } });
   const loginAsMutation = trpc.admin.loginAs.useMutation();
   const resendWelcomeMutation = trpc.admin.resendWelcomeEmail.useMutation();
@@ -121,7 +129,18 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const filteredProperties = (adminProperties ?? []).filter(p => {
     if (!propSearch) return true;
     const q = propSearch.toLowerCase();
-    return p.name.toLowerCase().includes(q) || (p.userCompany ?? "").toLowerCase().includes(q);
+    return p.name.toLowerCase().includes(q)
+      || (p.userName ?? "").toLowerCase().includes(q)
+      || (p.userCompany ?? "").toLowerCase().includes(q)
+      || (p.userEmail ?? "").toLowerCase().includes(q);
+  });
+  const filteredRequests = (adminRequests ?? []).filter(request => {
+    if (!requestSearch) return true;
+    const q = requestSearch.toLowerCase();
+    return request.title.toLowerCase().includes(q)
+      || (request.requesterName ?? "").toLowerCase().includes(q)
+      || (request.requesterCompany ?? "").toLowerCase().includes(q)
+      || (request.requesterEmail ?? "").toLowerCase().includes(q);
   });
 
   const statCards = [
@@ -169,7 +188,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
           >
             <span className="text-[11px] font-bold text-[#65748a]">管理メニュー</span>
             <span className="ml-auto mr-2 text-[13px] font-bold text-[#173f70]">{{
-              users: "業者一覧", properties: "物件一覧", ranking: "物件ランキング", search: "検索ログ",
+              users: "業者一覧", properties: "物件一覧", requests: "募集管理", ranking: "物件ランキング", search: "検索ログ",
               dm: "DM管理", logs: "操作ログ", broadcast: "一斉配信", ai: "AI分析",
             }[activeSection]}</span>
             <ChevronDown className={`h-4 w-4 text-[#173f70] transition-transform ${mobileAdminMenuOpen ? "rotate-180" : ""}`} />
@@ -183,6 +202,10 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
           <TabsTrigger value="properties" className="gap-1.5">
             <Building2 className="w-3.5 h-3.5" />
             物件一覧
+          </TabsTrigger>
+          <TabsTrigger value="requests" className="gap-1.5">
+            <Target className="w-3.5 h-3.5" />
+            募集管理
           </TabsTrigger>
           <TabsTrigger value="ranking" className="gap-1.5">
             <Eye className="w-3.5 h-3.5" />
@@ -476,7 +499,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               <table className="admin-mobile-table admin-properties-table w-full text-sm min-w-[500px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["ID", "物件名", "登録者", "価格", "表示", "登録日", ...(!isManagement ? ["操作"] : [])].map(h => (
+                    {["ID", "物件名", "登録者", "価格", "閲覧数", "商談数", "表示", "登録日", ...(!isManagement ? ["操作"] : [])].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -495,8 +518,14 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                             {(prop as any).userCompany ? `　${(prop as any).userCompany}` : "　企業名未設定"}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs">{prop.userCompany ?? "—"}</td>
+                        <td className="px-4 py-3 text-xs">
+                          <p className="font-bold text-foreground">{prop.userName ?? "氏名未設定"}</p>
+                          <p className="text-muted-foreground">{prop.userCompany ?? "会社名未設定"}</p>
+                          <p className="text-muted-foreground">{prop.userEmail ?? "メール未設定"}</p>
+                        </td>
                         <td className="px-4 py-3 text-foreground text-xs font-semibold">{prop.price?.toLocaleString() ?? "応相談"}</td>
+                        <td className="px-4 py-3 text-center text-xs font-bold text-foreground">{prop.viewCount ?? 0}</td>
+                        <td className="px-4 py-3 text-center text-xs font-bold text-foreground">{prop.inquiryCount ?? 0}</td>
                         <td className="px-4 py-3">
                           {isHidden ? (
                             <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground flex items-center gap-1 w-fit">
@@ -548,6 +577,104 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
 
           )}
 
+        </TabsContent>
+
+        {/* 募集管理タブ */}
+        <TabsContent value="requests" className="mt-4 space-y-4">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="募集内容・募集者・メールで検索..."
+              className="border-border bg-card pl-10"
+              value={requestSearch}
+              onChange={event => setRequestSearch(event.target.value)}
+            />
+          </div>
+          {filteredRequests.length === 0 ? (
+            <div className="border border-border bg-card py-12 text-center">
+              <Target className="mx-auto mb-2 h-10 w-10 text-muted-foreground/30" />
+              <p className="text-muted-foreground">物件募集はまだありません</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto border border-border bg-card">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    {['ID', '募集内容', '募集者', '公開範囲', '状態', '募集開始日', '提案', ...(!isManagement ? ['操作'] : [])].map(label => (
+                      <th key={label} className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground">{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredRequests.map(request => {
+                    const status = request.status === 'draft'
+                      ? '下書き'
+                      : request.status === 'active'
+                        ? '募集中'
+                        : request.status === 'negotiating'
+                          ? '商談中'
+                          : '募集終了';
+                    return (
+                      <tr key={request.id} className={`hover:bg-muted/30 ${request.adminHidden === 1 ? "opacity-50" : ""}`}>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">#{request.id}</td>
+                        <td className="px-4 py-3 text-xs font-bold text-[#173f70]">
+                          <a href={`/v2/property-search?requestId=${request.id}`} className="hover:underline">
+                            {request.title}
+                          </a>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <p className="font-bold text-foreground">{request.requesterName ?? '氏名未設定'}</p>
+                          <p className="text-muted-foreground">{request.requesterCompany ?? '会社名未設定'}</p>
+                          <p className="text-muted-foreground">{request.requesterEmail ?? 'メール未設定'}</p>
+                        </td>
+                        <td className="px-4 py-3 text-xs">{request.anonymous === 1 ? '匿名募集' : '氏名・会社名を公開'}</td>
+                        <td className="px-4 py-3 text-xs font-bold">
+                          {request.adminHidden === 1 ? "非表示" : status}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{request.publishedAt ? fmtDate(request.publishedAt) : '—'}</td>
+                        <td className="px-4 py-3 text-xs font-bold">{request.proposalCount ?? 0}件</td>
+                        {!isManagement && (
+                          <td className="px-4 py-3 text-xs">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="gap-2 text-xs"
+                                  disabled={hideRequestMutation.isPending}
+                                  onClick={() => hideRequestMutation.mutate({ id: request.id, hidden: request.adminHidden !== 1 })}
+                                >
+                                  {request.adminHidden === 1 ? (
+                                    <><RotateCcw className="h-3.5 w-3.5" />表示に戻す</>
+                                  ) : (
+                                    <><EyeOff className="h-3.5 w-3.5" />非表示にする</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="gap-2 text-xs text-destructive"
+                                  disabled={deleteRequestMutation.isPending}
+                                  onClick={() => {
+                                    if (!confirm(`物件募集「${request.title}」を完全に削除しますか？\n\n募集と届いた提案が削除されます。この操作は取り消せません。`)) return;
+                                    deleteRequestMutation.mutate({ id: request.id });
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />完全に削除
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </TabsContent>
 
         {/* 物件ランキングタブ */}

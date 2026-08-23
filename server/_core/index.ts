@@ -43,7 +43,9 @@ async function startServer() {
 
   // Run DB migrations for columns added without migration files
   const { runStartupMigrations } = await import("../db");
-  await runStartupMigrations().catch(e => console.warn("[migration] Failed:", e));
+  await runStartupMigrations().catch(e =>
+    console.warn("[migration] Failed:", e)
+  );
 
   registerStorageProxy(app);
   registerOAuthRoutes(app);
@@ -52,27 +54,54 @@ async function startServer() {
   app.get("/api/files/raw/:fileId", async (req, res) => {
     try {
       const { getSessionCookie, verifySessionToken } = await import("./auth");
-      const { getUserById, getPropertyFileContent, getPropertyById, getPropertyExclusions } = await import("../db");
+      const {
+        getUserById,
+        getPropertyFileContent,
+        getPropertyById,
+        getPropertyExclusions,
+      } = await import("../db");
 
       const cookie = getSessionCookie(req);
-      if (!cookie) { res.status(401).end(); return; }
+      if (!cookie) {
+        res.status(401).end();
+        return;
+      }
       const session = await verifySessionToken(cookie);
-      if (!session) { res.status(401).end(); return; }
+      if (!session) {
+        res.status(401).end();
+        return;
+      }
       const user = await getUserById(session.userId);
-      if (!user) { res.status(401).end(); return; }
+      if (!user) {
+        res.status(401).end();
+        return;
+      }
 
       const fileId = parseInt(req.params.fileId, 10);
-      if (isNaN(fileId)) { res.status(400).end(); return; }
+      if (isNaN(fileId)) {
+        res.status(400).end();
+        return;
+      }
 
       const file = await getPropertyFileContent(fileId);
-      if (!file) { res.status(404).end(); return; }
+      if (!file) {
+        res.status(404).end();
+        return;
+      }
 
       const prop = await getPropertyById(file.propertyId);
-      if (!prop) { res.status(404).end(); return; }
+      if (!prop) {
+        res.status(404).end();
+        return;
+      }
       const isOwner = prop.userId === user.id || user.role === "admin";
       if (!isOwner) {
         const exclusions = await getPropertyExclusions(file.propertyId);
-        if (prop.deleted === 1 || prop.published === 0 || exclusions.some(item => item.userId === user.id)) {
+        if (
+          prop.deleted === 1 ||
+          prop.published === 0 ||
+          exclusions.some(item => item.userId === user.id)
+        ) {
           res.status(404).end();
           return;
         }
@@ -86,10 +115,16 @@ async function startServer() {
       }
 
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-      const contentType = ext === "pdf" ? "application/pdf" : `image/${ext === "jpg" ? "jpeg" : ext}`;
+      const contentType =
+        ext === "pdf"
+          ? "application/pdf"
+          : `image/${ext === "jpg" ? "jpeg" : ext}`;
       const binary = Buffer.from(file.contentBase64, "base64");
       res.setHeader("Content-Type", contentType);
-      res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`);
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`
+      );
       res.setHeader("Content-Length", binary.length);
       res.setHeader("Cache-Control", "private, max-age=300");
       res.send(binary);
@@ -105,14 +140,26 @@ async function startServer() {
       const { getSessionCookie, verifySessionToken } = await import("./auth");
       const { getUserById } = await import("../db");
       const cookie = getSessionCookie(req);
-      if (!cookie) { res.status(401).end(); return; }
+      if (!cookie) {
+        res.status(401).end();
+        return;
+      }
       const session = await verifySessionToken(cookie);
-      if (!session) { res.status(401).end(); return; }
+      if (!session) {
+        res.status(401).end();
+        return;
+      }
       const user = await getUserById(session.userId);
-      if (!user) { res.status(401).end(); return; }
+      if (!user) {
+        res.status(401).end();
+        return;
+      }
 
       const { html } = req.body as { html?: string };
-      if (!html || typeof html !== "string") { res.status(400).json({ error: "html required" }); return; }
+      if (!html || typeof html !== "string") {
+        res.status(400).json({ error: "html required" });
+        return;
+      }
 
       const { default: puppeteer } = await import("puppeteer");
       const { existsSync } = await import("node:fs");
@@ -126,31 +173,48 @@ async function startServer() {
       const browser = await puppeteer.launch({
         headless: true,
         ...(systemBrowser ? { executablePath: systemBrowser } : {}),
-        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+        ],
         timeout: 30000,
       });
       try {
         const page = await browser.newPage();
         // Google Maps やWebフォントの一部が応答しなくても、紹介資料全体の
         // 生成を失敗させない。画像は最大12秒だけ待ち、読めたものをPDF化する。
-        await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.setContent(html, {
+          waitUntil: "domcontentloaded",
+          timeout: 30000,
+        });
         await page.evaluate(async () => {
           const images = Array.from(document.images);
-          const imageReady = Promise.all(images.map(image => {
-            if (image.complete) return Promise.resolve();
-            return new Promise<void>(resolve => {
-              image.addEventListener("load", () => resolve(), { once: true });
-              image.addEventListener("error", () => resolve(), { once: true });
-            });
-          }));
-          const fontsReady = document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve();
+          const imageReady = Promise.all(
+            images.map(image => {
+              if (image.complete) return Promise.resolve();
+              return new Promise<void>(resolve => {
+                image.addEventListener("load", () => resolve(), { once: true });
+                image.addEventListener("error", () => resolve(), {
+                  once: true,
+                });
+              });
+            })
+          );
+          const fontsReady =
+            document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve();
           await Promise.race([
             Promise.all([imageReady, fontsReady]),
             new Promise(resolve => window.setTimeout(resolve, 12000)),
           ]);
         });
         await page.emulateMediaType("print");
-        const pdf = await page.pdf({ format: "A4", printBackground: true, timeout: 60000 });
+        const pdf = await page.pdf({
+          format: "A4",
+          printBackground: true,
+          timeout: 60000,
+        });
         await browser.close();
         res.setHeader("Content-Type", "application/pdf");
         res.send(Buffer.from(pdf));
@@ -175,14 +239,22 @@ async function startServer() {
         if (event.type === "message" && event.message?.type === "text") {
           const lineUserId: string = event.source?.userId;
           const text: string = (event.message.text ?? "").trim();
-          const emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+          const emailMatch = text.match(
+            /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/
+          );
           if (emailMatch && lineUserId) {
             const user = await getUserByEmail(emailMatch[0].toLowerCase());
             if (user) {
               await saveLineUserId(user.id, lineUserId);
-              await sendLineReply(event.replyToken, `✅ ${emailMatch[0]} と連携しました。\nDMが届いた際にLINEへ通知します。`);
+              await sendLineReply(
+                event.replyToken,
+                `✅ ${emailMatch[0]} と連携しました。\nDMが届いた際にLINEへ通知します。`
+              );
             } else {
-              await sendLineReply(event.replyToken, `❌ ${emailMatch[0]} は登録されていません。\nPropFlowに登録済みのメールアドレスを送ってください。`);
+              await sendLineReply(
+                event.replyToken,
+                `❌ ${emailMatch[0]} は登録されていません。\nPropFlowに登録済みのメールアドレスを送ってください。`
+              );
             }
           }
         }
@@ -229,7 +301,10 @@ async function startServer() {
       const siteUrl = process.env.SITE_URL || "https://propflow.jp";
       const unreadList = await db.getUnreadDmCounts();
       for (const { email, unreadCount } of unreadList) {
-        await sendMail(email, `【PropFlow】未読メッセージが${unreadCount}件あります`, `
+        await sendMail(
+          email,
+          `【PropFlow】未読メッセージが${unreadCount}件あります`,
+          `
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
             <h2 style="color:#1e3a5f;">💬 未読メッセージのお知らせ</h2>
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">
@@ -238,14 +313,36 @@ async function startServer() {
             </div>
             <a href="${siteUrl}/dm-list" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">DMを確認する</a>
             <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
-          </div>`);
+          </div>`
+        );
       }
-      console.log(`[CRON] Sent unread DM notifications to ${unreadList.length} users`);
+      console.log(
+        `[CRON] Sent unread DM notifications to ${unreadList.length} users`
+      );
     } catch (e) {
       console.error("[CRON] Error:", e);
     }
   });
   console.log("[CRON] Unread DM check scheduled at 19:00 JST daily");
+
+  // 毎朝10時（JST）に、前日公開分の物件募集をまとめてメール配信
+  cron.schedule(
+    "0 10 * * *",
+    async () => {
+      console.log("[CRON] Sending previous-day property search digest...");
+      try {
+        const { sendPreviousDayPropertySearchDigest } = await import(
+          "./propertySearchDigest"
+        );
+        const result = await sendPreviousDayPropertySearchDigest();
+        console.log("[CRON] Property search digest result:", result);
+      } catch (e) {
+        console.error("[CRON] Property search digest error:", e);
+      }
+    },
+    { timezone: "Asia/Tokyo" }
+  );
+  console.log("[CRON] Property search digest scheduled at 10:00 JST daily");
 
   // 毎日深夜0時（JST）にダウンロード資料（3日超）を自動削除
   cron.schedule("0 15 * * *", async () => {
@@ -265,12 +362,16 @@ async function startServer() {
     try {
       const db = await import("../db");
       const deleted = await db.purgeExpiredOwnerDeletedProperties();
-      console.log(`[CRON] Permanently deleted ${deleted} expired owner-deleted properties`);
+      console.log(
+        `[CRON] Permanently deleted ${deleted} expired owner-deleted properties`
+      );
     } catch (e) {
       console.error("[CRON] purgeExpiredOwnerDeletedProperties error:", e);
     }
   });
-  console.log("[CRON] Owner-deleted property cleanup scheduled at 0:00 JST daily");
+  console.log(
+    "[CRON] Owner-deleted property cleanup scheduled at 0:00 JST daily"
+  );
 
   // 毎分：予約配信チェック
   cron.schedule("* * * * *", async () => {
@@ -284,7 +385,9 @@ async function startServer() {
       const siteUrl = process.env.SITE_URL || "https://propflow.jp";
 
       for (const schedule of pending) {
-        console.log(`[CRON] 予約配信送信: id=${schedule.id} subject=${schedule.subject}`);
+        console.log(
+          `[CRON] 予約配信送信: id=${schedule.id} subject=${schedule.subject}`
+        );
         await db.updateBroadcastScheduleStatus(schedule.id, "sending");
         try {
           const cleanSubject = schedule.subject.replace(/^【PropFlow】\s*/, "");
@@ -312,7 +415,11 @@ async function startServer() {
                 </div>
               </div>`;
             for (const email of emails) {
-              const ok = await sendMail(email, `【PropFlow】${cleanSubject}`, emailHtml);
+              const ok = await sendMail(
+                email,
+                `【PropFlow】${cleanSubject}`,
+                emailHtml
+              );
               if (ok) emailSent++;
             }
           }
@@ -321,20 +428,86 @@ async function startServer() {
           if (!schedule.skipLine && lineBody) {
             const bubbleContents: any = {
               type: "bubble",
-              ...(schedule.imageUrl ? { hero: { type: "image", url: schedule.imageUrl, size: "full", aspectRatio: "20:13", aspectMode: "cover" } } : {}),
-              header: { type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
-                contents: [{ type: "text", text: "📢 " + cleanSubject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }] },
-              body: { type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
-                contents: [{ type: "text", text: lineBody, size: "sm", color: "#374151", wrap: true }] },
-              footer: { type: "box", layout: "vertical", paddingAll: "12px",
-                contents: [{ type: "button", action: { type: "uri", label: "PropFlowを開く", uri: siteUrl }, style: "primary", color: "#2563eb", height: "sm" }] },
+              ...(schedule.imageUrl
+                ? {
+                    hero: {
+                      type: "image",
+                      url: schedule.imageUrl,
+                      size: "full",
+                      aspectRatio: "20:13",
+                      aspectMode: "cover",
+                    },
+                  }
+                : {}),
+              header: {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#1e3a5f",
+                paddingAll: "16px",
+                contents: [
+                  {
+                    type: "text",
+                    text: "📢 " + cleanSubject,
+                    color: "#ffffff",
+                    size: "sm",
+                    weight: "bold",
+                    wrap: true,
+                  },
+                ],
+              },
+              body: {
+                type: "box",
+                layout: "vertical",
+                paddingAll: "20px",
+                spacing: "md",
+                contents: [
+                  {
+                    type: "text",
+                    text: lineBody,
+                    size: "sm",
+                    color: "#374151",
+                    wrap: true,
+                  },
+                ],
+              },
+              footer: {
+                type: "box",
+                layout: "vertical",
+                paddingAll: "12px",
+                contents: [
+                  {
+                    type: "button",
+                    action: {
+                      type: "uri",
+                      label: "PropFlowを開く",
+                      uri: siteUrl,
+                    },
+                    style: "primary",
+                    color: "#2563eb",
+                    height: "sm",
+                  },
+                ],
+              },
             };
-            lineSent = await sendLineBroadcast({ type: "flex", altText: cleanSubject, contents: bubbleContents });
+            lineSent = await sendLineBroadcast({
+              type: "flex",
+              altText: cleanSubject,
+              contents: bubbleContents,
+            });
           }
 
-          await db.saveBroadcastLog({ subject: schedule.subject, message: emailBody, imageUrl: schedule.imageUrl, emailSent, emailTotal: emailSent, lineSent });
+          await db.saveBroadcastLog({
+            subject: schedule.subject,
+            message: emailBody,
+            imageUrl: schedule.imageUrl,
+            emailSent,
+            emailTotal: emailSent,
+            lineSent,
+          });
           await db.updateBroadcastScheduleStatus(schedule.id, "sent");
-          console.log(`[CRON] 予約配信完了: id=${schedule.id} email=${emailSent}件 LINE=${lineSent}`);
+          console.log(
+            `[CRON] 予約配信完了: id=${schedule.id} email=${emailSent}件 LINE=${lineSent}`
+          );
         } catch (e) {
           console.error(`[CRON] 予約配信エラー: id=${schedule.id}`, e);
           await db.updateBroadcastScheduleStatus(schedule.id, "error");

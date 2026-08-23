@@ -20,8 +20,21 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
-  Building2, LogOut, PanelLeft, Target, Download,
-  Upload, List, MessageCircle, ShieldCheck, UserCircle, Heart, HelpCircle, Users, CalendarDays, Archive
+  Building2,
+  LogOut,
+  PanelLeft,
+  Target,
+  Download,
+  Upload,
+  List,
+  MessageCircle,
+  ShieldCheck,
+  UserCircle,
+  Heart,
+  HelpCircle,
+  Users,
+  CalendarDays,
+  Archive,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -44,34 +57,66 @@ const adminBottomNav = [
   { icon: UserCircle, label: "マイページ", path: "/mypage" },
 ];
 
-type MenuItem = { icon: typeof List; label: string; path: string; href?: string };
+type MenuItem = {
+  icon: typeof List;
+  label: string;
+  path: string;
+  href?: string;
+};
 type MenuSection = { title: string | null; items: MenuItem[] };
 
 const baseSections: MenuSection[] = [
-  { title: "物件を探す", items: [
-    { icon: List, label: "物件一覧", path: "/properties" },
-    { icon: Target, label: "希望条件", path: "/buyer-preference" },
-    { icon: Heart, label: "お気に入り", path: "/favorites" },
-    { icon: MessageCircle, label: "質問中の一覧", path: "/dm-list" },
-    { icon: Download, label: "ダウンロード資料", path: "/documents" },
-  ]},
-  { title: "物件を出す", items: [
-    { icon: Upload, label: "物件登録", path: "/upload" },
-    { icon: Building2, label: "自社物件一覧", path: "/my-properties" },
-    { icon: MessageCircle, label: "対応中のメッセージ", path: "/dm-sell" },
-    { icon: Users, label: "興味者リスト", path: "/interested" },
-  ]},
-  { title: "マイページ", items: [
-    { icon: UserCircle, label: "マイページ", path: "/mypage" },
-    { icon: Archive, label: "お知らせアーカイブ", path: "/announce-archive-ext", href: "/announce-archive" },
-    { icon: HelpCircle, label: "できること", path: "/features-ext", href: "/propflow-guide.html" },
-  ]},
+  {
+    title: "物件を探す",
+    items: [
+      { icon: List, label: "物件一覧", path: "/properties" },
+      { icon: Target, label: "物件募集", path: "/v2/property-search" },
+      { icon: Heart, label: "お気に入り", path: "/favorites" },
+      { icon: MessageCircle, label: "質問中の一覧", path: "/dm-list" },
+      { icon: Download, label: "ダウンロード資料", path: "/documents" },
+    ],
+  },
+  {
+    title: "物件を出す",
+    items: [
+      { icon: Upload, label: "物件登録", path: "/upload" },
+      { icon: Building2, label: "自社物件一覧", path: "/my-properties" },
+      { icon: MessageCircle, label: "対応中のメッセージ", path: "/dm-sell" },
+      { icon: Users, label: "興味者リスト", path: "/interested" },
+    ],
+  },
+  {
+    title: "マイページ",
+    items: [
+      { icon: UserCircle, label: "マイページ", path: "/mypage" },
+      {
+        icon: Archive,
+        label: "お知らせアーカイブ",
+        path: "/announce-archive-ext",
+        href: "/announce-archive",
+      },
+      {
+        icon: HelpCircle,
+        label: "できること",
+        path: "/features-ext",
+        href: "/propflow-guide.html",
+      },
+    ],
+  },
 ];
 
-const adminSection: MenuSection = { title: null, items: [
-  { icon: ShieldCheck, label: "管理画面", path: "/v2/admin" },
-  { icon: CalendarDays, label: "配信計画", path: "/broadcast-plan", href: "https://claude.ai/code/artifact/f588c3ad-6dcc-43d7-a1f0-4b65044981d4" },
-] };
+const adminSection: MenuSection = {
+  title: null,
+  items: [
+    { icon: ShieldCheck, label: "管理画面", path: "/v2/admin" },
+    {
+      icon: CalendarDays,
+      label: "配信計画",
+      path: "/broadcast-plan",
+      href: "https://claude.ai/code/artifact/f588c3ad-6dcc-43d7-a1f0-4b65044981d4",
+    },
+  ],
+};
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 230;
@@ -117,14 +162,16 @@ function DashboardLayoutContent({
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isAdminOrMgmt = user?.role === "admin" || user?.role === "management";
-  const sections = isAdminOrMgmt ? [...baseSections, adminSection] : baseSections;
+  const sections = isAdminOrMgmt
+    ? [...baseSections, adminSection]
+    : baseSections;
   const bottomNav = isAdminOrMgmt ? adminBottomNav : userBottomNav;
   const allItems = sections.flatMap(s => s.items);
   const matchPath = (basePath: string) =>
     location === basePath || location.startsWith(basePath + "/");
-  const activeMenuItem = [...allItems].sort((a, b) => b.path.length - a.path.length).find(item =>
-    matchPath(item.path.split("?")[0])
-  );
+  const activeMenuItem = [...allItems]
+    .sort((a, b) => b.path.length - a.path.length)
+    .find(item => matchPath(item.path.split("?")[0]));
   const isMobile = useIsMobile();
   const hideBottomNav = location.startsWith("/dm/");
 
@@ -157,12 +204,20 @@ function DashboardLayoutContent({
   return (
     <>
       <div className="relative" ref={sidebarRef}>
-        <Sidebar collapsible="icon" className="border-r-0" disableTransition={isResizing}>
+        <Sidebar
+          collapsible="icon"
+          className="border-r-0"
+          disableTransition={isResizing}
+        >
           {/* ヘッダー */}
           <SidebarHeader className="border-b border-sidebar-border py-3">
             <div className="px-3 w-full space-y-2">
               {!isCollapsed && (
-                <img src="/logo2.png" alt="PropFlow" className="w-full px-2 object-contain brightness-0 invert" />
+                <img
+                  src="/logo2.png"
+                  alt="PropFlow"
+                  className="w-full px-2 object-contain brightness-0 invert"
+                />
               )}
               <button
                 onClick={toggleSidebar}
@@ -193,7 +248,14 @@ function DashboardLayoutContent({
                       <SidebarMenuItem key={item.path}>
                         <SidebarMenuButton
                           isActive={isActive}
-                          onClick={() => { if (item.href) { window.open(item.href, "_blank"); } else { setLocation(item.path); } if (isMobile) toggleSidebar(); }}
+                          onClick={() => {
+                            if (item.href) {
+                              window.open(item.href, "_blank");
+                            } else {
+                              setLocation(item.path);
+                            }
+                            if (isMobile) toggleSidebar();
+                          }}
                           tooltip={item.label}
                           className={`h-9 rounded-lg transition-all font-normal group/item ${
                             isActive
@@ -201,7 +263,9 @@ function DashboardLayoutContent({
                               : "text-white/65 hover:text-white hover:bg-white/10"
                           }`}
                         >
-                          <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : ""}`} />
+                          <item.icon
+                            className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : ""}`}
+                          />
                           <span className="text-[15px]">{item.label}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -233,7 +297,10 @@ function DashboardLayoutContent({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive gap-2" onClick={logout}>
+                <DropdownMenuItem
+                  className="cursor-pointer text-destructive focus:text-destructive gap-2"
+                  onClick={logout}
+                >
                   <LogOut className="h-4 w-4" />
                   <span>ログアウト</span>
                 </DropdownMenuItem>
@@ -247,7 +314,9 @@ function DashboardLayoutContent({
 
         <div
           className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-white/30 transition-colors ${isCollapsed ? "hidden" : ""}`}
-          onMouseDown={() => { if (!isCollapsed) setIsResizing(true); }}
+          onMouseDown={() => {
+            if (!isCollapsed) setIsResizing(true);
+          }}
           style={{ zIndex: 50 }}
         />
       </div>
@@ -257,11 +326,19 @@ function DashboardLayoutContent({
           <div className="flex border-b h-14 items-center justify-between bg-primary px-3 sticky top-0 z-40">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="h-10 w-10 rounded-lg bg-white/20 text-white hover:bg-white/30" />
-              <img src="/logo2.png" alt="PropFlow" className="h-7 object-contain brightness-0 invert" />
+              <img
+                src="/logo2.png"
+                alt="PropFlow"
+                className="h-7 object-contain brightness-0 invert"
+              />
             </div>
           </div>
         )}
-        <main className={`flex-1 px-6 ${hideBottomNav ? "py-2" : "py-6"} ${isMobile && !hideBottomNav ? "pb-24" : ""}`}>{children}</main>
+        <main
+          className={`flex-1 px-6 ${hideBottomNav ? "py-2" : "py-6"} ${isMobile && !hideBottomNav ? "pb-24" : ""}`}
+        >
+          {children}
+        </main>
       </SidebarInset>
 
       <AddToHomeScreenBanner />
@@ -274,7 +351,8 @@ function DashboardLayoutContent({
         >
           <div className="flex items-stretch h-16">
             {bottomNav.map(item => {
-              const isActive = location === item.path || location.startsWith(item.path + "/");
+              const isActive =
+                location === item.path || location.startsWith(item.path + "/");
               return (
                 <button
                   key={item.path}
@@ -284,16 +362,24 @@ function DashboardLayoutContent({
                   {isActive && (
                     <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary" />
                   )}
-                  <div className={`flex items-center justify-center w-10 h-7 rounded-xl transition-colors ${
-                    isActive ? "bg-primary/12" : ""
-                  }`}>
-                    <item.icon className={`w-5 h-5 transition-all ${
-                      isActive ? "text-primary scale-110" : "text-foreground/50"
-                    }`} />
+                  <div
+                    className={`flex items-center justify-center w-10 h-7 rounded-xl transition-colors ${
+                      isActive ? "bg-primary/12" : ""
+                    }`}
+                  >
+                    <item.icon
+                      className={`w-5 h-5 transition-all ${
+                        isActive
+                          ? "text-primary scale-110"
+                          : "text-foreground/50"
+                      }`}
+                    />
                   </div>
-                  <span className={`text-[10px] font-medium leading-none ${
-                    isActive ? "text-primary" : "text-foreground/45"
-                  }`}>
+                  <span
+                    className={`text-[10px] font-medium leading-none ${
+                      isActive ? "text-primary" : "text-foreground/45"
+                    }`}
+                  >
                     {item.label}
                   </span>
                 </button>

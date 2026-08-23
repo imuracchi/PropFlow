@@ -1,6 +1,12 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { publicProcedure, protectedProcedure, adminProcedure, managementProcedure, router } from "./_core/trpc";
+import {
+  publicProcedure,
+  protectedProcedure,
+  adminProcedure,
+  managementProcedure,
+  router,
+} from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, verifyPassword, createSessionToken } from "./_core/auth";
 import { parsePropertyFromPdfs } from "./_core/pdfParser";
@@ -8,11 +14,21 @@ import * as db from "./db";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
-async function canViewProperty(propertyId: number, user: { id: number; role: string }) {
+async function canViewProperty(
+  propertyId: number,
+  user: { id: number; role: string }
+) {
   const property = await db.getPropertyById(propertyId);
   if (!property) return false;
-  if (property.userId === user.id || user.role === "admin") return true;
+  if (
+    property.userId === user.id ||
+    user.role === "admin" ||
+    user.role === "management"
+  )
+    return true;
   if (property.deleted === 1 || property.published === 0) return false;
+  if (property.visibilityScope === "proposal")
+    return property.proposalTargetUserId === user.id;
   const exclusions = await db.getPropertyExclusions(propertyId);
   return !exclusions.some(exclusion => exclusion.userId === user.id);
 }
@@ -22,17 +38,28 @@ async function isPropertyExcluded(propertyId: number, userId: number) {
   return exclusions.some(exclusion => exclusion.userId === userId);
 }
 
-async function requirePropertyAccess(propertyId: number, user: { id: number; role: string }) {
+async function requirePropertyAccess(
+  propertyId: number,
+  user: { id: number; role: string }
+) {
   if (!(await canViewProperty(propertyId, user))) {
     throw new TRPCError({ code: "NOT_FOUND", message: "物件が見つかりません" });
   }
 }
 
-async function requirePropertyOwner(propertyId: number, user: { id: number; role: string }, allowAdmin = true) {
+async function requirePropertyOwner(
+  propertyId: number,
+  user: { id: number; role: string },
+  allowAdmin = true
+) {
   const property = await db.getPropertyById(propertyId);
-  if (!property) throw new TRPCError({ code: "NOT_FOUND", message: "物件が見つかりません" });
+  if (!property)
+    throw new TRPCError({ code: "NOT_FOUND", message: "物件が見つかりません" });
   if (property.userId !== user.id && !(allowAdmin && user.role === "admin")) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "この物件の変更権限がありません" });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "この物件の変更権限がありません",
+    });
   }
   return property;
 }
@@ -47,14 +74,27 @@ async function sendDmNotifications(opts: {
   title: string;
   emailSubject: string;
   emailHeading: string;
+  path?: string;
+  ctaLabel?: string | null;
 }) {
-  const propInfo = opts.propertyId ? await db.getPropertyById(opts.propertyId) : null;
-  const dmPath = opts.propertyId ? `/dm/${opts.senderId}/${opts.propertyId}` : `/dm/${opts.senderId}`;
+  const propInfo = opts.propertyId
+    ? await db.getPropertyById(opts.propertyId)
+    : null;
+  const dmPath =
+    opts.path ??
+    (opts.propertyId
+      ? `/dm/${opts.senderId}/${opts.propertyId}`
+      : `/dm/${opts.senderId}`);
   const siteUrl = process.env.SITE_URL || "https://propflow.jp";
   const dmUrl = `${siteUrl}${dmPath}`;
 
   const { sendPushToUsers } = await import("./_core/webpush");
-  sendPushToUsers([opts.receiverId], opts.title, opts.content.slice(0, 100), dmPath).catch(() => {});
+  sendPushToUsers(
+    [opts.receiverId],
+    opts.title,
+    opts.content.slice(0, 100),
+    dmPath
+  ).catch(() => {});
 
   const receiverEmail = await db.getUserEmailIfNotify(opts.receiverId, "dm");
   if (receiverEmail) {
@@ -69,7 +109,7 @@ async function sendDmNotifications(opts: {
             <p style="margin:0;color:#1a1a1a;white-space:pre-wrap;">${opts.content}</p>
           </div>
         </div>
-        <a href="${dmUrl}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">DMを確認・返信する</a>
+        ${opts.ctaLabel === null ? "" : `<a href="${dmUrl}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">${opts.ctaLabel ?? "DMを確認・返信する"}</a>`}
         <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
         <p style="margin-top:4px;font-size:12px;color:#9ca3af;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
       </div>`;
@@ -83,8 +123,10 @@ async function sendDmNotifications(opts: {
       opts.title,
       propInfo ? `📋 ${propInfo.name}` : null,
       `「${opts.content.slice(0, 50)}${opts.content.length > 50 ? "…" : ""}」`,
-      dmUrl,
-    ].filter(Boolean).join("\n");
+      opts.ctaLabel === null ? null : dmUrl,
+    ]
+      .filter(Boolean)
+      .join("\n");
     sendLinePush(receiverLineUserId, lineText).catch(() => {});
   }
 
@@ -129,7 +171,11 @@ async function sendBroadcastToAll(opts: {
         </div>
       </div>`;
     for (const email of emails) {
-      const ok = await sendMail(email, `【PropFlow】${cleanSubject}`, emailHtml);
+      const ok = await sendMail(
+        email,
+        `【PropFlow】${cleanSubject}`,
+        emailHtml
+      );
       if (ok) emailSent++;
     }
   }
@@ -138,23 +184,68 @@ async function sendBroadcastToAll(opts: {
   if (!opts.skipLine && lineBody) {
     const bubbleContents: any = {
       type: "bubble",
-      ...(opts.imageUrl ? {
-        hero: { type: "image", url: opts.imageUrl, size: "full", aspectRatio: "20:13", aspectMode: "cover" },
-      } : {}),
+      ...(opts.imageUrl
+        ? {
+            hero: {
+              type: "image",
+              url: opts.imageUrl,
+              size: "full",
+              aspectRatio: "20:13",
+              aspectMode: "cover",
+            },
+          }
+        : {}),
       header: {
-        type: "box", layout: "vertical", backgroundColor: "#1e3a5f", paddingAll: "16px",
-        contents: [{ type: "text", text: "📢 " + cleanSubject, color: "#ffffff", size: "sm", weight: "bold", wrap: true }],
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#1e3a5f",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "text",
+            text: "📢 " + cleanSubject,
+            color: "#ffffff",
+            size: "sm",
+            weight: "bold",
+            wrap: true,
+          },
+        ],
       },
       body: {
-        type: "box", layout: "vertical", paddingAll: "20px", spacing: "md",
-        contents: [{ type: "text", text: lineBody, size: "sm", color: "#374151", wrap: true }],
+        type: "box",
+        layout: "vertical",
+        paddingAll: "20px",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: lineBody,
+            size: "sm",
+            color: "#374151",
+            wrap: true,
+          },
+        ],
       },
       footer: {
-        type: "box", layout: "vertical", paddingAll: "12px",
-        contents: [{ type: "button", action: { type: "uri", label: "PropFlowを開く", uri: siteUrl }, style: "primary", color: "#2563eb", height: "sm" }],
+        type: "box",
+        layout: "vertical",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "button",
+            action: { type: "uri", label: "PropFlowを開く", uri: siteUrl },
+            style: "primary",
+            color: "#2563eb",
+            height: "sm",
+          },
+        ],
       },
     };
-    lineSent = await sendLineBroadcast({ type: "flex", altText: cleanSubject, contents: bubbleContents });
+    lineSent = await sendLineBroadcast({
+      type: "flex",
+      altText: cleanSubject,
+      contents: bubbleContents,
+    });
   }
 
   await db.saveBroadcastLog({
@@ -178,28 +269,48 @@ export const appRouter = router({
     }),
 
     login: publicProcedure
-      .input(z.object({
-        email: z.string().email(),
-        password: z.string().min(1),
-      }))
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(1),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         const user = await db.getUserByEmail(input.email);
         if (!user) {
-          return { success: false, error: "メールアドレスまたはパスワードが正しくありません" } as const;
+          return {
+            success: false,
+            error: "メールアドレスまたはパスワードが正しくありません",
+          } as const;
         }
         const valid = await verifyPassword(user.passwordHash, input.password);
         if (!valid) {
-          return { success: false, error: "メールアドレスまたはパスワードが正しくありません" } as const;
+          return {
+            success: false,
+            error: "メールアドレスまたはパスワードが正しくありません",
+          } as const;
         }
-        if (user.status === "pending") await db.updateUserStatus(user.id, "active");
+        if (user.status === "pending")
+          await db.updateUserStatus(user.id, "active");
         if (user.status === "suspended") {
-          return { success: false, error: "アカウントが停止されています。管理者にお問い合わせください" } as const;
+          return {
+            success: false,
+            error: "アカウントが停止されています。管理者にお問い合わせください",
+          } as const;
         }
         await db.updateLastSignedIn(user.id);
-        db.logActivity(user.id, "login", undefined, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          user.id,
+          "login",
+          undefined,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         const token = await createSessionToken(user.id, user.openId);
         const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: ONE_YEAR_MS,
+        });
         return { success: true } as const;
       }),
 
@@ -208,15 +319,25 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const existing = await db.getUserByEmail(input.email);
         if (existing) {
-          return { success: false, error: "このメールアドレスは既に登録されています" } as const;
+          return {
+            success: false,
+            error: "このメールアドレスは既に登録されています",
+          } as const;
         }
         const token = nanoid(32);
         const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
         await db.createRegistrationToken(input.email, token, expiresAt);
-        const siteUrl = process.env.SITE_URL || (process.env.NODE_ENV === "production" ? "https://propflow-production-2ce9.up.railway.app" : "http://localhost:3000");
+        const siteUrl =
+          process.env.SITE_URL ||
+          (process.env.NODE_ENV === "production"
+            ? "https://propflow-production-2ce9.up.railway.app"
+            : "http://localhost:3000");
         const registerUrl = `${siteUrl}/register/${token}`;
         const { sendMail } = await import("./_core/mail");
-        await sendMail(input.email, "【PropFlow】新規登録のご案内", `
+        await sendMail(
+          input.email,
+          "【PropFlow】新規登録のご案内",
+          `
           <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px;">
             <h2 style="color:#2563eb;">PropFlow 新規登録</h2>
             <p>以下のリンクから登録を完了してください。</p>
@@ -225,25 +346,32 @@ export const appRouter = router({
             <p style="color:#888;font-size:13px;">心当たりがない場合はこのメールを無視してください。</p>
             <p style="color:#9ca3af;font-size:12px;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
           </div>
-        `);
+        `
+        );
         return { success: true } as const;
       }),
 
     registerDirect: publicProcedure
-      .input(z.object({
-        email: z.string().email(),
-        password: z.string().min(8),
-        name: z.string().min(1),
-        company: z.string().min(1),
-        license: z.string().optional(),
-        phone: z.string().optional(),
-        fax: z.string().optional(),
-        url: z.string().optional(),
-        businessCardBase64: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(8),
+          name: z.string().min(1),
+          company: z.string().min(1),
+          license: z.string().optional(),
+          phone: z.string().optional(),
+          fax: z.string().optional(),
+          url: z.string().optional(),
+          businessCardBase64: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const existing = await db.getUserByEmail(input.email);
-        if (existing) return { success: false, error: "このメールアドレスは既に登録されています" } as const;
+        if (existing)
+          return {
+            success: false,
+            error: "このメールアドレスは既に登録されています",
+          } as const;
         const hashed = await hashPassword(input.password);
         try {
           const newUser = await db.createUser({
@@ -261,39 +389,66 @@ export const appRouter = router({
             status: "active",
           });
           if (input.businessCardBase64 && newUser) {
-            await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
+            await db.updateUserBusinessCard(
+              newUser.id,
+              input.businessCardBase64
+            );
           }
           return { success: true } as const;
         } catch (err: any) {
-          return { success: false, error: err.message ?? "登録に失敗しました" } as const;
+          return {
+            success: false,
+            error: err.message ?? "登録に失敗しました",
+          } as const;
         }
       }),
 
     readBusinessCard: publicProcedure
-      .input(z.object({ imageBase64: z.string(), mimeType: z.string().optional() }))
+      .input(
+        z.object({ imageBase64: z.string(), mimeType: z.string().optional() })
+      )
       .mutation(async ({ input }) => {
         const { parsed } = await import("dotenv").then(d => d.config());
-        const apiKey = parsed?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+        const apiKey =
+          parsed?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
         if (!apiKey) return { success: false, data: null };
         const Anthropic = (await import("@anthropic-ai/sdk")).default;
         const client = new Anthropic({ apiKey });
-        const mediaType = (input.mimeType ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
+        const mediaType = (input.mimeType ?? "image/jpeg") as
+          | "image/jpeg"
+          | "image/png"
+          | "image/webp";
         const message = await client.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 512,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: mediaType, data: input.imageBase64 } },
-              { type: "text", text: `この名刺画像から以下の情報をJSON形式で抽出してください。見つからない項目はnullにしてください。
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: mediaType,
+                    data: input.imageBase64,
+                  },
+                },
+                {
+                  type: "text",
+                  text: `この名刺画像から以下の情報をJSON形式で抽出してください。見つからない項目はnullにしてください。
 {"name":"氏名（フルネーム）","company":"会社名","email":"メールアドレス","phone":"電話番号（固定電話）","mobile":"携帯電話番号（090/080/070等で始まるもの）","fax":"FAX番号","url":"WebサイトURL","zipCode":"郵便番号（ハイフンなし数字7桁、例:1234567）","address":"住所（都道府県から番地まで）","license":"宅地建物取引士の免許番号（例: 東京都知事(3)第12345号）"}
-JSONのみ返してください。` },
-            ],
-          }],
+JSONのみ返してください。`,
+                },
+              ],
+            },
+          ],
         });
-        const text = message.content[0].type === "text" ? message.content[0].text : "";
+        const text =
+          message.content[0].type === "text" ? message.content[0].text : "";
         try {
-          const data = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());
+          const data = JSON.parse(
+            text.replace(/```json\n?|\n?```/g, "").trim()
+          );
           return { success: true, data };
         } catch {
           return { success: false, data: null };
@@ -301,32 +456,44 @@ JSONのみ返してください。` },
       }),
 
     register: publicProcedure
-      .input(z.object({
-        token: z.string(),
-        password: z.string().min(8),
-        name: z.string().min(1),
-        company: z.string().min(1),
-        license: z.string().optional(),
-        phone: z.string().optional(),
-        mobile: z.string().optional(),
-        fax: z.string().optional(),
-        url: z.string().optional(),
-        businessCardBase64: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          token: z.string(),
+          password: z.string().min(8),
+          name: z.string().min(1),
+          company: z.string().min(1),
+          license: z.string().optional(),
+          phone: z.string().optional(),
+          mobile: z.string().optional(),
+          fax: z.string().optional(),
+          url: z.string().optional(),
+          businessCardBase64: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const tokenData = await db.getRegistrationToken(input.token);
         if (!tokenData) {
           return { success: false, error: "無効なリンクです" } as const;
         }
         if (tokenData.used === 1) {
-          return { success: false, error: "このリンクは既に使用されています" } as const;
+          return {
+            success: false,
+            error: "このリンクは既に使用されています",
+          } as const;
         }
         if (new Date() > tokenData.expiresAt) {
-          return { success: false, error: "リンクの有効期限が切れています。再度メールを送信してください" } as const;
+          return {
+            success: false,
+            error:
+              "リンクの有効期限が切れています。再度メールを送信してください",
+          } as const;
         }
         const existing = await db.getUserByEmail(tokenData.email);
         if (existing) {
-          return { success: false, error: "このメールアドレスは既に登録されています" } as const;
+          return {
+            success: false,
+            error: "このメールアドレスは既に登録されています",
+          } as const;
         }
         const hashed = await hashPassword(input.password);
         try {
@@ -345,10 +512,16 @@ JSONのみ返してください。` },
             status: "active",
           });
           if (input.businessCardBase64 && newUser) {
-            await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
+            await db.updateUserBusinessCard(
+              newUser.id,
+              input.businessCardBase64
+            );
           }
         } catch (err: any) {
-          return { success: false, error: err.message ?? "登録に失敗しました" } as const;
+          return {
+            success: false,
+            error: err.message ?? "登録に失敗しました",
+          } as const;
         }
         await db.markTokenUsed(input.token);
         return { success: true } as const;
@@ -358,7 +531,11 @@ JSONのみ返してください。` },
       .input(z.object({ token: z.string() }))
       .query(async ({ input }) => {
         const tokenData = await db.getRegistrationToken(input.token);
-        if (!tokenData || tokenData.used === 1 || new Date() > tokenData.expiresAt) {
+        if (
+          !tokenData ||
+          tokenData.used === 1 ||
+          new Date() > tokenData.expiresAt
+        ) {
           return { valid: false, email: null } as const;
         }
         return { valid: true, email: tokenData.email } as const;
@@ -379,37 +556,42 @@ JSONのみ返してください。` },
       }),
 
     updateProfile: protectedProcedure
-      .input(z.object({
-        name: z.string().min(1).optional(),
-        company: z.string().min(1).optional(),
-        license: z.string().nullable().optional(),
-        zipCode: z.string().nullable().optional(),
-        address: z.string().nullable().optional(),
-        phone: z.string().nullable().optional(),
-        fax: z.string().nullable().optional(),
-        url: z.string().nullable().optional(),
-        businessHours: z.string().nullable().optional(),
-        holidays: z.string().nullable().optional(),
-        bio: z.string().nullable().optional(),
-      }))
+      .input(
+        z.object({
+          name: z.string().min(1).optional(),
+          company: z.string().min(1).optional(),
+          license: z.string().nullable().optional(),
+          zipCode: z.string().nullable().optional(),
+          address: z.string().nullable().optional(),
+          phone: z.string().nullable().optional(),
+          fax: z.string().nullable().optional(),
+          url: z.string().nullable().optional(),
+          businessHours: z.string().nullable().optional(),
+          holidays: z.string().nullable().optional(),
+          bio: z.string().nullable().optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         const dbConn = await db.getDb();
         if (!dbConn) return { success: false };
         const { users } = await import("../drizzle/schema");
         const { eq } = await import("drizzle-orm");
-        await dbConn.update(users).set({
-          ...(input.name ? { name: input.name } : {}),
-          ...(input.company ? { company: input.company } : {}),
-          license: input.license ?? null,
-          zipCode: input.zipCode ?? null,
-          address: input.address ?? null,
-          phone: input.phone ?? null,
-          fax: input.fax ?? null,
-          url: input.url ?? null,
-          businessHours: input.businessHours ?? null,
-          holidays: input.holidays ?? null,
-          bio: input.bio ?? null,
-        }).where(eq(users.id, ctx.user.id));
+        await dbConn
+          .update(users)
+          .set({
+            ...(input.name ? { name: input.name } : {}),
+            ...(input.company ? { company: input.company } : {}),
+            license: input.license ?? null,
+            zipCode: input.zipCode ?? null,
+            address: input.address ?? null,
+            phone: input.phone ?? null,
+            fax: input.fax ?? null,
+            url: input.url ?? null,
+            businessHours: input.businessHours ?? null,
+            holidays: input.holidays ?? null,
+            bio: input.bio ?? null,
+          })
+          .where(eq(users.id, ctx.user.id));
         return { success: true };
       }),
 
@@ -424,7 +606,10 @@ JSONのみ返してください。` },
         if (!dbConn) return { success: false } as const;
         const { users } = await import("../drizzle/schema");
         const { eq } = await import("drizzle-orm");
-        await dbConn.update(users).set({ resetToken: token, resetTokenExpiresAt: expiresAt }).where(eq(users.id, user.id));
+        await dbConn
+          .update(users)
+          .set({ resetToken: token, resetTokenExpiresAt: expiresAt })
+          .where(eq(users.id, user.id));
         const { sendMail } = await import("./_core/mail");
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
         await sendMail(
@@ -445,52 +630,102 @@ JSONのみ返してください。` },
       .input(z.object({ token: z.string(), password: z.string().min(8) }))
       .mutation(async ({ input }) => {
         const dbConn = await db.getDb();
-        if (!dbConn) return { success: false, error: "データベースに接続できません" } as const;
+        if (!dbConn)
+          return {
+            success: false,
+            error: "データベースに接続できません",
+          } as const;
         const { users } = await import("../drizzle/schema");
         const { eq } = await import("drizzle-orm");
-        const [user] = await dbConn.select().from(users).where(eq(users.resetToken, input.token)).limit(1);
-        if (!user) return { success: false, error: "無効なリンクです" } as const;
-        if (!user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
-          return { success: false, error: "リンクの有効期限が切れています" } as const;
+        const [user] = await dbConn
+          .select()
+          .from(users)
+          .where(eq(users.resetToken, input.token))
+          .limit(1);
+        if (!user)
+          return { success: false, error: "無効なリンクです" } as const;
+        if (
+          !user.resetTokenExpiresAt ||
+          user.resetTokenExpiresAt < new Date()
+        ) {
+          return {
+            success: false,
+            error: "リンクの有効期限が切れています",
+          } as const;
         }
         const { hashPassword } = await import("./_core/auth");
         const newHash = await hashPassword(input.password);
-        await dbConn.update(users).set({ passwordHash: newHash, resetToken: null, resetTokenExpiresAt: null }).where(eq(users.id, user.id));
+        await dbConn
+          .update(users)
+          .set({
+            passwordHash: newHash,
+            resetToken: null,
+            resetTokenExpiresAt: null,
+          })
+          .where(eq(users.id, user.id));
         return { success: true } as const;
       }),
 
     changePassword: protectedProcedure
-      .input(z.object({
-        currentPassword: z.string().min(1),
-        newPassword: z.string().min(8),
-      }))
+      .input(
+        z.object({
+          currentPassword: z.string().min(1),
+          newPassword: z.string().min(8),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         const user = await db.getUserById(ctx.user.id);
-        if (!user) return { success: false, error: "ユーザーが見つかりません" } as const;
-        const valid = await verifyPassword(user.passwordHash, input.currentPassword);
-        if (!valid) return { success: false, error: "現在のパスワードが正しくありません" } as const;
+        if (!user)
+          return { success: false, error: "ユーザーが見つかりません" } as const;
+        const valid = await verifyPassword(
+          user.passwordHash,
+          input.currentPassword
+        );
+        if (!valid)
+          return {
+            success: false,
+            error: "現在のパスワードが正しくありません",
+          } as const;
         const newHash = await hashPassword(input.newPassword);
         const dbConn = await db.getDb();
-        if (!dbConn) return { success: false, error: "データベースに接続できません" } as const;
+        if (!dbConn)
+          return {
+            success: false,
+            error: "データベースに接続できません",
+          } as const;
         const { users } = await import("../drizzle/schema");
         const { eq } = await import("drizzle-orm");
-        await dbConn.update(users).set({ passwordHash: newHash }).where(eq(users.id, ctx.user.id));
+        await dbConn
+          .update(users)
+          .set({ passwordHash: newHash })
+          .where(eq(users.id, ctx.user.id));
         return { success: true } as const;
       }),
 
     subscribePush: protectedProcedure
-      .input(z.object({ endpoint: z.string(), p256dh: z.string(), auth: z.string() }))
+      .input(
+        z.object({ endpoint: z.string(), p256dh: z.string(), auth: z.string() })
+      )
       .mutation(async ({ input, ctx }) => {
-        await db.savePushSubscription(ctx.user.id, input.endpoint, input.p256dh, input.auth);
+        await db.savePushSubscription(
+          ctx.user.id,
+          input.endpoint,
+          input.p256dh,
+          input.auth
+        );
         return { success: true };
       }),
 
-    agreeTerms: protectedProcedure
-      .mutation(async ({ ctx }) => {
-        await db.agreeToTerms(ctx.user.id);
-        db.logActivity(ctx.user.id, "terms_agree", "利用規約に同意", ctx.req.headers["user-agent"]).catch(() => {});
-        return { success: true };
-      }),
+    agreeTerms: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.agreeToTerms(ctx.user.id);
+      db.logActivity(
+        ctx.user.id,
+        "terms_agree",
+        "利用規約に同意",
+        ctx.req.headers["user-agent"]
+      ).catch(() => {});
+      return { success: true };
+    }),
 
     getVisibilitySettings: protectedProcedure.query(async ({ ctx }) => {
       return db.getVisibilitySettings(ctx.user.id);
@@ -508,11 +743,14 @@ JSONのみ返してください。` },
     }),
 
     updateNotifySettings: protectedProcedure
-      .input(z.object({
-        notifyNewProperty: z.number(),
-        notifyDm: z.number(),
-        notifyAnnounce: z.number(),
-      }))
+      .input(
+        z.object({
+          notifyNewProperty: z.number(),
+          notifyPropertySearch: z.number(),
+          notifyDm: z.number(),
+          notifyAnnounce: z.number(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         await db.updateNotifySettings(ctx.user.id, input);
         return { success: true };
@@ -550,17 +788,26 @@ JSONのみ返してください。` },
       .input(z.object({ propertyId: z.number() }))
       .query(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.propertyId);
-        if (!prop || !(await canViewProperty(input.propertyId, ctx.user)) || prop.status === "sold") {
+        if (
+          !prop ||
+          !(await canViewProperty(input.propertyId, ctx.user)) ||
+          prop.status === "sold"
+        ) {
           return { mine: false, others: false };
         }
-        return db.getPropertyNegotiationStatus(input.propertyId, ctx.user.id, prop.userId);
+        return db.getPropertyNegotiationStatus(
+          input.propertyId,
+          ctx.user.id,
+          prop.userId
+        );
       }),
 
     getExclusions: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .query(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.propertyId);
-        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) return [];
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin"))
+          return [];
         return db.getPropertyExclusions(input.propertyId);
       }),
 
@@ -569,11 +816,15 @@ JSONのみ返してください。` },
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.propertyId);
         if (!prop) {
-          console.warn(`[addExclusion] property not found: ${input.propertyId}`);
+          console.warn(
+            `[addExclusion] property not found: ${input.propertyId}`
+          );
           return { success: false };
         }
         if (prop.userId !== ctx.user.id && ctx.user.role !== "admin") {
-          console.warn(`[addExclusion] ownership mismatch: prop.userId=${prop.userId} ctx.user.id=${ctx.user.id}`);
+          console.warn(
+            `[addExclusion] ownership mismatch: prop.userId=${prop.userId} ctx.user.id=${ctx.user.id}`
+          );
           return { success: false };
         }
         if (input.userId === prop.userId) return { success: false };
@@ -587,46 +838,86 @@ JSONのみ返してください。` },
       .input(z.object({ propertyId: z.number(), userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.propertyId);
-        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) return { success: false };
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin"))
+          return { success: false };
         await db.removePropertyExclusion(input.propertyId, input.userId);
         return { success: true };
       }),
 
     create: protectedProcedure
-      .input(z.object({
-        name: z.string().min(1),
-        address: z.string().min(1),
-        lotNumber: z.string().optional(),
-        type: z.string().min(1),
-        price: z.number().nullable().optional(),
-        priceNegotiable: z.boolean().optional(),
-        estimatedYield: z.number().nullable().optional(),
-        landArea: z.number().positive().nullable().optional(),
-        buildingArea: z.number().nullable().optional(),
-        transport: z.string().optional(),
-        landCategory: z.string().optional(),
-        rights: z.string().optional(),
-        structure: z.string().optional(),
-        buildingAge: z.string().optional(),
-        zoning: z.string().optional(),
-        fireProtection: z.string().optional(),
-        access: z.string().optional(),
-        remarks: z.string().optional(),
-        transactionFlow: z.string().optional(),
-        negotiation: z.string().optional(),
-        comment: z.string().optional(),
-        heightDistrict: z.string().optional(),
-        otherRestrictions: z.string().optional(),
-        faqs: z.array(z.object({ q: z.string(), a: z.string() })).optional(),
-        files: z.array(z.object({ name: z.string(), size: z.number() })).optional(),
-        published: z.boolean().optional(),
-      }))
+      .input(
+        z.object({
+          name: z.string().min(1),
+          address: z.string().min(1),
+          lotNumber: z.string().optional(),
+          type: z.string().min(1),
+          price: z.number().nullable().optional(),
+          priceNegotiable: z.boolean().optional(),
+          estimatedYield: z.number().nullable().optional(),
+          landArea: z.number().positive().nullable().optional(),
+          buildingArea: z.number().nullable().optional(),
+          transport: z.string().optional(),
+          landCategory: z.string().optional(),
+          rights: z.string().optional(),
+          structure: z.string().optional(),
+          buildingAge: z.string().optional(),
+          zoning: z.string().optional(),
+          fireProtection: z.string().optional(),
+          access: z.string().optional(),
+          remarks: z.string().optional(),
+          transactionFlow: z.string().optional(),
+          negotiation: z.string().optional(),
+          comment: z.string().optional(),
+          heightDistrict: z.string().optional(),
+          otherRestrictions: z.string().optional(),
+          faqs: z.array(z.object({ q: z.string(), a: z.string() })).optional(),
+          files: z
+            .array(z.object({ name: z.string(), size: z.number() }))
+            .optional(),
+          published: z.boolean().optional(),
+          proposalRequestId: z.number().nullable().optional(),
+          proposalOnly: z.boolean().optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         try {
+          const proposalRequest = input.proposalRequestId
+            ? await db.getPropertySearchRequestForLimitedProposal(
+                input.proposalRequestId
+              )
+            : null;
+          if (input.proposalRequestId && !proposalRequest)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "提案先の募集が終了しているため登録できません",
+            });
+          if (proposalRequest?.userId === ctx.user.id)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "自分の募集へ提案する物件は登録できません",
+            });
+          if (
+            proposalRequest &&
+            input.proposalOnly !== false &&
+            input.published === false
+          )
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "提案先限定の物件は一時保存できません",
+            });
           const result = await db.createProperty({
             userId: ctx.user.id,
             published: input.published === false ? 0 : 1,
             publishedAt: input.published === false ? null : new Date(),
+            visibilityScope:
+              proposalRequest && input.proposalOnly !== false
+                ? "proposal"
+                : "public",
+            proposalTargetUserId:
+              proposalRequest && input.proposalOnly !== false
+                ? proposalRequest.userId
+                : null,
+            proposalRequestId: proposalRequest ? proposalRequest.id : null,
             name: input.name,
             address: input.address,
             lotNumber: input.lotNumber ?? null,
@@ -654,7 +945,12 @@ JSONのみ返してください。` },
             files: input.files ?? null,
           });
           if (result) {
-            db.logActivity(ctx.user.id, "property_create", `物件「${input.name}」を登録`, ctx.req.headers["user-agent"]).catch(() => {});
+            db.logActivity(
+              ctx.user.id,
+              "property_create",
+              `物件「${input.name}」を登録`,
+              ctx.req.headers["user-agent"]
+            ).catch(() => {});
           }
           return result;
         } catch (e: any) {
@@ -662,47 +958,60 @@ JSONのみ返してください。` },
           const cause = e?.cause ?? e;
           const code = cause?.code ?? cause?.errno ?? "unknown";
           const msg = cause?.sqlMessage ?? cause?.message ?? String(e);
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `[${code}] ${msg}` });
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `[${code}] ${msg}`,
+          });
         }
       }),
 
     update: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        address: z.string().optional(),
-        lotNumber: z.string().nullable().optional(),
-        type: z.string().optional(),
-        status: z.enum(["available", "negotiating", "sold"]).optional(),
-        dealPrice: z.number().nullable().optional(),
-        price: z.number().nullable().optional(),
-        priceNegotiable: z.boolean().optional(),
-        estimatedYield: z.number().nullable().optional(),
-        landArea: z.number().nullable().optional(),
-        buildingArea: z.number().nullable().optional(),
-        transport: z.string().nullable().optional(),
-        landCategory: z.string().nullable().optional(),
-        rights: z.string().nullable().optional(),
-        structure: z.string().nullable().optional(),
-        buildingAge: z.string().nullable().optional(),
-        zoning: z.string().nullable().optional(),
-        fireProtection: z.string().nullable().optional(),
-        access: z.string().nullable().optional(),
-        remarks: z.string().nullable().optional(),
-        transactionFlow: z.string().nullable().optional(),
-        negotiation: z.string().optional(),
-        comment: z.string().nullable().optional(),
-        heightDistrict: z.string().nullable().optional(),
-        otherRestrictions: z.string().nullable().optional(),
-        faqs: z.array(z.object({ q: z.string(), a: z.string() })).nullable().optional(),
-        files: z.array(z.object({ name: z.string(), size: z.number() })).nullable().optional(),
-      }))
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          address: z.string().optional(),
+          lotNumber: z.string().nullable().optional(),
+          type: z.string().optional(),
+          status: z.enum(["available", "negotiating", "sold"]).optional(),
+          dealPrice: z.number().nullable().optional(),
+          price: z.number().nullable().optional(),
+          priceNegotiable: z.boolean().optional(),
+          estimatedYield: z.number().nullable().optional(),
+          landArea: z.number().nullable().optional(),
+          buildingArea: z.number().nullable().optional(),
+          transport: z.string().nullable().optional(),
+          landCategory: z.string().nullable().optional(),
+          rights: z.string().nullable().optional(),
+          structure: z.string().nullable().optional(),
+          buildingAge: z.string().nullable().optional(),
+          zoning: z.string().nullable().optional(),
+          fireProtection: z.string().nullable().optional(),
+          access: z.string().nullable().optional(),
+          remarks: z.string().nullable().optional(),
+          transactionFlow: z.string().nullable().optional(),
+          negotiation: z.string().optional(),
+          comment: z.string().nullable().optional(),
+          heightDistrict: z.string().nullable().optional(),
+          otherRestrictions: z.string().nullable().optional(),
+          faqs: z
+            .array(z.object({ q: z.string(), a: z.string() }))
+            .nullable()
+            .optional(),
+          files: z
+            .array(z.object({ name: z.string(), size: z.number() }))
+            .nullable()
+            .optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         const { id, priceNegotiable, ...rest } = input;
         await requirePropertyOwner(id, ctx.user);
         return db.updateProperty(id, {
           ...rest,
-          ...(priceNegotiable !== undefined ? { priceNegotiable: priceNegotiable ? 1 : 0 } : {}),
+          ...(priceNegotiable !== undefined
+            ? { priceNegotiable: priceNegotiable ? 1 : 0 }
+            : {}),
         });
       }),
 
@@ -710,7 +1019,10 @@ JSONのみ返してください。` },
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.id);
-        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) {
+        if (
+          !prop ||
+          (prop.userId !== ctx.user.id && ctx.user.role !== "admin")
+        ) {
           return { success: false, error: "削除権限がありません" };
         }
         await db.deleteProperty(input.id);
@@ -718,23 +1030,40 @@ JSONのみ返してください。` },
       }),
 
     markSold: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        dealPrice: z.number().nullable(),
-        announcePublic: z.boolean(),
-      }))
+      .input(
+        z.object({
+          id: z.number(),
+          dealPrice: z.number().nullable(),
+          announcePublic: z.boolean(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.id);
         if (!prop) throw new TRPCError({ code: "NOT_FOUND" });
-        if (prop.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "この物件の権限がありません" });
+        if (prop.userId !== ctx.user.id)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "この物件の権限がありません",
+          });
 
-        await db.updateProperty(input.id, { status: "sold", dealPrice: input.dealPrice });
+        await db.updateProperty(input.id, {
+          status: "sold",
+          dealPrice: input.dealPrice,
+        });
 
         // やり取りしていた相手に成約を通知
-        const partnerIds = await db.getDmPartnersForProperty(input.id, ctx.user.id);
+        const partnerIds = await db.getDmPartnersForProperty(
+          input.id,
+          ctx.user.id
+        );
         const notifyContent = `🎉「${prop.name}」は成約となりました。ご興味いただきありがとうございました。`;
         for (const partnerId of partnerIds) {
-          await db.sendDirectMessage(ctx.user.id, partnerId, notifyContent, input.id);
+          await db.sendDirectMessage(
+            ctx.user.id,
+            partnerId,
+            notifyContent,
+            input.id
+          );
           await sendDmNotifications({
             senderId: ctx.user.id,
             senderName: ctx.user.name ?? "ユーザー",
@@ -745,13 +1074,15 @@ JSONのみ返してください。` },
             title: "🎉 物件が成約しました",
             emailSubject: `【PropFlow】「${prop.name}」が成約しました`,
             emailHeading: "🎉 物件が成約しました",
-          });
+          }).catch(() => null);
         }
 
         // 全体お知らせ（任意）
         let broadcastResult = null;
         if (input.announcePublic) {
-          const priceText = input.dealPrice ? `${input.dealPrice.toLocaleString()}円で` : "";
+          const priceText = input.dealPrice
+            ? `${input.dealPrice.toLocaleString()}円で`
+            : "";
           const message = `「${prop.name}」が${priceText}成約しました！`;
           broadcastResult = await sendBroadcastToAll({
             subject: `「${prop.name}」成約のお知らせ`,
@@ -760,26 +1091,49 @@ JSONのみ返してください。` },
           });
         }
 
-        return { success: true, notifiedCount: partnerIds.length, broadcastResult };
+        return {
+          success: true,
+          notifiedCount: partnerIds.length,
+          broadcastResult,
+        };
       }),
 
     deleteOwn: protectedProcedure
-      .input(z.object({ propertyId: z.number(), message: z.string().optional() }))
+      .input(
+        z.object({ propertyId: z.number(), message: z.string().optional() })
+      )
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.propertyId);
         if (!prop) throw new TRPCError({ code: "NOT_FOUND" });
-        if (prop.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "この物件の削除権限がありません" });
+        if (prop.userId !== ctx.user.id)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "この物件の削除権限がありません",
+          });
 
         if (input.message?.trim()) {
-          const partnerIds = await db.getDmPartnersForProperty(input.propertyId, ctx.user.id);
+          const partnerIds = await db.getDmPartnersForProperty(
+            input.propertyId,
+            ctx.user.id
+          );
           const fullMessage = `【物件「${prop.name}」について】\n${input.message.trim()}`;
           for (const partnerId of partnerIds) {
-            await db.sendDirectMessage(ctx.user.id, partnerId, fullMessage, input.propertyId);
+            await db.sendDirectMessage(
+              ctx.user.id,
+              partnerId,
+              fullMessage,
+              input.propertyId
+            );
           }
         }
 
         await db.ownerDeleteProperty(input.propertyId);
-        db.logActivity(ctx.user.id, "property_delete_own", `物件「${prop.name}」を削除（30日間復元可能）`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "property_delete_own",
+          `物件「${prop.name}」を削除（30日間復元可能）`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true };
       }),
 
@@ -789,27 +1143,40 @@ JSONのみ返してください。` },
         await requirePropertyAccess(input.propertyId, ctx.user);
         const files = await db.listPropertyFiles(input.propertyId);
         const prop = await db.getPropertyById(input.propertyId);
-        const isOwner = !!prop && (prop.userId === ctx.user.id || ctx.user.role === "admin");
+        const isOwner =
+          !!prop && (prop.userId === ctx.user.id || ctx.user.role === "admin");
         if (isOwner) return files;
         return files.filter(f => f.visible !== 0);
       }),
 
     uploadFile: protectedProcedure
-      .input(z.object({
-        propertyId: z.number(),
-        name: z.string(),
-        size: z.number(),
-        contentBase64: z.string(),
-        category: z.enum(["document", "photo"]).optional(),
-        visible: z.boolean().optional(),
-      }))
+      .input(
+        z.object({
+          propertyId: z.number(),
+          name: z.string(),
+          size: z.number(),
+          contentBase64: z.string(),
+          category: z.enum(["document", "photo"]).optional(),
+          visible: z.boolean().optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.propertyId);
-        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "追加権限がありません" });
+        if (
+          !prop ||
+          (prop.userId !== ctx.user.id && ctx.user.role !== "admin")
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "追加権限がありません",
+          });
         }
         const { visible, ...rest } = input;
-        await db.addPropertyFile({ ...rest, category: input.category ?? "document", visible: visible ?? true });
+        await db.addPropertyFile({
+          ...rest,
+          category: input.category ?? "document",
+          visible: visible ?? true,
+        });
         return { success: true };
       }),
 
@@ -819,7 +1186,10 @@ JSONのみ返してください。` },
         const file = await db.getPropertyFileContent(input.fileId);
         if (!file) return { success: false, error: "ファイルが見つかりません" };
         const prop = await db.getPropertyById(file.propertyId);
-        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) {
+        if (
+          !prop ||
+          (prop.userId !== ctx.user.id && ctx.user.role !== "admin")
+        ) {
           return { success: false, error: "変更権限がありません" };
         }
         await db.setPropertyFileVisibility(input.fileId, input.visible);
@@ -834,7 +1204,9 @@ JSONのみ返してください。` },
         await requirePropertyAccess(file.propertyId, ctx.user);
         if (file.visible === 0) {
           const prop = await db.getPropertyById(file.propertyId);
-          const isOwner = !!prop && (prop.userId === ctx.user.id || ctx.user.role === "admin");
+          const isOwner =
+            !!prop &&
+            (prop.userId === ctx.user.id || ctx.user.role === "admin");
           if (!isOwner) return null;
         }
         return { name: file.name, contentBase64: file.contentBase64 };
@@ -846,8 +1218,14 @@ JSONのみ返してください。` },
         const file = await db.getPropertyFileContent(input.fileId);
         if (!file) return { success: false };
         const prop = await db.getPropertyById(file.propertyId);
-        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "削除権限がありません" });
+        if (
+          !prop ||
+          (prop.userId !== ctx.user.id && ctx.user.role !== "admin")
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "削除権限がありません",
+          });
         }
         await db.deletePropertyFile(input.fileId);
         return { success: true };
@@ -876,39 +1254,48 @@ JSONのみ返してください。` },
         if (!apiKey) return { ids: [], error: "ANTHROPIC_API_KEYが未設定です" };
         const allProperties = await db.listProperties(ctx.user.id);
         if (!allProperties.length) return { ids: [] };
-        const propList = allProperties.map((p: any) => {
-          const price = p.priceNegotiable ? "応相談" : p.price ? `${p.price.toLocaleString()}円` : "未定";
-          const landArea = p.landArea ? `${p.landArea}㎡（${(p.landArea * 0.3025).toFixed(1)}坪）` : "不明";
-          const buildingArea = p.buildingArea ? `${p.buildingArea}㎡` : null;
-          const parts = [
-            `ID:${p.id}`,
-            `種別:${p.type}`,
-            `名称:${p.name}`,
-            `所在地:${p.address}`,
-            `価格:${price}`,
-            `土地面積:${landArea}`,
-            buildingArea ? `建物面積:${buildingArea}` : null,
-            p.zoning ? `用途地域:${p.zoning}` : null,
-            p.transport ? `交通:${p.transport}` : null,
-            p.landCategory ? `地目:${p.landCategory}` : null,
-            p.structure ? `構造:${p.structure}` : null,
-            p.buildingAge ? `築年数:${p.buildingAge}年` : null,
-            p.access ? `接道:${p.access}` : null,
-            p.rights ? `権利:${p.rights}` : null,
-            p.fireProtection ? `防火:${p.fireProtection}` : null,
-            p.remarks ? `備考:${p.remarks}` : null,
-            p.transactionFlow ? `取引形態:${p.transactionFlow}` : null,
-          ].filter(Boolean);
-          return parts.join(" ");
-        }).join("\n");
+        const propList = allProperties
+          .map((p: any) => {
+            const price = p.priceNegotiable
+              ? "応相談"
+              : p.price
+                ? `${p.price.toLocaleString()}円`
+                : "未定";
+            const landArea = p.landArea
+              ? `${p.landArea}㎡（${(p.landArea * 0.3025).toFixed(1)}坪）`
+              : "不明";
+            const buildingArea = p.buildingArea ? `${p.buildingArea}㎡` : null;
+            const parts = [
+              `ID:${p.id}`,
+              `種別:${p.type}`,
+              `名称:${p.name}`,
+              `所在地:${p.address}`,
+              `価格:${price}`,
+              `土地面積:${landArea}`,
+              buildingArea ? `建物面積:${buildingArea}` : null,
+              p.zoning ? `用途地域:${p.zoning}` : null,
+              p.transport ? `交通:${p.transport}` : null,
+              p.landCategory ? `地目:${p.landCategory}` : null,
+              p.structure ? `構造:${p.structure}` : null,
+              p.buildingAge ? `築年数:${p.buildingAge}年` : null,
+              p.access ? `接道:${p.access}` : null,
+              p.rights ? `権利:${p.rights}` : null,
+              p.fireProtection ? `防火:${p.fireProtection}` : null,
+              p.remarks ? `備考:${p.remarks}` : null,
+              p.transactionFlow ? `取引形態:${p.transactionFlow}` : null,
+            ].filter(Boolean);
+            return parts.join(" ");
+          })
+          .join("\n");
         const Anthropic = (await import("@anthropic-ai/sdk")).default;
         const client = new Anthropic({ apiKey });
         const res = await client.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 1024,
-          messages: [{
-            role: "user",
-            content: `あなたは不動産物件の検索AIです。以下の物件リストから、ユーザーの条件に近い物件を探してください。
+          messages: [
+            {
+              role: "user",
+              content: `あなたは不動産物件の検索AIです。以下の物件リストから、ユーザーの条件に近い物件を探してください。
 
 【重要なルール】
 - 条件をすべて満たす物件がなくても、最も条件に近い物件を優先して返す
@@ -921,14 +1308,25 @@ JSONのみ返してください。` },
 ${input.query}
 
 【物件リスト】
-${propList}`
-          }],
+${propList}`,
+            },
+          ],
         });
-        const text = res.content[0].type === "text" ? res.content[0].text.trim() : "[]";
+        const text =
+          res.content[0].type === "text" ? res.content[0].text.trim() : "[]";
         try {
-          const ids = JSON.parse(text.match(/\[[\d,\s]*\]/)?.[0] ?? "[]") as number[];
-          db.saveSearchLog(ctx.user.id, "ai", input.query, ids.length).catch(() => {});
-          db.logActivity(ctx.user.id, "search", `AI検索「${input.query}」(${ids.length}件)`, ctx.req.headers["user-agent"]).catch(() => {});
+          const ids = JSON.parse(
+            text.match(/\[[\d,\s]*\]/)?.[0] ?? "[]"
+          ) as number[];
+          db.saveSearchLog(ctx.user.id, "ai", input.query, ids.length).catch(
+            () => {}
+          );
+          db.logActivity(
+            ctx.user.id,
+            "search",
+            `AI検索「${input.query}」(${ids.length}件)`,
+            ctx.req.headers["user-agent"]
+          ).catch(() => {});
           return { ids };
         } catch {
           return { ids: [] };
@@ -938,9 +1336,21 @@ ${propList}`
     logSearch: protectedProcedure
       .input(z.object({ query: z.string().min(1), resultCount: z.number() }))
       .mutation(async ({ input, ctx }) => {
-        console.log(`[logSearch] userId=${ctx.user.id} query="${input.query}" count=${input.resultCount}`);
-        await db.saveSearchLog(ctx.user.id, "keyword", input.query, input.resultCount);
-        db.logActivity(ctx.user.id, "search", `キーワード検索「${input.query}」(${input.resultCount}件)`, ctx.req.headers["user-agent"]).catch(() => {});
+        console.log(
+          `[logSearch] userId=${ctx.user.id} query="${input.query}" count=${input.resultCount}`
+        );
+        await db.saveSearchLog(
+          ctx.user.id,
+          "keyword",
+          input.query,
+          input.resultCount
+        );
+        db.logActivity(
+          ctx.user.id,
+          "search",
+          `キーワード検索「${input.query}」(${input.resultCount}件)`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { ok: true };
       }),
 
@@ -958,11 +1368,10 @@ ${propList}`
         return rows;
       }),
 
-    clearSearchLogs: adminProcedure
-      .mutation(async () => {
-        await db.clearSearchLogs();
-        return { ok: true };
-      }),
+    clearSearchLogs: adminProcedure.mutation(async () => {
+      await db.clearSearchLogs();
+      return { ok: true };
+    }),
 
     searchRanking: managementProcedure
       .input(z.object({ limit: z.number().optional() }))
@@ -978,23 +1387,38 @@ ${propList}`
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
+        if (prop.visibilityScope === "proposal")
+          return { success: true, limited: true, hasExclusions: false };
         if (prop.lineNotifiedAt) return { success: false, alreadySent: true };
 
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
-        const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
-        const excludedIds = await db.getPropertyExcludedUserIds(input.propertyId);
+        const priceLine = prop.priceNegotiable
+          ? "応相談"
+          : prop.price
+            ? `${prop.price.toLocaleString()}円`
+            : "未定";
+        const excludedIds = await db.getPropertyExcludedUserIds(
+          input.propertyId
+        );
         const hasExclusions = excludedIds.length > 0;
 
         // LINE（閲覧制限なしの場合のみ）
         if (!hasExclusions) {
-          const { sendLineBroadcast, buildPropertyFlexMessage } = await import("./_core/line");
-          await sendLineBroadcast(buildPropertyFlexMessage(prop)).catch(() => {});
+          const { sendLineBroadcast, buildPropertyFlexMessage } = await import(
+            "./_core/line"
+          );
+          await sendLineBroadcast(buildPropertyFlexMessage(prop)).catch(
+            () => {}
+          );
         }
         await db.markPropertyLineNotified(input.propertyId);
 
         // メール（閲覧制限者を除外）
         const { sendMail } = await import("./_core/mail");
-        const emails = await db.getActiveUserEmailsForNotify("newProperty", excludedIds);
+        const emails = await db.getActiveUserEmailsForNotify(
+          "newProperty",
+          excludedIds
+        );
         const mailHtml = `
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
             <h2 style="color:#1e3a5f;">🏠 新着物件のお知らせ</h2>
@@ -1010,7 +1434,9 @@ ${propList}`
             <p style="margin-top:4px;font-size:12px;color:#9ca3af;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
           </div>`;
         for (const email of emails) {
-          sendMail(email, `【PropFlow】新着物件: ${prop.name}`, mailHtml).catch(() => {});
+          sendMail(email, `【PropFlow】新着物件: ${prop.name}`, mailHtml).catch(
+            () => {}
+          );
         }
 
         // プッシュ通知（閲覧制限者・物件オーナーを除外）
@@ -1036,8 +1462,12 @@ ${propList}`
       .input(z.object({ propertyId: z.number(), published: z.boolean() }))
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.propertyId);
-        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin")) return { success: false };
-        await db.setPropertyPublished(input.propertyId, input.published ? 1 : 0);
+        if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin"))
+          return { success: false };
+        await db.setPropertyPublished(
+          input.propertyId,
+          input.published ? 1 : 0
+        );
         return { success: true };
       }),
 
@@ -1045,17 +1475,20 @@ ${propList}`
       .input(z.object({ address: z.string() }))
       .mutation(async ({ input }) => {
         const { parsed } = await import("dotenv").then(d => d.config());
-        const apiKey = parsed?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
-        if (!apiKey) return { transport: null, error: "ANTHROPIC_API_KEYが未設定です" };
+        const apiKey =
+          parsed?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+        if (!apiKey)
+          return { transport: null, error: "ANTHROPIC_API_KEYが未設定です" };
         try {
           const Anthropic = (await import("@anthropic-ai/sdk")).default;
           const client = new Anthropic({ apiKey });
           const msg = await client.messages.create({
             model: "claude-sonnet-4-6",
             max_tokens: 300,
-            messages: [{
-              role: "user",
-              content: `以下の住所から最寄りの電車または地下鉄の駅を調べてください。
+            messages: [
+              {
+                role: "user",
+                content: `以下の住所から最寄りの電車または地下鉄の駅を調べてください。
 複数路線ある場合は近い順に2〜3駅まで記載してください。
 
 住所: ${input.address}
@@ -1065,7 +1498,8 @@ ${propList}`
 ○○線「○○」駅 徒歩○分
 
 不明な場合は「不明」とだけ返してください。`,
-            }],
+              },
+            ],
           });
           const reply = msg.content[0];
           if (reply.type === "text") {
@@ -1078,32 +1512,39 @@ ${propList}`
       }),
 
     generateComment: protectedProcedure
-      .input(z.object({
-        name: z.string(),
-        address: z.string(),
-        type: z.string(),
-        price: z.number(),
-        estimatedYield: z.number().nullable().optional(),
-        landArea: z.number().nullable().optional(),
-        buildingArea: z.number().nullable().optional(),
-        zoning: z.string().optional(),
-        access: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          name: z.string(),
+          address: z.string(),
+          type: z.string(),
+          price: z.number(),
+          estimatedYield: z.number().nullable().optional(),
+          landArea: z.number().nullable().optional(),
+          buildingArea: z.number().nullable().optional(),
+          zoning: z.string().optional(),
+          access: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const { generatePropertyComment } = await import("./_core/pdfParser");
         return generatePropertyComment(input);
       }),
 
     extractFromPdf: protectedProcedure
-      .input(z.object({
-        filesBase64: z.array(z.string()).min(1),
-        fileNames: z.array(z.string()).optional(),
-      }))
+      .input(
+        z.object({
+          filesBase64: z.array(z.string()).min(1),
+          fileNames: z.array(z.string()).optional(),
+        })
+      )
       .mutation(async ({ input }) => {
-        const { data, error } = await parsePropertyFromPdfs(input.filesBase64, input.fileNames);
+        const { data, error } = await parsePropertyFromPdfs(
+          input.filesBase64,
+          input.fileNames
+        );
 
         if (error) {
-          return { success: !!(data), data, error } as const;
+          return { success: !!data, data, error } as const;
         }
 
         return { success: true, data, error: null } as const;
@@ -1133,7 +1574,12 @@ ${propList}`
       .mutation(async ({ input, ctx }) => {
         await requirePropertyAccess(input.propertyId, ctx.user);
         await db.saveMemo(ctx.user.id, input.propertyId, input.content);
-        db.logActivity(ctx.user.id, "memo_save", `物件ID:${input.propertyId} の自分用メモを保存`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "memo_save",
+          `物件ID:${input.propertyId} の自分用メモを保存`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true };
       }),
 
@@ -1167,7 +1613,12 @@ ${propList}`
       .mutation(async ({ input, ctx }) => {
         await requirePropertyAccess(input.propertyId, ctx.user);
         const result = await db.toggleFavorite(ctx.user.id, input.propertyId);
-        db.logActivity(ctx.user.id, "favorite_toggle", `物件ID:${input.propertyId} を${result.favorited ? "お気に入り追加" : "お気に入り解除"}`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "favorite_toggle",
+          `物件ID:${input.propertyId} を${result.favorited ? "お気に入り追加" : "お気に入り解除"}`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return result;
       }),
   }),
@@ -1188,32 +1639,53 @@ ${propList}`
       return db.getDeletedPropertiesByUserId(ctx.user.id);
     }),
     restoreProperty: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        notifyPartners: z.boolean().optional().default(false),
-        message: z.string().max(2000).optional(),
-      }))
+      .input(
+        z.object({
+          id: z.number(),
+          notifyPartners: z.boolean().optional().default(false),
+          message: z.string().max(2000).optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.id);
         if (!prop || prop.userId !== ctx.user.id || prop.deleted !== 1) {
           return { success: false };
         }
-        if (prop.ownerDeletedAt && Date.now() - new Date(prop.ownerDeletedAt).getTime() >= 30 * 24 * 60 * 60 * 1000) {
+        if (
+          prop.ownerDeletedAt &&
+          Date.now() - new Date(prop.ownerDeletedAt).getTime() >=
+            30 * 24 * 60 * 60 * 1000
+        ) {
           await db.hardDeleteProperty(input.id);
           return { success: false, expired: true };
         }
         await db.restoreProperty(input.id);
         let notifiedCount = 0;
         if (input.notifyPartners) {
-          const partnerIds = await db.getDmPartnersForProperty(input.id, ctx.user.id);
-          const message = input.message?.trim() || `「${prop.name}」を再公開しました。引き続きご検討いただけます。`;
+          const partnerIds = await db.getDmPartnersForProperty(
+            input.id,
+            ctx.user.id
+          );
+          const message =
+            input.message?.trim() ||
+            `「${prop.name}」を再公開しました。引き続きご検討いただけます。`;
           const fullMessage = `【物件「${prop.name}」について】\n${message}`;
           for (const partnerId of partnerIds) {
-            await db.sendDirectMessage(ctx.user.id, partnerId, fullMessage, input.id);
+            await db.sendDirectMessage(
+              ctx.user.id,
+              partnerId,
+              fullMessage,
+              input.id
+            );
           }
           notifiedCount = partnerIds.length;
         }
-        db.logActivity(ctx.user.id, "property_restore", `物件「${prop.name}」を復元${input.notifyPartners ? `・商談相手${notifiedCount}名へ通知` : ""}`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "property_restore",
+          `物件「${prop.name}」を復元${input.notifyPartners ? `・商談相手${notifiedCount}名へ通知` : ""}`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true, notifiedCount };
       }),
   }),
@@ -1221,31 +1693,66 @@ ${propList}`
   dm: router({
     threads: protectedProcedure.query(async ({ ctx }) => {
       const threads = await db.getDirectMessageThreads(ctx.user.id);
-      return Promise.all(threads.map(async thread => ({
-        ...thread,
-        propertyRestricted: thread.propertyId
-          ? await isPropertyExcluded(thread.propertyId, ctx.user.id)
-          : false,
-      })));
+      return Promise.all(
+        threads.map(async thread => ({
+          ...thread,
+          propertyRestricted: thread.propertyId
+            ? await isPropertyExcluded(thread.propertyId, ctx.user.id)
+            : false,
+        }))
+      );
     }),
 
     messages: protectedProcedure
-      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable().optional() }))
+      .input(
+        z.object({
+          partnerId: z.number(),
+          propertyId: z.number().nullable().optional(),
+        })
+      )
       .query(async ({ input, ctx }) => {
-        return db.getDirectMessages(ctx.user.id, input.partnerId, input.propertyId ?? null);
+        return db.getDirectMessages(
+          ctx.user.id,
+          input.partnerId,
+          input.propertyId ?? null
+        );
       }),
 
     send: protectedProcedure
-      .input(z.object({ receiverId: z.number(), content: z.string().min(1), propertyId: z.number().nullable().optional() }))
+      .input(
+        z.object({
+          receiverId: z.number(),
+          content: z.string().min(1),
+          propertyId: z.number().nullable().optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         if (input.propertyId) {
           await requirePropertyAccess(input.propertyId, ctx.user);
           const property = await db.getPropertyById(input.propertyId);
-          if (property?.status === "sold") throw new TRPCError({ code: "BAD_REQUEST", message: "成約済み物件にはメッセージを送信できません" });
+          if (property?.status === "sold")
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "成約済み物件にはメッセージを送信できません",
+            });
         }
-        await db.rejoinDm(ctx.user.id, input.receiverId, input.propertyId ?? null);
-        await db.sendDirectMessage(ctx.user.id, input.receiverId, input.content, input.propertyId ?? null);
-        db.logActivity(ctx.user.id, "dm_send", `DM送信 (相手ID:${input.receiverId})`, ctx.req.headers["user-agent"]).catch(() => {});
+        await db.rejoinDm(
+          ctx.user.id,
+          input.receiverId,
+          input.propertyId ?? null
+        );
+        await db.sendDirectMessage(
+          ctx.user.id,
+          input.receiverId,
+          input.content,
+          input.propertyId ?? null
+        );
+        db.logActivity(
+          ctx.user.id,
+          "dm_send",
+          `DM送信 (相手ID:${input.receiverId})`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
 
         const senderName = ctx.user.name ?? "ユーザー";
         const propInfo = await sendDmNotifications({
@@ -1261,8 +1768,14 @@ ${propList}`
         });
 
         // 物件オーナー以外からの問い合わせが入ったら自動で商談中に
-        if (propInfo && ctx.user.id !== propInfo.userId && propInfo.status === "available") {
-          db.updateProperty(propInfo.id, { status: "negotiating" }).catch(() => {});
+        if (
+          propInfo &&
+          ctx.user.id !== propInfo.userId &&
+          propInfo.status === "available"
+        ) {
+          db.updateProperty(propInfo.id, { status: "negotiating" }).catch(
+            () => {}
+          );
         }
 
         return { success: true };
@@ -1273,12 +1786,28 @@ ${propList}`
       .mutation(async ({ input, ctx }) => {
         const message = await db.getDirectMessageById(input.messageId);
         if (!message || message.senderId !== ctx.user.id) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "このメッセージは削除できません" });
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "このメッセージは削除できません",
+          });
         }
-        if (message.propertyId) await requirePropertyAccess(message.propertyId, ctx.user);
-        const success = await db.deleteOwnDirectMessage(input.messageId, ctx.user.id);
-        if (!success) throw new TRPCError({ code: "FORBIDDEN", message: "このメッセージは削除できません" });
-        db.logActivity(ctx.user.id, "dm_delete", `DMメッセージID:${input.messageId} を削除`, ctx.req.headers["user-agent"]).catch(() => {});
+        if (message.propertyId)
+          await requirePropertyAccess(message.propertyId, ctx.user);
+        const success = await db.deleteOwnDirectMessage(
+          input.messageId,
+          ctx.user.id
+        );
+        if (!success)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "このメッセージは削除できません",
+          });
+        db.logActivity(
+          ctx.user.id,
+          "dm_delete",
+          `DMメッセージID:${input.messageId} を削除`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true };
       }),
 
@@ -1287,37 +1816,76 @@ ${propList}`
       .query(async ({ input }) => {
         const user = await db.getUserById(input.userId);
         if (!user) return null;
-        return { name: user.name, company: user.company, verified: user.verified, hasBusinessCard: !!user.businessCardBase64 };
+        return {
+          name: user.name,
+          company: user.company,
+          verified: user.verified,
+          hasBusinessCard: !!user.businessCardBase64,
+        };
       }),
 
     contactStatus: protectedProcedure
-      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
+      .input(
+        z.object({ partnerId: z.number(), propertyId: z.number().nullable() })
+      )
       .query(async ({ input, ctx }) => {
-        const { mineShared, partnerShared } = await db.getContactShareStatus(ctx.user.id, input.partnerId, input.propertyId);
-        const partner = partnerShared ? await db.getUserById(input.partnerId) : null;
+        const { mineShared, partnerShared } = await db.getContactShareStatus(
+          ctx.user.id,
+          input.partnerId,
+          input.propertyId
+        );
+        const partner = partnerShared
+          ? await db.getUserById(input.partnerId)
+          : null;
         return {
           mineShared,
           partnerShared,
-          myContact: { phone: ctx.user.phone, fax: ctx.user.fax, url: ctx.user.url, email: ctx.user.email },
-          partnerContact: partner ? { phone: partner.phone, fax: partner.fax, url: partner.url, email: partner.email, businessCardBase64: partner.businessCardBase64 } : null,
+          myContact: {
+            phone: ctx.user.phone,
+            fax: ctx.user.fax,
+            url: ctx.user.url,
+            email: ctx.user.email,
+          },
+          partnerContact: partner
+            ? {
+                phone: partner.phone,
+                fax: partner.fax,
+                url: partner.url,
+                email: partner.email,
+                businessCardBase64: partner.businessCardBase64,
+              }
+            : null,
         };
       }),
 
     shareContact: protectedProcedure
-      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
+      .input(
+        z.object({ partnerId: z.number(), propertyId: z.number().nullable() })
+      )
       .mutation(async ({ input, ctx }) => {
         if (input.propertyId) {
           await requirePropertyAccess(input.propertyId, ctx.user);
           const property = await db.getPropertyById(input.propertyId);
-          if (property?.status === "sold") throw new TRPCError({ code: "BAD_REQUEST", message: "成約済み物件では連絡先を共有できません" });
+          if (property?.status === "sold")
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "成約済み物件では連絡先を共有できません",
+            });
         }
         await db.shareContact(ctx.user.id, input.partnerId, input.propertyId);
         const contactLines = [
           ctx.user.phone ? `電話: ${ctx.user.phone}` : null,
           `メール: ${ctx.user.email}`,
-        ].filter(Boolean).join("\n");
+        ]
+          .filter(Boolean)
+          .join("\n");
         const content = `📇 連絡先を共有しました\n${contactLines}`;
-        await db.sendDirectMessage(ctx.user.id, input.partnerId, content, input.propertyId);
+        await db.sendDirectMessage(
+          ctx.user.id,
+          input.partnerId,
+          content,
+          input.propertyId
+        );
         const senderName = ctx.user.name ?? "ユーザー";
         await sendDmNotifications({
           senderId: ctx.user.id,
@@ -1330,20 +1898,38 @@ ${propList}`
           emailSubject: `【PropFlow】${senderName}さんが連絡先を共有しました`,
           emailHeading: "📇 連絡先が共有されました",
         });
-        db.logActivity(ctx.user.id, "contact_share", `相手ID:${input.partnerId} に連絡先を共有`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "contact_share",
+          `相手ID:${input.partnerId} に連絡先を共有`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true };
       }),
 
     sendBusinessCard: protectedProcedure
-      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable(), includePropertyLink: z.boolean().optional() }))
+      .input(
+        z.object({
+          partnerId: z.number(),
+          propertyId: z.number().nullable(),
+          includePropertyLink: z.boolean().optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         if (input.propertyId) {
           await requirePropertyAccess(input.propertyId, ctx.user);
           const property = await db.getPropertyById(input.propertyId);
-          if (property?.status === "sold") throw new TRPCError({ code: "BAD_REQUEST", message: "成約済み物件では名刺を送信できません" });
+          if (property?.status === "sold")
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "成約済み物件では名刺を送信できません",
+            });
         }
         if (!ctx.user.businessCardBase64) {
-          return { success: false, error: "名刺画像が登録されていません" } as const;
+          return {
+            success: false,
+            error: "名刺画像が登録されていません",
+          } as const;
         }
         const partner = await db.getUserById(input.partnerId);
         if (!partner) throw new TRPCError({ code: "NOT_FOUND" });
@@ -1353,7 +1939,10 @@ ${propList}`
         const siteUrl = process.env.SITE_URL || "https://propflow.jp";
 
         const includePropertyLink = input.includePropertyLink !== false;
-        const prop = input.propertyId && includePropertyLink ? await db.getPropertyById(input.propertyId) : null;
+        const prop =
+          input.propertyId && includePropertyLink
+            ? await db.getPropertyById(input.propertyId)
+            : null;
         const senderIsOwner = !!prop && prop.userId === ctx.user.id;
         const propertyBlock = prop
           ? `<p style="margin-top:16px;">対象物件: 「${prop.name}」<br/><a href="${siteUrl}/property/${prop.id}" style="color:#2563eb;">${siteUrl}/property/${prop.id}</a></p>
@@ -1372,17 +1961,33 @@ ${propList}`
               <p style="margin-top:16px;font-size:12px;color:#9ca3af;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
             </div>
           `,
-          { attachments: [{ filename: "名刺.jpg", content: ctx.user.businessCardBase64 }] }
+          {
+            attachments: [
+              { filename: "名刺.jpg", content: ctx.user.businessCardBase64 },
+            ],
+          }
         );
         if (ok) {
-          await db.sendDirectMessage(ctx.user.id, input.partnerId, "📇 名刺付き情報メールを送りました", input.propertyId);
-          db.logActivity(ctx.user.id, "business_card_send", `相手ID:${input.partnerId} に名刺を送付`, ctx.req.headers["user-agent"]).catch(() => {});
+          await db.sendDirectMessage(
+            ctx.user.id,
+            input.partnerId,
+            "📇 名刺付き情報メールを送りました",
+            input.propertyId
+          );
+          db.logActivity(
+            ctx.user.id,
+            "business_card_send",
+            `相手ID:${input.partnerId} に名刺を送付`,
+            ctx.req.headers["user-agent"]
+          ).catch(() => {});
         }
         return { success: ok } as const;
       }),
 
     markRead: protectedProcedure
-      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable() }))
+      .input(
+        z.object({ partnerId: z.number(), propertyId: z.number().nullable() })
+      )
       .mutation(async ({ input, ctx }) => {
         await db.markDmAsRead(ctx.user.id, input.partnerId, input.propertyId);
         return { success: true };
@@ -1393,16 +1998,32 @@ ${propList}`
     }),
 
     exit: protectedProcedure
-      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable().optional() }))
+      .input(
+        z.object({
+          partnerId: z.number(),
+          propertyId: z.number().nullable().optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         await db.exitDm(ctx.user.id, input.partnerId, input.propertyId ?? null);
         return { success: true };
       }),
 
     setFlag: protectedProcedure
-      .input(z.object({ partnerId: z.number(), propertyId: z.number().nullable(), flagged: z.boolean() }))
+      .input(
+        z.object({
+          partnerId: z.number(),
+          propertyId: z.number().nullable(),
+          flagged: z.boolean(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
-        await db.setDmFlag(ctx.user.id, input.partnerId, input.propertyId, input.flagged);
+        await db.setDmFlag(
+          ctx.user.id,
+          input.partnerId,
+          input.propertyId,
+          input.flagged
+        );
         return { success: true };
       }),
 
@@ -1414,23 +2035,24 @@ ${propList}`
       }),
   }),
 
-
   buyer: router({
     getPreference: protectedProcedure.query(async ({ ctx }) => {
       return db.getBuyerPreference(ctx.user.id);
     }),
 
     savePreference: protectedProcedure
-      .input(z.object({
-        areas: z.array(z.string()).nullable().optional(),
-        types: z.array(z.string()).nullable().optional(),
-        minPrice: z.number().nullable().optional(),
-        maxPrice: z.number().nullable().optional(),
-        minLandArea: z.number().nullable().optional(),
-        maxLandArea: z.number().nullable().optional(),
-        stations: z.string().nullable().optional(),
-        notes: z.string().nullable().optional(),
-      }))
+      .input(
+        z.object({
+          areas: z.array(z.string()).nullable().optional(),
+          types: z.array(z.string()).nullable().optional(),
+          minPrice: z.number().nullable().optional(),
+          maxPrice: z.number().nullable().optional(),
+          minLandArea: z.number().nullable().optional(),
+          maxLandArea: z.number().nullable().optional(),
+          stations: z.string().nullable().optional(),
+          notes: z.string().nullable().optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         await db.upsertBuyerPreference(ctx.user.id, {
           areas: input.areas ?? null,
@@ -1442,7 +2064,442 @@ ${propList}`
           stations: input.stations ?? null,
           notes: input.notes ?? null,
         });
-        db.logActivity(ctx.user.id, "buyer_preference_save", "希望条件を保存", ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "buyer_preference_save",
+          "希望条件を保存",
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return { success: true };
+      }),
+  }),
+
+  propertySearch: router({
+    list: protectedProcedure.query(({ ctx }) =>
+      db.listPropertySearchRequests(
+        ctx.user.id,
+        ctx.user.role === "admin" || ctx.user.role === "management"
+      )
+    ),
+
+    analyze: protectedProcedure
+      .input(z.object({ text: z.string().min(5).max(5000) }))
+      .mutation(async ({ input }) => {
+        const fallback = {
+          title: input.text.slice(0, 60),
+          areas: [] as string[],
+          propertyTypes: [] as string[],
+          minPrice: null as number | null,
+          maxPrice: null as number | null,
+          minArea: null as number | null,
+          maxArea: null as number | null,
+          purpose: null as string | null,
+          purchaseTiming: null as string | null,
+          conditions: {} as Record<string, string | number | null>,
+          notes: input.text,
+          piiWarning:
+            /(?:0\d{1,4}-\d{1,4}-\d{3,4}|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,})/.test(
+              input.text
+            ),
+        };
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) return fallback;
+        try {
+          const Anthropic = (await import("@anthropic-ai/sdk")).default;
+          const client = new Anthropic({ apiKey });
+          const result = await client.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 800,
+            messages: [
+              {
+                role: "user",
+                content: `不動産業者が購入・仕入れを希望する物件条件を、次のJSONだけで整理してください。貸し出し募集ではありません。金額は円、面積は㎡の数値にしてください。不明項目はnullまたは空配列。入力に氏名・会社名・電話番号・メールアドレスがあればpiiWarningをtrueにしてください。
+{"title":"短い募集タイトル","areas":["希望エリア"],"propertyTypes":["土地等"],"minPrice":null,"maxPrice":null,"minArea":null,"maxArea":null,"purpose":"開発用地/買取再販/投資・保有/自社利用/顧客への紹介/その他","purchaseTiming":null,"conditions":{"priorityConditions":null,"landCondition":null,"zoningPreference":null,"minFloorAreaRatio":null,"roadPreference":null,"surveyPreference":null,"minYield":null,"occupancyPreference":null,"structurePreference":null,"maxBuildingAge":null,"inspectionPreference":null},"notes":"その他条件","piiWarning":false}
+入力：${input.text}`,
+              },
+            ],
+          });
+          const text =
+            result.content[0].type === "text" ? result.content[0].text : "";
+          return {
+            ...fallback,
+            ...JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim()),
+          };
+        } catch {
+          return fallback;
+        }
+      }),
+
+    create: protectedProcedure
+      .input(
+        z.object({
+          title: z.string().min(1).max(255),
+          areas: z.array(z.string()),
+          propertyTypes: z.array(z.string()),
+          minPrice: z.number().nullable().optional(),
+          maxPrice: z.number().nullable().optional(),
+          minArea: z.number().nullable().optional(),
+          maxArea: z.number().nullable().optional(),
+          purpose: z.string().nullable().optional(),
+          purchaseTiming: z.string().nullable().optional(),
+          conditions: z
+            .record(z.string(), z.union([z.string(), z.number(), z.null()]))
+            .nullable()
+            .optional(),
+          notes: z.string().max(5000).nullable().optional(),
+          anonymous: z.boolean().default(true),
+          status: z.enum(["draft", "active"]).default("active"),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        if (
+          input.status === "active" &&
+          (!input.areas.length || !input.propertyTypes.length)
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "募集開始には希望エリアと物件種別が必要です",
+          });
+        }
+        const id = await db.createPropertySearchRequest(ctx.user.id, input);
+        db.logActivity(
+          ctx.user.id,
+          "property_search_create",
+          `物件募集「${input.title}」を${input.status === "draft" ? "下書き保存" : "登録"}`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return { success: true, id };
+      }),
+
+    updateDraft: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          title: z.string().min(1).max(255),
+          areas: z.array(z.string()),
+          propertyTypes: z.array(z.string()),
+          minPrice: z.number().nullable().optional(),
+          maxPrice: z.number().nullable().optional(),
+          minArea: z.number().nullable().optional(),
+          maxArea: z.number().nullable().optional(),
+          purpose: z.string().nullable().optional(),
+          purchaseTiming: z.string().nullable().optional(),
+          conditions: z
+            .record(z.string(), z.union([z.string(), z.number(), z.null()]))
+            .nullable()
+            .optional(),
+          notes: z.string().max(5000).nullable().optional(),
+          anonymous: z.boolean(),
+          status: z.enum(["draft", "active"]),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        if (
+          input.status === "active" &&
+          (!input.areas.length || !input.propertyTypes.length)
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "募集開始には希望エリアと物件種別が必要です",
+          });
+        }
+        const { id, ...data } = input;
+        const success = await db.updatePropertySearchRequest(
+          id,
+          ctx.user.id,
+          data
+        );
+        if (success)
+          db.logActivity(
+            ctx.user.id,
+            "property_search_update",
+            `物件募集ID:${id}の内容を編集`,
+            ctx.req.headers["user-agent"]
+          ).catch(() => {});
+        return { success };
+      }),
+
+    close: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          message: z.string().max(1000).optional().default(""),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const closed = await db.closePropertySearchRequest(
+          input.id,
+          ctx.user.id
+        );
+        if (!closed)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "この募集を終了できません",
+          });
+        const customMessage = input.message.trim();
+        const content = [
+          `物件募集「${closed.requestTitle}」は募集を終了しました。`,
+          customMessage || null,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+        await Promise.all(
+          closed.pendingProposals.map(proposal =>
+            sendDmNotifications({
+              senderId: ctx.user.id,
+              senderName: ctx.user.name ?? "PropFlowユーザー",
+              senderCompany: ctx.user.company ?? "",
+              receiverId: proposal.userId,
+              propertyId: proposal.propertyId ?? null,
+              content,
+              title: "物件募集が終了しました",
+              emailSubject: "【PropFlow】物件募集が終了しました",
+              emailHeading: "物件募集終了のお知らせ",
+              path: "/v2/property-search",
+              ctaLabel: null,
+            }).catch(() => null)
+          )
+        );
+        db.logActivity(
+          ctx.user.id,
+          "property_search_close",
+          `物件募集「${closed.requestTitle}」を終了（未商談提案${closed.pendingProposals.length}件を受付終了）`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return {
+          success: true,
+          declinedCount: closed.pendingProposals.length,
+        };
+      }),
+
+    returnToDraft: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const result = await db.returnPropertySearchRequestToDraft(
+          input.id,
+          ctx.user.id
+        );
+        if (!result)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "この募集を下書きに戻せません",
+          });
+        if (result.blocked)
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "提案があるため、下書きには戻せません。",
+          });
+        db.logActivity(
+          ctx.user.id,
+          "property_search_return_to_draft",
+          `物件募集「${result.title}」を下書きに戻しました`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return { success: true };
+      }),
+
+    propose: protectedProcedure
+      .input(
+        z.object({
+          requestId: z.number(),
+          propertyId: z.number().nullable().optional(),
+          message: z.string().min(1).max(3000),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.verified !== 1) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "提案できるのは認証ユーザーのみです",
+          });
+        }
+        const proposal = await db.createPropertySearchProposal(
+          ctx.user.id,
+          input
+        );
+        if (proposal && "duplicate" in proposal && proposal.duplicate) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "この募集にはすでに提案済みです",
+          });
+        }
+        if (proposal) {
+          db.logActivity(
+            ctx.user.id,
+            "property_search_propose",
+            `物件募集ID:${input.requestId}へ提案`,
+            ctx.req.headers["user-agent"]
+          ).catch(() => {});
+          const content = `物件募集「${proposal.requestTitle}」に新しい提案が届きました。\n\n提案内容：\n${input.message}`;
+          await sendDmNotifications({
+            senderId: ctx.user.id,
+            senderName: ctx.user.name ?? "PropFlowユーザー",
+            senderCompany: ctx.user.company ?? "",
+            receiverId: proposal.requesterId,
+            propertyId: input.propertyId ?? null,
+            content,
+            title: "物件募集に新しい提案が届きました",
+            emailSubject: "【PropFlow】物件募集に新しい提案が届きました",
+            emailHeading: "新しい提案が届きました",
+            path: "/v2/property-search",
+            ctaLabel: "届いた提案を確認する",
+          });
+        }
+        return { success: !!proposal };
+      }),
+
+    myProposal: protectedProcedure
+      .input(z.object({ requestId: z.number() }))
+      .query(({ input, ctx }) =>
+        db.getMyPropertySearchProposal(input.requestId, ctx.user.id)
+      ),
+
+    unreadProposalCount: protectedProcedure.query(({ ctx }) =>
+      db.countUnreadPropertySearchProposals(ctx.user.id)
+    ),
+
+    markProposalsViewed: protectedProcedure
+      .input(z.object({ requestId: z.number() }))
+      .mutation(async ({ input, ctx }) => ({
+        success: await db.markPropertySearchProposalsViewed(
+          input.requestId,
+          ctx.user.id
+        ),
+      })),
+
+    proposals: protectedProcedure
+      .input(z.object({ requestId: z.number() }))
+      .query(({ input, ctx }) =>
+        db.listPropertySearchProposals(input.requestId, ctx.user.id)
+      ),
+
+    acceptProposal: protectedProcedure
+      .input(z.object({ proposalId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const accepted = await db.acceptPropertySearchProposal(
+          input.proposalId,
+          ctx.user.id
+        );
+        if (!accepted)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "この提案を承認できません",
+          });
+        const proposalContent = [
+          `物件募集「${accepted.requestTitle}」への提案をしました。`,
+          `提案物件：${accepted.propertyName ?? "未掲載物件・物件指定なし"}`,
+          `提案内容：\n${accepted.proposalMessage}`,
+        ].join("\n\n");
+        await db.sendDirectMessage(
+          accepted.proposerId,
+          ctx.user.id,
+          proposalContent,
+          accepted.propertyId ?? null
+        );
+        const acceptanceContent = "提案ありがとうございます。内容を確認しました。";
+        await db.sendDirectMessage(
+          ctx.user.id,
+          accepted.proposerId,
+          acceptanceContent,
+          accepted.propertyId ?? null
+        );
+        await sendDmNotifications({
+          senderId: ctx.user.id,
+          senderName: ctx.user.name ?? "PropFlowユーザー",
+          senderCompany: ctx.user.company ?? "",
+          receiverId: accepted.proposerId,
+          propertyId: accepted.propertyId ?? null,
+          content: acceptanceContent,
+          title: "物件募集への提案が承認されました",
+          emailSubject: "【PropFlow】物件募集への提案が承認されました",
+          emailHeading: "商談が開始されました",
+          path: `/v2/chat/${ctx.user.id}/${accepted.propertyId ?? 0}`,
+        });
+        db.logActivity(
+          ctx.user.id,
+          "property_search_accept",
+          `物件募集「${accepted.requestTitle}」の提案を承認`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return {
+          success: true,
+          partnerId: accepted.proposerId,
+          propertyId: accepted.propertyId ?? 0,
+        };
+      }),
+  }),
+
+  support: router({
+    report: protectedProcedure
+      .input(
+        z.object({
+          category: z.enum([
+            "display",
+            "operation",
+            "email",
+            "document",
+            "usage",
+            "trouble",
+            "registration",
+            "other",
+          ]),
+          page: z.string().max(500).optional().default(""),
+          message: z.string().min(5).max(5000),
+          replyEmail: z.string().email().max(320),
+          currentUrl: z.string().max(2000).optional().default(""),
+          occurredAt: z.string().max(100).optional().default(""),
+          deviceInfo: z.string().max(2000).optional().default(""),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const labels: Record<typeof input.category, string> = {
+          display: "画面が表示されない",
+          operation: "操作できない",
+          email: "メールが届かない",
+          document: "PDF・資料関連",
+          usage: "使い方について",
+          trouble: "ユーザー間のトラブル",
+          registration: "登録情報の変更",
+          other: "その他",
+        };
+        const escapeHtml = (value: string) =>
+          value
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        const { sendMail } = await import("./_core/mail");
+        const sent = await sendMail(
+          "propflow@gspec.me",
+          `【PropFlow・管理者への連絡】${labels[input.category]} - ${ctx.user.name ?? ctx.user.email}`,
+          `<div style="font-family:sans-serif;max-width:680px;margin:0 auto;">
+            <h2 style="color:#173f70;">管理者への連絡</h2>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+              <tr><th style="width:150px;text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">カテゴリ</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(labels[input.category])}</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">ユーザー</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(ctx.user.name ?? "未設定")}（${escapeHtml(ctx.user.company ?? "会社名未設定")}）</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">返信先</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.replyEmail)}</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">発生した画面</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.page || "未入力")}</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">発生日時</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.occurredAt)}</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">URL</th><td style="padding:8px;border:1px solid #d8e0e8;word-break:break-all;">${escapeHtml(input.currentUrl)}</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">端末・ブラウザ</th><td style="padding:8px;border:1px solid #d8e0e8;word-break:break-all;">${escapeHtml(input.deviceInfo)}</td></tr>
+            </table>
+            <h3 style="margin-top:20px;color:#173f70;">内容</h3>
+            <div style="white-space:pre-wrap;border:1px solid #d8e0e8;padding:16px;">${escapeHtml(input.message)}</div>
+          </div>`,
+          { replyTo: input.replyEmail }
+        );
+        if (!sent)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "送信に失敗しました。時間をおいて再度お試しください。",
+          });
+        db.logActivity(
+          ctx.user.id,
+          "support_report",
+          `管理者へ連絡（${labels[input.category]}）`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true };
       }),
   }),
@@ -1451,73 +2508,105 @@ ${propList}`
     logStart: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
-        db.logActivity(ctx.user.id, "simulation_start", `物件ID:${input.propertyId} の収益シミュレーションを開始`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "simulation_start",
+          `物件ID:${input.propertyId} の収益シミュレーションを開始`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true };
       }),
   }),
 
   landPrice: router({
     search: protectedProcedure
-      .input(z.object({
-        area: z.string(),
-        city: z.string().optional(),
-        address: z.string().optional(),
-        year: z.number().optional(),
-        quarter: z.number().optional(),
-      }))
+      .input(
+        z.object({
+          area: z.string(),
+          city: z.string().optional(),
+          address: z.string().optional(),
+          year: z.number().optional(),
+          quarter: z.number().optional(),
+        })
+      )
       .query(async ({ input, ctx }) => {
-        db.logActivity(ctx.user.id, "land_price_search", `近隣取引事例を検索（${input.area}${input.address ? " " + input.address : ""}）`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "land_price_search",
+          `近隣取引事例を検索（${input.area}${input.address ? " " + input.address : ""}）`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         const apiKey = process.env.MLIT_API_KEY;
         if (!apiKey) {
           console.warn("[landPrice.search] MLIT_API_KEY is not configured");
-          return { data: [], error: "参考坪単価を現在取得できません。時間をおいて再度お試しください。" };
+          return {
+            data: [],
+            error:
+              "参考坪単価を現在取得できません。時間をおいて再度お試しください。",
+          };
         }
 
         let cityCode = input.city;
         if (!cityCode && input.address) {
           try {
-            const citiesRes = await fetch(`https://www.reinfolib.mlit.go.jp/ex-api/external/XIT002?area=${input.area}`, {
-              headers: { "Ocp-Apim-Subscription-Key": apiKey },
-            });
+            const citiesRes = await fetch(
+              `https://www.reinfolib.mlit.go.jp/ex-api/external/XIT002?area=${input.area}`,
+              {
+                headers: { "Ocp-Apim-Subscription-Key": apiKey },
+              }
+            );
             if (citiesRes.ok) {
               const citiesJson = await citiesRes.json();
               const cities = citiesJson.data ?? [];
-              const matched = cities.find((c: any) => input.address!.includes(c.name));
+              const matched = cities.find((c: any) =>
+                input.address!.includes(c.name)
+              );
               if (matched) cityCode = matched.id;
             }
-          } catch (e) { console.warn("City code lookup failed:", e); }
+          } catch (e) {
+            console.warn("City code lookup failed:", e);
+          }
         }
 
         const now = new Date();
         let currentYear = input.year ?? now.getFullYear();
-        let currentQuarter = input.quarter ?? (Math.floor(now.getMonth() / 3) + 1);
+        let currentQuarter =
+          input.quarter ?? Math.floor(now.getMonth() / 3) + 1;
 
-        const parseItems = (data: any[]) => data
-          .filter((d: any) => d.Type === "宅地(土地)" || d.Type === "宅地(土地と建物)")
-          .map((d: any) => {
-            const tradePrice = Number(d.TradePrice) || 0;
-            const area = Number(d.Area) || 0;
-            let pricePerUnit = Number(d.PricePerUnit) || 0;
-            if (pricePerUnit === 0 && tradePrice > 0 && area > 0) {
-              pricePerUnit = Math.round(tradePrice / (area * 0.3025));
-            }
-            return {
-              type: d.Type,
-              district: d.DistrictName,
-              tradePrice,
-              pricePerUnit,
-              unitPrice: Number(d.UnitPrice) || 0,
-              area,
-              landShape: d.LandShape,
-              use: d.Use,
-              cityPlanning: d.CityPlanning,
-              period: d.Period,
-            };
-          });
+        const parseItems = (data: any[]) =>
+          data
+            .filter(
+              (d: any) =>
+                d.Type === "宅地(土地)" || d.Type === "宅地(土地と建物)"
+            )
+            .map((d: any) => {
+              const tradePrice = Number(d.TradePrice) || 0;
+              const area = Number(d.Area) || 0;
+              let pricePerUnit = Number(d.PricePerUnit) || 0;
+              if (pricePerUnit === 0 && tradePrice > 0 && area > 0) {
+                pricePerUnit = Math.round(tradePrice / (area * 0.3025));
+              }
+              return {
+                type: d.Type,
+                district: d.DistrictName,
+                tradePrice,
+                pricePerUnit,
+                unitPrice: Number(d.UnitPrice) || 0,
+                area,
+                landShape: d.LandShape,
+                use: d.Use,
+                cityPlanning: d.CityPlanning,
+                period: d.Period,
+              };
+            });
 
         try {
           let allItems: any[] = [];
-          for (let attempt = 0; attempt < 8 && allItems.length < 15; attempt++) {
+          for (
+            let attempt = 0;
+            attempt < 8 && allItems.length < 15;
+            attempt++
+          ) {
             const params = new URLSearchParams({
               year: String(currentYear),
               quarter: String(currentQuarter),
@@ -1526,15 +2615,21 @@ ${propList}`
               language: "ja",
             });
             if (cityCode) params.set("city", cityCode);
-            const res = await fetch(`https://www.reinfolib.mlit.go.jp/ex-api/external/XIT001?${params}`, {
-              headers: { "Ocp-Apim-Subscription-Key": apiKey },
-            });
+            const res = await fetch(
+              `https://www.reinfolib.mlit.go.jp/ex-api/external/XIT001?${params}`,
+              {
+                headers: { "Ocp-Apim-Subscription-Key": apiKey },
+              }
+            );
             if (res.ok) {
               const json = await res.json();
               allItems.push(...parseItems(json.data ?? []));
             }
             currentQuarter--;
-            if (currentQuarter < 1) { currentQuarter = 4; currentYear--; }
+            if (currentQuarter < 1) {
+              currentQuarter = 4;
+              currentYear--;
+            }
           }
           return { data: allItems.slice(0, 15), error: null };
         } catch (err: any) {
@@ -1549,16 +2644,23 @@ ${propList}`
     }),
 
     save: protectedProcedure
-      .input(z.object({
-        propertyId: z.number(),
-        title: z.string(),
-        htmlContent: z.string(),
-        attachmentIds: z.array(z.number()),
-      }))
+      .input(
+        z.object({
+          propertyId: z.number(),
+          title: z.string(),
+          htmlContent: z.string(),
+          attachmentIds: z.array(z.number()),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         await requirePropertyAccess(input.propertyId, ctx.user);
         await db.saveGeneratedDocument({ userId: ctx.user.id, ...input });
-        db.logActivity(ctx.user.id, "document_generate", `「${input.title}」の紹介資料PDFを作成`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "document_generate",
+          `「${input.title}」の紹介資料PDFを作成`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true };
       }),
 
@@ -1579,7 +2681,13 @@ ${propList}`
   announce: router({
     archive: protectedProcedure.query(async () => {
       const logs = await db.getBroadcastLogs();
-      return logs.map(({ id, subject, message, imageUrl, sentAt }) => ({ id, subject, message, imageUrl, sentAt }));
+      return logs.map(({ id, subject, message, imageUrl, sentAt }) => ({
+        id,
+        subject,
+        message,
+        imageUrl,
+        sentAt,
+      }));
     }),
   }),
 
@@ -1596,7 +2704,6 @@ ${propList}`
     allUsers: managementProcedure.query(async () => {
       return db.listActiveUsers();
     }),
-
 
     approveUser: adminProcedure
       .input(z.object({ id: z.number() }))
@@ -1615,7 +2722,10 @@ ${propList}`
     setManagement: adminProcedure
       .input(z.object({ id: z.number(), management: z.boolean() }))
       .mutation(async ({ input }) => {
-        await db.setUserRole(input.id, input.management ? "management" : "user");
+        await db.setUserRole(
+          input.id,
+          input.management ? "management" : "user"
+        );
         return { success: true };
       }),
 
@@ -1665,6 +2775,38 @@ ${propList}`
         return { success: true };
       }),
 
+    deletePropertySearchRequest: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const request = await db.deletePropertySearchRequestAdmin(input.id);
+        if (!request) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "募集内容が見つかりません" });
+        }
+        db.logActivity(
+          ctx.user.id,
+          "property_search_admin_delete",
+          `物件募集「${request.title}」（ID:${request.id}）を管理画面から削除`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return { success: true };
+      }),
+
+    setPropertySearchRequestHidden: adminProcedure
+      .input(z.object({ id: z.number(), hidden: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        const success = await db.setPropertySearchRequestHiddenAdmin(input.id, input.hidden);
+        if (!success) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "募集内容が見つかりません" });
+        }
+        db.logActivity(
+          ctx.user.id,
+          input.hidden ? "property_search_admin_hide" : "property_search_admin_restore",
+          `物件募集ID:${input.id}を${input.hidden ? "非表示" : "表示に復元"}`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return { success: true };
+      }),
+
     getUserDetail: managementProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
@@ -1682,32 +2824,40 @@ ${propList}`
       }),
 
     updatePlan: adminProcedure
-      .input(z.object({
-        id: z.number(),
-        plan: z.enum(["standard", "gold", "platinum"]),
-      }))
+      .input(
+        z.object({
+          id: z.number(),
+          plan: z.enum(["standard", "gold", "platinum"]),
+        })
+      )
       .mutation(async ({ input }) => {
         await db.updateUserPlan(input.id, input.plan);
         return { success: true };
       }),
 
     createUser: adminProcedure
-      .input(z.object({
-        email: z.string().email(),
-        password: z.string().min(6),
-        name: z.string().optional(),
-        company: z.string().optional(),
-        phone: z.string().optional(),
-        fax: z.string().optional(),
-        zipCode: z.string().optional(),
-        address: z.string().optional(),
-        url: z.string().optional(),
-        license: z.string().optional(),
-        businessCardBase64: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(6),
+          name: z.string().optional(),
+          company: z.string().optional(),
+          phone: z.string().optional(),
+          fax: z.string().optional(),
+          zipCode: z.string().optional(),
+          address: z.string().optional(),
+          url: z.string().optional(),
+          license: z.string().optional(),
+          businessCardBase64: z.string().optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         const existing = await db.getUserByEmail(input.email);
-        if (existing) return { success: false, error: "このメールアドレスは既に登録されています" } as const;
+        if (existing)
+          return {
+            success: false,
+            error: "このメールアドレスは既に登録されています",
+          } as const;
         const passwordHash = await hashPassword(input.password);
         const newUser = await db.createUser({
           openId: nanoid(),
@@ -1726,11 +2876,19 @@ ${propList}`
         if (input.businessCardBase64 && newUser) {
           await db.updateUserBusinessCard(newUser.id, input.businessCardBase64);
         }
-        db.logActivity(ctx.user.id, "admin_create_user", `管理者がユーザー${input.email}を代理登録`, ctx.req.headers["user-agent"]).catch(() => {});
+        db.logActivity(
+          ctx.user.id,
+          "admin_create_user",
+          `管理者がユーザー${input.email}を代理登録`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
 
         const { sendMail } = await import("./_core/mail");
         const nameLabel = input.name ? `${input.name}　様` : "　様";
-        const emailSent = await sendMail(input.email, "【PropFlow】ご登録完了のお知らせ", `
+        const emailSent = await sendMail(
+          input.email,
+          "【PropFlow】ご登録完了のお知らせ",
+          `
 <p>${nameLabel}</p>
 <p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
 <p>下記にてご登録をさせて頂きました。</p>
@@ -1751,10 +2909,12 @@ ${propList}`
 </p>
 <p>宜しくお願い致します。</p>
 <p>PropFlowサポート　加藤</p>
-        `.trim(), {
-          replyTo: "propflow@gspec.me",
-          bcc: "imuracchi@gmail.com",
-        });
+        `.trim(),
+          {
+            replyTo: "propflow@gspec.me",
+            bcc: "imuracchi@gmail.com",
+          }
+        );
 
         return { success: true, emailSent } as const;
       }),
@@ -1763,16 +2923,23 @@ ${propList}`
       .input(z.object({ userId: z.number(), password: z.string().min(6) }))
       .mutation(async ({ input }) => {
         const user = await db.getUserById(input.userId);
-        if (!user) return { success: false, error: "ユーザーが見つかりません" } as const;
+        if (!user)
+          return { success: false, error: "ユーザーが見つかりません" } as const;
         const newHash = await hashPassword(input.password);
         const dbConn = await db.getDb();
         if (!dbConn) return { success: false, error: "DB接続エラー" } as const;
         const { users } = await import("../drizzle/schema");
         const { eq } = await import("drizzle-orm");
-        await dbConn.update(users).set({ passwordHash: newHash }).where(eq(users.id, input.userId));
+        await dbConn
+          .update(users)
+          .set({ passwordHash: newHash })
+          .where(eq(users.id, input.userId));
         const { sendMail } = await import("./_core/mail");
         const nameLabel = user.name ? `${user.name}　様` : "　様";
-        const emailSent = await sendMail(user.email, "【PropFlow】ご登録完了のお知らせ", `
+        const emailSent = await sendMail(
+          user.email,
+          "【PropFlow】ご登録完了のお知らせ",
+          `
 <p>${nameLabel}</p>
 <p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
 <p>下記にてご登録をさせて頂きました。</p>
@@ -1793,10 +2960,12 @@ ${propList}`
 </p>
 <p>宜しくお願い致します。</p>
 <p>PropFlowサポート　加藤</p>
-        `.trim(), {
-          replyTo: "propflow@gspec.me",
-          bcc: "imuracchi@gmail.com",
-        });
+        `.trim(),
+          {
+            replyTo: "propflow@gspec.me",
+            bcc: "imuracchi@gmail.com",
+          }
+        );
         return { success: true, emailSent } as const;
       }),
 
@@ -1804,11 +2973,23 @@ ${propList}`
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const targetUser = await db.getUserById(input.userId);
-        if (!targetUser) return { success: false, error: "ユーザーが見つかりません" } as const;
-        const token = await createSessionToken(targetUser.id, targetUser.openId);
+        if (!targetUser)
+          return { success: false, error: "ユーザーが見つかりません" } as const;
+        const token = await createSessionToken(
+          targetUser.id,
+          targetUser.openId
+        );
         const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        db.logActivity(ctx.user.id, "admin_login_as", `管理者が${targetUser.name}（ID:${targetUser.id}）として代理ログイン`, ctx.req.headers["user-agent"]).catch(() => {});
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: ONE_YEAR_MS,
+        });
+        db.logActivity(
+          ctx.user.id,
+          "admin_login_as",
+          `管理者が${targetUser.name}（ID:${targetUser.id}）として代理ログイン`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true } as const;
       }),
 
@@ -1817,9 +2998,17 @@ ${propList}`
     }),
 
     allDmMessages: managementProcedure
-      .input(z.object({ from: z.string().optional(), to: z.string().optional() }).optional())
+      .input(
+        z
+          .object({ from: z.string().optional(), to: z.string().optional() })
+          .optional()
+      )
       .query(async ({ input }) => {
-        return db.getAllDmMessagesAdmin(200, input?.from ? new Date(input.from) : undefined, input?.to ? new Date(input.to) : undefined);
+        return db.getAllDmMessagesAdmin(
+          200,
+          input?.from ? new Date(input.from) : undefined,
+          input?.to ? new Date(input.to) : undefined
+        );
       }),
 
     deleteDm: adminProcedure
@@ -1829,19 +3018,19 @@ ${propList}`
         return { success: true };
       }),
 
-
-    broadcastLogs: adminProcedure
-      .query(async () => {
-        return db.getBroadcastLogs();
-      }),
+    broadcastLogs: adminProcedure.query(async () => {
+      return db.getBroadcastLogs();
+    }),
 
     addBroadcastLog: adminProcedure
-      .input(z.object({
-        subject: z.string().min(1),
-        message: z.string().min(1),
-        imageUrl: z.string().url().optional(),
-        sentAt: z.string(),
-      }))
+      .input(
+        z.object({
+          subject: z.string().min(1),
+          message: z.string().min(1),
+          imageUrl: z.string().url().optional(),
+          sentAt: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         await db.saveBroadcastLog({
           subject: input.subject,
@@ -1856,34 +3045,43 @@ ${propList}`
       }),
 
     broadcast: adminProcedure
-      .input(z.object({
-        subject: z.string().min(1),
-        message: z.string().optional(),
-        lineMessage: z.string().optional(),
-        imageUrl: z.string().url().optional(),
-        skipLine: z.boolean().optional(),
-        skipEmail: z.boolean().optional(),
-      }))
+      .input(
+        z.object({
+          subject: z.string().min(1),
+          message: z.string().optional(),
+          lineMessage: z.string().optional(),
+          imageUrl: z.string().url().optional(),
+          skipLine: z.boolean().optional(),
+          skipEmail: z.boolean().optional(),
+        })
+      )
       .mutation(async ({ input }) => sendBroadcastToAll(input)),
 
-    analyzeDms: adminProcedure
-      .mutation(async () => {
-        const Anthropic = (await import("@anthropic-ai/sdk")).default;
-        const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    analyzeDms: adminProcedure.mutation(async () => {
+      const Anthropic = (await import("@anthropic-ai/sdk")).default;
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-        const allMessages = await db.getAllDmMessagesAdmin();
+      const allMessages = await db.getAllDmMessagesAdmin();
 
-        if (allMessages.length === 0) {
-          return { categories: [], summary: "分析するDMメッセージがありません。", totalMessages: 0, totalAnalyzed: 0 };
-        }
+      if (allMessages.length === 0) {
+        return {
+          categories: [],
+          summary: "分析するDMメッセージがありません。",
+          totalMessages: 0,
+          totalAnalyzed: 0,
+        };
+      }
 
-        const messages = (allMessages as any[]).slice(0, 300);
-        const messageTexts = messages
-          .filter((m: any) => m.content && m.content.trim().length > 2)
-          .map((m: any, i: number) => `${i + 1}. [${m.propertyName || "物件不明"}] ${m.content}`)
-          .join("\n");
+      const messages = (allMessages as any[]).slice(0, 300);
+      const messageTexts = messages
+        .filter((m: any) => m.content && m.content.trim().length > 2)
+        .map(
+          (m: any, i: number) =>
+            `${i + 1}. [${m.propertyName || "物件不明"}] ${m.content}`
+        )
+        .join("\n");
 
-        const prompt = `あなたは不動産プラットフォームのデータアナリストです。
+      const prompt = `あなたは不動産プラットフォームのデータアナリストです。
 以下は不動産取引プラットフォームPropFlowのDMメッセージ一覧です。
 これらを分析し、どのような話題・質問が多いかをカテゴリ別に集計・要約してください。
 
@@ -1912,49 +3110,58 @@ ${messageTexts}
 - examplesは実際のメッセージから選んでください（個人名・連絡先は省略すること）
 - percentageの合計は100になるよう調整すること`;
 
-        const stream = client.messages.stream({
-          model: "claude-opus-4-8",
-          max_tokens: 4000,
-          thinking: { type: "adaptive" },
-          messages: [{ role: "user", content: prompt }],
+      const stream = client.messages.stream({
+        model: "claude-opus-4-8",
+        max_tokens: 4000,
+        thinking: { type: "adaptive" },
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const finalMessage = await stream.finalMessage();
+
+      const textContent = finalMessage.content.find(
+        (c: any) => c.type === "text"
+      );
+      if (!textContent || textContent.type !== "text") {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Claude APIからの応答が不正です",
         });
+      }
 
-        const finalMessage = await stream.finalMessage();
+      const jsonMatch = (textContent as any).text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "分析結果が不正な形式です",
+        });
+      }
 
-        const textContent = finalMessage.content.find((c: any) => c.type === "text");
-        if (!textContent || textContent.type !== "text") {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Claude APIからの応答が不正です" });
-        }
+      const result = JSON.parse(jsonMatch[0]);
+      return {
+        categories: result.categories ?? [],
+        summary: result.summary ?? "",
+        totalAnalyzed: result.totalAnalyzed ?? messages.length,
+        totalMessages: allMessages.length,
+      };
+    }),
 
-        const jsonMatch = (textContent as any).text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "分析結果が不正な形式です" });
-        }
-
-        const result = JSON.parse(jsonMatch[0]);
-        return {
-          categories: result.categories ?? [],
-          summary: result.summary ?? "",
-          totalAnalyzed: result.totalAnalyzed ?? messages.length,
-          totalMessages: allMessages.length,
-        };
-      }),
-
-    listSchedules: adminProcedure
-      .query(async () => {
-        return db.listBroadcastSchedules();
-      }),
+    listSchedules: adminProcedure.query(async () => {
+      return db.listBroadcastSchedules();
+    }),
 
     createSchedule: adminProcedure
-      .input(z.object({
-        subject: z.string().min(1),
-        message: z.string().optional(),
-        lineMessage: z.string().optional(),
-        imageUrl: z.string().url().optional(),
-        skipLine: z.boolean().optional(),
-        skipEmail: z.boolean().optional(),
-        scheduledAt: z.string(),
-      }))
+      .input(
+        z.object({
+          subject: z.string().min(1),
+          message: z.string().optional(),
+          lineMessage: z.string().optional(),
+          imageUrl: z.string().url().optional(),
+          skipLine: z.boolean().optional(),
+          skipEmail: z.boolean().optional(),
+          scheduledAt: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         await db.createBroadcastSchedule({
           subject: input.subject,

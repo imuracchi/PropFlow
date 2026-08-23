@@ -639,6 +639,11 @@ export default function V2PropertyList({
                     {p.published === 0 && (
                       <span className="bg-[#eef1f5] px-2 py-0.5 text-[#526176]">下書き</span>
                     )}
+                    {collection === "mine" && p.visibilityScope === "proposal" && (
+                      <span className="bg-[#e8f0f8] px-2 py-0.5 text-[#173f70]">
+                        提案先限定
+                      </span>
+                    )}
                     {p.published !== 0 && p.userId !== user?.id && !readSet.has(p.id) && (
                       <span className="bg-[#173f70] px-2 py-0.5 text-white">
                         新着・未読
@@ -801,6 +806,11 @@ export default function V2PropertyList({
                         <div className="flex min-w-[118px] flex-wrap gap-1.5">
                         {p.published === 0 && (
                           <span className="bg-[#eef1f5] px-2 py-1 text-[12px] font-bold text-[#526176]">下書き</span>
+                        )}
+                        {collection === "mine" && p.visibilityScope === "proposal" && (
+                          <span className="whitespace-nowrap bg-[#e8f0f8] px-2 py-1 text-[12px] font-bold text-[#173f70]">
+                            提案先限定
+                          </span>
                         )}
                         {p.published !== 0 && p.userId !== user?.id && !readSet.has(p.id) && (
                           <span className="bg-[#173f70] px-2 py-1 text-[12px] font-bold text-white">

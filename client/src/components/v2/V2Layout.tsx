@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Plus,
   ShieldCheck,
+  Target,
   TriangleAlert,
   UserRound,
   Users,
@@ -17,6 +18,7 @@ import {
 import { ReactNode, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 
 const nav = [
   { icon: List, label: "物件一覧", path: "/v2/properties" },
@@ -39,8 +41,19 @@ export default function V2Layout({
 }) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const unreadProposalCountQuery =
+    trpc.propertySearch.unreadProposalCount.useQuery(undefined, {
+      enabled: !preview && !!user,
+      refetchInterval: 30000,
+    });
+  const unreadProposalCount = unreadProposalCountQuery.data ?? 0;
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
-  const mobileNav = [nav[0], nav[3], nav[2]];
+  const mobileNav = [
+    nav[0],
+    { icon: Target, label: "物件募集", path: "/v2/property-search" },
+    nav[2],
+    nav[3],
+  ];
   const sellerNav = [nav[3], nav[2], nav[4]];
   const destination = (path: string) => {
     if (!preview && !location.startsWith("/v2/preview")) return path;
@@ -57,10 +70,7 @@ export default function V2Layout({
   };
   const openAdminReport = () => {
     setMobileMoreOpen(false);
-    setLocation(`${destination("/v2/mypage")}#admin-report`);
-    window.setTimeout(() => {
-      document.getElementById("admin-report")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
+    setLocation("/v2/issue-report");
   };
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#17211d]">
@@ -93,6 +103,21 @@ export default function V2Layout({
               {item.label}
             </button>
           ))}
+          <p className="mt-5 px-3 pb-2 text-[10px] font-bold tracking-widest text-white/40">
+            募集案件
+          </p>
+          <button
+            onClick={() => setLocation(destination("/v2/property-search"))}
+            className={`mb-1 flex h-10 w-full items-center gap-3 px-3 text-[13px] ${location === destination("/v2/property-search") ? "bg-white/15 font-bold text-white" : "text-white/65 hover:bg-white/10"}`}
+          >
+            <Target size={17} />
+            物件募集
+            {unreadProposalCount > 0 && (
+              <span className="ml-auto rounded-full bg-[#d95532] px-2 py-0.5 text-[10px] font-bold text-white">
+                {unreadProposalCount > 99 ? "99+" : unreadProposalCount}
+              </span>
+            )}
+          </button>
           <p className="mt-5 px-3 pb-2 text-[10px] font-bold tracking-widest text-white/40">
             物件を出す
           </p>
@@ -136,8 +161,12 @@ export default function V2Layout({
         </nav>
         <div className="border-t border-white/10 p-4">
           {(user?.role === "admin" || user?.role === "management") && (
-            <button onClick={() => setLocation("/v2/admin")} className="mb-4 flex h-10 w-full items-center gap-2 border border-white/25 px-3 text-[11px] font-bold text-white">
-              <ShieldCheck size={16}/>管理画面を開く
+            <button
+              onClick={() => setLocation("/v2/admin")}
+              className="mb-4 flex h-10 w-full items-center gap-2 border border-white/25 px-3 text-[11px] font-bold text-white"
+            >
+              <ShieldCheck size={16} />
+              管理画面を開く
             </button>
           )}
           <div className="flex items-center">
@@ -177,85 +206,126 @@ export default function V2Layout({
             <Bell size={18} />
           </button>
           {(user?.role === "admin" || user?.role === "management") && (
-            <button onClick={() => setLocation("/v2/admin")} className="ml-1 grid size-9 place-items-center lg:hidden" aria-label="管理画面"><ShieldCheck size={18}/></button>
+            <button
+              onClick={() => setLocation("/v2/admin")}
+              className="ml-1 grid size-9 place-items-center lg:hidden"
+              aria-label="管理画面"
+            >
+              <ShieldCheck size={18} />
+            </button>
           )}
         </header>
         <div className={hideMobileNav ? "" : "pb-20 lg:pb-0"}>{children}</div>
       </div>
       {!hideMobileNav && mobileMoreOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onClick={() => setMobileMoreOpen(false)}>
-          <section className="absolute inset-x-0 bottom-0 bg-white px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-4" onClick={event => event.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 bg-black/40 lg:hidden"
+          onClick={() => setMobileMoreOpen(false)}
+        >
+          <section
+            className="absolute inset-x-0 bottom-0 bg-white px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-4"
+            onClick={event => event.stopPropagation()}
+          >
             <div className="flex items-center border-b border-[#dfe4ea] pb-3">
               <div>
-                <p className="text-[11px] font-bold tracking-wider text-[#5275a0]">MENU</p>
-                <h2 className="text-[18px] font-bold text-[#102d50]">その他の機能</h2>
+                <p className="text-[11px] font-bold tracking-wider text-[#5275a0]">
+                  MENU
+                </p>
+                <h2 className="text-[18px] font-bold text-[#102d50]">
+                  その他の機能
+                </h2>
               </div>
-              <button onClick={() => setMobileMoreOpen(false)} className="ml-auto grid size-10 place-items-center" aria-label="メニューを閉じる"><X size={20}/></button>
+              <button
+                onClick={() => setMobileMoreOpen(false)}
+                className="ml-auto grid size-10 place-items-center"
+                aria-label="メニューを閉じる"
+              >
+                <X size={20} />
+              </button>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
               {[
-                { icon: Download, label: "ダウンロード資料", path: "/v2/documents" },
+                { icon: UserRound, label: "マイページ", path: "/v2/mypage" },
+                {
+                  icon: Download,
+                  label: "ダウンロード資料",
+                  path: "/v2/documents",
+                },
                 { icon: Users, label: "興味者リスト", path: "/v2/interested" },
-                { icon: Plus, label: "物件を登録", path: "/v2/upload" },
                 { icon: Bell, label: "お知らせ", path: "/v2/announcements" },
               ].map(item => (
                 <button
                   key={item.path}
-                  onClick={() => { setMobileMoreOpen(false); setLocation(destination(item.path)); }}
+                  onClick={() => {
+                    setMobileMoreOpen(false);
+                    setLocation(destination(item.path));
+                  }}
                   className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
                 >
-                  <item.icon size={23}/>
-                  <span className="mt-2 text-[11px] font-bold leading-4">{item.label}</span>
+                  <item.icon size={23} />
+                  <span className="mt-2 text-[11px] font-bold leading-4">
+                    {item.label}
+                  </span>
                 </button>
               ))}
               <button
                 onClick={openAdminReport}
                 className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
               >
-                <TriangleAlert size={23}/>
-                <span className="mt-2 text-[11px] font-bold leading-4">障害報告</span>
+                <TriangleAlert size={23} />
+                <span className="mt-2 text-[11px] font-bold leading-4">
+                  障害報告
+                </span>
               </button>
               {(user?.role === "admin" || user?.role === "management") && (
                 <button
-                  onClick={() => { setMobileMoreOpen(false); setLocation("/v2/admin"); }}
+                  onClick={() => {
+                    setMobileMoreOpen(false);
+                    setLocation("/v2/admin");
+                  }}
                   className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
                 >
-                  <ShieldCheck size={23}/>
-                  <span className="mt-2 text-[11px] font-bold leading-4">管理画面</span>
+                  <ShieldCheck size={23} />
+                  <span className="mt-2 text-[11px] font-bold leading-4">
+                    管理画面
+                  </span>
                 </button>
               )}
             </div>
           </section>
         </div>
       )}
-      {!hideMobileNav && <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dfe3e8] bg-white pb-[max(7px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
-        <div className="mx-auto flex max-w-md justify-around">
-          {mobileNav.map(item => (
+      {!hideMobileNav && (
+        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dfe3e8] bg-white pb-[max(7px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+          <div className="mx-auto flex max-w-md justify-around">
+            {mobileNav.map(item => (
+              <button
+                key={item.path}
+                onClick={() => setLocation(destination(item.path))}
+                className={`flex w-16 flex-col items-center gap-1 text-[10px] ${location === destination(item.path) ? "font-bold text-[#173f70]" : "text-[#718096]"}`}
+              >
+                <span className="relative">
+                  <item.icon size={21} />
+                  {item.path === "/v2/property-search" &&
+                    unreadProposalCount > 0 && (
+                      <span className="absolute -right-3 -top-2 grid min-w-4 place-items-center rounded-full bg-[#d95532] px-1 text-[9px] font-bold leading-4 text-white">
+                        {unreadProposalCount > 9 ? "9+" : unreadProposalCount}
+                      </span>
+                    )}
+                </span>
+                {item.label}
+              </button>
+            ))}
             <button
-              key={item.path}
-              onClick={() => setLocation(destination(item.path))}
-              className={`flex w-16 flex-col items-center gap-1 text-[10px] ${location === destination(item.path) ? "font-bold text-[#173f70]" : "text-[#718096]"}`}
+              onClick={() => setMobileMoreOpen(true)}
+              className={`flex w-16 flex-col items-center gap-1 text-[10px] ${mobileMoreOpen ? "font-bold text-[#173f70]" : "text-[#718096]"}`}
             >
-              <item.icon size={21} />
-              {item.label}
+              <LayoutGrid size={21} />
+              その他
             </button>
-          ))}
-          <button
-            onClick={() => setMobileMoreOpen(true)}
-            className={`flex w-16 flex-col items-center gap-1 text-[10px] ${mobileMoreOpen ? "font-bold text-[#173f70]" : "text-[#718096]"}`}
-          >
-            <LayoutGrid size={21}/>
-            その他
-          </button>
-          <button
-            onClick={() => setLocation(destination(nav[6].path))}
-            className={`flex w-16 flex-col items-center gap-1 text-[10px] ${location === destination(nav[6].path) ? "font-bold text-[#173f70]" : "text-[#718096]"}`}
-          >
-            <UserRound size={21}/>
-            マイページ
-          </button>
-        </div>
-      </nav>}
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

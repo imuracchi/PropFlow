@@ -42,6 +42,84 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* PropFlow V2 admin console -------------------------------------------------
+ * Admin.tsx also serves the legacy route. Keep the V2 visual system scoped to
+ * the new admin shell so every management tab uses one consistent treatment.
+ */
+.v2-admin-console [role="tabpanel"] > .bg-card,
+.v2-admin-console [role="tabpanel"] > .border.bg-card,
+.v2-admin-console [role="tabpanel"] > .space-y-4 > .bg-card,
+.v2-admin-console [role="tabpanel"] > .space-y-3 > .bg-card {
+  border-color: #d4dde7;
+  border-top: 3px solid #173f70;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.v2-admin-console table {
+  color: #102d50;
+  border-collapse: collapse;
+}
+
+.v2-admin-console table thead,
+.v2-admin-console table thead.bg-card {
+  background: #e9eef4;
+}
+
+.v2-admin-console table th {
+  height: 44px;
+  color: #526176;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.v2-admin-console table td {
+  border-color: #d9e0e8;
+  font-size: 13px;
+}
+
+.v2-admin-console table tbody tr:hover {
+  background: #f3f6f9;
+}
+
+.v2-admin-console input,
+.v2-admin-console textarea,
+.v2-admin-console select {
+  border-color: #bfcbd8;
+  border-radius: 0;
+  background: #fff;
+  color: #102d50;
+  box-shadow: none;
+}
+
+.v2-admin-console input:focus,
+.v2-admin-console textarea:focus,
+.v2-admin-console select:focus {
+  border-color: #173f70;
+  outline: 1px solid #173f70;
+  outline-offset: 0;
+}
+
+.v2-admin-console h3 {
+  color: #102d50;
+  font-weight: 700;
+}
+
+.v2-admin-console [class~="rounded"],
+.v2-admin-console button.rounded-lg,
+.v2-admin-console button.rounded-md {
+  border-radius: 0;
+}
+
+.v2-admin-console [role="dialog"] {
+  border: 1px solid #cbd5df;
+  border-top: 4px solid #173f70;
+  border-radius: 0;
+  box-shadow: 0 12px 36px rgb(16 45 80 / 18%);
+}
+
 :root {
   --radius: 0.5rem;
 

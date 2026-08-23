@@ -1,4 +1,17 @@
-import { bigint, datetime, double, int, json, longtext, mysqlEnum, mysqlTable, text, timestamp, tinyint, varchar } from "drizzle-orm/mysql-core";
+import {
+  bigint,
+  datetime,
+  double,
+  int,
+  json,
+  longtext,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  tinyint,
+  varchar,
+} from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -19,14 +32,21 @@ export const users = mysqlTable("users", {
   loginMethod: varchar("loginMethod", { length: 64 }),
   logoBase64: longtext("logoBase64"),
   businessCardBase64: longtext("businessCardBase64"),
-  role: mysqlEnum("role", ["user", "admin", "management"]).default("user").notNull(),
-  plan: mysqlEnum("plan", ["standard", "gold", "platinum"]).default("standard").notNull(),
-  status: mysqlEnum("status", ["pending", "active", "suspended"]).default("active").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "management"])
+    .default("user")
+    .notNull(),
+  plan: mysqlEnum("plan", ["standard", "gold", "platinum"])
+    .default("standard")
+    .notNull(),
+  status: mysqlEnum("status", ["pending", "active", "suspended"])
+    .default("active")
+    .notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   termsAgreedAt: timestamp("termsAgreedAt"),
   notifyNewProperty: int("notifyNewProperty").default(1).notNull(),
+  notifyPropertySearch: int("notifyPropertySearch").default(1).notNull(),
   notifyDm: int("notifyDm").default(1).notNull(),
   notifyAnnounce: int("notifyAnnounce").default(1).notNull(),
   showCompany: int("showCompany").default(1).notNull(),
@@ -49,7 +69,9 @@ export const properties = mysqlTable("properties", {
   address: varchar("address", { length: 500 }).notNull(),
   lotNumber: varchar("lotNumber", { length: 255 }),
   type: varchar("type", { length: 64 }).notNull(),
-  status: mysqlEnum("status", ["available", "negotiating", "sold"]).default("available").notNull(),
+  status: mysqlEnum("status", ["available", "negotiating", "sold"])
+    .default("available")
+    .notNull(),
   price: bigint("price", { mode: "number" }),
   priceNegotiable: int("priceNegotiable").default(0).notNull(),
   estimatedYield: double("estimatedYield"),
@@ -77,6 +99,11 @@ export const properties = mysqlTable("properties", {
   ownerDeletedAt: timestamp("ownerDeletedAt"),
   published: int("published").default(1).notNull(),
   publishedAt: timestamp("publishedAt"),
+  visibilityScope: varchar("visibilityScope", { length: 20 })
+    .default("public")
+    .notNull(),
+  proposalTargetUserId: int("proposalTargetUserId"),
+  proposalRequestId: int("proposalRequestId"),
   lineNotifiedAt: timestamp("lineNotifiedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -91,7 +118,9 @@ export const messages = mysqlTable("messages", {
   userId: int("userId").notNull(),
   content: text("content").notNull(),
   attachment: varchar("attachment", { length: 500 }),
-  type: mysqlEnum("type", ["message", "announcement", "system"]).default("message").notNull(),
+  type: mysqlEnum("type", ["message", "announcement", "system"])
+    .default("message")
+    .notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -104,7 +133,9 @@ export const propertyFiles = mysqlTable("property_files", {
   name: varchar("name", { length: 500 }).notNull(),
   size: int("size").notNull(),
   contentBase64: longtext("contentBase64").notNull(),
-  category: mysqlEnum("category", ["document", "photo"]).default("document").notNull(),
+  category: mysqlEnum("category", ["document", "photo"])
+    .default("document")
+    .notNull(),
   visible: int("visible").default(1).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -178,6 +209,59 @@ export const buyerPreferences = mysqlTable("buyer_preferences", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+export const propertySearchRequests = mysqlTable("property_search_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  areas: json("areas").$type<string[]>().notNull(),
+  propertyTypes: json("propertyTypes").$type<string[]>().notNull(),
+  minPrice: bigint("minPrice", { mode: "number" }),
+  maxPrice: bigint("maxPrice", { mode: "number" }),
+  minArea: double("minArea"),
+  maxArea: double("maxArea"),
+  purpose: varchar("purpose", { length: 64 }),
+  purchaseTiming: varchar("purchaseTiming", { length: 128 }),
+  conditions:
+    json("conditions").$type<Record<string, string | number | null>>(),
+  notes: text("notes"),
+  anonymous: int("anonymous").default(1).notNull(),
+  adminHidden: int("adminHidden").default(0).notNull(),
+  status: mysqlEnum("status", ["draft", "active", "negotiating", "closed"])
+    .default("active")
+    .notNull(),
+  publishedAt: datetime("publishedAt"),
+  expiresAt: datetime("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const propertySearchProposals = mysqlTable("property_search_proposals", {
+  id: int("id").autoincrement().primaryKey(),
+  requestId: int("requestId").notNull(),
+  userId: int("userId").notNull(),
+  propertyId: int("propertyId"),
+  message: text("message").notNull(),
+  status: mysqlEnum("status", ["proposed", "accepted", "declined"])
+    .default("proposed")
+    .notNull(),
+  viewedAt: datetime("viewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const propertySearchDigestDeliveries = mysqlTable(
+  "property_search_digest_deliveries",
+  {
+    digestDate: varchar("digestDate", { length: 10 }).primaryKey(),
+    requestCount: int("requestCount").default(0).notNull(),
+    recipientCount: int("recipientCount").default(0).notNull(),
+    sentCount: int("sentCount").default(0).notNull(),
+    status: varchar("status", { length: 20 }).default("sending").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    completedAt: timestamp("completedAt"),
+  }
+);
 
 export const activityLogs = mysqlTable("activity_logs", {
   id: int("id").autoincrement().primaryKey(),

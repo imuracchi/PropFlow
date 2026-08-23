@@ -1,4 +1,4 @@
-import { ArrowLeft, BarChart2, Building2, LayoutDashboard, LogOut, MessageCircle, ScrollText, Search, Send, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, BarChart2, Building2, LayoutDashboard, LogOut, MessageCircle, ScrollText, Search, Send, ShieldCheck, Sparkles, Target, Users } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -12,6 +12,7 @@ export default function V2Admin() {
   const sections = [
     { id: "users", label: "業者管理", icon: Users },
     { id: "properties", label: "物件管理", icon: Building2 },
+    { id: "requests", label: "募集管理", icon: Target },
     { id: "ranking", label: "閲覧ランキング", icon: BarChart2 },
     { id: "search", label: "検索ログ", icon: Search },
     { id: "dm", label: "DM管理", icon: MessageCircle },
@@ -55,7 +56,7 @@ export default function V2Admin() {
           <button onClick={() => setLocation("/v2/properties")} className="ml-auto flex h-9 items-center gap-1.5 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70]"><ArrowLeft size={14}/>ユーザー画面</button>
         </header>
         <main className="mx-auto max-w-[1600px] p-4 pb-12 lg:p-7">
-          <div className="[&_.rounded-lg]:rounded-none [&_.rounded-xl]:rounded-none [&_.rounded-md]:rounded-none [&_.bg-card]:bg-white [&_.border-border]:border-[#d9e0e8] [&_.text-lg]:text-[21px] [&_.text-sm]:text-[14px] [&_.text-xs]:text-[12px] [&_table]:text-[13px] [&_input]:rounded-none [&_textarea]:rounded-none">
+          <div className="v2-admin-console [&_.rounded-lg]:rounded-none [&_.rounded-xl]:rounded-none [&_.rounded-md]:rounded-none [&_.bg-card]:bg-white [&_.border-border]:border-[#d9e0e8] [&_.text-lg]:text-[21px] [&_.text-sm]:text-[14px] [&_.text-xs]:text-[12px] [&_table]:text-[13px] [&_input]:rounded-none [&_textarea]:rounded-none">
             <Admin v2 />
           </div>
         </main>
