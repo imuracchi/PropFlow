@@ -67,6 +67,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const { data: topViewed } = trpc.property.topViewed.useQuery({});
   const { data: searchLogs, refetch: refetchSearchLogs } = trpc.property.searchLogs.useQuery({});
   const { data: searchRanking } = trpc.property.searchRanking.useQuery({});
+  const { data: propertySearchNeedLogs } = trpc.admin.propertySearchNeedLogs.useQuery();
   const clearSearchLogsMutation = trpc.property.clearSearchLogs.useMutation({ onSuccess: () => refetchSearchLogs() });
 
   const suspendMutation = trpc.admin.suspendUser.useMutation({ onSuccess: () => { utils.admin.allUsers.invalidate(); } });
@@ -188,7 +189,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
           >
             <span className="text-[11px] font-bold text-[#65748a]">管理メニュー</span>
             <span className="ml-auto mr-2 text-[13px] font-bold text-[#173f70]">{{
-              users: "業者一覧", properties: "物件一覧", requests: "募集管理", ranking: "物件ランキング", search: "検索ログ",
+              users: "業者一覧", properties: "物件一覧", requests: "募集管理", ranking: "物件ランキング", search: "検索ログ", needs: "募集ニーズログ",
               dm: "DM管理", logs: "操作ログ", broadcast: "一斉配信", ai: "AI分析",
             }[activeSection]}</span>
             <ChevronDown className={`h-4 w-4 text-[#173f70] transition-transform ${mobileAdminMenuOpen ? "rotate-180" : ""}`} />
@@ -214,6 +215,10 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
           <TabsTrigger value="search" className="gap-1.5">
             <Search className="w-3.5 h-3.5" />
             検索ログ
+          </TabsTrigger>
+          <TabsTrigger value="needs" className="gap-1.5">
+            <Target className="w-3.5 h-3.5" />
+            募集ニーズ
           </TabsTrigger>
           <TabsTrigger value="dm" className="gap-1.5">
             <MessageCircle className="w-3.5 h-3.5" />
@@ -810,6 +815,61 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   ))}
                   {(searchLogs ?? []).length === 0 && (
                     <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">まだ検索ログがありません</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* 募集ニーズログタブ */}
+        <TabsContent value="needs" className="mt-4 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="border border-[#d4dde7] bg-white p-4">
+              <p className="text-[11px] font-bold text-[#65748a]">候補確認回数</p>
+              <p className="mt-1 text-[24px] font-bold text-[#102d50]">{(propertySearchNeedLogs ?? []).length.toLocaleString()}回</p>
+            </div>
+            <div className="border border-[#d4dde7] bg-white p-4">
+              <p className="text-[11px] font-bold text-[#65748a]">候補0件のニーズ</p>
+              <p className="mt-1 text-[24px] font-bold text-[#b42318]">{(propertySearchNeedLogs ?? []).filter((log: any) => log.resultCount === 0).length.toLocaleString()}回</p>
+            </div>
+          </div>
+          <div className="overflow-hidden border border-border bg-card">
+            <div className="border-b border-border bg-muted/40 px-4 py-3">
+              <h3 className="text-sm font-semibold">募集ニーズログ（直近500件）</h3>
+              <p className="mt-1 text-xs text-muted-foreground">ユーザーが「掲載物件も確認する」を押した時点の条件です。</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1050px] text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    {["日時", "ユーザー", "希望エリア", "物件種別", "予算（万円）", "面積（㎡）", "候補"].map(label => (
+                      <th key={label} className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {(propertySearchNeedLogs ?? []).map((log: any) => {
+                    const price = log.minPrice != null || log.maxPrice != null
+                      ? `${log.minPrice != null ? Math.round(Number(log.minPrice) / 10_000).toLocaleString() : "指定なし"}〜${log.maxPrice != null ? Math.round(Number(log.maxPrice) / 10_000).toLocaleString() : "指定なし"}`
+                      : "指定なし";
+                    const area = log.minArea != null || log.maxArea != null
+                      ? `${log.minArea ?? "指定なし"}〜${log.maxArea ?? "指定なし"}`
+                      : "指定なし";
+                    return (
+                      <tr key={log.id} className="hover:bg-accent/30">
+                        <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{fmtDateTime(log.createdAt)}</td>
+                        <td className="px-4 py-3 text-xs"><p className="font-bold">{log.userCompany ?? log.userName ?? "—"}</p><p className="text-muted-foreground">{log.userEmail ?? ""}</p></td>
+                        <td className="px-4 py-3 text-xs font-medium">{(log.areas ?? []).join("・") || "エリア不問"}</td>
+                        <td className="px-4 py-3 text-xs">{(log.propertyTypes ?? []).join("・") || "指定なし"}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs">{price}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs">{area}</td>
+                        <td className={`whitespace-nowrap px-4 py-3 text-sm font-bold ${log.resultCount === 0 ? "text-[#b42318]" : "text-[#173f70]"}`}>{log.resultCount}件</td>
+                      </tr>
+                    );
+                  })}
+                  {(propertySearchNeedLogs ?? []).length === 0 && (
+                    <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">募集ニーズログはまだありません</td></tr>
                   )}
                 </tbody>
               </table>

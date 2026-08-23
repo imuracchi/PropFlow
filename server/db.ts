@@ -37,6 +37,7 @@ import {
   propertyExclusions,
   broadcastLogs,
   propertyReads,
+  propertySearchNeedLogs,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -120,6 +121,20 @@ export async function runStartupMigrations() {
       \`emailTotal\` int NOT NULL DEFAULT 0,
       \`lineSent\` int NOT NULL DEFAULT 0,
       \`sentAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS \`property_search_need_logs\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`userId\` int NOT NULL,
+      \`areas\` json NOT NULL,
+      \`propertyTypes\` json NOT NULL,
+      \`minPrice\` bigint NULL,
+      \`maxPrice\` bigint NULL,
+      \`minArea\` double NULL,
+      \`maxArea\` double NULL,
+      \`resultCount\` int NOT NULL DEFAULT 0,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY \`idx_property_search_need_logs_created\` (\`createdAt\`),
+      KEY \`idx_property_search_need_logs_user\` (\`userId\`)
     )`,
     `CREATE TABLE IF NOT EXISTS \`property_name_snapshots\` (
       \`propertyId\` int NOT NULL PRIMARY KEY,
@@ -3416,6 +3431,47 @@ export async function getActivityLogs(limit = 200) {
     .from(activityLogs)
     .leftJoin(users, eq(activityLogs.userId, users.id))
     .orderBy(desc(activityLogs.createdAt))
+    .limit(limit);
+}
+
+export async function createPropertySearchNeedLog(input: {
+  userId: number;
+  areas: string[];
+  propertyTypes: string[];
+  minPrice: number | null;
+  maxPrice: number | null;
+  minArea: number | null;
+  maxArea: number | null;
+  resultCount: number;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(propertySearchNeedLogs).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function getPropertySearchNeedLogs(limit = 500) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: propertySearchNeedLogs.id,
+      userId: propertySearchNeedLogs.userId,
+      userName: users.name,
+      userCompany: users.company,
+      userEmail: users.email,
+      areas: propertySearchNeedLogs.areas,
+      propertyTypes: propertySearchNeedLogs.propertyTypes,
+      minPrice: propertySearchNeedLogs.minPrice,
+      maxPrice: propertySearchNeedLogs.maxPrice,
+      minArea: propertySearchNeedLogs.minArea,
+      maxArea: propertySearchNeedLogs.maxArea,
+      resultCount: propertySearchNeedLogs.resultCount,
+      createdAt: propertySearchNeedLogs.createdAt,
+    })
+    .from(propertySearchNeedLogs)
+    .leftJoin(users, eq(propertySearchNeedLogs.userId, users.id))
+    .orderBy(desc(propertySearchNeedLogs.createdAt))
     .limit(limit);
 }
 

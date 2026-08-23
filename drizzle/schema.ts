@@ -329,6 +329,19 @@ export const searchLogs = mysqlTable("search_logs", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const propertySearchNeedLogs = mysqlTable("property_search_need_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  areas: json("areas").$type<string[]>().notNull(),
+  propertyTypes: json("propertyTypes").$type<string[]>().notNull(),
+  minPrice: bigint("minPrice", { mode: "number" }),
+  maxPrice: bigint("maxPrice", { mode: "number" }),
+  minArea: double("minArea"),
+  maxArea: double("maxArea"),
+  resultCount: int("resultCount").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const broadcastSchedules = mysqlTable("broadcast_schedules", {
   id: int("id").autoincrement().primaryKey(),
   subject: varchar("subject", { length: 500 }).notNull(),

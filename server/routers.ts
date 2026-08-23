@@ -2187,6 +2187,12 @@ ${propList}`,
         z.object({
           event: z.literal("results_open"),
           resultCount: z.number().int().nonnegative().max(10_000),
+          areas: z.array(z.string().max(100)).max(20),
+          propertyTypes: z.array(z.string().max(100)).max(20),
+          minPrice: z.number().nonnegative().nullable(),
+          maxPrice: z.number().nonnegative().nullable(),
+          minArea: z.number().nonnegative().nullable(),
+          maxArea: z.number().nonnegative().nullable(),
         }),
         z.object({
           event: z.literal("property_open"),
@@ -2196,10 +2202,26 @@ ${propList}`,
       ]))
       .mutation(async ({ input, ctx }) => {
         if (input.event === "results_open") {
+          const priceRange = input.minPrice != null || input.maxPrice != null
+            ? `${input.minPrice != null ? Math.round(input.minPrice / 10_000).toLocaleString() : "指定なし"}〜${input.maxPrice != null ? Math.round(input.maxPrice / 10_000).toLocaleString() : "指定なし"}万円`
+            : "指定なし";
+          const areaRange = input.minArea != null || input.maxArea != null
+            ? `${input.minArea ?? "指定なし"}〜${input.maxArea ?? "指定なし"}㎡`
+            : "指定なし";
+          await db.createPropertySearchNeedLog({
+            userId: ctx.user.id,
+            areas: input.areas,
+            propertyTypes: input.propertyTypes,
+            minPrice: input.minPrice,
+            maxPrice: input.maxPrice,
+            minArea: input.minArea,
+            maxArea: input.maxArea,
+            resultCount: input.resultCount,
+          });
           await db.logActivity(
             ctx.user.id,
             "property_match_results_open",
-            `候補物件一覧を表示（該当${input.resultCount}件）`,
+            `候補物件一覧を表示（該当${input.resultCount}件 / エリア:${input.areas.join("・") || "エリア不問"} / 種別:${input.propertyTypes.join("・") || "指定なし"} / 予算:${priceRange} / 面積:${areaRange}）`,
             ctx.req.headers["user-agent"]
           );
         } else {
@@ -3121,6 +3143,10 @@ ${propList}`,
 
     activityLogs: adminProcedure.query(async () => {
       return db.getActivityLogs(500);
+    }),
+
+    propertySearchNeedLogs: managementProcedure.query(async () => {
+      return db.getPropertySearchNeedLogs(500);
     }),
 
     allDmMessages: managementProcedure

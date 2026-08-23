@@ -1953,7 +1953,7 @@ export default function V2PropertySearch() {
                         ) : (
                           <>
                             <p className="mt-2 text-[13px] text-[#526176]">募集条件に合う掲載物件があるか、募集前に確認できます。</p>
-                            <button type="button" disabled={!form.propertyTypes.length || (!form.areaAgnostic && !form.areas.trim())} onClick={() => { setMatchesOpen(true); logMatchEvent.mutate({ event: "results_open", resultCount: matchingTotal }); }} className="mt-3 h-11 w-full border border-[#173f70] bg-white px-7 text-[13px] font-bold text-[#173f70] hover:bg-[#e7eef6] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto">掲載物件も確認する</button>
+                            <button type="button" disabled={!form.propertyTypes.length || (!form.areaAgnostic && !form.areas.trim())} onClick={() => { setMatchesOpen(true); logMatchEvent.mutate({ event: "results_open", resultCount: matchingTotal, areas: form.areaAgnostic ? ["エリア不問"] : form.areas.split(/[、,\n]/).map(area => area.trim()).filter(Boolean), propertyTypes: form.propertyTypes, minPrice: form.minPrice ? Number(form.minPrice) * 10_000 : null, maxPrice: form.maxPrice ? Number(form.maxPrice) * 10_000 : null, minArea: form.minArea ? Number(form.minArea) : null, maxArea: form.maxArea ? Number(form.maxArea) : null }); }} className="mt-3 h-11 w-full border border-[#173f70] bg-white px-7 text-[13px] font-bold text-[#173f70] hover:bg-[#e7eef6] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto">掲載物件も確認する</button>
                             <p className="mt-3 border-l-4 border-[#173f70] bg-white px-3 py-2 text-[13px] font-bold leading-6 text-[#173f70]">候補を確認した後も募集を開始できます。未掲載物件からの提案を受けるため、募集の開始をおすすめします。</p>
                           </>
                         )}

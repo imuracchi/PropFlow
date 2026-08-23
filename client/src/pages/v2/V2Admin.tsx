@@ -15,6 +15,7 @@ export default function V2Admin() {
     { id: "requests", label: "募集管理", icon: Target },
     { id: "ranking", label: "閲覧ランキング", icon: BarChart2 },
     { id: "search", label: "検索ログ", icon: Search },
+    { id: "needs", label: "募集ニーズログ", icon: Target },
     { id: "dm", label: "DM管理", icon: MessageCircle },
     ...(!management ? [
       { id: "logs", label: "操作ログ", icon: ScrollText },
