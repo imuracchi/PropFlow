@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Bell,
@@ -39,6 +39,48 @@ const PURPOSES = [
   "顧客への紹介",
   "その他",
 ];
+const normalizePropertyTypes = (values: unknown): string[] => {
+  if (!Array.isArray(values)) return [];
+  const aliases: Record<string, string> = {
+    アパート: "一棟アパート",
+    ビル: "事務所ビル",
+    事務所: "事務所ビル",
+    一戸建て: "戸建",
+    戸建て: "戸建",
+  };
+  return Array.from(new Set(values.flatMap(value => {
+    const raw = String(value).trim();
+    if (TYPES.includes(raw)) return [raw];
+    if (aliases[raw]) return [aliases[raw]];
+    if (raw.includes("区分") && raw.includes("マンション")) return ["区分マンション"];
+    if (raw.includes("一棟") && raw.includes("マンション")) return ["一棟マンション"];
+    if (raw === "マンション" || raw.includes("マンション")) return ["一棟マンション", "区分マンション"];
+    if (raw.includes("アパート")) return ["一棟アパート"];
+    if (raw.includes("戸建")) return ["戸建"];
+    return TYPES.filter(type => raw.includes(type));
+  })));
+};
+const formatTitlePrice = (value: number) => {
+  if (value >= 100_000_000 && value % 100_000_000 === 0)
+    return `${value / 100_000_000}億円`;
+  return `${Math.round(value / 10_000).toLocaleString()}万円`;
+};
+const buildRecruitmentTitle = (data: any, sourceText: string, types: string[]) => {
+  const parsedAreas = Array.isArray(data.areas)
+    ? data.areas.map((area: unknown) => String(area).trim()).filter(Boolean)
+    : [];
+  const inferredArea = sourceText.match(/([一-龠ぁ-んァ-ヶー]{2,12}(?:都|道|府|県|市|区|町|村)?)(?:で|の)/)?.[1];
+  const areaLabel = parsedAreas.slice(0, 2).join("・") || inferredArea || "";
+  const typeLabel = types.includes("一棟マンション") && types.includes("区分マンション")
+    ? "マンション"
+    : types.slice(0, 2).join("・");
+  const conditions = [
+    data.maxPrice ? `${formatTitlePrice(Number(data.maxPrice))}まで` : "",
+    data.minArea ? `${Number(data.minArea).toLocaleString()}㎡以上` : "",
+  ].filter(Boolean);
+  if (!areaLabel && !typeLabel) return cleanTitle(data.title ?? sourceText.slice(0, 60));
+  return `${areaLabel ? `【${areaLabel}】` : ""}${typeLabel || "物件"}募集${conditions.length ? `｜${conditions.join("・")}` : ""}`.slice(0, 255);
+};
 const cleanTitle = (title: string) =>
   title
     .replace(/^\s*#{1,6}\s*/, "")
@@ -116,6 +158,7 @@ export default function V2PropertySearch() {
     enabled: !!proposalFor,
   });
   const analyze = trpc.propertySearch.analyze.useMutation();
+  const findMatches = trpc.propertySearch.matches.useMutation();
   const create = trpc.propertySearch.create.useMutation({
     onSuccess: () => requestsQuery.refetch(),
   });
@@ -145,6 +188,11 @@ export default function V2PropertySearch() {
   const [closeOpen, setCloseOpen] = useState(false);
   const [closeMessage, setCloseMessage] = useState("");
   const [closeError, setCloseError] = useState("");
+  const [matchingProperties, setMatchingProperties] = useState<any[]>([]);
+  const [matchingTotal, setMatchingTotal] = useState(0);
+  const [matchesChecked, setMatchesChecked] = useState(false);
+  const [matchesOpen, setMatchesOpen] = useState(false);
+  const matchRequestRef = useRef(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -176,7 +224,7 @@ export default function V2PropertySearch() {
   // Legacy proposal modal remains closed; proposals are displayed in the request detail.
   const [proposalsFor, setProposalsFor] = useState<number | null>(null);
   const hasOverlay = Boolean(
-    detailFor || createOpen || proposalFor || proposalsFor || closeOpen
+    detailFor || createOpen || proposalFor || proposalsFor || closeOpen || matchesOpen
   );
   useEffect(() => {
     if (!hasOverlay) return;
@@ -277,6 +325,37 @@ export default function V2PropertySearch() {
     )
   );
 
+  useEffect(() => {
+    if (!createOpen || step !== "confirm") return;
+    const areas = form.areas.split(/[、,\n]/).map(x => x.trim()).filter(Boolean);
+    if (!areas.length && !form.propertyTypes.length) {
+      setMatchingProperties([]);
+      setMatchingTotal(0);
+      setMatchesChecked(true);
+      return;
+    }
+    const requestId = ++matchRequestRef.current;
+    setMatchesChecked(false);
+    const timer = window.setTimeout(() => {
+      findMatches.mutateAsync({
+        areas,
+        propertyTypes: form.propertyTypes,
+        minPrice: form.minPrice ? Number(form.minPrice) * 10000 : null,
+        maxPrice: form.maxPrice ? Number(form.maxPrice) * 10000 : null,
+        minArea: form.minArea ? Number(form.minArea) : null,
+        maxArea: form.maxArea ? Number(form.maxArea) : null,
+      }).then(result => {
+        if (requestId !== matchRequestRef.current) return;
+        setMatchingProperties(result.matches);
+        setMatchingTotal(result.total);
+        setMatchesChecked(true);
+      }).catch(() => {
+        if (requestId === matchRequestRef.current) setMatchesChecked(true);
+      });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [createOpen, step, form.areas, form.propertyTypes, form.minPrice, form.maxPrice, form.minArea, form.maxArea]);
+
   const openCreate = () => {
     if (user?.verified !== 1) {
       window.alert(
@@ -290,10 +369,16 @@ export default function V2PropertySearch() {
 
   const runAi = async () => {
     const data: any = await analyze.mutateAsync({ text: aiText });
+    const analyzedTypes = Array.isArray(data.propertyTypes)
+      ? data.propertyTypes
+      : [];
+    const normalizedTypes = normalizePropertyTypes([...analyzedTypes, aiText]);
     setForm({
-      title: cleanTitle(data.title ?? ""),
+      title: buildRecruitmentTitle(data, aiText, normalizedTypes),
       areas: (data.areas ?? []).join("、"),
-      propertyTypes: data.propertyTypes ?? [],
+      // Also inspect the original sentence so local/fallback analysis still
+      // selects an obvious property type when the AI response is incomplete.
+      propertyTypes: normalizedTypes,
       minPrice: data.minPrice ? String(Math.round(data.minPrice / 10000)) : "",
       maxPrice: data.maxPrice ? String(Math.round(data.maxPrice / 10000)) : "",
       minArea: data.minArea ? String(data.minArea) : "",
@@ -402,6 +487,10 @@ export default function V2PropertySearch() {
     setForm(emptyForm);
     setEditingDraftId(null);
     setEditingPublished(false);
+    setMatchesOpen(false);
+    setMatchingProperties([]);
+    setMatchingTotal(0);
+    setMatchesChecked(false);
     if (showMine) {
       setStatusTab("mine");
     }
@@ -1406,7 +1495,7 @@ export default function V2PropertySearch() {
                   </button>
                 </>
               ) : step === "confirm" ? (
-                <div className="mt-5 space-y-4">
+                <div className="relative mt-5 space-y-4 lg:pr-[405px] xl:pr-[445px]">
                   <label className="block text-[12px] font-bold">
                     募集タイトル
                     <input
@@ -1738,6 +1827,34 @@ export default function V2PropertySearch() {
                       </small>
                     </span>
                   </label>
+                  <section className="border border-[#9fb4ca] border-t-4 border-t-[#173f70] bg-[#eef4fa] p-4 shadow-sm sm:p-5 lg:absolute lg:right-0 lg:top-0 lg:w-[375px] lg:p-6 xl:w-[415px]">
+                    <div className="flex items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center bg-[#173f70] text-white"><Search size={20} /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-[16px] font-bold text-[#102d50]">掲載中の物件を確認</h3>
+                          <span className="bg-white px-2 py-1 text-[10px] font-bold tracking-wide text-[#173f70]">自動マッチング</span>
+                        </div>
+                        {!matchesChecked ? (
+                          <>
+                            <p className="mt-1 flex items-center gap-2 text-[13px] text-[#526176]"><Loader2 size={14} className="animate-spin" />条件に近い物件を探しています…</p>
+                            <p className="mt-1 text-[11px] text-[#718096]">検索中でも募集はこのまま開始できます。</p>
+                          </>
+                        ) : matchingTotal > 0 ? (
+                          <>
+                            <p className="mt-2 text-[18px] font-bold text-[#173f70]">条件に近い物件が{matchingTotal}件あります</p>
+                            <p className="mt-1 text-[12px] text-[#526176]">希望条件に近い順に候補を確認できます。</p>
+                            <button type="button" onClick={() => setMatchesOpen(true)} className="mt-4 h-12 w-full bg-[#173f70] px-7 text-[14px] font-bold text-white hover:bg-[#102d50] sm:w-auto">候補物件を見る</button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="mt-1 text-[13px] font-bold text-[#526176]">現在、条件に近い掲載物件はありません</p>
+                            <p className="mt-1 text-[12px] leading-5 text-[#65748a]">募集を開始すると、まだ掲載されていない物件を持つ業者からも提案を受けられます。</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </section>
                   <div
                     className={`grid grid-cols-2 gap-3 ${editingPublished ? "sm:grid-cols-[1fr_1.4fr]" : "sm:grid-cols-[1fr_1fr_1.4fr]"}`}
                   >
@@ -1986,6 +2103,43 @@ export default function V2PropertySearch() {
               </>
             )}
           </div>
+        </div>
+      )}
+      {matchesOpen && (
+        <div className="fixed inset-0 z-[80] flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setMatchesOpen(false); }}>
+          <section className="flex max-h-[85vh] w-full flex-col bg-white shadow-2xl sm:max-w-2xl">
+            <header className="flex shrink-0 items-start border-b border-[#d9e0e8] px-4 py-4 sm:px-6">
+              <div>
+                <h2 className="text-[18px] font-bold text-[#102d50]">条件に近い掲載物件</h2>
+                <p className="mt-1 text-[12px] text-[#65748a]">近い順に最大10件を表示しています</p>
+              </div>
+              <button type="button" onClick={() => setMatchesOpen(false)} aria-label="閉じる" className="ml-auto grid size-9 place-items-center text-[#526176]"><X size={20} /></button>
+            </header>
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-4 sm:p-5">
+              {matchingProperties.map(property => {
+                const displayArea = property.type === "土地" ? property.landArea : property.buildingArea ?? property.landArea;
+                return (
+                  <article key={property.id} className="grid gap-2 border border-[#d4dde7] p-3 sm:grid-cols-[88px_minmax(0,1fr)_140px_82px] sm:items-center sm:gap-3 sm:px-4">
+                    <div className="flex items-center gap-2 sm:block sm:text-center">
+                      <span className="text-[10px] font-bold text-[#65748a]">一致度</span>
+                      <b className="text-[20px] leading-none text-[#173f70] sm:mt-1 sm:block">{property.score}%</b>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <h3 className="truncate text-[16px] font-bold text-[#102d50]">{property.name}</h3>
+                        <span className="shrink-0 bg-[#edf2f7] px-1.5 py-0.5 text-[11px] font-bold text-[#526176]">{property.type}</span>
+                      </div>
+                      <p className="mt-0.5 truncate text-[13px] text-[#65748a]">{property.address || "所在地非公開"}</p>
+                      <p className="mt-1 truncate text-[11px] text-[#65748a]">{(property.reasons ?? []).join("・")}</p>
+                    </div>
+                    <p className="text-[14px] font-bold text-[#173f70] sm:text-right">{money(property.price)}<span className="block text-[12px] font-normal text-[#65748a]">{displayArea ? `${Number(displayArea).toLocaleString()}㎡` : "面積指定なし"}</span></p>
+                    <a href={`/v2/property/${property.id}`} target="_blank" rel="noreferrer" className="flex h-10 items-center justify-center bg-[#173f70] px-2 text-[12px] font-bold text-white hover:bg-[#102d50]">物件を見る</a>
+                  </article>
+                );
+              })}
+            </div>
+            <footer className="shrink-0 border-t border-[#d9e0e8] p-4 sm:px-6"><button type="button" onClick={() => setMatchesOpen(false)} className="h-11 w-full bg-[#173f70] text-[13px] font-bold text-white">募集条件の入力に戻る</button></footer>
+          </section>
         </div>
       )}
       {proposalsFor && (

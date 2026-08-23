@@ -2154,7 +2154,7 @@ ${propList}`,
             messages: [
               {
                 role: "user",
-                content: `不動産業者が購入・仕入れを希望する物件条件を、次のJSONだけで整理してください。貸し出し募集ではありません。金額は円、面積は㎡の数値にしてください。不明項目はnullまたは空配列。入力に氏名・会社名・電話番号・メールアドレスがあればpiiWarningをtrueにしてください。
+              content: `不動産業者が購入・仕入れを希望する物件条件を、次のJSONだけで整理してください。貸し出し募集ではありません。金額は円、面積は㎡の数値にしてください。不明項目はnullまたは空配列。propertyTypesは「土地」「一棟マンション」「区分マンション」「一棟アパート」「戸建」「事務所ビル」「店舗」「倉庫」の中からだけ選んでください。単に「マンション」とだけ書かれていて一棟・区分を判別できない場合は「一棟マンション」と「区分マンション」の両方を選び、どちらかが明記されている場合だけ一方を選んでください。入力に氏名・会社名・電話番号・メールアドレスがあればpiiWarningをtrueにしてください。
 {"title":"短い募集タイトル","areas":["希望エリア"],"propertyTypes":["土地等"],"minPrice":null,"maxPrice":null,"minArea":null,"maxArea":null,"purpose":"開発用地/買取再販/投資・保有/自社利用/顧客への紹介/その他","purchaseTiming":null,"conditions":{"priorityConditions":null,"landCondition":null,"zoningPreference":null,"minFloorAreaRatio":null,"roadPreference":null,"surveyPreference":null,"minYield":null,"occupancyPreference":null,"structurePreference":null,"maxBuildingAge":null,"inspectionPreference":null},"notes":"その他条件","piiWarning":false}
 入力：${input.text}`,
               },
@@ -2170,6 +2170,17 @@ ${propList}`,
           return fallback;
         }
       }),
+
+    matches: protectedProcedure
+      .input(z.object({
+        areas: z.array(z.string().max(100)).max(20),
+        propertyTypes: z.array(z.string().max(100)).max(20),
+        minPrice: z.number().nonnegative().nullable().optional(),
+        maxPrice: z.number().nonnegative().nullable().optional(),
+        minArea: z.number().nonnegative().nullable().optional(),
+        maxArea: z.number().nonnegative().nullable().optional(),
+      }))
+      .mutation(({ input, ctx }) => db.findMatchingProperties(ctx.user.id, input)),
 
     create: protectedProcedure
       .input(

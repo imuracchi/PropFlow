@@ -706,6 +706,97 @@ export async function listProperties(viewerUserId?: number) {
     .orderBy(desc(properties.createdAt));
 }
 
+type PropertyMatchCriteria = {
+  areas: string[];
+  propertyTypes: string[];
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  minArea?: number | null;
+  maxArea?: number | null;
+};
+
+export async function findMatchingProperties(
+  viewerUserId: number,
+  criteria: PropertyMatchCriteria
+) {
+  const db = await getDb();
+  if (!db) return { matches: [], total: 0 };
+  const candidates = await db
+    .select({
+      id: properties.id,
+      name: properties.name,
+      address: properties.address,
+      type: properties.type,
+      status: properties.status,
+      price: properties.price,
+      priceNegotiable: properties.priceNegotiable,
+      landArea: properties.landArea,
+      buildingArea: properties.buildingArea,
+    })
+    .from(properties)
+    .where(and(
+      eq(properties.deleted, 0),
+      eq(properties.published, 1),
+      ne(properties.status, "sold"),
+      ne(properties.userId, viewerUserId),
+      sql`(
+        (${properties.visibilityScope} = 'proposal' AND ${properties.proposalTargetUserId} = ${viewerUserId})
+        OR (${properties.visibilityScope} = 'public' AND NOT EXISTS (
+          SELECT 1 FROM property_exclusions pe
+          WHERE pe.propertyId = ${properties.id} AND pe.userId = ${viewerUserId}
+        ))
+      )`
+    ));
+
+  const normalize = (value: string) =>
+    value.replace(/[\s　,、]/g, "").replace(/[都道府県]/g, "").toLowerCase();
+  const areas = criteria.areas.map(normalize).filter(Boolean);
+  const hasBudget = criteria.minPrice != null || criteria.maxPrice != null;
+  const hasSize = criteria.minArea != null || criteria.maxArea != null;
+  const inRange = (value: number | null, min?: number | null, max?: number | null) =>
+    value != null && (min == null || value >= min) && (max == null || value <= max);
+
+  const scored = candidates.flatMap(property => {
+    const reasons: string[] = [];
+    let score = 0;
+    let possible = 0;
+    const address = normalize(property.address ?? "");
+    const areaMatch = areas.some(area => address.includes(area) || area.includes(address));
+    if (areas.length) {
+      possible += 35;
+      if (areaMatch) { score += 35; reasons.push("希望エリアに一致"); }
+    }
+    const typeMatch = criteria.propertyTypes.includes(property.type);
+    if (criteria.propertyTypes.length) {
+      possible += 25;
+      if (typeMatch) { score += 25; reasons.push("物件種別に一致"); }
+    }
+    if (hasBudget) {
+      possible += 25;
+      if (inRange(property.price, criteria.minPrice, criteria.maxPrice)) {
+        score += 25; reasons.push("予算範囲内");
+      } else if (property.priceNegotiable === 1) {
+        score += 10; reasons.push("価格相談可");
+      }
+    }
+    if (hasSize) {
+      possible += 15;
+      const size = property.type === "土地"
+        ? property.landArea
+        : property.buildingArea ?? property.landArea;
+      if (inRange(size, criteria.minArea, criteria.maxArea)) {
+        score += 15; reasons.push("希望面積の範囲内");
+      }
+    }
+    if ((!areaMatch && !typeMatch) || possible === 0) return [];
+    const matchScore = Math.round((score / possible) * 100);
+    if (matchScore < 35) return [];
+    return [{ ...property, score: matchScore, reasons }];
+  }).sort((a, b) => b.score - a.score || a.id - b.id);
+
+  return { matches: scored.slice(0, 10), total: scored.length };
+}
+
 export async function getPropertyExclusions(propertyId: number) {
   const db = await getDb();
   if (!db) return [];
