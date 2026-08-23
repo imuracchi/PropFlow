@@ -1216,7 +1216,7 @@ export default function V2PropertyDetail({
           </aside>
         </div>
       </main>
-      <div className="fixed inset-x-0 bottom-[69px] z-40 border-t border-[#d8e0e8] bg-white p-3 shadow-[0_-3px_12px_rgba(16,45,80,0.12)] lg:hidden">
+      <div className="fixed inset-x-0 bottom-[calc(55px+max(7px,env(safe-area-inset-bottom)))] z-40 border-t border-[#d8e0e8] bg-white p-3 shadow-[0_-3px_12px_rgba(16,45,80,0.12)] [transform:translateZ(0)] lg:hidden">
         <div className="flex gap-3">
           {canInquire && (
             <button

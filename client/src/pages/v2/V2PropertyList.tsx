@@ -610,12 +610,12 @@ export default function V2PropertyList({
                 <article
                   key={p.id}
                   onClick={() => openProperty(p.id)}
-                  className={`relative bg-white px-4 py-4 ${i < filtered.length - 1 ? "mb-2" : ""}`}
+                  className={`relative bg-white px-4 py-3 ${i < filtered.length - 1 ? "mb-1.5" : ""}`}
                 >
                   <span
                     className={`absolute inset-y-0 left-0 w-[3px] ${p.userId !== user?.id && !readSet.has(p.id) ? "bg-[#173f70]" : "bg-transparent"}`}
                   />
-                  <div className="flex items-center gap-2 text-[13px] font-semibold text-[#5f6e82]">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#5f6e82]">
                     <span>{p.type}</span>
                     {p.published === 0 && (
                       <span className="bg-[#eef1f5] px-2 py-0.5 text-[#526176]">下書き</span>
@@ -640,21 +640,21 @@ export default function V2PropertyList({
                         成約済み
                       </span>
                     )}
-                    <span className="ml-auto text-[12px] text-[#8490a0]">
+                    <span className="ml-auto text-[11px] text-[#8490a0]">
                       {new Date(p.createdAt).toLocaleDateString("ja-JP", {
                         month: "numeric",
                         day: "numeric",
                       })}
                     </span>
                   </div>
-                  <div className="mt-2 min-w-0">
-                    <h2 className="text-[18px] font-bold leading-7 text-[#102d50]">{p.name}</h2>
-                    <p className="mt-1 text-[14px] leading-6 text-[#65748a]">
+                  <div className="mt-1.5 min-w-0">
+                    <h2 className="text-[17px] font-bold leading-6 text-[#102d50]">{p.name}</h2>
+                    <p className="mt-0.5 truncate text-[13px] leading-5 text-[#65748a]">
                       {p.address}
                     </p>
-                    <div className="mt-3 flex items-center border-t border-[#edf0ee] pt-3">
-                      <span className="text-[12px] font-bold text-[#65748a]">販売価格</span>
-                      <p className="ml-auto whitespace-nowrap text-[20px] font-bold text-[#102d50]">
+                    <div className="mt-2 flex items-center border-t border-[#edf0ee] pt-2">
+                      <span className="text-[11px] font-bold text-[#65748a]">販売価格</span>
+                      <p className="ml-auto whitespace-nowrap text-[18px] font-bold text-[#102d50]">
                         {priceLabel(p.price, p.priceNegotiable)}
                       </p>
                       {p.userId !== user?.id && <button className="ml-3" onClick={e => toggleFavorite(p.id, e)}>
@@ -670,7 +670,7 @@ export default function V2PropertyList({
                       </button>}
                     </div>
                   </div>
-                  <div className="mt-3 flex items-center gap-2 border-y border-[#edf0ee] py-2.5 text-[13px] font-semibold text-[#4f5f72]">
+                  <div className="mt-2 flex items-center gap-1.5 border-y border-[#edf0ee] py-2 text-[12px] font-semibold text-[#4f5f72]">
                     <span>土地 {p.landArea ? `${p.landArea}㎡` : "—"}</span>
                     <span className="text-[#c1c8d0]">｜</span>
                     <span>
@@ -679,8 +679,8 @@ export default function V2PropertyList({
                     <span className="text-[#c1c8d0]">｜</span>
                     <span>{p.buildingAge || "—"}</span>
                   </div>
-                  <div className="mt-3 flex items-center">
-                    <span className="flex items-center gap-1 text-[13px] text-[#6f7d90]">
+                  <div className="mt-2 flex items-center">
+                    <span className="flex items-center gap-1 text-[12px] text-[#6f7d90]">
                       <Eye size={14} />
                       {p.viewCount ?? 0}回閲覧
                     </span>
