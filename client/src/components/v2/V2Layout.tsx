@@ -198,9 +198,6 @@ export default function V2Layout({
                 { icon: Users, label: "興味者リスト", path: "/v2/interested" },
                 { icon: Plus, label: "物件を登録", path: "/v2/upload" },
                 { icon: Bell, label: "お知らせ", path: "/v2/announcements" },
-                ...((user?.role === "admin" || user?.role === "management")
-                  ? [{ icon: ShieldCheck, label: "管理画面", path: "/v2/admin" }]
-                  : []),
               ].map(item => (
                 <button
                   key={item.path}
@@ -218,6 +215,15 @@ export default function V2Layout({
                 <TriangleAlert size={23}/>
                 <span className="mt-2 text-[11px] font-bold leading-4">障害報告</span>
               </button>
+              {(user?.role === "admin" || user?.role === "management") && (
+                <button
+                  onClick={() => { setMobileMoreOpen(false); setLocation("/v2/admin"); }}
+                  className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
+                >
+                  <ShieldCheck size={23}/>
+                  <span className="mt-2 text-[11px] font-bold leading-4">管理画面</span>
+                </button>
+              )}
             </div>
           </section>
         </div>
