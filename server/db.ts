@@ -2625,6 +2625,27 @@ export async function listPropertySearchRequests(
     .orderBy(desc(propertySearchRequests.createdAt));
 }
 
+export async function countActivePropertySearchRequests(
+  userId: number,
+  excludeId?: number
+) {
+  const db = await getDb();
+  if (!db) return 0;
+  const conditions = [
+    eq(propertySearchRequests.userId, userId),
+    inArray(propertySearchRequests.status, ["active", "negotiating"]),
+    sql`${propertySearchRequests.expiresAt} > NOW()`,
+  ];
+  if (excludeId !== undefined) {
+    conditions.push(ne(propertySearchRequests.id, excludeId));
+  }
+  const [result] = await db
+    .select({ value: count() })
+    .from(propertySearchRequests)
+    .where(and(...conditions));
+  return Number(result?.value ?? 0);
+}
+
 export async function deletePropertySearchRequestAdmin(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

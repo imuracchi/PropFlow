@@ -259,6 +259,12 @@ export default function V2PropertySearch() {
     (item: any) =>
       item.userId === user?.id && item.deleted !== 1 && item.published === 1
   );
+  const myActiveRequestCount = (requestsQuery.data ?? []).filter(
+    (item: any) =>
+      item.userId === user?.id &&
+      ["active", "negotiating"].includes(item.status) &&
+      new Date(item.expiresAt).getTime() > Date.now()
+  ).length;
   const pendingProposalCount = (proposalsQuery.data ?? []).filter(
     (proposal: any) => proposal.status === "proposed"
   ).length;
@@ -323,6 +329,22 @@ export default function V2PropertySearch() {
       );
       closeCreate();
       navigate("/v2/mypage");
+      return;
+    }
+    const editingRequest = editingDraftId
+      ? (requestsQuery.data ?? []).find((item: any) => item.id === editingDraftId)
+      : null;
+    const editingCountsTowardLimit =
+      editingRequest &&
+      ["active", "negotiating"].includes(editingRequest.status) &&
+      new Date(editingRequest.expiresAt).getTime() > Date.now();
+    if (
+      status === "active" &&
+      myActiveRequestCount - (editingCountsTowardLimit ? 1 : 0) >= 5
+    ) {
+      window.alert(
+        "同時に公開できる物件募集は5件までです。既存の募集を終了してから公開してください。"
+      );
       return;
     }
     const areas = form.areas
@@ -621,6 +643,16 @@ export default function V2PropertySearch() {
             </button>
           ))}
         </div>
+        {statusTab === "mine" && (
+          <div className="mt-4 border border-[#bfd0e2] bg-[#edf3fa] px-4 py-3 text-[13px] text-[#173f70] sm:flex sm:items-center">
+            <p className="font-bold">
+              同時に公開できる物件募集は1ユーザー5件までです
+            </p>
+            <p className="mt-1 sm:ml-auto sm:mt-0">
+              現在公開中 <b>{myActiveRequestCount} / 5件</b>
+            </p>
+          </div>
+        )}
         <div className="mt-4 border border-[#d4dde7] bg-white p-3 lg:flex lg:items-center lg:gap-3">
           <form
             onSubmit={event => {

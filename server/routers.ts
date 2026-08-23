@@ -2190,6 +2190,16 @@ ${propList}`,
         }
         if (
           input.status === "active" &&
+          (await db.countActivePropertySearchRequests(ctx.user.id)) >= 5
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message:
+              "同時に公開できる物件募集は5件までです。既存の募集を終了してから公開してください。",
+          });
+        }
+        if (
+          input.status === "active" &&
           (!input.areas.length || !input.propertyTypes.length)
         ) {
           throw new TRPCError({
@@ -2235,6 +2245,17 @@ ${propList}`,
             code: "FORBIDDEN",
             message:
               "物件募集を行えるのは認証ユーザーのみです。マイページから名刺画像登録を行ってください。",
+          });
+        }
+        if (
+          input.status === "active" &&
+          (await db.countActivePropertySearchRequests(ctx.user.id, input.id)) >=
+            5
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message:
+              "同時に公開できる物件募集は5件までです。既存の募集を終了してから公開してください。",
           });
         }
         if (
