@@ -31,9 +31,11 @@ const nav = [
 export default function V2Layout({
   children,
   preview = false,
+  hideMobileNav = false,
 }: {
   children: ReactNode;
   preview?: boolean;
+  hideMobileNav?: boolean;
 }) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
@@ -178,9 +180,9 @@ export default function V2Layout({
             <button onClick={() => setLocation("/v2/admin")} className="ml-1 grid size-9 place-items-center lg:hidden" aria-label="管理画面"><ShieldCheck size={18}/></button>
           )}
         </header>
-        <div className="pb-20 lg:pb-0">{children}</div>
+        <div className={hideMobileNav ? "" : "pb-20 lg:pb-0"}>{children}</div>
       </div>
-      {mobileMoreOpen && (
+      {!hideMobileNav && mobileMoreOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onClick={() => setMobileMoreOpen(false)}>
           <section className="absolute inset-x-0 bottom-0 bg-white px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-4" onClick={event => event.stopPropagation()}>
             <div className="flex items-center border-b border-[#dfe4ea] pb-3">
@@ -220,7 +222,7 @@ export default function V2Layout({
           </section>
         </div>
       )}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dfe3e8] bg-white pb-[max(7px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+      {!hideMobileNav && <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dfe3e8] bg-white pb-[max(7px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
         <div className="mx-auto flex max-w-md justify-around">
           {mobileNav.map(item => (
             <button
@@ -247,7 +249,7 @@ export default function V2Layout({
             マイページ
           </button>
         </div>
-      </nav>
+      </nav>}
     </div>
   );
 }

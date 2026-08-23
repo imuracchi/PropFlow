@@ -4,7 +4,7 @@ import MyPage from "@/pages/MyPage";
 export default function V2MyPage() {
   return (
     <V2Layout>
-      <main className="mx-auto max-w-[980px] p-4 pb-24 lg:p-7 lg:pb-10">
+      <main className="mx-auto max-w-[980px] p-4 lg:p-7 lg:pb-10">
         <div className="mb-5">
           <p className="text-[12px] text-[#758194]">登録情報と各種設定</p>
           <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">

@@ -280,6 +280,7 @@ export default function V2PropertyDetail({
   const isOwner =
     !!property &&
     (preview || user?.id === property.userId || user?.role === "admin");
+  const canInquire = preview || (!!user && !!property && user.id !== property.userId);
   const exclusionCount = preview
     ? previewExclusions.length
     : (exclusionsQuery.data?.length ?? 0);
@@ -649,7 +650,7 @@ export default function V2PropertyDetail({
 
   return (
     <V2Layout preview={preview}>
-      <main className="mx-auto min-w-0 max-w-[1600px] overflow-x-hidden pb-40 lg:overflow-visible lg:p-7 lg:pb-10">
+      <main className="mx-auto min-w-0 max-w-[1600px] overflow-x-hidden pb-20 lg:overflow-visible lg:p-7 lg:pb-10">
         <div className="flex h-12 items-center bg-white px-3 lg:bg-transparent lg:px-0">
           {!isOwner && <button
             onClick={() =>
@@ -1068,7 +1069,7 @@ export default function V2PropertyDetail({
               <p className="mt-1 text-[25px] font-bold text-[#102d50]">
                 {priceLabel(property.price, property.priceNegotiable)}
               </p>
-              {(preview || !isOwner) && (
+              {canInquire && (
                 <button
                   onClick={() =>
                     setLocation(
@@ -1201,7 +1202,7 @@ export default function V2PropertyDetail({
       </main>
       <div className="fixed inset-x-0 bottom-[69px] z-40 border-t border-[#d8e0e8] bg-white p-3 shadow-[0_-3px_12px_rgba(16,45,80,0.12)] lg:hidden">
         <div className="flex gap-3">
-          {!isOwner && (
+          {canInquire && (
             <button
               onClick={() =>
                 setLocation(

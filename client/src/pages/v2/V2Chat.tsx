@@ -180,7 +180,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
     window.setTimeout(() => setCopied(null), 1500);
   };
   return (
-    <V2Layout preview={preview}>
+    <V2Layout preview={preview} hideMobileNav>
       <main className="mx-auto flex h-[calc(100dvh-56px)] max-w-[1380px] flex-col bg-white lg:my-6 lg:h-[calc(100dvh-116px)] lg:flex-row lg:border lg:border-[#d9e0e8]">
         <aside className="hidden w-[330px] shrink-0 border-r border-[#d9e0e8] bg-white lg:block">
           <div className="border-b border-[#d9e0e8] px-5 py-4">
