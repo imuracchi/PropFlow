@@ -1156,6 +1156,24 @@ export async function getDirectMessages(userId1: number, userId2: number, proper
     .orderBy(directMessages.createdAt);
 }
 
+export async function getPropertyNegotiationStatus(propertyId: number, viewerId: number, ownerId: number) {
+  const db = await getDb();
+  if (!db) return { mine: false, others: false };
+  const rows = await db
+    .select({ senderId: directMessages.senderId, receiverId: directMessages.receiverId })
+    .from(directMessages)
+    .where(eq(directMessages.propertyId, propertyId));
+  const participants = new Set<number>();
+  for (const row of rows) {
+    if (row.senderId !== ownerId) participants.add(row.senderId);
+    if (row.receiverId !== ownerId) participants.add(row.receiverId);
+  }
+  return {
+    mine: viewerId !== ownerId && participants.has(viewerId),
+    others: [...participants].some(id => id !== viewerId),
+  };
+}
+
 export async function getDirectMessageById(id: number) {
   const db = await getDb();
   if (!db) return null;

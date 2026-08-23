@@ -187,6 +187,10 @@ export default function V2PropertyDetail({
     { propertyId },
     { enabled: !preview && !!propertyId }
   );
+  const negotiationQuery = trpc.property.negotiationStatus.useQuery(
+    { propertyId },
+    { enabled: !preview && !!propertyId }
+  );
   const [previewOverride, setPreviewOverride] = useState<any>(null);
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
@@ -279,6 +283,9 @@ export default function V2PropertyDetail({
   const exclusionCount = preview
     ? previewExclusions.length
     : (exclusionsQuery.data?.length ?? 0);
+  const negotiationStatus = preview
+    ? { mine: true, others: true }
+    : (negotiationQuery.data ?? { mine: false, others: false });
 
   useEffect(() => {
     if (!preview && property && user && !isOwner)
@@ -642,7 +649,7 @@ export default function V2PropertyDetail({
 
   return (
     <V2Layout preview={preview}>
-      <main className="mx-auto max-w-[1600px] pb-24 lg:p-7 lg:pb-10">
+      <main className="mx-auto min-w-0 max-w-[1600px] overflow-x-hidden pb-40 lg:overflow-visible lg:p-7 lg:pb-10">
         <div className="flex h-12 items-center bg-white px-3 lg:bg-transparent lg:px-0">
           {!isOwner && <button
             onClick={() =>
@@ -677,9 +684,9 @@ export default function V2PropertyDetail({
             {isFavorite ? "お気に入り済み" : "お気に入りに入れる"}
           </button>
         </div>
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
-          <div className="space-y-2 lg:space-y-5">
-            <section className="bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:p-6">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
+          <div className="min-w-0 space-y-2 lg:space-y-5">
+            <section className="min-w-0 overflow-hidden bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:p-6">
               <div className="flex items-center gap-2">
                 <span className="bg-[#173f70] px-2 py-1 text-[10px] font-bold text-white">
                   {property.type}
@@ -718,26 +725,47 @@ export default function V2PropertyDetail({
               <p className="text-[27px] font-bold text-[#102d50] lg:hidden">
                 {priceLabel(property.price, property.priceNegotiable)}
               </p>
+              {!isOwner && (negotiationStatus.mine || negotiationStatus.others) && (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-[#e1e6ec] pt-4">
+                  {negotiationStatus.mine && (
+                    <span className="bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
+                      あなたが商談中です
+                    </span>
+                  )}
+                  {negotiationStatus.others && (
+                    <span className="bg-[#f3f0e8] px-3 py-2 text-[12px] font-bold text-[#6b5a35]">
+                      他の方が商談中です
+                    </span>
+                  )}
+                </div>
+              )}
+              {isOwner && negotiationStatus.others && (
+                <div className="mt-4 border-t border-[#e1e6ec] pt-4">
+                  <span className="inline-block bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
+                    他の方が商談中です
+                  </span>
+                </div>
+              )}
             </section>
-            <section className="bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:p-6">
+            <section className="min-w-0 overflow-hidden bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:p-6">
               <h2 className="text-[18px] font-bold text-[#102d50]">物件概要</h2>
               <dl className="mt-3 border-t border-[#dfe4ea] lg:grid lg:grid-cols-2 lg:border-l">
                 {facts.map(([label, value]) => (
                   <div
                     key={label}
-                    className="grid grid-cols-[110px_1fr] border-b border-[#e5e9ee] py-3 text-[13px] lg:grid-cols-[120px_1fr] lg:border-r lg:py-0 lg:text-[14px]"
+                    className="grid min-w-0 grid-cols-[96px_minmax(0,1fr)] border-b border-[#e5e9ee] py-3 text-[13px] sm:grid-cols-[110px_minmax(0,1fr)] lg:grid-cols-[120px_minmax(0,1fr)] lg:border-r lg:py-0 lg:text-[14px]"
                   >
                     <dt className="text-[#6d798b] lg:bg-[#edf1f5] lg:p-3">
                       {label}
                     </dt>
-                    <dd className="font-semibold text-[#263b58] lg:p-3">
+                    <dd className="min-w-0 break-words font-semibold text-[#263b58] [overflow-wrap:anywhere] lg:p-3">
                       {value}
                     </dd>
                   </div>
                 ))}
-                <div className="grid grid-cols-[110px_1fr] border-b border-[#e5e9ee] py-3 text-[13px] lg:col-span-2 lg:grid-cols-[120px_1fr] lg:border-r lg:py-0 lg:text-[14px]">
+                <div className="grid min-w-0 grid-cols-[96px_minmax(0,1fr)] border-b border-[#e5e9ee] py-3 text-[13px] sm:grid-cols-[110px_minmax(0,1fr)] lg:col-span-2 lg:grid-cols-[120px_minmax(0,1fr)] lg:border-r lg:py-0 lg:text-[14px]">
                   <dt className="text-[#6d798b] lg:bg-[#edf1f5] lg:p-3">備考</dt>
-                  <dd className="whitespace-pre-wrap font-semibold leading-7 text-[#263b58] lg:min-h-24 lg:p-3">
+                  <dd className="min-w-0 whitespace-pre-wrap break-words font-semibold leading-7 text-[#263b58] [overflow-wrap:anywhere] lg:min-h-24 lg:p-3">
                     {property.remarks || "—"}
                   </dd>
                 </div>
@@ -747,15 +775,15 @@ export default function V2PropertyDetail({
                   <h3 className="mt-6 text-[15px] font-bold text-[#102d50]">
                     紹介コメント
                   </h3>
-                  <p className="mt-2 text-[14px] leading-7 text-[#44546a] lg:text-[15px]">
+                  <p className="mt-2 break-words text-[14px] leading-7 text-[#44546a] [overflow-wrap:anywhere] lg:text-[15px]">
                     {property.comment}
                   </p>
                 </>
               )}
               {property.transactionFlow && (
-                <div className="mt-4 grid grid-cols-[90px_1fr] border-y border-[#dfe4ea] py-3 text-[13px] lg:text-[14px]">
+                <div className="mt-4 grid min-w-0 grid-cols-[80px_minmax(0,1fr)] border-y border-[#dfe4ea] py-3 text-[13px] sm:grid-cols-[90px_minmax(0,1fr)] lg:text-[14px]">
                   <span className="text-[#6d798b]">商流</span>
-                  <strong>{property.transactionFlow}</strong>
+                  <strong className="min-w-0 break-words [overflow-wrap:anywhere]">{property.transactionFlow}</strong>
                 </div>
               )}
             </section>
@@ -795,8 +823,8 @@ export default function V2PropertyDetail({
                 </p>
               )}
             </section>
-            <section className="bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:border-t-[3px] lg:border-t-[#173f70] lg:p-6">
-              <div className="flex items-center">
+            <section className="min-w-0 overflow-hidden bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:border-t-[3px] lg:border-t-[#173f70] lg:p-6">
+              <div className="flex min-w-0 flex-wrap items-center gap-y-2">
                 <h2 className="text-[18px] font-bold text-[#102d50]">
                   関連資料
                 </h2>
@@ -1040,14 +1068,6 @@ export default function V2PropertyDetail({
               <p className="mt-1 text-[25px] font-bold text-[#102d50]">
                 {priceLabel(property.price, property.priceNegotiable)}
               </p>
-              <button
-                onClick={downloadAll}
-                disabled={!visibleFiles.length || downloading === "all"}
-                className="mt-5 flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-[14px] font-bold text-white disabled:bg-[#9aa7b6]"
-              >
-                <Download size={17} />
-                資料を一括DL
-              </button>
               {(preview || !isOwner) && (
                 <button
                   onClick={() =>
@@ -1057,12 +1077,20 @@ export default function V2PropertyDetail({
                         : `/v2/chat/${property.userId}/${property.id}`
                     )
                   }
-                  className="mt-2 flex h-12 w-full items-center justify-center gap-2 border-2 border-[#173f70] text-[14px] font-bold text-[#173f70]"
+                  className="mt-5 flex h-14 w-full items-center justify-center gap-2 bg-[#173f70] text-[15px] font-bold text-white shadow-sm"
                 >
                   <MessageCircle size={17} />
                   問い合わせる
                 </button>
               )}
+              <button
+                onClick={downloadAll}
+                disabled={!visibleFiles.length || downloading === "all"}
+                className="mt-2 flex h-12 w-full items-center justify-center gap-2 border-2 border-[#173f70] text-[14px] font-bold text-[#173f70] disabled:border-[#9aa7b6] disabled:text-[#9aa7b6]"
+              >
+                <Download size={17} />
+                資料を一括DL
+              </button>
             </section>
             <section className="bg-white p-4 lg:border lg:border-[#d9e0e8]">
               <p className="text-[11px] font-bold tracking-wider text-[#5275a0]">
@@ -1171,15 +1199,8 @@ export default function V2PropertyDetail({
           </aside>
         </div>
       </main>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d8e0e8] bg-white p-3 lg:hidden">
+      <div className="fixed inset-x-0 bottom-[69px] z-40 border-t border-[#d8e0e8] bg-white p-3 shadow-[0_-3px_12px_rgba(16,45,80,0.12)] lg:hidden">
         <div className="flex gap-3">
-          <button
-            onClick={downloadAll}
-            className="flex h-12 flex-1 items-center justify-center gap-2 border-2 border-[#173f70] text-[12px] font-bold text-[#173f70]"
-          >
-            <Download size={17} />
-            資料一括DL
-          </button>
           {!isOwner && (
             <button
               onClick={() =>
@@ -1189,12 +1210,20 @@ export default function V2PropertyDetail({
                     : `/v2/chat/${property.userId}/${property.id}`
                 )
               }
-              className="flex h-12 flex-1 items-center justify-center gap-2 bg-[#173f70] text-[13px] font-bold text-white"
+              className="flex h-12 flex-[1.35] items-center justify-center gap-2 bg-[#173f70] text-[14px] font-bold text-white"
             >
               <MessageCircle size={17} />
               問い合わせる
             </button>
           )}
+          <button
+            onClick={downloadAll}
+            disabled={!visibleFiles.length || downloading === "all"}
+            className="flex h-12 flex-1 items-center justify-center gap-2 border-2 border-[#173f70] text-[12px] font-bold text-[#173f70] disabled:border-[#9aa7b6] disabled:text-[#9aa7b6]"
+          >
+            <Download size={17} />
+            資料一括DL
+          </button>
         </div>
       </div>
       {introOpen && (

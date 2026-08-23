@@ -546,6 +546,16 @@ JSONのみ返してください。` },
         return prop;
       }),
 
+    negotiationStatus: protectedProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const prop = await db.getPropertyById(input.propertyId);
+        if (!prop || !(await canViewProperty(input.propertyId, ctx.user)) || prop.status === "sold") {
+          return { mine: false, others: false };
+        }
+        return db.getPropertyNegotiationStatus(input.propertyId, ctx.user.id, prop.userId);
+      }),
+
     getExclusions: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .query(async ({ input, ctx }) => {
