@@ -981,19 +981,24 @@ export default function V2PropertyDetail({
                       </button>
                     </div>
                   )}
-                  <div className="overflow-hidden border border-[#d9e0e8]">
+                  <div className="relative overflow-hidden border border-[#d9e0e8]">
                     <iframe
                       title={`${property.name}の所在地地図`}
-                      src={`https://www.google.com/maps?q=${encodeURIComponent(property.address)}&output=embed`}
+                      src={`https://www.google.com/maps?q=${encodeURIComponent(property.address)}&z=17&output=embed`}
                       className="h-64 w-full lg:h-80"
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
                     />
+                    <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 border border-[#d64242] bg-white/95 px-3 py-2 text-[12px] font-bold text-[#9f2525] shadow-sm">
+                      <MapPin size={16} fill="#d64242" className="text-[#d64242]" />
+                      物件所在地
+                    </div>
                   </div>
-                  <p className="mt-2 flex items-start gap-1 text-[12px] text-[#65748a]">
-                    <MapPin size={14} className="mt-0.5 shrink-0" />
-                    {property.address}
-                  </p>
+                  <div className="mt-2 flex items-start gap-2 text-[12px] text-[#65748a]">
+                    <MapPin size={14} className="mt-0.5 shrink-0 text-[#d64242]" />
+                    <p className="min-w-0 flex-1">{property.address}</p>
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address)}`} target="_blank" rel="noreferrer" className="shrink-0 font-bold text-[#173f70] underline underline-offset-2">Googleマップで確認</a>
+                  </div>
                   {photos.length > 0 && (
                     <div className="mt-4 grid grid-cols-3 gap-2">
                       {photos.map(photo => (

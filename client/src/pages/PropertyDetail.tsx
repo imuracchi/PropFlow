@@ -83,9 +83,9 @@ export async function printProperty(
 ) {
   const addr = encodeURIComponent(p.address);
   const key = GOOGLE_MAPS_API_KEY;
-  const mapImg = `https://maps.googleapis.com/maps/api/staticmap?center=${addr}&zoom=16&size=640x480&scale=2&maptype=roadmap&markers=color:red%7C${addr}&key=${key}`;
+  const mapImg = `https://maps.googleapis.com/maps/api/staticmap?center=${addr}&zoom=17&size=640x480&scale=2&maptype=roadmap&markers=size:mid%7Ccolor:0xd64242%7Clabel:P%7C${addr}&key=${key}`;
   const svImg = `https://maps.googleapis.com/maps/api/streetview?location=${addr}&size=640x480&key=${key}`;
-  const wideImg = `https://maps.googleapis.com/maps/api/staticmap?center=${addr}&zoom=14&size=640x480&scale=2&maptype=roadmap&markers=color:red%7C${addr}&key=${key}`;
+  const wideImg = `https://maps.googleapis.com/maps/api/staticmap?center=${addr}&zoom=15&size=640x480&scale=2&maptype=roadmap&markers=size:mid%7Ccolor:0xd64242%7Clabel:P%7C${addr}&key=${key}`;
   const priceText = p.priceNegotiable ? "応相談" : (p.price?.toLocaleString() ?? "—") + "円";
   const logoHtml = myLogo
     ? `<img src="${myLogo}" alt="logo" style="height:50px;max-width:260px;object-fit:contain;" />`
@@ -185,6 +185,7 @@ table.ct th{background:#f0f5fa;color:#334155;font-weight:600;width:72px}
 .ft{text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #c8d6e5;padding-top:6px;margin-top:16px}
 .mt{font-size:15px;font-weight:700;color:#2b5c94;border-bottom:2px solid #2b5c94;padding-bottom:6px;margin-bottom:14px}
 .ma{font-size:12px;color:#475569;margin-bottom:10px}
+.map-label{display:inline-flex;align-items:center;gap:6px;background:#fff1f1;border:1px solid #d64242;color:#9f2525;font-size:11px;font-weight:700;padding:5px 9px;margin-bottom:8px}
 .mi{text-align:center;margin:20px 0}
 .mi img{max-width:100%;border:1px solid #c8d6e5;border-radius:4px}
 .tb{background:#f0f5fa;border:1px solid #c8d6e5;padding:10px 14px;margin-bottom:14px;font-size:12px}
@@ -235,6 +236,7 @@ ${pg.map ? `<div class="page">
 ${hdr}
 <div class="mt">所在地地図</div>
 <div class="ma">📍 ${p.address}</div>
+<div class="map-label">P　物件所在地</div>
 <div class="mi"><img src="${mapImg}" alt="所在地地図" /></div>
 ${footer}
 </div>` : ""}
