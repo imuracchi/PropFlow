@@ -2182,6 +2182,37 @@ ${propList}`,
       }))
       .mutation(({ input, ctx }) => db.findMatchingProperties(ctx.user.id, input)),
 
+    logMatchEvent: protectedProcedure
+      .input(z.discriminatedUnion("event", [
+        z.object({
+          event: z.literal("results_open"),
+          resultCount: z.number().int().nonnegative().max(10_000),
+        }),
+        z.object({
+          event: z.literal("property_open"),
+          propertyId: z.number().int().positive(),
+          score: z.number().int().min(0).max(100),
+        }),
+      ]))
+      .mutation(async ({ input, ctx }) => {
+        if (input.event === "results_open") {
+          await db.logActivity(
+            ctx.user.id,
+            "property_match_results_open",
+            `候補物件一覧を表示（該当${input.resultCount}件）`,
+            ctx.req.headers["user-agent"]
+          );
+        } else {
+          await db.logActivity(
+            ctx.user.id,
+            "property_match_property_open",
+            `候補から物件ID:${input.propertyId}を表示（一致度${input.score}%）`,
+            ctx.req.headers["user-agent"]
+          );
+        }
+        return { success: true };
+      }),
+
     create: protectedProcedure
       .input(
         z.object({
@@ -2204,6 +2235,10 @@ ${propList}`,
         })
       )
       .mutation(async ({ input, ctx }) => {
+        if (input.minPrice != null && input.maxPrice != null && input.minPrice > input.maxPrice)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "予算下限は予算上限以下にしてください。" });
+        if (input.minArea != null && input.maxArea != null && input.minArea > input.maxArea)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "面積下限は面積上限以下にしてください。" });
         if (ctx.user.verified !== 1) {
           throw new TRPCError({
             code: "FORBIDDEN",
@@ -2263,6 +2298,10 @@ ${propList}`,
         })
       )
       .mutation(async ({ input, ctx }) => {
+        if (input.minPrice != null && input.maxPrice != null && input.minPrice > input.maxPrice)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "予算下限は予算上限以下にしてください。" });
+        if (input.minArea != null && input.maxArea != null && input.minArea > input.maxArea)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "面積下限は面積上限以下にしてください。" });
         if (ctx.user.verified !== 1) {
           throw new TRPCError({
             code: "FORBIDDEN",

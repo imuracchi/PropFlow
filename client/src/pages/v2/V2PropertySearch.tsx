@@ -65,6 +65,17 @@ const formatTitlePrice = (value: number) => {
     return `${value / 100_000_000}億円`;
   return `${Math.round(value / 10_000).toLocaleString()}万円`;
 };
+const formatNumericInput = (value: string) => {
+  if (!value) return "";
+  const [integer, decimal] = value.split(".");
+  const formattedInteger = Number(integer || 0).toLocaleString("ja-JP");
+  return decimal === undefined ? formattedInteger : `${formattedInteger}.${decimal}`;
+};
+const parseNumericInput = (value: string) => {
+  const cleaned = value.replace(/,/g, "").replace(/[^\d.]/g, "");
+  const [integer = "", ...decimals] = cleaned.split(".");
+  return decimals.length ? `${integer}.${decimals.join("")}` : integer;
+};
 const buildRecruitmentTitle = (data: any, sourceText: string, types: string[]) => {
   const parsedAreas = Array.isArray(data.areas)
     ? data.areas.map((area: unknown) => String(area).trim()).filter(Boolean)
@@ -159,6 +170,7 @@ export default function V2PropertySearch() {
   });
   const analyze = trpc.propertySearch.analyze.useMutation();
   const findMatches = trpc.propertySearch.matches.useMutation();
+  const logMatchEvent = trpc.propertySearch.logMatchEvent.useMutation();
   const create = trpc.propertySearch.create.useMutation({
     onSuccess: () => requestsQuery.refetch(),
   });
@@ -190,8 +202,12 @@ export default function V2PropertySearch() {
   const [closeError, setCloseError] = useState("");
   const [matchingProperties, setMatchingProperties] = useState<any[]>([]);
   const [matchingTotal, setMatchingTotal] = useState(0);
+  const [matchingWarnings, setMatchingWarnings] = useState<string[]>([]);
   const [matchesChecked, setMatchesChecked] = useState(false);
   const [matchesOpen, setMatchesOpen] = useState(false);
+  const [matchError, setMatchError] = useState(false);
+  const [matchRetry, setMatchRetry] = useState(0);
+  const [matchCriteriaVersion, setMatchCriteriaVersion] = useState(0);
   const matchRequestRef = useRef(0);
 
   useEffect(() => {
@@ -328,33 +344,66 @@ export default function V2PropertySearch() {
   useEffect(() => {
     if (!createOpen || step !== "confirm") return;
     const areas = form.areas.split(/[、,\n]/).map(x => x.trim()).filter(Boolean);
+    const minPrice = form.minPrice ? Number(form.minPrice) : null;
+    const maxPrice = form.maxPrice ? Number(form.maxPrice) : null;
+    const minArea = form.minArea ? Number(form.minArea) : null;
+    const maxArea = form.maxArea ? Number(form.maxArea) : null;
+    const rangeWarnings = [
+      minPrice != null && maxPrice != null && minPrice > maxPrice
+        ? "予算下限は予算上限以下にしてください。"
+        : "",
+      minArea != null && maxArea != null && minArea > maxArea
+        ? "面積下限は面積上限以下にしてください。"
+        : "",
+    ].filter(Boolean);
+    if (rangeWarnings.length) {
+      setMatchingProperties([]);
+      setMatchingTotal(0);
+      setMatchingWarnings(rangeWarnings);
+      setMatchesChecked(true);
+      setMatchError(false);
+      return;
+    }
     if (!areas.length && !form.propertyTypes.length) {
       setMatchingProperties([]);
       setMatchingTotal(0);
+      setMatchingWarnings([]);
       setMatchesChecked(true);
+      setMatchError(false);
       return;
     }
     const requestId = ++matchRequestRef.current;
+    setMatchingProperties([]);
+    setMatchingTotal(0);
+    setMatchingWarnings([]);
     setMatchesChecked(false);
+    setMatchError(false);
     const timer = window.setTimeout(() => {
       findMatches.mutateAsync({
         areas,
         propertyTypes: form.propertyTypes,
-        minPrice: form.minPrice ? Number(form.minPrice) * 10000 : null,
-        maxPrice: form.maxPrice ? Number(form.maxPrice) * 10000 : null,
-        minArea: form.minArea ? Number(form.minArea) : null,
-        maxArea: form.maxArea ? Number(form.maxArea) : null,
+        minPrice: minPrice != null ? minPrice * 10000 : null,
+        maxPrice: maxPrice != null ? maxPrice * 10000 : null,
+        minArea,
+        maxArea,
       }).then(result => {
         if (requestId !== matchRequestRef.current) return;
         setMatchingProperties(result.matches);
         setMatchingTotal(result.total);
+        setMatchingWarnings(result.warnings);
         setMatchesChecked(true);
+        setMatchError(false);
       }).catch(() => {
-        if (requestId === matchRequestRef.current) setMatchesChecked(true);
+        if (requestId !== matchRequestRef.current) return;
+        setMatchingProperties([]);
+        setMatchingTotal(0);
+        setMatchingWarnings([]);
+        setMatchesChecked(true);
+        setMatchError(true);
       });
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [createOpen, step, form.areas, form.propertyTypes, form.minPrice, form.maxPrice, form.minArea, form.maxArea]);
+  }, [createOpen, step, matchCriteriaVersion, matchRetry]);
 
   const openCreate = () => {
     if (user?.verified !== 1) {
@@ -438,6 +487,14 @@ export default function V2PropertySearch() {
       .split(/[、,\n]/)
       .map(x => x.trim())
       .filter(Boolean);
+    if (status === "active" && form.minPrice && form.maxPrice && Number(form.minPrice) > Number(form.maxPrice)) {
+      window.alert("予算下限は予算上限以下にしてください。");
+      return;
+    }
+    if (status === "active" && form.minArea && form.maxArea && Number(form.minArea) > Number(form.maxArea)) {
+      window.alert("面積下限は面積上限以下にしてください。");
+      return;
+    }
     if (
       status === "active" &&
       (!form.title.trim() || !areas.length || !form.propertyTypes.length)
@@ -490,7 +547,11 @@ export default function V2PropertySearch() {
     setMatchesOpen(false);
     setMatchingProperties([]);
     setMatchingTotal(0);
+    setMatchingWarnings([]);
     setMatchesChecked(false);
+    setMatchError(false);
+    setMatchRetry(0);
+    setMatchCriteriaVersion(0);
     if (showMine) {
       setStatusTab("mine");
     }
@@ -1513,6 +1574,7 @@ export default function V2PropertySearch() {
                       onChange={e =>
                         setForm({ ...form, areas: e.target.value })
                       }
+                      onBlur={() => setMatchCriteriaVersion(value => value + 1)}
                       placeholder="港区、渋谷区"
                       className="mt-1 h-11 w-full border px-3 text-[14px]"
                     />
@@ -1524,12 +1586,14 @@ export default function V2PropertySearch() {
                         <button
                           key={type}
                           onClick={() =>
-                            setForm({
-                              ...form,
-                              propertyTypes: form.propertyTypes.includes(type)
-                                ? form.propertyTypes.filter(x => x !== type)
-                                : [...form.propertyTypes, type],
-                            })
+                            { setForm({
+                                ...form,
+                                propertyTypes: form.propertyTypes.includes(type)
+                                  ? form.propertyTypes.filter(x => x !== type)
+                                  : [...form.propertyTypes, type],
+                              });
+                              setMatchCriteriaVersion(value => value + 1);
+                            }
                           }
                           className={`border px-3 py-2 text-[12px] font-bold ${form.propertyTypes.includes(type) ? "border-[#173f70] bg-[#173f70] text-white" : "border-[#bdc9d6] text-[#526176]"}`}
                         >
@@ -1542,44 +1606,52 @@ export default function V2PropertySearch() {
                     <label className="text-[12px] font-bold">
                       予算下限（万円）
                       <input
-                        type="number"
-                        value={form.minPrice}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatNumericInput(form.minPrice)}
                         onChange={e =>
-                          setForm({ ...form, minPrice: e.target.value })
+                          setForm({ ...form, minPrice: parseNumericInput(e.target.value).replace(/\..*$/, "") })
                         }
+                        onBlur={() => setMatchCriteriaVersion(value => value + 1)}
                         className="mt-1 h-11 w-full border px-3"
                       />
                     </label>
                     <label className="text-[12px] font-bold">
                       予算上限（万円）
                       <input
-                        type="number"
-                        value={form.maxPrice}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatNumericInput(form.maxPrice)}
                         onChange={e =>
-                          setForm({ ...form, maxPrice: e.target.value })
+                          setForm({ ...form, maxPrice: parseNumericInput(e.target.value).replace(/\..*$/, "") })
                         }
+                        onBlur={() => setMatchCriteriaVersion(value => value + 1)}
                         className="mt-1 h-11 w-full border px-3"
                       />
                     </label>
                     <label className="text-[12px] font-bold">
                       面積下限（㎡）
                       <input
-                        type="number"
-                        value={form.minArea}
+                        type="text"
+                        inputMode="decimal"
+                        value={formatNumericInput(form.minArea)}
                         onChange={e =>
-                          setForm({ ...form, minArea: e.target.value })
+                          setForm({ ...form, minArea: parseNumericInput(e.target.value) })
                         }
+                        onBlur={() => setMatchCriteriaVersion(value => value + 1)}
                         className="mt-1 h-11 w-full border px-3"
                       />
                     </label>
                     <label className="text-[12px] font-bold">
                       面積上限（㎡）
                       <input
-                        type="number"
-                        value={form.maxArea}
+                        type="text"
+                        inputMode="decimal"
+                        value={formatNumericInput(form.maxArea)}
                         onChange={e =>
-                          setForm({ ...form, maxArea: e.target.value })
+                          setForm({ ...form, maxArea: parseNumericInput(e.target.value) })
                         }
+                        onBlur={() => setMatchCriteriaVersion(value => value + 1)}
                         className="mt-1 h-11 w-full border px-3"
                       />
                     </label>
@@ -1835,16 +1907,27 @@ export default function V2PropertySearch() {
                           <h3 className="text-[16px] font-bold text-[#102d50]">掲載中の物件を確認</h3>
                           <span className="bg-white px-2 py-1 text-[10px] font-bold tracking-wide text-[#173f70]">自動マッチング</span>
                         </div>
+                        {matchingWarnings.map(warning => (
+                          <p key={warning} className="mt-2 border-l-4 border-[#b7791f] bg-[#fff8e8] px-3 py-2 text-[12px] font-bold leading-5 text-[#8a5a13]">{warning}</p>
+                        ))}
                         {!matchesChecked ? (
                           <>
                             <p className="mt-1 flex items-center gap-2 text-[13px] text-[#526176]"><Loader2 size={14} className="animate-spin" />条件に近い物件を探しています…</p>
                             <p className="mt-1 text-[11px] text-[#718096]">検索中でも募集はこのまま開始できます。</p>
                           </>
+                        ) : matchError ? (
+                          <div className="mt-2">
+                            <p className="text-[12px] font-bold text-[#a33a2b]">候補物件を検索できませんでした。</p>
+                            <button type="button" onClick={() => setMatchRetry(value => value + 1)} className="mt-2 h-9 border border-[#173f70] bg-white px-4 text-[12px] font-bold text-[#173f70]">再試行する</button>
+                            <p className="mt-1 text-[11px] text-[#718096]">募集内容の入力と募集開始はそのまま続けられます。</p>
+                          </div>
+                        ) : matchingWarnings.length > 0 && matchingTotal === 0 ? (
+                          <p className="mt-2 text-[12px] leading-5 text-[#65748a]">条件を修正すると候補物件を検索します。募集内容の入力はそのまま続けられます。</p>
                         ) : matchingTotal > 0 ? (
                           <>
                             <p className="mt-2 text-[18px] font-bold text-[#173f70]">条件に近い物件が{matchingTotal}件あります</p>
                             <p className="mt-1 text-[12px] text-[#526176]">希望条件に近い順に候補を確認できます。</p>
-                            <button type="button" onClick={() => setMatchesOpen(true)} className="mt-4 h-12 w-full bg-[#173f70] px-7 text-[14px] font-bold text-white hover:bg-[#102d50] sm:w-auto">候補物件を見る</button>
+                            <button type="button" onClick={() => { setMatchesOpen(true); logMatchEvent.mutate({ event: "results_open", resultCount: matchingTotal }); }} className="mt-4 h-12 w-full bg-[#173f70] px-7 text-[14px] font-bold text-white hover:bg-[#102d50] sm:w-auto">候補物件を見る</button>
                           </>
                         ) : (
                           <>
@@ -1884,7 +1967,9 @@ export default function V2PropertySearch() {
                         updateDraft.isPending ||
                         !form.title.trim() ||
                         !form.areas.trim() ||
-                        !form.propertyTypes.length
+                        !form.propertyTypes.length ||
+                        (!!form.minPrice && !!form.maxPrice && Number(form.minPrice) > Number(form.maxPrice)) ||
+                        (!!form.minArea && !!form.maxArea && Number(form.minArea) > Number(form.maxArea))
                       }
                       className="col-span-2 h-11 bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50 sm:col-span-1"
                     >
@@ -2112,6 +2197,7 @@ export default function V2PropertySearch() {
               <div>
                 <h2 className="text-[18px] font-bold text-[#102d50]">条件に近い掲載物件</h2>
                 <p className="mt-1 text-[12px] text-[#65748a]">近い順に最大10件を表示しています</p>
+                <p className="mt-1 text-[11px] leading-5 text-[#718096]">一致度は入力された条件を基に算出した参考値です。物件の適合性や成約可能性を保証するものではありません。</p>
               </div>
               <button type="button" onClick={() => setMatchesOpen(false)} aria-label="閉じる" className="ml-auto grid size-9 place-items-center text-[#526176]"><X size={20} /></button>
             </header>
@@ -2133,7 +2219,7 @@ export default function V2PropertySearch() {
                       <p className="mt-1 truncate text-[11px] text-[#65748a]">{(property.reasons ?? []).join("・")}</p>
                     </div>
                     <p className="text-[14px] font-bold text-[#173f70] sm:text-right">{money(property.price)}<span className="block text-[12px] font-normal text-[#65748a]">{displayArea ? `${Number(displayArea).toLocaleString()}㎡` : "面積指定なし"}</span></p>
-                    <a href={`/v2/property/${property.id}`} target="_blank" rel="noreferrer" className="flex h-10 items-center justify-center bg-[#173f70] px-2 text-[12px] font-bold text-white hover:bg-[#102d50]">物件を見る</a>
+                    <a href={`/v2/property/${property.id}`} target="_blank" rel="noreferrer" onClick={() => logMatchEvent.mutate({ event: "property_open", propertyId: property.id, score: property.score })} className="flex h-10 items-center justify-center bg-[#173f70] px-2 text-[12px] font-bold text-white hover:bg-[#102d50]">物件を見る</a>
                   </article>
                 );
               })}

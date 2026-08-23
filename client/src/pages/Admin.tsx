@@ -1037,6 +1037,8 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                             log.action === "dm_send" ? "DM送信" :
                             log.action === "announce" ? "お知らせ" :
                             log.action === "terms_agree" ? "規約同意" :
+                            log.action === "property_match_results_open" ? "候補一覧表示" :
+                            log.action === "property_match_property_open" ? "候補物件表示" :
                             log.action
                           }</span>
                         </td>

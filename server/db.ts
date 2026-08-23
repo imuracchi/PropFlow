@@ -720,7 +720,7 @@ export async function findMatchingProperties(
   criteria: PropertyMatchCriteria
 ) {
   const db = await getDb();
-  if (!db) return { matches: [], total: 0 };
+  if (!db) return { matches: [], total: 0, warnings: [] as string[] };
   const candidates = await db
     .select({
       id: properties.id,
@@ -750,7 +750,47 @@ export async function findMatchingProperties(
 
   const normalize = (value: string) =>
     value.replace(/[\s　,、]/g, "").replace(/[都道府県]/g, "").toLowerCase();
-  const areas = criteria.areas.map(normalize).filter(Boolean);
+  const areaPairs = criteria.areas
+    .map(original => ({
+      original: original.replace(/[\s　,、]/g, ""),
+      normalized: normalize(original),
+    }))
+    .filter(area => area.normalized);
+  const areas = areaPairs.map(area => area.normalized);
+  const bareWardPairs = areaPairs.filter(area =>
+    /^[^都道府県市区町村]+区$/.test(area.original)
+  );
+  const getWardParent = (address: string, ward: string) => {
+    const compact = address.replace(/[\s　]/g, "");
+    const wardIndex = compact.indexOf(ward);
+    if (wardIndex < 0) return null;
+    const prefix = compact.slice(0, wardIndex);
+    const cityEnd = prefix.lastIndexOf("市");
+    if (cityEnd >= 0) return prefix.slice(0, cityEnd + 1);
+    return prefix.match(/^.*?[都道府県]/)?.[0] ?? prefix;
+  };
+  const ambiguousPairs = bareWardPairs.filter(area => {
+    const parents = new Set(candidates.flatMap(property => {
+      const parent = getWardParent(property.address ?? "", area.original);
+      return parent ? [parent] : [];
+    }));
+    return parents.size > 1;
+  });
+  const ambiguousAreas = ambiguousPairs.map(area => area.normalized);
+  const matchableAreas = areas.filter(area => !ambiguousAreas.includes(area));
+  const warnings = ambiguousPairs.map(area =>
+    `「${area.original}」に該当する掲載物件が複数地域にあるため、都道府県または市まで入力してください。`
+  );
+  const structuredAreas = matchableAreas.filter(area => /[市区町村]/.test(area));
+  const standaloneLocalities = matchableAreas.filter(area => !/[市区町村]/.test(area));
+  const localityTerms = [
+    ...structuredAreas.map(area => area.replace(/^.*?[市区町村]/, "")),
+    ...standaloneLocalities,
+  ]
+    .filter(term => term.length >= 2);
+  const administrativeTerms = structuredAreas.flatMap(area =>
+    area.match(/[^市区町村]{1,12}[市区町村]/g) ?? []
+  );
   const hasBudget = criteria.minPrice != null || criteria.maxPrice != null;
   const hasSize = criteria.minArea != null || criteria.maxArea != null;
   const inRange = (value: number | null, min?: number | null, max?: number | null) =>
@@ -761,10 +801,30 @@ export async function findMatchingProperties(
     let score = 0;
     let possible = 0;
     const address = normalize(property.address ?? "");
-    const areaMatch = areas.some(area => address.includes(area) || area.includes(address));
+    const propertyName = normalize(property.name);
+    const fullAreaMatch = structuredAreas.some(area =>
+      address.includes(area) || (address.length >= 2 && area.includes(address))
+    );
+    const propertyAdministrativeTerms =
+      address.match(/[^市区町村]{1,12}[市区町村]/g) ?? [];
+    const administrativeMatch = !fullAreaMatch && administrativeTerms.some(term =>
+      propertyAdministrativeTerms.some(propertyTerm =>
+        term === propertyTerm || term.endsWith(propertyTerm) || propertyTerm.endsWith(term)
+      )
+    );
+    const localityMatch = !fullAreaMatch && !administrativeMatch && localityTerms.some(term =>
+      address.includes(term) || propertyName.includes(term)
+    );
+    const areaMatch = fullAreaMatch || administrativeMatch || localityMatch;
     if (areas.length) {
       possible += 35;
-      if (areaMatch) { score += 35; reasons.push("希望エリアに一致"); }
+      if (fullAreaMatch) {
+        score += 35; reasons.push("希望エリアに一致");
+      } else if (administrativeMatch) {
+        score += 25; reasons.push("希望する区・市に一致");
+      } else if (localityMatch) {
+        score += 22; reasons.push("希望エリアの町名に一致");
+      }
     }
     const typeMatch = criteria.propertyTypes.includes(property.type);
     if (criteria.propertyTypes.length) {
@@ -788,13 +848,16 @@ export async function findMatchingProperties(
         score += 15; reasons.push("希望面積の範囲内");
       }
     }
-    if ((!areaMatch && !typeMatch) || possible === 0) return [];
+    if ((areas.length && !areaMatch) || (!areas.length && !typeMatch) || possible === 0)
+      return [];
     const matchScore = Math.round((score / possible) * 100);
     if (matchScore < 35) return [];
     return [{ ...property, score: matchScore, reasons }];
   }).sort((a, b) => b.score - a.score || a.id - b.id);
 
-  return { matches: scored.slice(0, 10), total: scored.length };
+  if (areas.length && !matchableAreas.length)
+    return { matches: [], total: 0, warnings };
+  return { matches: scored.slice(0, 10), total: scored.length, warnings };
 }
 
 export async function getPropertyExclusions(propertyId: number) {
