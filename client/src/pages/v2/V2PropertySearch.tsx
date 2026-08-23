@@ -2217,8 +2217,8 @@ export default function V2PropertySearch() {
             <header className="flex shrink-0 items-start border-b border-[#d9e0e8] px-4 py-4 sm:px-6">
               <div>
                 <h2 className="text-[18px] font-bold text-[#102d50]">条件に近い掲載物件</h2>
-                <p className="mt-1 text-[12px] text-[#65748a]">近い順に最大10件を表示しています</p>
-                <p className="mt-1 text-[11px] leading-5 text-[#718096]">一致度は入力された条件を基に算出した参考値です。物件の適合性や成約可能性を保証するものではありません。</p>
+                <p className="mt-1 text-[12px] text-[#65748a]">一致度70%以上の物件を、近い順に最大10件表示しています</p>
+                <p className="mt-3 border-l-4 border-[#b7791f] bg-[#fff8e8] px-3 py-2 text-[12px] font-bold leading-5 text-[#7a4b0b]">一致度は入力された条件を基に算出した参考値です。物件の適合性や成約可能性を保証するものではありません。</p>
               </div>
               <button type="button" onClick={() => setMatchesOpen(false)} aria-label="閉じる" className="ml-auto grid size-9 place-items-center text-[#526176]"><X size={20} /></button>
             </header>

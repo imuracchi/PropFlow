@@ -851,7 +851,7 @@ export async function findMatchingProperties(
     if ((areas.length && !areaMatch) || (!areas.length && !typeMatch) || possible === 0)
       return [];
     const matchScore = Math.round((score / possible) * 100);
-    if (matchScore < 35) return [];
+    if (matchScore < 70) return [];
     return [{ ...property, score: matchScore, reasons }];
   }).sort((a, b) => b.score - a.score || a.id - b.id);
 
