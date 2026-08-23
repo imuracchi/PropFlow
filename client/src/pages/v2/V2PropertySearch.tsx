@@ -547,7 +547,7 @@ export default function V2PropertySearch() {
 
   return (
     <V2Layout>
-      <main className="mx-auto max-w-[1500px] p-4 pb-24 lg:p-7 lg:pb-10">
+      <main className="mx-auto max-w-[1500px] p-4 pb-40 lg:p-7 lg:pb-10">
         <div className="flex flex-wrap items-stretch gap-4 sm:items-end">
           <div>
             <p className="text-[12px] font-bold tracking-wider text-[#5275a0]">
@@ -562,7 +562,7 @@ export default function V2PropertySearch() {
           </div>
           <button
             onClick={() => setCreateOpen(true)}
-            className="group ml-auto flex h-14 w-full items-center justify-center gap-3 border border-[#0f3158] bg-[#173f70] px-6 text-[15px] font-bold text-white shadow-[0_4px_12px_rgba(23,63,112,0.22)] transition-colors hover:bg-[#0f3158] sm:w-auto sm:min-w-[250px]"
+            className="group ml-auto hidden h-14 items-center justify-center gap-3 border border-[#0f3158] bg-[#173f70] px-6 text-[15px] font-bold text-white shadow-[0_4px_12px_rgba(23,63,112,0.22)] transition-colors hover:bg-[#0f3158] sm:flex sm:min-w-[250px]"
           >
             <span className="grid size-8 place-items-center bg-white/15 transition-colors group-hover:bg-white/20">
               <Plus size={20} />
@@ -821,6 +821,17 @@ export default function V2PropertySearch() {
           </div>
         )}
       </main>
+      {!detailFor && !createOpen && !proposalFor && !closeOpen && (
+        <div className="fixed inset-x-0 bottom-[65px] z-30 border-t border-[#d9e0e8] bg-white p-2.5 lg:hidden">
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] px-5 text-[14px] font-bold text-white"
+          >
+            <Plus size={19} />
+            物件を募集する
+          </button>
+        </div>
+      )}
       {detailFor && (
         <div className="fixed inset-x-0 bottom-20 top-0 z-[35] overflow-y-auto overscroll-y-contain bg-[#f3f5f7] lg:bottom-0 lg:left-60 lg:top-0 lg:z-[35]">
           <div className="sticky top-0 z-30 hidden h-[68px] items-center border-b border-[#d9e0e8] bg-white px-7 lg:flex">
