@@ -97,6 +97,14 @@ const money = (value: number | null) =>
   value ? `${Math.round(value / 10000).toLocaleString()}万円` : "指定なし";
 const startDate = (value: string | Date | null | undefined) =>
   value ? new Date(value).toLocaleDateString("ja-JP") : "未公開";
+const isNewRequest = (
+  value: string | Date | null | undefined,
+  status: string
+) => {
+  if (!value || !["active", "negotiating"].includes(status)) return false;
+  const age = Date.now() - new Date(value).getTime();
+  return age >= 0 && age < 7 * 24 * 60 * 60 * 1000;
+};
 
 export default function V2PropertySearch() {
   const [, navigate] = useLocation();
@@ -674,6 +682,9 @@ export default function V2PropertySearch() {
                     >
                       {item.status === "draft" ? "下書き" : item.status === "closed" ? "募集終了" : "募集中"}
                     </span>
+                    {isNewRequest(item.publishedAt, item.status) && (
+                      <span className="shrink-0 bg-[#c94b28] px-2 py-1 text-[11px] font-bold text-white">新規募集</span>
+                    )}
                     <span
                       className={`shrink-0 border px-2 py-1 text-[11px] font-bold ${item.userId === user?.id ? "border-[#173f70] text-[#173f70]" : "border-[#bdc9d6] text-[#65748a]"}`}
                     >
@@ -749,6 +760,9 @@ export default function V2PropertySearch() {
                   <span className={`shrink-0 px-2 py-1 text-[11px] font-bold ${item.status === "draft" ? "bg-[#eef1f5] text-[#526176]" : item.status === "active" || item.status === "negotiating" ? "bg-[#e8f3ec] text-[#27613c]" : "bg-[#eef1f5] text-[#526176]"}`}>
                     {item.status === "draft" ? "下書き" : item.status === "closed" ? "募集終了" : "募集中"}
                   </span>
+                  {isNewRequest(item.publishedAt, item.status) && (
+                    <span className="shrink-0 bg-[#c94b28] px-2 py-1 text-[11px] font-bold text-white">新規募集</span>
+                  )}
                   <span className="text-[12px] text-[#758194]">募集開始 {startDate(item.publishedAt)}</span>
                   <span className="truncate text-[12px] text-[#526176]">
                     {item.anonymous === 1 && item.userId !== user?.id && !item.requesterName
