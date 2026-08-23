@@ -34,6 +34,81 @@ import { printProperty } from "@/pages/PropertyDetail";
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "";
 
+let googleMapsPromise: Promise<void> | null = null;
+function loadGoogleMaps(): Promise<void> {
+  if ((window as any).google?.maps) return Promise.resolve();
+  if (googleMapsPromise) return googleMapsPromise;
+  googleMapsPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-propflow-google-maps]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Google Mapsを読み込めませんでした")), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.dataset.propflowGoogleMaps = "true";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&v=weekly`;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Google Mapsを読み込めませんでした"));
+    document.head.appendChild(script);
+  });
+  return googleMapsPromise;
+}
+
+function PropertyLocationMap({ name, address }: { name: string; address: string }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [mapError, setMapError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!GOOGLE_MAPS_API_KEY || !mapRef.current) {
+      setMapError("Googleマップを表示できませんでした");
+      return;
+    }
+    loadGoogleMaps().then(() => {
+      if (cancelled || !mapRef.current) return;
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address }, (results, status) => {
+        if (cancelled || !mapRef.current) return;
+        if (status !== "OK" || !results?.[0]) {
+          setMapError("住所から物件位置を特定できませんでした");
+          return;
+        }
+        const position = results[0].geometry.location;
+        const map = new google.maps.Map(mapRef.current, {
+          center: position,
+          zoom: 17,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+        });
+        const marker = new google.maps.Marker({
+          map,
+          position,
+          title: `物件所在地：${name}`,
+          label: { text: "物", color: "#ffffff", fontSize: "12px", fontWeight: "700" },
+        });
+        const content = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = name;
+        const location = document.createElement("div");
+        location.textContent = address;
+        location.style.marginTop = "3px";
+        content.append(title, location);
+        new google.maps.InfoWindow({ content }).open({ map, anchor: marker });
+      });
+    }).catch(error => {
+      if (!cancelled) setMapError(error instanceof Error ? error.message : "Googleマップを表示できませんでした");
+    });
+    return () => { cancelled = true; };
+  }, [address, name]);
+
+  return mapError ? (
+    <div className="grid h-64 place-items-center bg-[#f2f5f8] px-4 text-center text-[13px] text-[#65748a] lg:h-80">{mapError}</div>
+  ) : <div ref={mapRef} className="h-64 w-full lg:h-80" />;
+}
+
 const previewProperty: any = {
   id: 901,
   userId: 99,
@@ -983,20 +1058,8 @@ export default function V2PropertyDetail({
                       </button>
                     </div>
                   )}
-                  <div className="relative overflow-hidden border border-[#d9e0e8]">
-                    <iframe
-                      title={`${property.name}の所在地地図`}
-                      src={GOOGLE_MAPS_API_KEY
-                        ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&q=${encodeURIComponent(property.address)}&zoom=17`
-                        : `https://www.google.com/maps?q=${encodeURIComponent(property.address)}&z=17&output=embed`}
-                      className="h-64 w-full lg:h-80"
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                    <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5 border border-[#d64242] bg-white/95 px-3 py-2 text-[12px] font-bold text-[#9f2525] shadow-sm">
-                      <MapPin size={16} fill="#d64242" className="text-[#d64242]" />
-                      物件所在地
-                    </div>
+                  <div className="overflow-hidden border border-[#d9e0e8]">
+                    <PropertyLocationMap name={property.name} address={property.address} />
                   </div>
                   <div className="mt-2 flex items-start gap-2 text-[12px] text-[#65748a]">
                     <MapPin size={14} className="mt-0.5 shrink-0 text-[#d64242]" />
