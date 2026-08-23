@@ -22,10 +22,17 @@ try {
     ["properties", "publishedAt"],
     ["properties", "ownerDeletedAt"],
     ["properties", "dealPrice"],
+    ["properties", "visibilityScope"],
+    ["properties", "proposalTargetUserId"],
+    ["properties", "proposalRequestId"],
     ["property_files", "visible"],
     ["property_files", "category"],
     ["dm_read_status", "flagged"],
     ["users", "businessCardBase64"],
+    ["users", "notifyPropertySearch"],
+    ["property_search_requests", "publishedAt"],
+    ["property_search_requests", "adminHidden"],
+    ["property_search_proposals", "viewedAt"],
   ] as const;
   const [columnRows] = await connection.query<Array<{ tableName: string; columnName: string }>>(
     "SELECT TABLE_NAME AS tableName, COLUMN_NAME AS columnName FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ?",
@@ -45,6 +52,9 @@ try {
     "search_logs",
     "broadcast_logs",
     "broadcast_schedules",
+    "property_search_requests",
+    "property_search_proposals",
+    "property_search_digest_deliveries",
   ];
   const [tableRows] = await connection.query<Array<{ tableName: string }>>(
     "SELECT TABLE_NAME AS tableName FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?",

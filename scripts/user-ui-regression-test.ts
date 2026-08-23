@@ -233,7 +233,7 @@ async function runViewport(label: string, width: number, height: number) {
     );
     await page.evaluate(() => {
       const title = [...document.querySelectorAll("button")].find(element =>
-        element.textContent?.includes("自動テスト用 事業用地募集")
+        element.textContent?.includes("テスト用 足立区 事業用地募集（募集中）")
       );
       (title as HTMLButtonElement | undefined)?.click();
     });
