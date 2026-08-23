@@ -1575,9 +1575,26 @@ export default function V2PropertySearch() {
                       className="mt-1 h-11 w-full border px-3 text-[14px]"
                     />
                   </label>
-                  <label className="block text-[12px] font-bold">
-                    希望エリア <span className="ml-1 bg-[#b42318] px-1.5 py-0.5 text-[10px] font-bold text-white">必須</span>
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label htmlFor="recruitment-areas" className="text-[12px] font-bold">
+                        希望エリア <span className="ml-1 bg-[#b42318] px-1.5 py-0.5 text-[10px] font-bold text-white">必須</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-[12px] font-bold text-[#173f70]">
+                        <input
+                          type="checkbox"
+                          checked={form.areaAgnostic}
+                          onChange={event => {
+                            setForm({ ...form, areaAgnostic: event.target.checked });
+                            setMatchCriteriaVersion(value => value + 1);
+                          }}
+                          className="size-4 accent-[#173f70]"
+                        />
+                        エリア不問（全国から探す）
+                      </label>
+                    </div>
                     <input
+                      id="recruitment-areas"
                       value={form.areas}
                       onChange={e =>
                         setForm({ ...form, areas: e.target.value })
@@ -1587,19 +1604,7 @@ export default function V2PropertySearch() {
                       placeholder="港区、渋谷区"
                       className="mt-1 h-11 w-full border px-3 text-[14px] disabled:bg-[#edf1f5] disabled:text-[#8a96a5]"
                     />
-                    <span className="mt-2 flex items-center gap-2 text-[12px] font-bold text-[#173f70]">
-                      <input
-                        type="checkbox"
-                        checked={form.areaAgnostic}
-                        onChange={event => {
-                          setForm({ ...form, areaAgnostic: event.target.checked });
-                          setMatchCriteriaVersion(value => value + 1);
-                        }}
-                        className="size-4 accent-[#173f70]"
-                      />
-                      エリア不問（全国から探す）
-                    </span>
-                  </label>
+                  </div>
                   <div>
                     <p className="text-[12px] font-bold">物件種別 <span className="ml-1 bg-[#b42318] px-1.5 py-0.5 text-[10px] font-bold text-white">必須</span></p>
                     <div className="mt-2 flex flex-wrap gap-2">
