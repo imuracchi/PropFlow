@@ -119,6 +119,7 @@ type Form = {
   maxBuildingAge: string;
   inspectionPreference: string;
   notes: string;
+  areaAgnostic: boolean;
   anonymous: boolean;
 };
 const emptyForm: Form = {
@@ -143,6 +144,7 @@ const emptyForm: Form = {
   maxBuildingAge: "",
   inspectionPreference: "",
   notes: "",
+  areaAgnostic: false,
   anonymous: true,
 };
 
@@ -343,7 +345,9 @@ export default function V2PropertySearch() {
 
   useEffect(() => {
     if (!createOpen || step !== "confirm") return;
-    const areas = form.areas.split(/[、,\n]/).map(x => x.trim()).filter(Boolean);
+    const areas = form.areaAgnostic
+      ? []
+      : form.areas.split(/[、,\n]/).map(x => x.trim()).filter(Boolean);
     const minPrice = form.minPrice ? Number(form.minPrice) : null;
     const maxPrice = form.maxPrice ? Number(form.maxPrice) : null;
     const minArea = form.minArea ? Number(form.minArea) : null;
@@ -424,7 +428,7 @@ export default function V2PropertySearch() {
     const normalizedTypes = normalizePropertyTypes([...analyzedTypes, aiText]);
     setForm({
       title: buildRecruitmentTitle(data, aiText, normalizedTypes),
-      areas: (data.areas ?? []).join("、"),
+      areas: (data.areas ?? []).filter((area: unknown) => !["全国", "エリア不問"].includes(String(area).trim())).join("、"),
       // Also inspect the original sentence so local/fallback analysis still
       // selects an obvious property type when the AI response is incomplete.
       propertyTypes: normalizedTypes,
@@ -450,6 +454,7 @@ export default function V2PropertySearch() {
       maxBuildingAge: data.conditions?.maxBuildingAge ?? "",
       inspectionPreference: data.conditions?.inspectionPreference ?? "",
       notes: data.notes ?? aiText,
+      areaAgnostic: (data.areas ?? []).some((area: unknown) => ["全国", "エリア不問"].includes(String(area).trim())),
       anonymous: true,
     });
     if (data.piiWarning)
@@ -483,10 +488,12 @@ export default function V2PropertySearch() {
       );
       return;
     }
-    const areas = form.areas
-      .split(/[、,\n]/)
-      .map(x => x.trim())
-      .filter(Boolean);
+    const areas = form.areaAgnostic
+      ? ["エリア不問"]
+      : form.areas
+          .split(/[、,\n]/)
+          .map(x => x.trim())
+          .filter(Boolean);
     if (status === "active" && form.minPrice && form.maxPrice && Number(form.minPrice) > Number(form.maxPrice)) {
       window.alert("予算下限は予算上限以下にしてください。");
       return;
@@ -568,7 +575,7 @@ export default function V2PropertySearch() {
     const conditions = item.conditions ?? {};
     setForm({
       title: cleanTitle(item.title),
-      areas: (item.areas ?? []).join("、"),
+      areas: (item.areas ?? []).filter((area: string) => area !== "エリア不問").join("、"),
       propertyTypes: item.propertyTypes ?? [],
       minPrice: item.minPrice ? String(Math.round(item.minPrice / 10000)) : "",
       maxPrice: item.maxPrice ? String(Math.round(item.maxPrice / 10000)) : "",
@@ -590,6 +597,7 @@ export default function V2PropertySearch() {
       maxBuildingAge: conditions.maxBuildingAge ?? "",
       inspectionPreference: conditions.inspectionPreference ?? "",
       notes: item.notes ?? "",
+      areaAgnostic: (item.areas ?? []).includes("エリア不問"),
       anonymous: item.anonymous === 1,
     });
     setEditingDraftId(item.id);
@@ -1575,9 +1583,22 @@ export default function V2PropertySearch() {
                         setForm({ ...form, areas: e.target.value })
                       }
                       onBlur={() => setMatchCriteriaVersion(value => value + 1)}
+                      disabled={form.areaAgnostic}
                       placeholder="港区、渋谷区"
-                      className="mt-1 h-11 w-full border px-3 text-[14px]"
+                      className="mt-1 h-11 w-full border px-3 text-[14px] disabled:bg-[#edf1f5] disabled:text-[#8a96a5]"
                     />
+                    <span className="mt-2 flex items-center gap-2 text-[12px] font-bold text-[#173f70]">
+                      <input
+                        type="checkbox"
+                        checked={form.areaAgnostic}
+                        onChange={event => {
+                          setForm({ ...form, areaAgnostic: event.target.checked });
+                          setMatchCriteriaVersion(value => value + 1);
+                        }}
+                        className="size-4 accent-[#173f70]"
+                      />
+                      エリア不問（全国から探す）
+                    </span>
                   </label>
                   <div>
                     <p className="text-[12px] font-bold">物件種別 <span className="ml-1 bg-[#b42318] px-1.5 py-0.5 text-[10px] font-bold text-white">必須</span></p>
@@ -1966,7 +1987,7 @@ export default function V2PropertySearch() {
                         create.isPending ||
                         updateDraft.isPending ||
                         !form.title.trim() ||
-                        !form.areas.trim() ||
+                        (!form.areas.trim() && !form.areaAgnostic) ||
                         !form.propertyTypes.length ||
                         (!!form.minPrice && !!form.maxPrice && Number(form.minPrice) > Number(form.maxPrice)) ||
                         (!!form.minArea && !!form.maxArea && Number(form.minArea) > Number(form.maxArea))
