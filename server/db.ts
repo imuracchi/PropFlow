@@ -38,6 +38,7 @@ import {
   broadcastLogs,
   announcementReads,
   propertyReads,
+  propertyViewEvents,
   propertySearchNeedLogs,
 } from "../drizzle/schema";
 
@@ -106,6 +107,14 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` ADD COLUMN `holidays` varchar(255) NULL",
     "ALTER TABLE `users` ADD COLUMN `bio` text NULL",
     "ALTER TABLE `properties` ADD COLUMN `viewCount` int NOT NULL DEFAULT 0",
+    `CREATE TABLE IF NOT EXISTS \`property_view_events\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`userId\` int NOT NULL,
+      \`propertyId\` int NOT NULL,
+      \`viewedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY \`idx_property_view_events_property_viewed\` (\`propertyId\`, \`viewedAt\`),
+      KEY \`idx_property_view_events_user_viewed\` (\`userId\`, \`viewedAt\`)
+    )`,
     `CREATE TABLE IF NOT EXISTS \`property_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`userId\` int NOT NULL,
@@ -660,6 +669,32 @@ export async function listProperties(viewerUserId?: number) {
     .where(sql`${directMessages.senderId} != ${properties.userId}`)
     .groupBy(directMessages.propertyId)
     .as("inquiry_count");
+  const recentViewCountSub = db
+    .select({
+      propertyId: propertyViewEvents.propertyId,
+      cnt: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as("cnt"),
+    })
+    .from(propertyViewEvents)
+    .innerJoin(properties, eq(propertyViewEvents.propertyId, properties.id))
+    .where(sql`${propertyViewEvents.viewedAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND ${propertyViewEvents.userId} != ${properties.userId}`)
+    .groupBy(propertyViewEvents.propertyId)
+    .as("recent_view_count");
+  const recentFavoriteCountSub = db
+    .select({ propertyId: favorites.propertyId, cnt: count().as("cnt") })
+    .from(favorites)
+    .where(sql`${favorites.createdAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY)`)
+    .groupBy(favorites.propertyId)
+    .as("recent_favorite_count");
+  const recentInquiryCountSub = db
+    .select({
+      propertyId: directMessages.propertyId,
+      cnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("cnt"),
+    })
+    .from(directMessages)
+    .innerJoin(properties, eq(directMessages.propertyId, properties.id))
+    .where(sql`${directMessages.createdAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND ${directMessages.senderId} != ${properties.userId}`)
+    .groupBy(directMessages.propertyId)
+    .as("recent_inquiry_count");
   const baseWhere = eq(properties.deleted, 0);
   const visibilityFilter = viewerUserId
     ? sql`(
@@ -716,6 +751,9 @@ export async function listProperties(viewerUserId?: number) {
       inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as(
         "inquiryCount"
       ),
+      recentViewCount: sql<number>`COALESCE(${recentViewCountSub.cnt}, 0)`.as("recentViewCount"),
+      recentFavoriteCount: sql<number>`COALESCE(${recentFavoriteCountSub.cnt}, 0)`.as("recentFavoriteCount"),
+      recentInquiryCount: sql<number>`COALESCE(${recentInquiryCountSub.cnt}, 0)`.as("recentInquiryCount"),
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
@@ -725,6 +763,9 @@ export async function listProperties(viewerUserId?: number) {
     )
     .leftJoin(favCountSub, eq(properties.id, favCountSub.propertyId))
     .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
+    .leftJoin(recentViewCountSub, eq(properties.id, recentViewCountSub.propertyId))
+    .leftJoin(recentFavoriteCountSub, eq(properties.id, recentFavoriteCountSub.propertyId))
+    .leftJoin(recentInquiryCountSub, eq(properties.id, recentInquiryCountSub.propertyId))
     .where(visibilityFilter ? and(baseWhere, visibilityFilter) : baseWhere)
     .orderBy(desc(properties.createdAt));
 }
@@ -947,6 +988,11 @@ export async function getPropertyExcludedUserIds(
 export async function getPropertyById(id: number) {
   const db = await getDb();
   if (!db) return null;
+  const favCountSub = db
+    .select({ propertyId: favorites.propertyId, cnt: count().as("cnt") })
+    .from(favorites)
+    .groupBy(favorites.propertyId)
+    .as("fav_count");
   const inquiryCountSub = db
     .select({
       propertyId: directMessages.propertyId,
@@ -959,6 +1005,32 @@ export async function getPropertyById(id: number) {
     .where(sql`${directMessages.senderId} != ${properties.userId}`)
     .groupBy(directMessages.propertyId)
     .as("inquiry_count");
+  const recentViewCountSub = db
+    .select({
+      propertyId: propertyViewEvents.propertyId,
+      cnt: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as("cnt"),
+    })
+    .from(propertyViewEvents)
+    .innerJoin(properties, eq(propertyViewEvents.propertyId, properties.id))
+    .where(sql`${propertyViewEvents.viewedAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND ${propertyViewEvents.userId} != ${properties.userId}`)
+    .groupBy(propertyViewEvents.propertyId)
+    .as("recent_view_count");
+  const recentFavoriteCountSub = db
+    .select({ propertyId: favorites.propertyId, cnt: count().as("cnt") })
+    .from(favorites)
+    .where(sql`${favorites.createdAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY)`)
+    .groupBy(favorites.propertyId)
+    .as("recent_favorite_count");
+  const recentInquiryCountSub = db
+    .select({
+      propertyId: directMessages.propertyId,
+      cnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("cnt"),
+    })
+    .from(directMessages)
+    .innerJoin(properties, eq(directMessages.propertyId, properties.id))
+    .where(sql`${directMessages.createdAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND ${directMessages.senderId} != ${properties.userId}`)
+    .groupBy(directMessages.propertyId)
+    .as("recent_inquiry_count");
   const result = await db
     .select({
       id: properties.id,
@@ -969,10 +1041,16 @@ export async function getPropertyById(id: number) {
       type: properties.type,
       status: properties.status,
       viewCount: properties.viewCount,
+      favoriteCount: sql<number>`COALESCE(${favCountSub.cnt}, 0)`.as(
+        "favoriteCount"
+      ),
       dealPrice: properties.dealPrice,
       inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as(
         "inquiryCount"
       ),
+      recentViewCount: sql<number>`COALESCE(${recentViewCountSub.cnt}, 0)`.as("recentViewCount"),
+      recentFavoriteCount: sql<number>`COALESCE(${recentFavoriteCountSub.cnt}, 0)`.as("recentFavoriteCount"),
+      recentInquiryCount: sql<number>`COALESCE(${recentInquiryCountSub.cnt}, 0)`.as("recentInquiryCount"),
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,
       estimatedYield: properties.estimatedYield,
@@ -1024,11 +1102,15 @@ export async function getPropertyById(id: number) {
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
+    .leftJoin(favCountSub, eq(properties.id, favCountSub.propertyId))
     .leftJoin(
       propertySearchRequests,
       eq(properties.proposalRequestId, propertySearchRequests.id)
     )
     .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
+    .leftJoin(recentViewCountSub, eq(properties.id, recentViewCountSub.propertyId))
+    .leftJoin(recentFavoriteCountSub, eq(properties.id, recentFavoriteCountSub.propertyId))
+    .leftJoin(recentInquiryCountSub, eq(properties.id, recentInquiryCountSub.propertyId))
     .where(eq(properties.id, id))
     .limit(1);
   return result[0] ?? null;
@@ -4009,13 +4091,16 @@ export async function updateBroadcastScheduleStatus(
   }
 }
 
-export async function incrementViewCount(propertyId: number) {
+export async function incrementViewCount(propertyId: number, userId: number) {
   const db = await getDb();
   if (!db) return;
-  await db
-    .update(properties)
-    .set({ viewCount: sql`viewCount + 1` })
-    .where(eq(properties.id, propertyId));
+  await Promise.all([
+    db
+      .update(properties)
+      .set({ viewCount: sql`viewCount + 1` })
+      .where(eq(properties.id, propertyId)),
+    db.insert(propertyViewEvents).values({ propertyId, userId }),
+  ]);
 }
 
 export async function getTopViewedProperties(limit = 20) {

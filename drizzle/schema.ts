@@ -3,6 +3,7 @@ import {
   datetime,
   double,
   int,
+  index,
   json,
   longtext,
   mysqlEnum,
@@ -303,6 +304,26 @@ export const propertyReads = mysqlTable("property_reads", {
   propertyId: int("propertyId").notNull(),
   readAt: timestamp("readAt").defaultNow().notNull(),
 });
+
+export const propertyViewEvents = mysqlTable(
+  "property_view_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    propertyId: int("propertyId").notNull(),
+    viewedAt: timestamp("viewedAt").defaultNow().notNull(),
+  },
+  table => ({
+    propertyViewedAtIdx: index("idx_property_view_events_property_viewed").on(
+      table.propertyId,
+      table.viewedAt
+    ),
+    userViewedAtIdx: index("idx_property_view_events_user_viewed").on(
+      table.userId,
+      table.viewedAt
+    ),
+  })
+);
 
 export const broadcastLogs = mysqlTable("broadcast_logs", {
   id: int("id").autoincrement().primaryKey(),

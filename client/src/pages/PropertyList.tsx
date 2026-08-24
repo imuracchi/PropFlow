@@ -11,6 +11,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PropertyRegisterNudgeBanner } from "@/components/PropertyRegisterNudgeBanner";
+import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   available: { label: "公開中", cls: "bg-blue-50 text-blue-700 border border-blue-200" },
@@ -151,7 +152,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     })
     .filter(p => {
       if (!showHotOnly) return true;
-      return ((p as any).inquiryCount ?? 0) >= 3;
+      return isPropertyAttentionWorthy(p as any);
     })
     .filter(p => {
       if (!filterRegion) return true;
@@ -697,7 +698,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                               <Eye className="w-2.5 h-2.5" />{property.viewCount}
                             </span>
                           )}
-                          {((property as any).inquiryCount ?? 0) >= 3 && (
+                          {isPropertyAttentionWorthy(property as any) && (
                             <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">
                               <Flame className="w-2.5 h-2.5" />注目
                             </span>

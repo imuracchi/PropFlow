@@ -16,6 +16,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
+import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
 
 const REGIONS = [
   {
@@ -281,7 +282,7 @@ export default function V2PropertyList({
           return false;
         if (newOnly && (p.userId === user?.id || readSet.has(p.id)))
           return false;
-        if (hotOnly && (p.inquiryCount ?? 0) < 3) return false;
+        if (hotOnly && !isPropertyAttentionWorthy(p)) return false;
         if (negotiatingOnly && p.status !== "negotiating") return false;
         return true;
       }),
@@ -654,7 +655,7 @@ export default function V2PropertyList({
                         商談中
                       </span>
                     )}
-                    {p.published !== 0 && (p.inquiryCount ?? 0) >= 3 && (
+                    {p.published !== 0 && isPropertyAttentionWorthy(p) && (
                       <span className="bg-[#fde2d3] px-2 py-0.5 text-[#b43b16]">
                         注目
                       </span>
@@ -822,7 +823,7 @@ export default function V2PropertyList({
                             商談中
                           </span>
                         )}
-                        {p.published !== 0 && (p.inquiryCount ?? 0) >= 3 && (
+                        {p.published !== 0 && isPropertyAttentionWorthy(p) && (
                           <span className="bg-[#fde2d3] px-2 py-1 text-[12px] font-bold text-[#b43b16]">
                             注目
                           </span>

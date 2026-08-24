@@ -1277,7 +1277,7 @@ JSONのみ返してください。`,
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         await requirePropertyAccess(input.propertyId, ctx.user);
-        await db.incrementViewCount(input.propertyId);
+        await db.incrementViewCount(input.propertyId, ctx.user.id);
         return { success: true };
       }),
 

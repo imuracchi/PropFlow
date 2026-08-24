@@ -15,6 +15,7 @@ import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { FileViewerModal } from "@/components/FileViewerModal";
+import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
 
 type FaqItem = { q: string; a: string };
 
@@ -1264,7 +1265,7 @@ export default function PropertyDetail() {
               <Eye className="w-3.5 h-3.5" />{(property as any).viewCount}
             </span>
           )}
-          {(property as any).inquiryCount >= 3 && (
+          {isPropertyAttentionWorthy(property as any) && (
             <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500 text-white">
               <Flame className="w-3.5 h-3.5" />注目
             </span>

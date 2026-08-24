@@ -30,6 +30,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
 import { printProperty } from "@/pages/PropertyDetail";
+import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "";
 
@@ -823,7 +824,7 @@ export default function V2PropertyDetail({
                 <span className="bg-[#173f70] px-2 py-1 text-[10px] font-bold text-white">
                   {property.type}
                 </span>
-                {(property.inquiryCount ?? 0) >= 3 && (
+                {isPropertyAttentionWorthy(property) && (
                   <span className="bg-[#fde2d3] px-2 py-1 text-[10px] font-bold text-[#b43b16]">
                     注目
                   </span>
