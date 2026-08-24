@@ -5,7 +5,7 @@
 | 位置 | 表示 | アクション |
 |---|---|---|
 | 上段全面 | 物件を探す | `https://propflow.jp/?utm_source=line&utm_medium=richmenu&utm_campaign=property_search` |
-| 下段左 | 希望物件を募集する | `https://propflow.jp/v2/property-search?create=1&utm_source=line&utm_medium=richmenu&utm_campaign=request` |
+| 下段左 | 希望物件を募集する | `https://propflow.jp/v2/property-search?new=1&utm_source=line&utm_medium=richmenu&utm_campaign=request` |
 | 下段中央 | PropFlowとは | `https://propflow.jp/propflow-intro.html?utm_source=line&utm_medium=richmenu&utm_campaign=introduction` |
 | 下段右 | 利用登録・相談 | LINEのテキスト送信アクション：「利用登録・相談を希望します」 |
 

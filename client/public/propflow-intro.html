@@ -316,6 +316,15 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
   .hero-actions .btn-secondary { width: 100%; justify-content: center; font-size: 15px; padding: 14px 20px; }
   .feature-group { margin: 0 -4px 40px; padding: 28px 20px; }
   .feature-group-head { margin: -28px -20px 30px; padding: 24px 20px 20px; }
+  .hero .frame img { max-height: 430px; object-fit: cover; object-position: top; }
+  .feat-media { min-width: 0; width: 100%; }
+  .feat-media .frame { width: 100%; border-radius: 10px; }
+  .feat-media img[src*="mobile-"] { max-height: 540px; object-fit: cover; object-position: top; }
+  .feat-media img[src*="property-detail"],
+  .feat-media img[src*="intro-v2-chat"] { width: 760px; max-width: none; }
+  .feat-media .frame:has(img[src*="property-detail"]),
+  .feat-media .frame:has(img[src*="intro-v2-chat"]) { max-width: 100%; overflow-x: auto; }
+  .screen-showcase img { max-height: 600px; object-fit: cover; object-position: top; }
 
   /* pain */
   .pain { padding: 52px 0; }
@@ -723,6 +732,16 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
   if (mobileMessageScreen) {
     mobileMessageScreen.src = "/intro-v2-mobile-property-search.png";
     mobileMessageScreen.alt = "加工済みサンプルデータを表示した現在のスマホ物件募集画面";
+  }
+  if (window.matchMedia('(max-width: 640px)').matches) {
+    document.querySelectorAll('img[src="/intro-v2-properties.png"]').forEach(image => {
+      image.src = "/intro-v2-mobile-properties.png";
+      image.alt = "スマホで物件を検索・比較する画面";
+    });
+    document.querySelectorAll('img[src="/intro-v2-property-search.png"]').forEach(image => {
+      image.src = "/intro-v2-mobile-property-search.png";
+      image.alt = "スマホで希望物件を募集する画面";
+    });
   }
 </script>
 </body>
