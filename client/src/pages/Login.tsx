@@ -121,6 +121,14 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
             <h1 className="mt-5 text-[30px] font-bold leading-[1.55]">業者間の物件情報を、<br/>もっと速く、シンプルに。</h1>
             <p className="mt-5 max-w-sm text-[14px] leading-7 text-[#d8e4f0]">物件の確認から商談、資料共有まで。日々の不動産取引をひとつの場所で進められます。</p>
             <div className="mt-9 border-l-2 border-[#6f96c1] pl-5 text-[13px] leading-7 text-[#d8e4f0]"><p>不動産事業者専用</p><p>登録済みユーザーのみ利用可能</p></div>
+            <div className="mt-8 grid gap-3">
+              <a href="/propflow-intro.html" className="flex items-center justify-between border border-[#8da9c7] px-4 py-3 text-[13px] font-bold text-white transition-colors hover:bg-white/10">
+                <span className="flex items-center gap-2"><FileText size={16}/>PropFlowについて</span><span aria-hidden="true">→</span>
+              </a>
+              <a href="https://lin.ee/Ueg4j5Q" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between border border-[#8bd6a5] px-4 py-3 text-[13px] font-bold text-white transition-colors hover:bg-white/10">
+                <span className="flex items-center gap-2"><Phone size={16}/>公式LINEで相談する</span><span aria-hidden="true">↗</span>
+              </a>
+            </div>
           </div>
           <p className="text-[11px] text-[#9fb7d1]">PropFlow — 不動産情報プラットフォーム</p>
         </aside>
@@ -128,6 +136,15 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
         <div className="flex flex-col items-center mb-7 lg:hidden">
           <div className="flex items-center gap-2 text-[#173f70]"><Building2 size={28}/><span className="text-[25px] font-bold tracking-wide">PropFlow</span></div>
           <p className="text-[12px] text-[#65748a] mt-2 tracking-[0.18em]">不動産情報プラットフォーム</p>
+        </div>
+
+        <div className="mb-6 grid grid-cols-2 gap-2 lg:hidden">
+          <a href="/propflow-intro.html" className="flex min-h-12 items-center justify-center gap-1.5 border border-[#b8c6d5] bg-white px-2 text-center text-[12px] font-bold text-[#173f70]">
+            <FileText size={15}/>PropFlowについて
+          </a>
+          <a href="https://lin.ee/Ueg4j5Q" target="_blank" rel="noopener noreferrer" className="flex min-h-12 items-center justify-center gap-1.5 border border-[#75c992] bg-[#f1faf4] px-2 text-center text-[12px] font-bold text-[#16713a]">
+            <Phone size={15}/>公式LINE
+          </a>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
