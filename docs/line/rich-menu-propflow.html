@@ -5,22 +5,24 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:2500px;height:1686px;overflow:hidden;background:#f4f6fa;font-family:"Noto Sans JP",sans-serif;color:#142c49}
 .menu{display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:1fr 1fr;width:2500px;height:1686px;background:#fff}
-.item{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;grid-column:span 2;padding:58px 42px;border:5px solid #d8e0e9;background:#fff;text-align:center}
-.item:first-child{grid-column:1/-1;flex-direction:row;gap:82px;padding:80px 180px;text-align:left}
+.item{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;grid-column:span 2;padding:38px 18px;border:5px solid #d8e0e9;background:#fff;text-align:center}
+.item:first-child{grid-column:1/-1;padding:60px 120px;text-align:center}
 .item:nth-child(1){background:#173f70;color:#fff;border-color:#173f70}
 .item:nth-child(2){background:#eef4fa}
 .item:nth-child(3){background:#f8fafc}
 .item:nth-child(4){background:#edf9f1;border-color:#c8e8d3}
-.icon{display:grid;place-items:center;width:154px;height:154px;flex:0 0 154px;border:5px solid currentColor;border-radius:50%}
-.icon svg{width:78px;height:78px;fill:none;stroke:currentColor;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
-.item:first-child .icon{width:196px;height:196px;flex-basis:196px}.item:first-child .icon svg{width:100px;height:100px}
-.label{font-size:68px;font-weight:900;letter-spacing:.01em;line-height:1.3}
-.item:first-child .label{font-size:96px}
+.icon{display:none}
+.icon svg{width:62px;height:62px;fill:none;stroke:currentColor;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+.item:first-child .icon{width:160px;height:160px;flex-basis:160px}.item:first-child .icon svg{width:82px;height:82px}
+.label{font-size:112px;font-weight:900;letter-spacing:-.035em;line-height:1.2}
+.item:first-child .label{font-size:190px}
+.item:nth-child(3) .label{font-size:118px}
+.item:nth-child(4) .label{font-size:104px}
 .sub{margin-top:18px;font-size:27px;font-weight:500;line-height:1.55;opacity:.76}
-.item:first-child .sub{font-size:34px}
+.item:first-child .sub{display:none}
 .item:not(:first-child) .sub{display:none}
 .arrow{position:absolute;right:82px;bottom:64px;font-size:52px;font-weight:700;opacity:.55}
-.brand{position:absolute;right:56px;top:42px;font-size:22px;font-weight:800;letter-spacing:.16em;opacity:.55}
+.brand{display:none}
 .item:nth-child(1) .brand{opacity:.7}
 .item:nth-child(4){color:#146b38}
 </style>
