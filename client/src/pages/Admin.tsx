@@ -89,6 +89,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const loginAsMutation = trpc.admin.loginAs.useMutation();
   const resendWelcomeMutation = trpc.admin.resendWelcomeEmail.useMutation();
   const broadcastMutation = trpc.admin.broadcast.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); } });
+  const publishAnnouncementMutation = trpc.admin.publishAnnouncement.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); } });
   const broadcastLogsQuery = trpc.admin.broadcastLogs.useQuery();
   const analyzeDmsMutation = trpc.admin.analyzeDms.useMutation({ onSuccess: (data) => setAnalysisResult(data) });
   const addBroadcastLogMutation = trpc.admin.addBroadcastLog.useMutation({ onSuccess: () => { utils.admin.broadcastLogs.invalidate(); setShowManualAdd(false); setManualSubject(""); setManualMessage(""); setManualSentAt(""); } });
@@ -117,7 +118,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastLineMessage, setBroadcastLineMessage] = useState("");
   const [broadcastImageUrl, setBroadcastImageUrl] = useState("");
-  const [broadcastMode, setBroadcastMode] = useState<"both" | "email" | "line">("both");
+  const [broadcastMode, setBroadcastMode] = useState<"site" | "both" | "email" | "line">("site");
   const [broadcastSkipLine, setBroadcastSkipLine] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<{ emailSent: number; emailTotal: number; lineSent: boolean } | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
@@ -1155,7 +1156,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">送信先</label>
                 <div className="flex gap-2">
-                  {([["both", "LINE + メール"], ["email", "メールのみ"], ["line", "LINEのみ"]] as const).map(([val, label]) => (
+                  {([["site", "サイト内のみ"], ["both", "LINE + メール"], ["email", "メールのみ"], ["line", "LINEのみ"]] as const).map(([val, label]) => (
                     <button
                       key={val}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${broadcastMode === val ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary/50"}`}
@@ -1192,11 +1193,11 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">メール本文</label>
+                    <label className="text-sm font-medium text-foreground">{broadcastMode === "site" ? "お知らせ本文" : "メール本文"}</label>
                     <textarea
                       className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                       rows={8}
-                      placeholder="メールに送る本文を入力..."
+                      placeholder={broadcastMode === "site" ? "サイト内のお知らせ本文を入力..." : "メールに送る本文を入力..."}
                       value={broadcastMessage}
                       onChange={e => { setBroadcastMessage(e.target.value); setBroadcastResult(null); }}
                     />
@@ -1204,7 +1205,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                 </>
               )}
 
-              {broadcastMode !== "email" && (
+              {broadcastMode !== "email" && broadcastMode !== "site" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">
                     LINE本文
@@ -1224,9 +1225,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                 <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 space-y-1">
                   <p className="text-sm font-medium text-green-800">送信完了</p>
                   <p className="text-xs text-green-700">
-                    {broadcastMode !== "line" && `メール: ${broadcastResult.emailSent}/${broadcastResult.emailTotal}件送信`}
+                    {broadcastMode === "site" ? "サイト内のお知らせに掲載しました（メール・LINE送信なし）" : broadcastMode !== "line" && `メール: ${broadcastResult.emailSent}/${broadcastResult.emailTotal}件送信`}
                     {broadcastMode === "both" && "　"}
-                    {broadcastMode !== "email" && `LINE: ${broadcastResult.lineSent ? "送信成功" : "送信失敗（トークン未設定？）"}`}
+                    {broadcastMode !== "email" && broadcastMode !== "site" && `LINE: ${broadcastResult.lineSent ? "送信成功" : "送信失敗（トークン未設定？）"}`}
                   </p>
                 </div>
               )}
@@ -1239,8 +1240,14 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
 
               <Button
                 className="gap-2 bg-primary hover:bg-primary/90"
-                disabled={!broadcastSubject.trim() || (broadcastMode !== "line" && !broadcastMessage.trim()) || (broadcastMode === "line" && !broadcastLineMessage.trim()) || broadcastMutation.isPending}
+                disabled={!broadcastSubject.trim() || (broadcastMode !== "line" && !broadcastMessage.trim()) || (broadcastMode === "line" && !broadcastLineMessage.trim()) || broadcastMutation.isPending || publishAnnouncementMutation.isPending}
                 onClick={async () => {
+                  if (broadcastMode === "site") {
+                    if (!confirm(`サイト内のお知らせに掲載します。メール・LINEは送信されません。よろしいですか？\n\n件名: ${broadcastSubject}`)) return;
+                    await publishAnnouncementMutation.mutateAsync({ subject: broadcastSubject, message: broadcastMessage, imageUrl: broadcastImageUrl || undefined });
+                    setBroadcastResult({ emailSent: 0, emailTotal: 0, lineSent: false });
+                    return;
+                  }
                   const modeLabel = broadcastMode === "both" ? "LINE＋メール" : broadcastMode === "email" ? "メールのみ" : "LINEのみ";
                   if (!confirm(`全ユーザーに${modeLabel}を送信します。よろしいですか？\n\n件名: ${broadcastSubject}`)) return;
                   const result = await broadcastMutation.mutateAsync({
@@ -1254,8 +1261,8 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   setBroadcastResult(result);
                 }}
               >
-                {broadcastMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {broadcastMutation.isPending ? "送信中..." : broadcastMode === "both" ? "LINE + メール一斉送信" : broadcastMode === "email" ? "メールのみ一斉送信" : "LINEのみ一斉送信"}
+                {broadcastMutation.isPending || publishAnnouncementMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {broadcastMutation.isPending || publishAnnouncementMutation.isPending ? "処理中..." : broadcastMode === "site" ? "サイト内に掲載" : broadcastMode === "both" ? "LINE + メール一斉送信" : broadcastMode === "email" ? "メールのみ一斉送信" : "LINEのみ一斉送信"}
               </Button>
             </div>
 

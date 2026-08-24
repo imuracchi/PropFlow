@@ -3198,6 +3198,27 @@ ${propList}`,
         return { success: true };
       }),
 
+    publishAnnouncement: adminProcedure
+      .input(
+        z.object({
+          subject: z.string().min(1),
+          message: z.string().min(1),
+          imageUrl: z.string().url().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.saveBroadcastLog({
+          subject: input.subject,
+          message: input.message,
+          imageUrl: input.imageUrl,
+          emailSent: 0,
+          emailTotal: 0,
+          lineSent: false,
+          sentAt: new Date(),
+        });
+        return { success: true };
+      }),
+
     broadcast: adminProcedure
       .input(
         z.object({
