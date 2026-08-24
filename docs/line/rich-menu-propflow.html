@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:2500px;height:1686px;overflow:hidden;background:#f4f6fa;font-family:"Noto Sans JP",sans-serif;color:#142c49}
+.menu{display:grid;grid-template-columns:1fr 1fr;width:2500px;height:1686px;background:#fff}
+.item{position:relative;display:flex;align-items:center;gap:62px;padding:90px 112px;border:5px solid #d8e0e9;background:#fff}
+.item:nth-child(1){background:#173f70;color:#fff;border-color:#173f70}
+.item:nth-child(2){background:#eef4fa}
+.item:nth-child(3){background:#f8fafc}
+.item:nth-child(4){background:#edf9f1;border-color:#c8e8d3}
+.icon{display:grid;place-items:center;width:188px;height:188px;flex:0 0 188px;border:5px solid currentColor;border-radius:50%}
+.icon svg{width:94px;height:94px;fill:none;stroke:currentColor;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+.label{font-size:68px;font-weight:900;letter-spacing:.01em;line-height:1.35}
+.sub{margin-top:20px;font-size:32px;font-weight:500;line-height:1.55;opacity:.76}
+.arrow{position:absolute;right:82px;bottom:64px;font-size:52px;font-weight:700;opacity:.55}
+.brand{position:absolute;right:82px;top:56px;font-size:25px;font-weight:800;letter-spacing:.16em;opacity:.55}
+.item:nth-child(1) .brand{opacity:.7}
+.item:nth-child(4){color:#146b38}
+</style>
+</head>
+<body>
+<main class="menu">
+  <section class="item">
+    <span class="brand">PropFlow</span>
+    <div class="icon"><svg viewBox="0 0 100 100"><circle cx="44" cy="44" r="27"/><path d="m64 64 22 22"/><path d="M32 44h24M44 32v24"/></svg></div>
+    <div><div class="label">物件を探す</div><div class="sub">公開・非公開物件を検索</div></div><span class="arrow">›</span>
+  </section>
+  <section class="item">
+    <div class="icon"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="34"/><circle cx="50" cy="50" r="17"/><circle cx="50" cy="50" r="4"/><path d="M50 5v11M50 84v11M5 50h11M84 50h11"/></svg></div>
+    <div><div class="label">希望物件を<br>募集する</div><div class="sub">条件を公開して提案を受ける</div></div><span class="arrow">›</span>
+  </section>
+  <section class="item">
+    <span class="brand">ABOUT</span>
+    <div class="icon"><svg viewBox="0 0 100 100"><path d="M24 12h40l14 14v62H24z"/><path d="M64 12v16h14M37 45h28M37 59h28M37 73h18"/></svg></div>
+    <div><div class="label">PropFlowとは</div><div class="sub">サービス・機能を見る</div></div><span class="arrow">›</span>
+  </section>
+  <section class="item">
+    <span class="brand">SUPPORT</span>
+    <div class="icon"><svg viewBox="0 0 100 100"><path d="M18 22h64v45H46L29 82V67H18z"/><path d="M35 43h30M35 55h20"/></svg></div>
+    <div><div class="label">利用登録・相談</div><div class="sub">名刺登録・LINE相談</div></div><span class="arrow">›</span>
+  </section>
+</main>
+</body>
+</html>
