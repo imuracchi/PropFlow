@@ -49,6 +49,11 @@ export default function V2Layout({
       refetchInterval: 30000,
     });
   const unreadProposalCount = unreadProposalCountQuery.data ?? 0;
+  const unreadAnnouncementCountQuery = trpc.announce.unreadCount.useQuery(undefined, {
+    enabled: !preview && !!user,
+    refetchInterval: 30000,
+  });
+  const unreadAnnouncementCount = unreadAnnouncementCountQuery.data ?? 0;
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const mobileNav = [
     nav[0],
@@ -215,10 +220,12 @@ export default function V2Layout({
           </p>
           <button
             onClick={() => setLocation(destination("/v2/announcements"))}
-            className="ml-auto grid size-9 place-items-center"
-            aria-label="お知らせ"
+            className="relative ml-auto flex h-9 items-center gap-1.5 px-2 text-[#173f70]"
+            aria-label={`お知らせ${unreadAnnouncementCount > 0 ? ` 未読${unreadAnnouncementCount}件` : ""}`}
           >
             <Bell size={18} />
+            <span className="text-[12px] font-bold">お知らせ</span>
+            {unreadAnnouncementCount > 0 && <span className="absolute -right-1 -top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-[#d95532] px-1 text-[9px] font-bold leading-none text-white">{unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}</span>}
           </button>
           {(user?.role === "admin" || user?.role === "management") && (
             <button
@@ -275,9 +282,10 @@ export default function V2Layout({
                     setMobileMoreOpen(false);
                     setLocation(destination(item.path));
                   }}
-                  className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
+                  className="relative flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
                 >
                   <item.icon size={23} />
+                  {item.path === "/v2/announcements" && unreadAnnouncementCount > 0 && <span className="absolute right-3 top-3 grid min-w-5 h-5 place-items-center rounded-full bg-[#d95532] px-1 text-[9px] font-bold text-white">{unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}</span>}
                   <span className="mt-2 text-[11px] font-bold leading-4">
                     {item.label}
                   </span>

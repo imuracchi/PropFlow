@@ -10,6 +10,7 @@ import {
   text,
   timestamp,
   tinyint,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
 
@@ -313,6 +314,15 @@ export const broadcastLogs = mysqlTable("broadcast_logs", {
   lineSent: int("lineSent").notNull().default(0),
   sentAt: timestamp("sentAt").defaultNow().notNull(),
 });
+
+export const announcementReads = mysqlTable("announcement_reads", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  broadcastLogId: int("broadcastLogId").notNull(),
+  readAt: timestamp("readAt").defaultNow().notNull(),
+}, table => ({
+  userBroadcastUnique: uniqueIndex("uq_announcement_reads").on(table.userId, table.broadcastLogId),
+}));
 
 export const propertyNameSnapshots = mysqlTable("property_name_snapshots", {
   propertyId: int("propertyId").primaryKey(),

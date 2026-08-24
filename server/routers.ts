@@ -2827,16 +2827,18 @@ ${propList}`,
   }),
 
   announce: router({
-    archive: protectedProcedure.query(async () => {
-      const logs = await db.getBroadcastLogs();
-      return logs.map(({ id, subject, message, imageUrl, sentAt }) => ({
-        id,
-        subject,
-        message,
-        imageUrl,
-        sentAt,
-      }));
-    }),
+    archive: protectedProcedure.query(async ({ ctx }) =>
+      db.getBroadcastLogsForUser(ctx.user.id)
+    ),
+    unreadCount: protectedProcedure.query(async ({ ctx }) =>
+      db.getUnreadAnnouncementCount(ctx.user.id)
+    ),
+    markRead: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.markAnnouncementRead(ctx.user.id, input.id);
+        return { success: true };
+      }),
   }),
 
   admin: router({

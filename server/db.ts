@@ -36,6 +36,7 @@ import {
   dmReadStatus,
   propertyExclusions,
   broadcastLogs,
+  announcementReads,
   propertyReads,
   propertySearchNeedLogs,
 } from "../drizzle/schema";
@@ -121,6 +122,13 @@ export async function runStartupMigrations() {
       \`emailTotal\` int NOT NULL DEFAULT 0,
       \`lineSent\` int NOT NULL DEFAULT 0,
       \`sentAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS \`announcement_reads\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`userId\` int NOT NULL,
+      \`broadcastLogId\` int NOT NULL,
+      \`readAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY \`uq_announcement_reads\` (\`userId\`, \`broadcastLogId\`)
     )`,
     `CREATE TABLE IF NOT EXISTS \`property_search_need_logs\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -3876,6 +3884,57 @@ export async function getBroadcastLogs() {
     .from(broadcastLogs)
     .orderBy(desc(broadcastLogs.sentAt))
     .limit(50);
+}
+
+export async function getBroadcastLogsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: broadcastLogs.id,
+      subject: broadcastLogs.subject,
+      message: broadcastLogs.message,
+      imageUrl: broadcastLogs.imageUrl,
+      sentAt: broadcastLogs.sentAt,
+      readId: announcementReads.id,
+    })
+    .from(broadcastLogs)
+    .leftJoin(
+      announcementReads,
+      and(
+        eq(announcementReads.broadcastLogId, broadcastLogs.id),
+        eq(announcementReads.userId, userId)
+      )
+    )
+    .orderBy(desc(broadcastLogs.sentAt))
+    .limit(50);
+  return rows.map(row => ({ ...row, isRead: row.readId !== null }));
+}
+
+export async function getUnreadAnnouncementCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const [row] = await db
+    .select({ value: count() })
+    .from(broadcastLogs)
+    .leftJoin(
+      announcementReads,
+      and(
+        eq(announcementReads.broadcastLogId, broadcastLogs.id),
+        eq(announcementReads.userId, userId)
+      )
+    )
+    .where(isNull(announcementReads.id));
+  return Number(row?.value ?? 0);
+}
+
+export async function markAnnouncementRead(userId: number, broadcastLogId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .insert(announcementReads)
+    .values({ userId, broadcastLogId })
+    .onDuplicateKeyUpdate({ set: { readAt: new Date() } });
 }
 
 export async function createBroadcastSchedule(data: {

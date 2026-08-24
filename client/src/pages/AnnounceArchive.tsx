@@ -1,9 +1,20 @@
 import { trpc } from "@/lib/trpc";
 import { fmtDate } from "@/lib/utils";
-import { Megaphone } from "lucide-react";
+import { ChevronDown, Megaphone } from "lucide-react";
 
 export default function AnnounceArchive() {
   const { data: logs, isLoading } = trpc.announce.archive.useQuery();
+  const markRead = trpc.announce.markRead.useMutation();
+  const utils = trpc.useUtils();
+
+  const handleOpen = async (id: number, isRead: boolean) => {
+    if (isRead || markRead.isPending) return;
+    await markRead.mutateAsync({ id });
+    await Promise.all([
+      utils.announce.archive.invalidate(),
+      utils.announce.unreadCount.invalidate(),
+    ]);
+  };
 
   return (
     <div className="space-y-5 max-w-2xl">
@@ -23,19 +34,23 @@ export default function AnnounceArchive() {
       )}
 
       {logs && logs.length > 0 && (
-        <div className="space-y-4">
-          {logs.map((log: { id: number; subject: string; message: string; imageUrl?: string | null; sentAt: Date }) => (
-            <div key={log.id} className="bg-card border border-border rounded-lg overflow-hidden">
-              <div className="px-5 py-3 border-b border-border bg-muted/40 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
+        <div className="border-t border-[#d9e0e8]">
+          {logs.map((log: { id: number; subject: string; message: string; imageUrl?: string | null; sentAt: Date; isRead: boolean }) => (
+            <details key={log.id} className="group border-x border-b border-[#d9e0e8] bg-white" onToggle={event => {
+              if (event.currentTarget.open) handleOpen(log.id, log.isRead);
+            }}>
+              <summary className={`flex cursor-pointer list-none items-center gap-3 px-4 py-4 lg:px-5 [&::-webkit-details-marker]:hidden ${log.isRead ? "bg-white" : "bg-[#f2f7fc]"}`}>
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <Megaphone className="w-4 h-4 text-primary shrink-0" />
-                  <span className="text-sm font-semibold text-foreground">{log.subject}</span>
+                  <span className="truncate text-sm font-semibold text-foreground">{log.subject}</span>
+                  {!log.isRead && <span className="shrink-0 bg-[#d95532] px-2 py-0.5 text-[10px] font-bold text-white">新着</span>}
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0">
                   {fmtDate(log.sentAt)}
                 </span>
-              </div>
-              <div className="px-5 py-4 space-y-3">
+                <ChevronDown className="size-4 shrink-0 text-[#65748a] transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="space-y-3 border-t border-[#e2e7ec] px-4 py-4 lg:px-5">
                 {log.imageUrl && (
                   <img
                     src={log.imageUrl}
@@ -46,7 +61,7 @@ export default function AnnounceArchive() {
                 )}
                 <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{log.message}</p>
               </div>
-            </div>
+            </details>
           ))}
         </div>
       )}

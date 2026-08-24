@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
   Calculator,
   Camera,
   CheckCircle2,
@@ -817,33 +816,6 @@ export default function V2PropertyDetail({
   return (
     <V2Layout preview={preview}>
       <main className="min-w-0 w-full max-w-[1600px] overflow-x-hidden pb-20 lg:overflow-visible lg:p-7 lg:pb-10">
-        {!isRegistrant && (
-          <div className="flex h-12 items-center bg-white px-3 lg:bg-transparent lg:px-0">
-            <button
-              onClick={() =>
-                setLocation(preview ? "/v2/preview" : "/v2/properties")
-              }
-              className="flex items-center gap-1 text-[12px] font-bold text-[#173f70]"
-            >
-              <ArrowLeft size={18} />
-              物件一覧
-            </button>
-            <button
-              onClick={toggleCurrentFavorite}
-              className={`ml-auto hidden h-10 items-center gap-1.5 border px-3 text-[12px] font-bold lg:flex ${isFavorite ? "border-[#a13b50] bg-[#fff1f4] text-[#a13b50]" : "border-[#9aabc0] bg-white text-[#526176]"}`}
-              aria-label={
-                isFavorite ? "お気に入りから外す" : "お気に入りに入れる"
-              }
-            >
-              <Heart
-                size={21}
-                fill={isFavorite ? "currentColor" : "none"}
-                className={isFavorite ? "text-[#a13b50]" : "text-[#64748b]"}
-              />
-              {isFavorite ? "お気に入り済み" : "お気に入りに入れる"}
-            </button>
-          </div>
-        )}
         <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
           <div className="min-w-0 space-y-2 lg:space-y-5">
             <section className="min-w-0 overflow-hidden bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:p-6">
@@ -856,10 +828,20 @@ export default function V2PropertyDetail({
                     注目
                   </span>
                 )}
-                <span className="ml-auto flex items-center gap-1 text-[11px] text-[#6f7d90]">
-                  <Eye size={14} />
-                  {property.viewCount ?? 0}回閲覧
-                </span>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="flex items-center gap-1 text-[11px] text-[#6f7d90]">
+                    <Eye size={14} />
+                    {property.viewCount ?? 0}回閲覧
+                  </span>
+                  {!isRegistrant && <button
+                    onClick={toggleCurrentFavorite}
+                    className={`hidden h-8 items-center gap-1 border px-2.5 text-[11px] font-bold lg:flex ${isFavorite ? "border-[#a13b50] bg-[#fff1f4] text-[#a13b50]" : "border-[#9aabc0] bg-white text-[#526176]"}`}
+                    aria-label={isFavorite ? "お気に入りから外す" : "お気に入りに入れる"}
+                  >
+                    <Heart size={17} fill={isFavorite ? "currentColor" : "none"} />
+                    {isFavorite ? "お気に入り済み" : "お気に入り"}
+                  </button>}
+                </div>
               </div>
               <div className="mt-4 flex items-start gap-3">
                 <h1 className="min-w-0 flex-1 text-[24px] font-bold text-[#102d50]">
