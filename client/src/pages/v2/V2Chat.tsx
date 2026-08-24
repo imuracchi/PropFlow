@@ -200,8 +200,8 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
     window.setTimeout(() => setCopied(null), 1500);
   };
   return (
-    <V2Layout preview={preview} hideMobileNav>
-      <main className="fixed inset-x-0 bottom-0 top-14 z-20 flex max-w-[1380px] flex-col overflow-hidden bg-white lg:static lg:ml-7 lg:my-6 lg:h-[calc(100dvh-116px)] lg:flex-row lg:border lg:border-[#d9e0e8]">
+    <V2Layout preview={preview} hideMobileNav hideMobileHeader>
+      <main className="fixed inset-0 z-20 flex max-w-[1380px] flex-col overflow-hidden bg-white lg:static lg:ml-7 lg:my-6 lg:h-[calc(100dvh-116px)] lg:flex-row lg:border lg:border-[#d9e0e8]">
         <aside className="hidden w-[330px] shrink-0 border-r border-[#d9e0e8] bg-white lg:block">
           <div className="border-b border-[#d9e0e8] px-5 py-4">
             <h2 className="text-[18px] font-bold text-[#102d50]">商談一覧</h2>
@@ -219,16 +219,16 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center border-b border-[#d9e0e8] px-3 lg:px-5">
+        <header className="flex h-12 shrink-0 items-center border-b border-[#d9e0e8] px-2 lg:h-16 lg:px-5">
           <button
             onClick={() =>
               setLocation(preview ? "/v2/preview/messages" : "/v2/messages")
             }
-            className="grid size-9 place-items-center text-[#173f70]"
+            className="grid size-8 place-items-center text-[#173f70] lg:size-9"
           >
             <ArrowLeft size={20} />
           </button>
-          <div className="ml-2 flex min-w-0 flex-1 items-center gap-2">
+          <div className="ml-1 flex min-w-0 flex-1 items-center gap-1.5 lg:ml-2 lg:gap-2">
             <h1 className="max-w-[42%] shrink-0 truncate text-[14px] font-bold text-[#102d50] lg:text-[15px]">
               {thread?.partnerName ?? `ユーザー #${partnerId}`}
             </h1>
@@ -248,18 +248,18 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
               !preview && !isRestricted && property && setLocation(`/v2/property/${property.id}`)
             }
             disabled={isRestricted}
-            className="flex shrink-0 items-center border-b border-[#e2e7ec] bg-[#f3f7fb] px-4 py-3 text-left disabled:cursor-default"
+            className="flex shrink-0 items-center border-b border-[#e2e7ec] bg-[#f3f7fb] px-3 py-2 text-left disabled:cursor-default lg:px-4 lg:py-3"
           >
             <Building2 size={17} className="text-[#173f70]" />
             <div className="ml-2 min-w-0">
               <p className="truncate text-[12px] font-bold text-[#173f70]">
                 {property?.name ?? thread?.propertyName}
               </p>
-              {isRestricted ? <p className="truncate text-[10px] font-bold text-[#a06018]">閲覧制限中・商談履歴のみ閲覧可能</p> : <p className="truncate text-[10px] text-[#758194]">{property?.address}</p>}
+              {isRestricted ? <p className="truncate text-[10px] font-bold text-[#a06018]">閲覧制限中・商談履歴のみ閲覧可能</p> : <p className="hidden truncate text-[10px] text-[#758194] lg:block">{property?.address}</p>}
             </div>
           </button>
         )}
-        <section className="flex-1 overflow-y-auto overscroll-contain bg-[#f5f7f9] px-4 py-4 lg:px-8">
+        <section className="flex-1 overflow-y-auto overscroll-contain bg-[#f5f7f9] px-3 py-2 lg:px-8 lg:py-4">
           {messagesQuery.isLoading && !preview ? (
             <div className="grid h-full place-items-center">
               <Loader2 className="animate-spin text-[#173f70]" />
@@ -270,22 +270,19 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
               return (
                 <div
                   key={message.id}
-                  className={`mb-3 flex ${mine ? "justify-end" : "justify-start"}`}
+                  className={`mb-2 flex lg:mb-3 ${mine ? "justify-end" : "justify-start"}`}
                 >
                   <div
                     className={`max-w-[82%] lg:max-w-[65%] ${mine ? "items-end" : "items-start"}`}
                   >
-                    <div className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}><div
-                        className={`px-4 py-2.5 text-[14px] leading-6 whitespace-pre-wrap ${mine ? "bg-[#173f70] text-white" : "border border-[#d9e0e8] bg-white text-[#263b58]"}`}
-                      >{message.content}</div>{mine && !isRestricted && <button onClick={async () => { if (!confirm("このメッセージを削除しますか？相手の画面からも削除されます。")) return; await deleteMessage.mutateAsync({messageId:message.id}); await messagesQuery.refetch(); await utils.dm.threads.invalidate(); }} disabled={deleteMessage.isPending} className="grid size-8 shrink-0 place-items-center text-[#8a96a5] hover:text-[#a72e2e] disabled:opacity-40" aria-label="メッセージを削除"><Trash2 className="size-3.5"/></button>}</div>
-                    <p
-                      className={`mt-1 text-[9px] text-[#8a96a5] ${mine ? "text-right" : "text-left"}`}
-                    >
+                    <div className={`flex items-end gap-1.5 ${mine ? "flex-row-reverse" : ""}`}><div
+                        className={`whitespace-pre-wrap px-3 py-2 text-[14px] leading-5 lg:px-4 lg:py-2.5 lg:leading-6 ${mine ? "bg-[#173f70] text-white" : "border border-[#d9e0e8] bg-white text-[#263b58]"}`}
+                      >{message.content}</div><p className="shrink-0 pb-0.5 text-[9px] text-[#8a96a5]">
                       {new Date(message.createdAt).toLocaleTimeString("ja-JP", {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </p>
+                    </p>{mine && !isRestricted && <button onClick={async () => { if (!confirm("このメッセージを削除しますか？相手の画面からも削除されます。")) return; await deleteMessage.mutateAsync({messageId:message.id}); await messagesQuery.refetch(); await utils.dm.threads.invalidate(); }} disabled={deleteMessage.isPending} className="grid size-6 shrink-0 place-items-center text-[#8a96a5] hover:text-[#a72e2e] disabled:opacity-40 lg:size-8" aria-label="メッセージを削除"><Trash2 className="size-3.5"/></button>}</div>
                   </div>
                 </div>
               );
@@ -302,7 +299,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
           )}
           <div ref={bottomRef} />
         </section>
-        <footer className="shrink-0 border-t border-[#d9e0e8] bg-white p-3 lg:p-4">
+        <footer className="shrink-0 border-t border-[#d9e0e8] bg-white px-2 pt-2 pb-0 lg:p-4">
           {!isClosed && !isRestricted && <div className="mb-2 flex flex-wrap gap-2">
             <button
               onClick={() => {
@@ -357,7 +354,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
               <Send size={18} />
             </button>
           </div>}
-          {!isClosed && <p className="mt-1.5 text-[9px] text-[#8a96a5]">
+          {!isClosed && <p className="mt-1.5 hidden text-[9px] text-[#8a96a5] lg:block">
             ファイル添付には対応していません
           </p>}
         </footer>

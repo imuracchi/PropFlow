@@ -34,10 +34,12 @@ export default function V2Layout({
   children,
   preview = false,
   hideMobileNav = false,
+  hideMobileHeader = false,
 }: {
   children: ReactNode;
   preview?: boolean;
   hideMobileNav?: boolean;
+  hideMobileHeader?: boolean;
 }) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
@@ -201,7 +203,7 @@ export default function V2Layout({
         </div>
       </aside>
       <div className="lg:ml-60">
-        <header className="sticky top-0 z-30 flex h-14 items-center border-b border-[#d9e0e8] bg-white px-4 lg:h-[68px] lg:px-7">
+        <header className={`${hideMobileHeader ? "hidden lg:flex" : "flex"} sticky top-0 z-30 h-14 items-center border-b border-[#d9e0e8] bg-white px-4 lg:h-[68px] lg:px-7`}>
           <div className="flex items-center gap-2 lg:hidden">
             <Building2 size={20} className="text-[#173f70]" />
             <span className="text-[17px] font-bold text-[#102d50]">
