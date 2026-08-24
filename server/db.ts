@@ -1177,9 +1177,12 @@ export async function getDmPartnersForProperty(
 export async function ownerDeleteProperty(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // 写真・資料の実体は削除時に破棄する。物件概要はマーケティング分析用に
+  // properties に残し、ユーザー向けには deleted フラグで非表示にする。
+  await db.delete(propertyFiles).where(eq(propertyFiles.propertyId, id));
   await db
     .update(properties)
-    .set({ deleted: 1, ownerDeletedAt: new Date() })
+    .set({ deleted: 1, ownerDeletedAt: new Date(), files: null })
     .where(eq(properties.id, id));
 }
 
@@ -1193,7 +1196,17 @@ export async function purgeExpiredOwnerDeletedProperties() {
     .where(
       and(eq(properties.deleted, 1), lt(properties.ownerDeletedAt, expiry))
     );
-  for (const property of expired) await hardDeleteProperty(property.id);
+  // 旧仕様で削除済みになった物件にも添付の消去だけを適用する。
+  // properties の概要レコードはマーケティング分析用に保持する。
+  for (const property of expired) {
+    await db
+      .delete(propertyFiles)
+      .where(eq(propertyFiles.propertyId, property.id));
+    await db
+      .update(properties)
+      .set({ files: null })
+      .where(eq(properties.id, property.id));
+  }
   return expired.length;
 }
 
@@ -1292,6 +1305,7 @@ export async function getDeletedPropertiesByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
   await purgeExpiredOwnerDeletedProperties();
+  const restoreExpiry = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   return db
     .select({
       id: properties.id,
@@ -1305,7 +1319,13 @@ export async function getDeletedPropertiesByUserId(userId: number) {
       createdAt: properties.createdAt,
     })
     .from(properties)
-    .where(and(eq(properties.userId, userId), eq(properties.deleted, 1)))
+    .where(
+      and(
+        eq(properties.userId, userId),
+        eq(properties.deleted, 1),
+        gte(properties.ownerDeletedAt, restoreExpiry)
+      )
+    )
     .orderBy(desc(properties.updatedAt));
 }
 

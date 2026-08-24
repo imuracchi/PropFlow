@@ -445,20 +445,20 @@ async function startServer() {
   });
   console.log("[CRON] Expired document cleanup scheduled at 0:00 JST daily");
 
-  // 毎日深夜0時（JST）に、物件登録者が削除して30日を超えた物件を完全削除
+  // 毎日深夜0時（JST）に、削除済み物件の添付を消去（概要は分析用に保持）
   cron.schedule("0 15 * * *", async () => {
     try {
       const db = await import("../db");
-      const deleted = await db.purgeExpiredOwnerDeletedProperties();
+      const cleaned = await db.purgeExpiredOwnerDeletedProperties();
       console.log(
-        `[CRON] Permanently deleted ${deleted} expired owner-deleted properties`
+        `[CRON] Cleaned attachments for ${cleaned} expired owner-deleted properties`
       );
     } catch (e) {
       console.error("[CRON] purgeExpiredOwnerDeletedProperties error:", e);
     }
   });
   console.log(
-    "[CRON] Owner-deleted property cleanup scheduled at 0:00 JST daily"
+    "[CRON] Owner-deleted property attachment cleanup scheduled at 0:00 JST daily"
   );
 
   // 毎分：予約配信チェック

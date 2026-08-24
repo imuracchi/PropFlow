@@ -1079,6 +1079,11 @@ JSONのみ返してください。`,
             code: "FORBIDDEN",
             message: "この物件の権限がありません",
           });
+        if (prop.status === "sold")
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "この物件はすでに成約済みです",
+          });
 
         await db.updateProperty(input.id, {
           status: "sold",
@@ -1165,7 +1170,7 @@ JSONのみ返してください。`,
         db.logActivity(
           ctx.user.id,
           "property_delete_own",
-          `物件「${prop.name}」を削除（30日間復元可能）`,
+          `物件「${prop.name}」を削除（添付を消去、概要は分析用に保持）`,
           ctx.req.headers["user-agent"]
         ).catch(() => {});
         return { success: true };
@@ -1669,8 +1674,12 @@ ${propList}`,
     chatProperties: protectedProcedure.query(async ({ ctx }) => {
       return db.getChatPropertiesByUserId(ctx.user.id);
     }),
-    deletedProperties: protectedProcedure.query(async ({ ctx }) => {
-      return db.getDeletedPropertiesByUserId(ctx.user.id);
+    deletedProperties: protectedProcedure.query(async () => {
+      // 登録者の画面には削除済み物件を戻さない。DB上の概要は管理・分析用に保持する。
+      const hidden: Awaited<
+        ReturnType<typeof db.getDeletedPropertiesByUserId>
+      > = [];
+      return hidden;
     }),
     restoreProperty: protectedProcedure
       .input(
@@ -1680,47 +1689,9 @@ ${propList}`,
           message: z.string().max(2000).optional(),
         })
       )
-      .mutation(async ({ input, ctx }) => {
-        const prop = await db.getPropertyById(input.id);
-        if (!prop || prop.userId !== ctx.user.id || prop.deleted !== 1) {
-          return { success: false };
-        }
-        if (
-          prop.ownerDeletedAt &&
-          Date.now() - new Date(prop.ownerDeletedAt).getTime() >=
-            30 * 24 * 60 * 60 * 1000
-        ) {
-          await db.hardDeleteProperty(input.id);
-          return { success: false, expired: true };
-        }
-        await db.restoreProperty(input.id);
-        let notifiedCount = 0;
-        if (input.notifyPartners) {
-          const partnerIds = await db.getDmPartnersForProperty(
-            input.id,
-            ctx.user.id
-          );
-          const message =
-            input.message?.trim() ||
-            `「${prop.name}」を再公開しました。引き続きご検討いただけます。`;
-          const fullMessage = `【物件「${prop.name}」について】\n${message}`;
-          for (const partnerId of partnerIds) {
-            await db.sendDirectMessage(
-              ctx.user.id,
-              partnerId,
-              fullMessage,
-              input.id
-            );
-          }
-          notifiedCount = partnerIds.length;
-        }
-        db.logActivity(
-          ctx.user.id,
-          "property_restore",
-          `物件「${prop.name}」を復元${input.notifyPartners ? `・商談相手${notifiedCount}名へ通知` : ""}`,
-          ctx.req.headers["user-agent"]
-        ).catch(() => {});
-        return { success: true, notifiedCount };
+      .mutation(async () => {
+        // 登録者による削除は取り消せない。概要レコードのみ内部で保持する。
+        return { success: false, expired: false, notifiedCount: 0 };
       }),
   }),
 

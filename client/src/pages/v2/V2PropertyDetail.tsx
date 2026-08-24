@@ -1416,17 +1416,24 @@ export default function V2PropertyDetail({
                     </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setDealPrice("");
-                    setAnnouncePublic(false);
-                    setDialog("sold");
-                  }}
-                  className="flex w-full items-center border-b border-[#e2e7ec] py-3 text-left text-[13px] font-bold text-[#173f70] lg:text-[14px]"
-                >
-                  <CheckCircle2 size={18} className="mr-3" />
-                  物件の成約を報告
-                </button>
+                {property.status !== "sold" ? (
+                  <button
+                    onClick={() => {
+                      setDealPrice("");
+                      setAnnouncePublic(false);
+                      setDialog("sold");
+                    }}
+                    className="my-3 flex min-h-14 w-full items-center justify-center bg-[#27613c] px-4 text-[14px] font-bold text-white shadow-sm hover:bg-[#1f5131] lg:text-[15px]"
+                  >
+                    <CheckCircle2 size={20} className="mr-2.5" />
+                    この物件を成約にする
+                  </button>
+                ) : (
+                  <div className="my-3 flex min-h-14 w-full items-center justify-center border border-[#9fc5ad] bg-[#e8f3ec] px-4 text-[14px] font-bold text-[#27613c]">
+                    <CheckCircle2 size={20} className="mr-2.5" />
+                    この物件は成約済みです
+                  </div>
+                )}
                 <button
                   onClick={() => setDialog("restrict")}
                   className="flex w-full items-center border-b border-[#e2e7ec] py-3 text-left text-[13px] font-bold lg:text-[14px]"
@@ -2130,7 +2137,7 @@ export default function V2PropertyDetail({
             {dialog === "delete" && (
               <div className="mt-4 space-y-4">
                 <p className="text-[13px] leading-6 text-[#a72e2e]">
-                  この物件を削除して一覧から取り下げます。削除した物件は、マイページの「削除した物件」から復元できます。
+                  この物件を一覧とマイページから削除します。写真・資料も削除され、この操作は取り消せません。
                 </p>
                 <label className="block text-[12px] font-bold text-[#526176]">
                   やり取りした相手へのメッセージ（任意）
