@@ -96,6 +96,23 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const createScheduleMutation = trpc.admin.createSchedule.useMutation({ onSuccess: () => { schedulesQuery.refetch(); setScheduleSubject(""); setScheduleMessage(""); setScheduleLineMessage(""); setScheduleAt(""); } });
   const cancelScheduleMutation = trpc.admin.cancelSchedule.useMutation({ onSuccess: () => schedulesQuery.refetch() });
 
+  const handleLoginAs = (user: { id: number; name: string | null; email: string }) => {
+    if (!confirm(`${user.name ?? user.email}として代理ログインしますか？`)) return;
+    loginAsMutation.mutate(
+      { userId: user.id },
+      {
+        onSuccess: result => {
+          if (!result.success) {
+            alert(result.error);
+            return;
+          }
+          window.location.href = v2 ? "/v2/properties" : "/properties";
+        },
+        onError: () => alert("代理ログインに失敗しました。もう一度お試しください。"),
+      }
+    );
+  };
+
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastLineMessage, setBroadcastLineMessage] = useState("");
@@ -303,6 +320,17 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       <button onClick={() => setSelectedUserId(user.id)} className="h-10 flex-1 border border-[#173f70] text-[12px] font-bold text-[#173f70]">詳細を見る</button>
                       {!isManagement && <button onClick={() => user.status === "active" ? suspendMutation.mutate({id:user.id}) : activateMutation.mutate({id:user.id})} className={`h-10 flex-1 border text-[12px] font-bold ${user.status === "active" ? "border-[#a72e2e] text-[#a72e2e]" : "border-[#27613c] text-[#27613c]"}`}>{user.status === "active" ? "利用を停止" : "利用を再開"}</button>}
                     </div>
+                    {!isManagement && (
+                      <button
+                        type="button"
+                        disabled={loginAsMutation.isPending}
+                        onClick={() => handleLoginAs(user)}
+                        className="mt-2 flex h-11 w-full items-center justify-center gap-2 bg-[#173f70] text-[12px] font-bold text-white disabled:opacity-50"
+                      >
+                        {loginAsMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
+                        このユーザーとして代理ログイン
+                      </button>
+                    )}
                   </article>
                 );
               })}
@@ -460,13 +488,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                                   <Mail className="w-3.5 h-3.5" />登録メールを再送信
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="gap-2 text-xs text-primary" onClick={() => {
-                                  if (confirm(`${user.name}として代理ログインしますか？`)) {
-                                    loginAsMutation.mutate({ userId: user.id }, {
-                                      onSuccess: () => { window.location.href = v2 ? "/v2/properties" : "/properties"; },
-                                    });
-                                  }
-                                }}>
+                                <DropdownMenuItem className="gap-2 text-xs text-primary" onClick={() => handleLoginAs(user)}>
                                   <ArrowUpRight className="w-3.5 h-3.5" />このユーザーとしてログイン
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
