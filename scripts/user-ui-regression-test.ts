@@ -56,7 +56,10 @@ assert(property && thread, "property and negotiation test data available");
 const searchRequests = await query("propertySearch.list", buyerCookie.header);
 if (
   !searchRequests.some(
-    (item: any) => item.title === "テスト用 足立区 事業用地募集（募集中）"
+    (item: any) =>
+      item.title === "テスト用 足立区 事業用地募集（募集中）" &&
+      ["active", "negotiating"].includes(item.status) &&
+      new Date(item.expiresAt).getTime() > Date.now()
   )
 ) {
   await mutate("propertySearch.create", buyerCookie.header, {
@@ -231,15 +234,21 @@ async function runViewport(label: string, width: number, height: number) {
     await page.waitForFunction(() =>
       document.body.innerText.includes("物件募集一覧")
     );
-    await page.evaluate(() => {
+    await page.waitForFunction(() =>
+      document.body.innerText.includes("テスト用 足立区 事業用地募集")
+    );
+    const recruitmentClicked = await page.evaluate(() => {
       const title = [...document.querySelectorAll("button")].find(element =>
-        element.textContent?.includes("テスト用 足立区 事業用地募集（募集中）")
+        element.textContent?.includes("テスト用 足立区 事業用地募集")
       );
       (title as HTMLButtonElement | undefined)?.click();
+      return !!title;
     });
-    await page.waitForFunction(() =>
-      document.body.innerText.includes("募集案件の詳細")
+    assert(
+      recruitmentClicked,
+      `${label}: property-search test request is clickable`
     );
+    await page.waitForSelector('button[aria-label="一覧へ戻る"]');
     if (width >= 1024) {
       const sidebarVisible = await page.evaluate(() => {
         const aside = document.querySelector("aside");
