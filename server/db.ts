@@ -973,32 +973,6 @@ export async function getPropertyById(id: number) {
     .where(sql`${directMessages.senderId} != ${properties.userId}`)
     .groupBy(directMessages.propertyId)
     .as("inquiry_count");
-  const recentViewCountSub = db
-    .select({
-      propertyId: propertyViewEvents.propertyId,
-      cnt: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as("cnt"),
-    })
-    .from(propertyViewEvents)
-    .innerJoin(properties, eq(propertyViewEvents.propertyId, properties.id))
-    .where(sql`${propertyViewEvents.viewedAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND ${propertyViewEvents.userId} != ${properties.userId}`)
-    .groupBy(propertyViewEvents.propertyId)
-    .as("recent_view_count");
-  const recentFavoriteCountSub = db
-    .select({ propertyId: favorites.propertyId, cnt: count().as("cnt") })
-    .from(favorites)
-    .where(sql`${favorites.createdAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY)`)
-    .groupBy(favorites.propertyId)
-    .as("recent_favorite_count");
-  const recentInquiryCountSub = db
-    .select({
-      propertyId: directMessages.propertyId,
-      cnt: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as("cnt"),
-    })
-    .from(directMessages)
-    .innerJoin(properties, eq(directMessages.propertyId, properties.id))
-    .where(sql`${directMessages.createdAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND ${directMessages.senderId} != ${properties.userId}`)
-    .groupBy(directMessages.propertyId)
-    .as("recent_inquiry_count");
   const result = await db
     .select({
       id: properties.id,
@@ -1016,9 +990,6 @@ export async function getPropertyById(id: number) {
       inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as(
         "inquiryCount"
       ),
-      recentViewCount: sql<number>`COALESCE(${recentViewCountSub.cnt}, 0)`.as("recentViewCount"),
-      recentFavoriteCount: sql<number>`COALESCE(${recentFavoriteCountSub.cnt}, 0)`.as("recentFavoriteCount"),
-      recentInquiryCount: sql<number>`COALESCE(${recentInquiryCountSub.cnt}, 0)`.as("recentInquiryCount"),
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,
       estimatedYield: properties.estimatedYield,
@@ -1076,9 +1047,6 @@ export async function getPropertyById(id: number) {
       eq(properties.proposalRequestId, propertySearchRequests.id)
     )
     .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
-    .leftJoin(recentViewCountSub, eq(properties.id, recentViewCountSub.propertyId))
-    .leftJoin(recentFavoriteCountSub, eq(properties.id, recentFavoriteCountSub.propertyId))
-    .leftJoin(recentInquiryCountSub, eq(properties.id, recentInquiryCountSub.propertyId))
     .where(eq(properties.id, id))
     .limit(1);
   return result[0] ?? null;
