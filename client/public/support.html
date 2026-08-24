@@ -1,73 +1,48 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>お問い合わせ - PropFlow</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ヘルプ・お問い合わせ | PropFlow</title>
+<meta name="description" content="PropFlowの使い方、物件検索・募集、LINE連携、通知についてのよくある質問です。">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif; background: #f8fafc; min-height: 100vh; padding: 20px; }
-.container { max-width: 480px; margin: 0 auto; }
-.header { text-align: center; margin-bottom: 24px; }
-.header h1 { font-size: 22px; font-weight: 800; color: #1e3a5f; }
-.header p { font-size: 13px; color: #64748b; margin-top: 4px; }
-.card {
-  display: block;
-  background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 20px 24px;
-  margin-bottom: 12px;
-  text-decoration: none;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.card:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.1); }
-.card-title { font-size: 18px; font-weight: 700; color: #1e3a5f; margin-bottom: 6px; }
-.card-desc { font-size: 14px; color: #64748b; line-height: 1.6; }
-.chat-box {
-  background: white;
-  border: 2px solid #06C755;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 12px;
-  text-align: center;
-}
-.chat-title { font-size: 18px; font-weight: 700; color: #1e3a5f; margin-bottom: 8px; }
-.chat-desc { font-size: 14px; color: #64748b; margin-bottom: 12px; line-height: 1.6; }
-.chat-note { font-size: 13px; color: #06C755; font-weight: 600; }
-.back { display: block; text-align: center; margin-top: 20px; color: #2563eb; text-decoration: none; font-size: 14px; }
+:root{--navy:#173f70;--blue:#2563eb;--line:#dce4ed;--muted:#607087;--bg:#f4f7fa;--green:#06c755}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:#142c49;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;line-height:1.7}.wrap{max-width:680px;margin:auto;padding:20px 16px 48px}.hero{padding:22px 4px 18px}.hero small{color:var(--blue);font-weight:800}.hero h1{margin:4px 0 6px;font-size:28px}.hero p{margin:0;color:var(--muted);font-size:14px}.search{position:sticky;top:0;z-index:5;padding:10px 0;background:rgba(244,247,250,.94);backdrop-filter:blur(8px)}.search input{width:100%;height:50px;border:1px solid #bdcad8;border-radius:12px;background:#fff;padding:0 16px;font-size:16px;outline:none}.search input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}.categories{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 28px}.category{padding:15px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--navy);text-decoration:none;font-size:14px;font-weight:700}.category span{display:block;color:var(--muted);font-size:11px;font-weight:400}.section{margin:28px 0}.section h2{font-size:19px}.faq{margin-bottom:9px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}.faq summary{display:flex;align-items:center;gap:10px;padding:16px;cursor:pointer;font-size:15px;font-weight:700;list-style:none}.faq summary::-webkit-details-marker{display:none}.faq summary:before{content:"Q";display:grid;place-items:center;flex:0 0 25px;height:25px;border-radius:50%;background:#eaf1fb;color:var(--blue);font-size:12px}.faq summary:after{content:"＋";margin-left:auto;color:#718096;font-size:18px}.faq[open] summary:after{content:"−"}.answer{padding:0 16px 17px 51px;color:#485a70;font-size:14px}.answer p{margin:0}.answer a,.links a{color:var(--blue)}.empty{display:none;padding:30px 16px;text-align:center;color:var(--muted);font-size:14px}.contact{margin-top:34px;padding:24px 20px;border:2px solid var(--green);border-radius:16px;background:#fff;text-align:center}.contact h2{margin:0 0 6px;font-size:19px}.contact p{margin:0 0 16px;color:var(--muted);font-size:13px}.line-button{display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:10px;background:var(--green);color:#fff;text-decoration:none;font-weight:800}.notice{margin-top:12px;padding:13px;border-radius:10px;background:#fff7ed;color:#88470d;text-align:left;font-size:12px}.links{display:flex;justify-content:center;gap:20px;margin-top:24px;font-size:13px}@media(max-width:380px){.categories{grid-template-columns:1fr}.hero h1{font-size:25px}}
 </style>
 </head>
-<body>
-<div class="container">
-  <div class="header">
-    <h1>お問い合わせ</h1>
-    <p>PropFlowについてのご質問・ご相談</p>
-  </div>
-
-  <a href="https://propflow.jp/features" class="card">
-    <div class="card-title">できること</div>
-    <div class="card-desc">PropFlowの全機能を確認できます</div>
-  </a>
-
-  <a href="https://propflow.jp/propflow-guide.html" class="card">
-    <div class="card-title">ご案内資料</div>
-    <div class="card-desc">PropFlowの使い方ガイド（画面付き説明）</div>
-  </a>
-
-  <a href="https://lin.ee/Ueg4j5Q" style="text-decoration:none;display:block;">
-    <div class="chat-box" style="cursor:pointer;">
-      <div class="chat-title">LINEで質問する</div>
-      <div class="chat-desc">公式LINEのチャットからお気軽にご質問ください</div>
-      <div class="chat-note">▼ タップしてチャットを開く</div>
-    </div>
-  </a>
-
-  <div style="background:#fef2f2;border:2px solid #fecaca;border-radius:12px;padding:16px 20px;margin-bottom:12px;">
-    <div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px;">ご注意</div>
-    <div style="font-size:13px;color:#7f1d1d;line-height:1.7;">個別物件に関するお問い合わせは公式LINE等ではお答えできません。物件に関しては物件チャットから行ってください。</div>
-  </div>
+<body><main class="wrap">
+<header class="hero"><small>PropFlow SUPPORT</small><h1>ヘルプ・お問い合わせ</h1><p>知りたい内容を検索するか、カテゴリからお選びください。</p></header>
+<div class="search"><input id="faq-search" type="search" placeholder="質問を検索（例：LINE、物件募集）" aria-label="ヘルプを検索"></div>
+<nav class="categories" aria-label="ヘルプカテゴリ">
+ <a class="category" href="#account">アカウント・LINE<span>登録、ログイン、LINE連携</span></a>
+ <a class="category" href="#property">物件を探す・募集する<span>検索、募集、提案</span></a>
+ <a class="category" href="#message">メッセージ・通知<span>物件チャット、DM、通知</span></a>
+ <a class="category" href="#safety">安心して使うために<span>公開範囲、個人情報、相談先</span></a>
+</nav>
+<div id="faq-list">
+ <section class="section" id="account"><h2>アカウント・LINE</h2>
+  <details class="faq"><summary>PropFlowの利用を始めるには？</summary><div class="answer"><p><a href="https://propflow.jp/register?utm_source=line&amp;utm_medium=help&amp;utm_campaign=signup">新規登録ページ</a>から必要事項を入力してください。登録後、物件検索や募集、メッセージ機能を利用できます。</p></div></details>
+  <details class="faq"><summary>ログインできません</summary><div class="answer"><p>登録したメールアドレスに誤りがないか確認してください。解決しない場合は、ページ下部のLINE窓口からご連絡ください。</p></div></details>
+  <details class="faq"><summary>LINEとPropFlowを連携するには？</summary><div class="answer"><p>公式LINEのトーク画面に、PropFlowへ登録したメールアドレスを送信してください。連携完了の返信後、DMなどの通知をLINEで受け取れます。</p></div></details>
+ </section>
+ <section class="section" id="property"><h2>物件を探す・募集する</h2>
+  <details class="faq"><summary>物件を探すには？</summary><div class="answer"><p><a href="https://propflow.jp/?utm_source=line&amp;utm_medium=help&amp;utm_campaign=property_search">物件一覧</a>でエリアや物件種別などの条件を指定して検索できます。</p></div></details>
+  <details class="faq"><summary>希望する物件が見つかりません</summary><div class="answer"><p><a href="https://propflow.jp/v2/property-search?new=1&amp;utm_source=line&amp;utm_medium=help&amp;utm_campaign=request">希望物件を募集する</a>から条件を公開すると、条件に合う物件を持つ利用者から提案を受けられます。</p></div></details>
+  <details class="faq"><summary>物件募集への提案はどう行いますか？</summary><div class="answer"><p>物件募集一覧から条件に合う募集を開き、画面の案内に沿って物件を提案してください。提案後の確認はメッセージで行えます。</p></div></details>
+  <details class="faq"><summary>個別物件について質問したい</summary><div class="answer"><p>物件詳細のチャットからお問い合わせください。正確な確認のため、公式LINEでは個別物件への回答を行っていません。</p></div></details>
+ </section>
+ <section class="section" id="message"><h2>メッセージ・通知</h2>
+  <details class="faq"><summary>届いたメッセージはどこで確認できますか？</summary><div class="answer"><p>ログイン後のメッセージ一覧から確認できます。物件に関する会話は、対象物件のチャットからも開けます。</p></div></details>
+  <details class="faq"><summary>LINE通知が届きません</summary><div class="answer"><p>公式LINEをブロックしていないか、登録メールアドレスによるLINE連携が完了しているかを確認してください。</p></div></details>
+  <details class="faq"><summary>LINEのトークで物件交渉できますか？</summary><div class="answer"><p>公式LINEはサービス案内と通知・操作サポート用です。物件の質問や交渉は、履歴を安全に残せるPropFlow内の物件チャットをご利用ください。</p></div></details>
+ </section>
+ <section class="section" id="safety"><h2>安心して使うために</h2>
+  <details class="faq"><summary>登録情報は誰に公開されますか？</summary><div class="answer"><p>登録内容によって公開範囲が異なります。個人情報の取り扱いは<a href="https://propflow.jp/privacy.html">プライバシーポリシー</a>をご確認ください。</p></div></details>
+  <details class="faq"><summary>不審な利用者や情報を見つけました</summary><div class="answer"><p>やり取りを続けず、対象が分かる情報を添えて下部のLINE窓口へご連絡ください。緊急性がある場合は関係機関にもご相談ください。</p></div></details>
+ </section>
 </div>
-</body>
-</html>
+<p class="empty" id="empty">該当する質問が見つかりませんでした。別の言葉で検索するか、LINEでお問い合わせください。</p>
+<section class="contact"><h2>解決しませんでしたか？</h2><p>操作方法や登録について、公式LINEでサポートします。</p><a class="line-button" href="https://lin.ee/Ueg4j5Q">LINEで質問する</a><div class="notice">個別物件の内容・条件・交渉については、対象物件のチャットからお問い合わせください。</div></section>
+<div class="links"><a href="https://propflow.jp/propflow-intro.html">PropFlowとは</a><a href="https://propflow.jp/">物件を探す</a></div>
+</main>
+<script>const input=document.getElementById('faq-search'),faqs=[...document.querySelectorAll('.faq')],sections=[...document.querySelectorAll('.section')],empty=document.getElementById('empty');input.addEventListener('input',()=>{const q=input.value.trim().toLowerCase();let n=0;faqs.forEach(f=>{const show=!q||f.textContent.toLowerCase().includes(q);f.style.display=show?'':'none';if(show)n++});sections.forEach(s=>s.style.display=[...s.querySelectorAll('.faq')].some(f=>f.style.display!=='none')?'':'none');empty.style.display=n?'none':'block'});</script>
+</body></html>
