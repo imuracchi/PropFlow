@@ -2619,7 +2619,7 @@ ${propList}`,
             .replace(/'/g, "&#039;");
         const { sendMail } = await import("./_core/mail");
         const sent = await sendMail(
-          "propflow@gspec.me",
+          "support@gspec.me",
           `【PropFlow・管理者への連絡】${labels[input.category]} - ${ctx.user.name ?? ctx.user.email}`,
           `<div style="font-family:sans-serif;max-width:680px;margin:0 auto;">
             <h2 style="color:#173f70;">管理者への連絡</h2>
@@ -3061,7 +3061,7 @@ ${propList}`,
 <p>PropFlowサポート　加藤</p>
         `.trim(),
           {
-            replyTo: "propflow@gspec.me",
+            replyTo: "support@gspec.me",
             bcc: "imuracchi@gmail.com",
           }
         );
@@ -3112,7 +3112,7 @@ ${propList}`,
 <p>PropFlowサポート　加藤</p>
         `.trim(),
           {
-            replyTo: "propflow@gspec.me",
+            replyTo: "support@gspec.me",
             bcc: "imuracchi@gmail.com",
           }
         );
