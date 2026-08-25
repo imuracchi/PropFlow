@@ -245,12 +245,6 @@ export default function Login({
             </section>
           )}
 
-          {highlights.length > 0 && (
-            <div className="mb-5 border-2 border-[#173f70] bg-white px-4 py-3.5 text-center text-[14px] font-bold leading-6 text-[#173f70] sm:text-[15px]">
-              詳細・資料・問い合わせはログイン後に確認できます
-            </div>
-          )}
-
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid h-12 w-full grid-cols-2 mb-0 bg-transparent border-b border-[#cbd5df] p-0">
               <TabsTrigger value="login">ログイン</TabsTrigger>
@@ -715,9 +709,9 @@ export default function Login({
                         </div>
                       </div>
                     </button>
-                    <button
-                      className="w-full bg-card border-2 border-border rounded-xl p-5 text-left hover:border-[#06C755]/40 transition-colors"
-                      onClick={() => setRegMode("proxy")}
+                    <a
+                      href="/registration-request"
+                      className="block w-full bg-card border-2 border-border rounded-xl p-5 text-left hover:border-[#06C755]/40 transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <Send className="w-6 h-6 text-[#06C755] shrink-0" />
@@ -730,7 +724,7 @@ export default function Login({
                           </p>
                         </div>
                       </div>
-                    </button>
+                    </a>
                   </div>
                 </div>
               )}
@@ -775,6 +769,11 @@ export default function Login({
               個人情報保護方針
             </a>
           </div>
+          {highlights.length > 0 && (
+            <p className="mt-3 text-center text-[12px] font-semibold leading-5 text-[#65748a]">
+              詳細・資料・問い合わせはログイン後に確認できます
+            </p>
+          )}
           <p className="text-[10px] text-muted-foreground/40 text-center mt-3">
             運営：
             <a
