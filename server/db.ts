@@ -956,7 +956,7 @@ export async function getPublicPropertyHighlights() {
       eq(properties.deleted, 0),
       eq(properties.published, 1),
       eq(properties.visibilityScope, "public"),
-      eq(properties.status, "available"),
+      ne(properties.status, "sold"),
       eq(properties.externalListingConsent, 1)
     )).orderBy(desc(properties.createdAt)).limit(20);
     const counts = await getRecentPropertyAttentionCountsForPublicPage();
@@ -987,7 +987,10 @@ export async function getPublicPropertyHighlights() {
           ...newest,
         ]
       : newest;
-    publicHighlightsCache = { expiresAt: Date.now() + 5 * 60 * 1000, data };
+    publicHighlightsCache = {
+      expiresAt: Date.now() + (data.length > 0 ? 5 * 60 * 1000 : 15 * 1000),
+      data,
+    };
     return data;
   } catch (error) {
     console.warn("[public-highlights] Failed to refresh:", error);
@@ -1015,7 +1018,7 @@ export async function getPublicPropertyShowcase() {
       eq(properties.deleted, 0),
       eq(properties.published, 1),
       eq(properties.visibilityScope, "public"),
-      eq(properties.status, "available"),
+      ne(properties.status, "sold"),
       eq(properties.externalListingConsent, 1)
     )).orderBy(desc(properties.createdAt)).limit(50);
     const counts = await getRecentPropertyAttentionCountsForPublicPage();
@@ -1046,7 +1049,12 @@ export async function getPublicPropertyShowcase() {
       attention: attentionCandidates.map(toPublicHighlight),
       newest: newestCandidates.map(item => ({ ...toPublicHighlight(item), attention: false })),
     };
-    publicShowcaseCache = { expiresAt: Date.now() + 5 * 60 * 1000, data };
+    publicShowcaseCache = {
+      expiresAt:
+        Date.now() +
+        (data.attention.length + data.newest.length > 0 ? 5 * 60 * 1000 : 15 * 1000),
+      data,
+    };
     return data;
   } catch (error) {
     console.warn("[public-showcase] Failed to refresh:", error);
