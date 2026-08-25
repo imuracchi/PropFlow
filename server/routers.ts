@@ -149,6 +149,7 @@ async function sendBroadcastToAll(opts: {
   imageUrl?: string;
   skipLine?: boolean;
   skipEmail?: boolean;
+  audience?: "all" | "propertyOwners";
 }) {
   const { sendMail } = await import("./_core/mail");
   const { sendLineBroadcast } = await import("./_core/line");
@@ -157,7 +158,16 @@ async function sendBroadcastToAll(opts: {
   const emailBody = opts.message ?? "";
   const lineBody = opts.lineMessage ?? emailBody;
 
-  const emails = await db.getAllActiveUserEmails();
+  const audience = opts.audience ?? "all";
+  if (audience === "propertyOwners" && !opts.skipLine) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "物件登録者のみの配信はメール専用です",
+    });
+  }
+  const emails = audience === "propertyOwners"
+    ? await db.getActivePropertyOwnerEmails()
+    : await db.getAllActiveUserEmails();
   let emailSent = 0;
   if (!opts.skipEmail && emailBody) {
     const imageBlock = opts.imageUrl
@@ -261,6 +271,7 @@ async function sendBroadcastToAll(opts: {
     subject: opts.subject,
     message: emailBody,
     imageUrl: opts.imageUrl,
+    audience,
     emailSent,
     emailTotal: emails.length,
     lineSent,
@@ -3563,9 +3574,18 @@ ${propList}`,
           imageUrl: z.string().url().optional(),
           skipLine: z.boolean().optional(),
           skipEmail: z.boolean().optional(),
+          audience: z.enum(["all", "propertyOwners"]).optional(),
         })
       )
       .mutation(async ({ input }) => sendBroadcastToAll(input)),
+
+    broadcastAudienceCounts: adminProcedure.query(async () => {
+      const [all, propertyOwners] = await Promise.all([
+        db.getAllActiveUserEmails(),
+        db.getActivePropertyOwnerEmails(),
+      ]);
+      return { all: all.length, propertyOwners: propertyOwners.length };
+    }),
 
     analyzeDms: adminProcedure.mutation(async () => {
       const Anthropic = (await import("@anthropic-ai/sdk")).default;

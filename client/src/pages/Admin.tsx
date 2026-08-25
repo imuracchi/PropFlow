@@ -221,6 +221,8 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
       },
     });
   const broadcastLogsQuery = trpc.admin.broadcastLogs.useQuery();
+  const broadcastAudienceCountsQuery =
+    trpc.admin.broadcastAudienceCounts.useQuery();
   const analyzeDmsMutation = trpc.admin.analyzeDms.useMutation({
     onSuccess: data => setAnalysisResult(data),
   });
@@ -277,6 +279,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const [broadcastMode, setBroadcastMode] = useState<
     "site" | "both" | "email" | "line"
   >("site");
+  const [broadcastAudience, setBroadcastAudience] = useState<
+    "all" | "propertyOwners"
+  >("all");
   const [broadcastSkipLine, setBroadcastSkipLine] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<{
     emailSent: number;
@@ -2200,7 +2205,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               {/* 送信先モード */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  送信先
+                  配信方法
                 </label>
                 <div className="flex gap-2">
                   {(
@@ -2216,6 +2221,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${broadcastMode === val ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary/50"}`}
                       onClick={() => {
                         setBroadcastMode(val);
+                        if (val !== "email") setBroadcastAudience("all");
                         setBroadcastResult(null);
                       }}
                     >
@@ -2224,6 +2230,45 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   ))}
                 </div>
               </div>
+
+              {broadcastMode !== "site" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    配信対象
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        ["all", "全ユーザー"],
+                        ["propertyOwners", "物件登録者のみ"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`border px-3 py-2 text-left text-xs font-bold ${broadcastAudience === value ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"}`}
+                        onClick={() => {
+                          setBroadcastAudience(value);
+                          if (value === "propertyOwners") setBroadcastMode("email");
+                          setBroadcastResult(null);
+                        }}
+                      >
+                        <span className="block">{label}</span>
+                        <span className="mt-1 block font-normal">
+                          {broadcastAudienceCountsQuery.isLoading
+                            ? "集計中…"
+                            : `${broadcastAudienceCountsQuery.data?.[value] ?? 0}人`}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {broadcastAudience === "propertyOwners" && (
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      削除されていない物件を1件以上登録した有効ユーザーへ、1人1通だけメールを送信します。
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
@@ -2370,7 +2415,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                         : "LINEのみ";
                   if (
                     !confirm(
-                      `全ユーザーに${modeLabel}を送信します。よろしいですか？\n\n件名: ${broadcastSubject}`
+                      `${broadcastAudience === "propertyOwners" ? "物件登録者" : "全ユーザー"} ${broadcastAudienceCountsQuery.data?.[broadcastAudience] ?? 0}人に${modeLabel}を送信します。よろしいですか？\n\n件名: ${broadcastSubject}`
                     )
                   )
                     return;
@@ -2385,6 +2430,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                     imageUrl: broadcastImageUrl || undefined,
                     skipLine: broadcastMode === "email",
                     skipEmail: broadcastMode === "line",
+                    audience: broadcastAudience,
                   });
                   setBroadcastResult(result);
                 }}
@@ -2481,6 +2527,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           送信日時
                         </th>
                         <th className="pb-2 pr-4">件名</th>
+                        <th className="pb-2 pr-4 whitespace-nowrap">対象</th>
                         <th className="pb-2 pr-4 whitespace-nowrap">メール</th>
                         <th className="pb-2 whitespace-nowrap">LINE</th>
                       </tr>
@@ -2496,6 +2543,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           </td>
                           <td className="py-2 pr-4 max-w-[200px] truncate">
                             {log.subject}
+                          </td>
+                          <td className="py-2 pr-4 whitespace-nowrap text-xs">
+                            {log.audience === "propertyOwners" ? "物件登録者" : "全ユーザー"}
                           </td>
                           <td className="py-2 pr-4 whitespace-nowrap">
                             {log.emailSent}/{log.emailTotal}件

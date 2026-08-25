@@ -140,11 +140,13 @@ export async function runStartupMigrations() {
       \`subject\` varchar(500) NOT NULL,
       \`message\` text NOT NULL,
       \`imageUrl\` varchar(500) NULL,
+      \`audience\` varchar(32) NOT NULL DEFAULT 'all',
       \`emailSent\` int NOT NULL DEFAULT 0,
       \`emailTotal\` int NOT NULL DEFAULT 0,
       \`lineSent\` int NOT NULL DEFAULT 0,
       \`sentAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    "ALTER TABLE `broadcast_logs` ADD COLUMN `audience` varchar(32) NOT NULL DEFAULT 'all' AFTER `imageUrl`",
     `CREATE TABLE IF NOT EXISTS \`announcement_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`userId\` int NOT NULL,
@@ -576,6 +578,17 @@ export async function getAllActiveUserEmails(): Promise<string[]> {
     .from(users)
     .where(eq(users.status, "active"));
   return rows.map(r => r.email);
+}
+
+export async function getActivePropertyOwnerEmails(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .selectDistinct({ email: users.email })
+    .from(users)
+    .innerJoin(properties, eq(properties.userId, users.id))
+    .where(and(eq(users.status, "active"), eq(properties.deleted, 0)));
+  return rows.map(row => row.email);
 }
 
 export async function getActiveUserEmailsForNotify(
@@ -4423,6 +4436,7 @@ export async function saveBroadcastLog(data: {
   subject: string;
   message: string;
   imageUrl?: string;
+  audience?: "all" | "propertyOwners";
   emailSent: number;
   emailTotal: number;
   lineSent: boolean;
@@ -4434,6 +4448,7 @@ export async function saveBroadcastLog(data: {
     subject: data.subject,
     message: data.message,
     imageUrl: data.imageUrl ?? null,
+    audience: data.audience ?? "all",
     emailSent: data.emailSent,
     emailTotal: data.emailTotal,
     lineSent: data.lineSent ? 1 : 0,

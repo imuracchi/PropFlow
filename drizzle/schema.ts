@@ -400,6 +400,7 @@ export const broadcastLogs = mysqlTable("broadcast_logs", {
   subject: varchar("subject", { length: 500 }).notNull(),
   message: text("message").notNull(),
   imageUrl: varchar("imageUrl", { length: 500 }),
+  audience: varchar("audience", { length: 32 }).default("all").notNull(),
   emailSent: int("emailSent").notNull().default(0),
   emailTotal: int("emailTotal").notNull().default(0),
   lineSent: int("lineSent").notNull().default(0),
