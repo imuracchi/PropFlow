@@ -741,13 +741,18 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
       const attention = Array.isArray(data?.attention) ? data.attention : [];
       const newest = Array.isArray(data?.newest) ? data.newest : [];
       if (attention.length + newest.length < 6) return;
+      const mobile = window.matchMedia('(max-width: 760px)').matches;
+      const displayedAttention = mobile ? attention.slice(0, 2) : attention;
+      const displayedNewest = mobile
+        ? newest.slice(0, Math.max(0, 6 - displayedAttention.length))
+        : newest;
       const section = document.getElementById('property-showcase');
-      if (attention.length) {
-        renderShowcaseCards(document.getElementById('showcase-attention'), attention, true);
+      if (displayedAttention.length) {
+        renderShowcaseCards(document.getElementById('showcase-attention'), displayedAttention, true);
         document.getElementById('showcase-attention-group').hidden = false;
       }
-      if (newest.length) {
-        renderShowcaseCards(document.getElementById('showcase-newest'), newest, false);
+      if (displayedNewest.length) {
+        renderShowcaseCards(document.getElementById('showcase-newest'), displayedNewest, false);
         document.getElementById('showcase-newest-group').hidden = false;
       }
       section.hidden = false;
