@@ -116,7 +116,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
     "publish"
   );
   const [proposalOnly, setProposalOnly] = useState(proposalRequestId > 0);
-  const [externalListingConsent, setExternalListingConsent] = useState(false);
+  const [externalListingConsent, setExternalListingConsent] = useState(true);
   const [excludedUsers, setExcludedUsers] = useState<
     { id: number; name: string | null; company: string | null }[]
   >([]);
