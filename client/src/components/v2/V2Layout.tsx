@@ -315,6 +315,15 @@ export default function V2Layout({
                 </button>
               )}
             </div>
+            <button
+              onClick={() => {
+                void logout();
+              }}
+              className="mt-4 flex h-12 w-full items-center justify-center gap-2 border border-[#d9a9a9] bg-[#fff7f7] text-[13px] font-bold text-[#a72e2e]"
+            >
+              <LogOut size={18} />
+              ログアウト
+            </button>
           </section>
         </div>
       )}
