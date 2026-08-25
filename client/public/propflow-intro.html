@@ -414,6 +414,12 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
 .screen-showcase img{width:100%;border-radius:10px}
 .screen-caption{margin:12px 4px 2px;color:var(--text-sub);font-size:13px;text-align:center}
 .recruit-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:28px}
+.use-cases{padding:88px 0;background:var(--bg)}
+.use-case-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.use-case-card{position:relative;padding:28px 24px;border:1px solid var(--border);border-top:4px solid var(--blue);background:var(--surface);box-shadow:var(--shadow)}
+.use-case-number{display:block;margin-bottom:14px;color:var(--blue);font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;letter-spacing:.1em}
+.use-case-card h3{margin:0 0 10px;color:var(--text);font-size:21px;font-weight:900}
+.use-case-card p{margin:0;color:var(--text-sub);font-size:16px;line-height:1.85}
 .faq{padding:88px 0;background:var(--bg)}
 .faq-list{max-width:860px;margin:0 auto;display:grid;gap:12px}
 .faq-category{margin:18px 0 2px;padding-left:14px;border-left:4px solid var(--blue);font-size:21px;color:var(--text)}
@@ -425,7 +431,8 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
 .faq details[open] summary:after{content:"−"}
 .faq-answer{padding:0 22px 20px;color:var(--text-sub);font-size:16px}
 .faq-answer p{margin:0}
-@media(max-width:760px){.role-grid{grid-template-columns:1fr}.recruitment,.faq{padding:64px 0}.role-card{padding:24px 20px}.screen-showcase{padding:7px}.faq summary{padding-left:18px}.faq-answer{padding-left:18px;padding-right:18px}}
+@media(max-width:900px){.use-case-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.role-grid,.use-case-grid{grid-template-columns:1fr}.recruitment,.use-cases,.faq{padding:64px 0}.role-card,.use-case-card{padding:24px 20px}.screen-showcase{padding:7px}.faq summary{padding-left:18px}.faq-answer{padding-left:18px;padding-right:18px}}
 </style>
 </head>
 <body>
@@ -631,6 +638,24 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
   </div>
 </section>
 
+<section class="use-cases" id="use-cases">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">USE CASES</span>
+      <h2>不動産事業者ごとの<br><span class="nobreak">PropFlow活用例</span></h2>
+      <p>物件を買いたい方にも、売りたい・紹介したい方にも。それぞれの仕事に合わせて活用できます。</p>
+    </div>
+    <div class="use-case-grid">
+      <article class="use-case-card"><span class="use-case-number">01</span><h3>売買仲介</h3><p>顧客の希望条件に合う物件を検索し、資料の確認から担当者への問い合わせまでスムーズに進められます。</p></article>
+      <article class="use-case-card"><span class="use-case-number">02</span><h3>買取再販</h3><p>希望エリア・価格帯・面積から仕入れ候補を探し、一般公開前を含む物件情報を比較できます。</p></article>
+      <article class="use-case-card"><span class="use-case-number">03</span><h3>土地・開発用地の仕入れ</h3><p>土地面積やエリアで絞り込み、住宅用地や事業用地など、計画に合う土地情報を確認できます。</p></article>
+      <article class="use-case-card"><span class="use-case-number">04</span><h3>物件所有者・元付会社</h3><p>手持ち物件を登録し、物件を探している不動産事業者へ情報を届け、問い合わせにつなげられます。</p></article>
+      <article class="use-case-card"><span class="use-case-number">05</span><h3>客付会社</h3><p>顧客の購入条件を登録して、条件に合う物件を持つ事業者から未掲載物件を含む提案を受けられます。</p></article>
+      <article class="use-case-card"><span class="use-case-number">06</span><h3>少人数の不動産会社</h3><p>LINEやメールに散らばりやすい物件情報を一か所で確認し、資料共有や商談の履歴もまとめて管理できます。</p></article>
+    </div>
+  </div>
+</section>
+
 <section class="faq" id="faq">
   <div class="wrap">
     <div class="section-head">
@@ -715,7 +740,7 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
       const data = payload?.result?.data?.json ?? payload?.result?.data;
       const attention = Array.isArray(data?.attention) ? data.attention : [];
       const newest = Array.isArray(data?.newest) ? data.newest : [];
-      if (!attention.length && !newest.length) return;
+      if (attention.length + newest.length < 6) return;
       const section = document.getElementById('property-showcase');
       if (attention.length) {
         renderShowcaseCards(document.getElementById('showcase-attention'), attention, true);
