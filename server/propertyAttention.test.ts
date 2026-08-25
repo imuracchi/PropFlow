@@ -9,8 +9,8 @@ describe("property attention score", () => {
     expect(getPropertyAttentionScore({ viewCount: 10, favoriteCount: 2, inquiryCount: 1 })).toBe(30);
   });
 
-  it("preserves the previous three-inquiry threshold", () => {
-    expect(isPropertyAttentionWorthy({ inquiryCount: 3 })).toBe(true);
+  it("marks two inquiries as attention-worthy", () => {
+    expect(isPropertyAttentionWorthy({ inquiryCount: 2 })).toBe(true);
   });
 
   it("uses rolling seven-day counts when supplied", () => {
@@ -30,6 +30,11 @@ describe("property attention score", () => {
       favoriteCount: 50,
       inquiryCount: 20,
       recentViewCount: 12,
+      recentFavoriteCount: 1,
+      recentInquiryCount: 1,
+    })).toBe(true);
+    expect(isPropertyAttentionWorthy({
+      recentViewCount: 4,
       recentFavoriteCount: 1,
       recentInquiryCount: 1,
     })).toBe(false);

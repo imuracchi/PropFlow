@@ -1,4 +1,4 @@
-export const PROPERTY_ATTENTION_THRESHOLD = 30;
+export const PROPERTY_ATTENTION_THRESHOLD = 20;
 
 export type PropertyAttentionSignals = {
   viewCount?: number | null;
