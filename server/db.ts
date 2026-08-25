@@ -4025,14 +4025,38 @@ export async function getPropertySearchNeedLogs(limit = 500) {
 
 export async function agreeToTerms(userId: number) {
   const db = await getDb();
-  if (!db) return;
-  await db
-    .update(users)
-    .set({
-      termsAgreedAt: new Date(),
-      termsAgreedVersion: CURRENT_LEGAL_VERSION,
-    })
-    .where(eq(users.id, userId));
+  if (!db) return false;
+  const result: any = await db.execute(sql`
+    UPDATE users
+    SET termsAgreedAt = CURRENT_TIMESTAMP,
+        termsAgreedVersion = ${CURRENT_LEGAL_VERSION}
+    WHERE id = ${userId}
+      AND (termsAgreedVersion IS NULL OR termsAgreedVersion <> ${CURRENT_LEGAL_VERSION})
+  `);
+  return Number(result?.[0]?.affectedRows ?? 0) > 0;
+}
+
+export async function logTermsAgreementCompleted(
+  userId: number,
+  userAgent?: string
+) {
+  const db = await getDb();
+  if (!db) return false;
+  const result: any = await db.execute(sql`
+    INSERT INTO activity_logs (userId, action, detail, deviceType)
+    SELECT ${userId}, 'terms_agree_complete', '規約同意後の画面表示に成功', ${detectDeviceType(userAgent)}
+    FROM users
+    WHERE id = ${userId}
+      AND termsAgreedVersion = ${CURRENT_LEGAL_VERSION}
+      AND NOT EXISTS (
+        SELECT 1
+        FROM activity_logs
+        WHERE userId = ${userId}
+          AND action = 'terms_agree_complete'
+          AND createdAt >= users.termsAgreedAt
+      )
+  `);
+  return Number(result?.[0]?.affectedRows ?? 0) > 0;
 }
 
 // ---- Admin: Delete Messages ----
@@ -4598,12 +4622,28 @@ export async function saveSearchLog(
   try {
     const db = await getDb();
     if (!db) throw new Error("DB not available");
-    await db.execute(
-      sql`INSERT INTO search_logs (userId, searchType, query, resultCount) VALUES (${userId}, ${searchType}, ${query.slice(0, 500)}, ${resultCount})`
+    const normalizedQuery = query.trim().slice(0, 500);
+    const result: any = await db.execute(sql`
+      INSERT INTO search_logs (userId, searchType, query, resultCount)
+      SELECT ${userId}, ${searchType}, ${normalizedQuery}, ${resultCount}
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM search_logs
+        WHERE userId = ${userId}
+          AND searchType = ${searchType}
+          AND query = ${normalizedQuery}
+          AND resultCount = ${resultCount}
+          AND createdAt >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 5 MINUTE)
+      )
+    `);
+    const saved = Number(result?.[0]?.affectedRows ?? 0) > 0;
+    console.log(
+      `[saveSearchLog] ${saved ? "OK" : "SKIP_DUPLICATE"} userId=${userId} query="${normalizedQuery}"`
     );
-    console.log(`[saveSearchLog] OK userId=${userId} query="${query}"`);
+    return saved;
   } catch (e: any) {
     console.error("[saveSearchLog] error:", e.message);
+    return false;
   }
 }
 

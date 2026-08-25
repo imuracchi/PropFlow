@@ -387,6 +387,12 @@ export const appRouter = router({
         }
         const valid = await verifyPassword(user.passwordHash, input.password);
         if (!valid) {
+          db.logActivity(
+            user.id,
+            "login_error",
+            "パスワード不一致",
+            ctx.req.headers["user-agent"]
+          ).catch(() => {});
           return {
             success: false,
             error: "メールアドレスまたはパスワードが正しくありません",
@@ -395,6 +401,12 @@ export const appRouter = router({
         if (user.status === "pending")
           await db.updateUserStatus(user.id, "active");
         if (user.status === "suspended") {
+          db.logActivity(
+            user.id,
+            "login_error",
+            "停止中アカウントでのログイン試行",
+            ctx.req.headers["user-agent"]
+          ).catch(() => {});
           return {
             success: false,
             error: "アカウントが停止されています。管理者にお問い合わせください",
@@ -879,13 +891,23 @@ JSONのみ返してください。`,
       }),
 
     agreeTerms: protectedProcedure.mutation(async ({ ctx }) => {
-      await db.agreeToTerms(ctx.user.id);
-      db.logActivity(
+      const newlyAgreed = await db.agreeToTerms(ctx.user.id);
+      if (newlyAgreed) {
+        db.logActivity(
+          ctx.user.id,
+          "terms_agree",
+          "利用規約に同意",
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+      }
+      return { success: true };
+    }),
+
+    confirmTermsEntry: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.logTermsAgreementCompleted(
         ctx.user.id,
-        "terms_agree",
-        "利用規約に同意",
         ctx.req.headers["user-agent"]
-      ).catch(() => {});
+      );
       return { success: true };
     }),
 
@@ -1527,15 +1549,20 @@ ${propList}`,
           const ids = JSON.parse(
             text.match(/\[[\d,\s]*\]/)?.[0] ?? "[]"
           ) as number[];
-          db.saveSearchLog(ctx.user.id, "ai", input.query, ids.length).catch(
-            () => {}
-          );
-          db.logActivity(
+          const saved = await db.saveSearchLog(
             ctx.user.id,
-            "search",
-            `AI検索「${input.query}」(${ids.length}件)`,
-            ctx.req.headers["user-agent"]
-          ).catch(() => {});
+            "ai",
+            input.query,
+            ids.length
+          );
+          if (saved) {
+            db.logActivity(
+              ctx.user.id,
+              "search",
+              `AI検索「${input.query}」(${ids.length}件)`,
+              ctx.req.headers["user-agent"]
+            ).catch(() => {});
+          }
           return { ids };
         } catch {
           return { ids: [] };
@@ -1548,18 +1575,20 @@ ${propList}`,
         console.log(
           `[logSearch] userId=${ctx.user.id} query="${input.query}" count=${input.resultCount}`
         );
-        await db.saveSearchLog(
+        const saved = await db.saveSearchLog(
           ctx.user.id,
           "keyword",
           input.query,
           input.resultCount
         );
-        db.logActivity(
-          ctx.user.id,
-          "search",
-          `キーワード検索「${input.query}」(${input.resultCount}件)`,
-          ctx.req.headers["user-agent"]
-        ).catch(() => {});
+        if (saved) {
+          db.logActivity(
+            ctx.user.id,
+            "search",
+            `キーワード検索「${input.query}」(${input.resultCount}件)`,
+            ctx.req.headers["user-agent"]
+          ).catch(() => {});
+        }
         return { ok: true };
       }),
 

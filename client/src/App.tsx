@@ -134,7 +134,34 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return <LegalConsentGate onAccepted={refresh} onLogout={logout} />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <TermsEntryTracker />
+      {children}
+    </>
+  );
+}
+
+function TermsEntryTracker() {
+  const confirmEntry = trpc.auth.confirmTermsEntry.useMutation();
+  const started = React.useRef(false);
+
+  useEffect(() => {
+    if (
+      started.current ||
+      sessionStorage.getItem("propflow_terms_entry_pending") !== "1"
+    )
+      return;
+    started.current = true;
+    confirmEntry
+      .mutateAsync()
+      .then(() => sessionStorage.removeItem("propflow_terms_entry_pending"))
+      .catch(() => {
+        started.current = false;
+      });
+  }, []);
+
+  return null;
 }
 
 function AdminRoute({ v2 = false }: { v2?: boolean }) {

@@ -324,6 +324,20 @@ export default function Login({
                       パスワードをお忘れの方
                     </a>
                   </div>
+                  <div className="border-t border-[#dce3eb] pt-4 text-center">
+                    <p className="text-[12px] text-[#65748a]">
+                      ログインできないときは？
+                    </p>
+                    <a
+                      href="https://lin.ee/Ueg4j5Q"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center justify-center gap-1.5 font-bold text-[#16713a] hover:underline"
+                    >
+                      <MessageCircle size={15} />
+                      公式LINEへ相談する
+                    </a>
+                  </div>
                 </div>
               </div>
             </TabsContent>

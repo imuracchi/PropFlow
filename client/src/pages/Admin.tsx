@@ -1,4 +1,4 @@
-import { fmtDate, fmtDateTime, fmtDateShort } from "@/lib/utils";
+import { fmtDate, fmtDateTime, fmtDateTimeSeconds, fmtDateShort } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1618,7 +1618,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   {(searchLogs ?? []).map((log: any) => (
                     <tr key={log.id} className="hover:bg-accent/30">
                       <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                        {fmtDateTime(log.createdAt)}
+                        {fmtDateTimeSeconds(log.createdAt)}
                       </td>
                       <td className="px-4 py-2.5 text-xs max-w-[120px] truncate">
                         {log.userCompany ?? log.userName ?? "-"}
@@ -1721,7 +1721,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                     return (
                       <tr key={log.id} className="hover:bg-accent/30">
                         <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
-                          {fmtDateTime(log.createdAt)}
+                          {fmtDateTimeSeconds(log.createdAt)}
                         </td>
                         <td className="px-4 py-3 text-xs">
                           <p className="font-bold">
@@ -2115,7 +2115,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           #{log.id}
                         </td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                          {fmtDateTime(log.createdAt)}
+                          {fmtDateTimeSeconds(log.createdAt)}
                         </td>
                         <td className="px-4 py-2.5 text-sm">
                           {log.userName ?? "?"}
@@ -2128,19 +2128,24 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                             className={`text-xs font-medium px-2 py-0.5 rounded ${
                               log.action === "login"
                                 ? "bg-green-100 text-green-700"
+                                : log.action === "login_error"
+                                  ? "bg-red-100 text-red-700"
                                 : log.action === "property_create"
                                   ? "bg-blue-100 text-blue-700"
                                   : log.action === "dm_send"
                                     ? "bg-violet-100 text-violet-700"
                                     : log.action === "announce"
                                       ? "bg-amber-100 text-amber-700"
-                                      : log.action === "terms_agree"
+                                      : log.action === "terms_agree" ||
+                                          log.action === "terms_agree_complete"
                                         ? "bg-emerald-100 text-emerald-700"
                                         : "bg-muted text-muted-foreground"
                             }`}
                           >
                             {log.action === "login"
                               ? "ログイン"
+                              : log.action === "login_error"
+                                ? "ログイン失敗"
                               : log.action === "property_create"
                                 ? "物件登録"
                                 : log.action === "dm_send"
@@ -2149,6 +2154,8 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                                     ? "お知らせ"
                                     : log.action === "terms_agree"
                                       ? "規約同意"
+                                      : log.action === "terms_agree_complete"
+                                        ? "利用開始"
                                       : log.action ===
                                           "property_match_results_open"
                                         ? "候補一覧表示"

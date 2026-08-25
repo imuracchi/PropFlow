@@ -15,6 +15,7 @@ export default function LegalConsentGate({
   const submit = async () => {
     if (!checked || agree.isPending) return;
     await agree.mutateAsync();
+    sessionStorage.setItem("propflow_terms_entry_pending", "1");
     await onAccepted();
   };
 
