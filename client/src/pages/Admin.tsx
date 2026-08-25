@@ -1099,6 +1099,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       "閲覧数",
                       "商談数",
                       "表示",
+                      "外部掲載",
                       "登録日",
                       ...(!isManagement ? ["操作"] : []),
                     ].map(h => (
@@ -1177,6 +1178,13 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                               <Eye className="w-3 h-3" />
                               公開中
                             </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs whitespace-nowrap">
+                          {(prop as any).externalListingConsent === 1 ? (
+                            <span className="bg-green-100 px-2 py-1 font-bold text-green-700">掲載中</span>
+                          ) : (
+                            <span className="text-muted-foreground">申請なし</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">

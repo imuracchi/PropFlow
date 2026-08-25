@@ -40,6 +40,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const [cardBase64, setCardBase64] = useState<string | null>(null);
   const [cardMime, setCardMime] = useState("image/jpeg");
@@ -122,6 +123,10 @@ export default function Register() {
       setError("パスワードは8文字以上で入力してください");
       return;
     }
+    if (!acceptedTerms) {
+      setError("利用規約と個人情報保護方針への同意が必要です");
+      return;
+    }
     const license = licenseNum
       ? `${licenseType} (${licenseCode}) 第${licenseNum}号`
       : undefined;
@@ -136,6 +141,7 @@ export default function Register() {
       url: url || undefined,
       password,
       businessCardBase64: cardBase64 ?? undefined,
+      acceptedTerms: true,
     });
     if (result.success) {
       setSubmitted(true);
@@ -435,11 +441,16 @@ export default function Register() {
               </p>
             )}
 
+            <label className="flex items-start gap-3 border border-[#d6dee8] bg-[#f7f9fb] p-3 text-xs leading-5 text-[#526176]">
+              <input type="checkbox" className="mt-1 size-4 shrink-0" checked={acceptedTerms} onChange={event => setAcceptedTerms(event.target.checked)} />
+              <span><a href="/terms.html" target="_blank" rel="noopener noreferrer" className="font-bold text-[#173f70] underline">利用規約</a>および<a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="font-bold text-[#173f70] underline">個人情報保護方針</a>を確認し、同意します。</span>
+            </label>
+
             <Button
               className="w-full h-12 bg-[#173f70] hover:bg-[#102f56] text-white font-bold shadow-none"
               size="lg"
               onClick={handleSubmit}
-              disabled={registerMutation.isPending || cardReading}
+              disabled={registerMutation.isPending || cardReading || !acceptedTerms}
             >
               {registerMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />

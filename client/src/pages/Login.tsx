@@ -13,7 +13,7 @@ import {
   Camera,
   X,
   Building2,
-  Phone,
+  MessageCircle,
   Globe,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -51,12 +51,17 @@ export default function Login({
   const [cardPassword, setCardPassword] = useState("");
   const [cardRegError, setCardRegError] = useState("");
   const [cardDone, setCardDone] = useState(false);
+  const [cardAcceptedTerms, setCardAcceptedTerms] = useState(false);
 
   const loginMutation = trpc.auth.login.useMutation();
   const sendRegMutation = trpc.auth.sendRegistrationEmail.useMutation();
   const readCardMutation = trpc.auth.readBusinessCard.useMutation();
   const registerDirectMutation = trpc.auth.registerDirect.useMutation();
-
+  const highlightsQuery = trpc.property.publicHighlights.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const highlights = highlightsQuery.data ?? [];
   const toBase64 = (file: File): Promise<string> =>
     file
       .arrayBuffer()
@@ -134,6 +139,10 @@ export default function Login({
       setCardRegError("パスワードは8文字以上で入力してください");
       return;
     }
+    if (!cardAcceptedTerms) {
+      setCardRegError("利用規約と個人情報保護方針への同意が必要です");
+      return;
+    }
     const result = await registerDirectMutation.mutateAsync({
       email: cardEmail,
       password: cardPassword,
@@ -143,6 +152,7 @@ export default function Login({
       fax: cardFax || undefined,
       url: cardUrl || undefined,
       businessCardBase64: cardBase64 ?? undefined,
+      acceptedTerms: true,
     });
     if (result.success) {
       setCardDone(true);
@@ -173,34 +183,30 @@ export default function Login({
             <p className="mt-5 max-w-sm text-[14px] leading-7 text-[#d8e4f0]">
               物件の確認から商談、資料共有まで。日々の不動産取引をひとつの場所で進められます。
             </p>
-            <div className="mt-9 border-l-2 border-[#6f96c1] pl-5 text-[13px] leading-7 text-[#d8e4f0]">
-              <p>不動産事業者専用</p>
-              <p>登録済みユーザーのみ利用可能</p>
-            </div>
-            <div className="mt-8 grid gap-3">
-              <a
-                href="/propflow-intro.html"
-                className="flex items-center justify-between border border-[#8da9c7] px-4 py-3 text-[13px] font-bold text-white transition-colors hover:bg-white/10"
-              >
-                <span className="flex items-center gap-2">
-                  <FileText size={16} />
-                  PropFlowについて
-                </span>
-                <span aria-hidden="true">→</span>
-              </a>
-              <a
-                href="https://lin.ee/Ueg4j5Q"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between border border-[#8bd6a5] px-4 py-3 text-[13px] font-bold text-white transition-colors hover:bg-white/10"
-              >
-                <span className="flex items-center gap-2">
-                  <Phone size={16} />
-                  公式LINEで相談する
-                </span>
-                <span aria-hidden="true">↗</span>
-              </a>
-            </div>
+            {highlights.length > 0 && (
+              <section className="mt-9 border-t-4 border-[#d6a43e] bg-white p-6 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-bold tracking-[.16em] text-[#8a671d]">NEW & TRENDING</p>
+                    <h2 className="mt-1 whitespace-nowrap text-[16px] font-bold">今、こんな物件が登録されています</h2>
+                  </div>
+                  <span className="shrink-0 bg-[#173f70] px-3 py-2 text-[11px] font-bold tracking-wide text-white">会員限定</span>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {highlights.map((item, index) => (
+                    <div key={`${item.area}-${item.type}-${index}`} className="border border-[#d7e0e9] border-l-4 border-l-[#d6a43e] bg-[#f7f9fb] px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className={`shrink-0 px-2 py-1 text-[9px] font-bold text-white ${item.attention ? "bg-[#c78e19]" : "bg-[#173f70]"}`}>{item.attention ? "注目" : "登録"}</span>
+                        <p className="truncate text-[15px] font-bold">{item.area}｜{item.type}</p>
+                      </div>
+                      <div className="mt-3">
+                        <p className="text-[16px] font-bold text-[#173f70]">{item.priceBand}{item.sizeLabel ? `｜${item.sizeLabel}` : ""}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
           <p className="text-[11px] text-[#9fb7d1]">
             PropFlow — 不動産情報プラットフォーム
@@ -219,24 +225,31 @@ export default function Login({
             </p>
           </div>
 
-          <div className="mb-6 grid grid-cols-2 gap-2 lg:hidden">
-            <a
-              href="/propflow-intro.html"
-              className="flex min-h-12 items-center justify-center gap-1.5 border border-[#b8c6d5] bg-white px-2 text-center text-[12px] font-bold text-[#173f70]"
-            >
-              <FileText size={15} />
-              PropFlowについて
-            </a>
-            <a
-              href="https://lin.ee/Ueg4j5Q"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex min-h-12 items-center justify-center gap-1.5 border border-[#75c992] bg-[#f1faf4] px-2 text-center text-[12px] font-bold text-[#16713a]"
-            >
-              <Phone size={15} />
-              公式LINE
-            </a>
-          </div>
+          {highlights.length > 0 && (
+            <section className="mb-5 border border-[#b9c9da] bg-[#f7f9fb] p-3 lg:hidden">
+              <div className="flex items-start gap-3">
+                <div className="grid size-8 shrink-0 place-items-center bg-[#173f70] text-white"><Building2 size={16} /></div>
+                <div>
+                  <h2 className="text-[13px] font-bold text-[#102d50]">最近の登録・注目物件</h2>
+                </div>
+              </div>
+              <div className="mt-3 divide-y divide-[#dce3eb] border-y border-[#dce3eb]">
+                {highlights.map((item, index) => (
+                  <div key={`${item.area}-${item.type}-${index}`} className="flex items-center gap-2 py-2.5">
+                    <span className={`shrink-0 px-1.5 py-0.5 text-[9px] font-bold text-white ${item.attention ? "bg-[#c78e19]" : "bg-[#173f70]"}`}>{item.attention ? "注目" : "登録"}</span>
+                    <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-[#263b58]">{item.area}｜{item.type}</p>
+                    <p className="shrink-0 text-[10px] text-[#65748a]">{item.priceBand}{item.sizeLabel ? `｜${item.sizeLabel}` : ""}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {highlights.length > 0 && (
+            <div className="mb-5 border-2 border-[#173f70] bg-white px-4 py-3.5 text-center text-[14px] font-bold leading-6 text-[#173f70] sm:text-[15px]">
+              詳細・資料・問い合わせはログイン後に確認できます
+            </div>
+          )}
 
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid h-12 w-full grid-cols-2 mb-0 bg-transparent border-b border-[#cbd5df] p-0">
@@ -522,11 +535,15 @@ export default function Login({
                             {cardRegError}
                           </p>
                         )}
+                        <label className="flex items-start gap-2 border border-border bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
+                          <input type="checkbox" className="mt-1 size-4 shrink-0" checked={cardAcceptedTerms} onChange={event => setCardAcceptedTerms(event.target.checked)} />
+                          <span><a href="/terms.html" target="_blank" rel="noopener noreferrer" className="font-bold text-primary underline">利用規約</a>および<a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="font-bold text-primary underline">個人情報保護方針</a>を確認し、同意します。</span>
+                        </label>
                         <Button
                           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm"
                           size="lg"
                           onClick={handleCardRegister}
-                          disabled={registerDirectMutation.isPending}
+                          disabled={registerDirectMutation.isPending || !cardAcceptedTerms}
                         >
                           {registerDirectMutation.isPending ? (
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -719,22 +736,23 @@ export default function Login({
               )}
             </TabsContent>
           </Tabs>
-          <div className="mt-5 flex items-center justify-center gap-3 text-[11px] text-[#65748a]">
+          <div className="mt-5 grid grid-cols-2 gap-2 text-[12px] font-bold">
             <a
               href="/propflow-guide.html"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-[#173f70]"
+              className="flex h-11 items-center justify-center gap-1.5 border border-[#9fb1c5] bg-[#f7f9fb] text-[#173f70] hover:bg-[#edf3fa]"
             >
+              <FileText size={14} />
               初めての方へ
             </a>
-            <span className="text-[#c5ced8]">|</span>
             <a
               href="https://lin.ee/Ueg4j5Q"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-[#173f70]"
+              className="flex h-11 items-center justify-center gap-1.5 border border-[#75c992] bg-[#f1faf4] text-[#16713a] hover:bg-[#e4f6ea]"
             >
+              <MessageCircle size={14} />
               公式LINE
             </a>
           </div>

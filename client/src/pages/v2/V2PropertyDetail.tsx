@@ -347,6 +347,13 @@ export default function V2PropertyDetail({
       await utils.property.list.invalidate();
     },
   });
+  const setExternalListingConsent =
+    trpc.property.setExternalListingConsent.useMutation({
+      onSuccess: async () => {
+        await propertyQuery.refetch();
+        await utils.property.list.invalidate();
+      },
+    });
   const saveMemo = trpc.memo.save.useMutation();
   const deleteMemo = trpc.memo.delete.useMutation();
   const addExclusion = trpc.property.addExclusion.useMutation({
@@ -1416,6 +1423,30 @@ export default function V2PropertyDetail({
                     </button>
                   </div>
                 </div>
+                {isRegistrant && property.visibilityScope === "public" && (
+                  <div className="border-b border-[#e2e7ec] py-4">
+                    <div className="flex items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-bold text-[#526176]">ログインページへの匿名掲載</p>
+                        <p className="mt-1 text-[10px] leading-5 text-[#758194]">都道府県・物件種別・価格帯・登録時期のみ表示します。住所詳細、会社名、担当者名、資料は表示されません。</p>
+                        <span className={`mt-2 inline-flex px-2 py-1 text-[10px] font-bold ${property.externalListingConsent === 1 ? "bg-[#e8f3ec] text-[#27613c]" : "bg-[#edf1f5] text-[#65748a]"}`}>
+                          {property.externalListingConsent === 1 ? "外部掲載中" : "外部非掲載"}
+                        </span>
+                      </div>
+                      <button
+                        disabled={setExternalListingConsent.isPending}
+                        onClick={async () => {
+                          const consent = property.externalListingConsent !== 1;
+                          if (consent && !window.confirm("ログイン前の方にも、都道府県・物件種別・価格帯・登録時期を匿名で掲載します。詳細住所、会社名、担当者名、資料は掲載されません。内容を確認し、外部掲載に同意しますか？")) return;
+                          await setExternalListingConsent.mutateAsync({ id: propertyId, consent });
+                        }}
+                        className="h-10 shrink-0 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50"
+                      >
+                        {property.externalListingConsent === 1 ? "掲載を停止" : "掲載に同意"}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {property.status !== "sold" ? (
                   <button
                     onClick={() => {

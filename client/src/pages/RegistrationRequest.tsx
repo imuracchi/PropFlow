@@ -28,6 +28,7 @@ export default function RegistrationRequest() {
   const [reading, setReading] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const readCard = trpc.auth.readBusinessCard.useMutation();
   const submitRequest = trpc.registrationRequest.submit.useMutation();
@@ -77,12 +78,17 @@ export default function RegistrationRequest() {
 
   const submit = async () => {
     if (!cardBase64 || !cardData) return;
+    if (!acceptedTerms) {
+      setError("利用規約と個人情報保護方針への同意が必要です");
+      return;
+    }
     setError("");
     try {
       const result = await submitRequest.mutateAsync({
         ...cardData,
         businessCardBase64: cardBase64,
         businessCardMimeType: cardMimeType,
+        acceptedTerms: true,
       });
       if (!result.success) {
         setError(result.error);
@@ -133,8 +139,8 @@ export default function RegistrationRequest() {
           </div>
           {cardData && <div className="border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800"><CheckCircle className="mr-2 inline size-4"/>名刺を確認できました。このまま送信してください。</div>}
           {error && <p role="alert" className="border border-red-200 bg-red-50 px-3 py-2 text-sm leading-6 text-red-700">{error}</p>}
-          <p className="text-xs leading-5 text-[#65748a]">「名刺を送信する」を押すことで、<a href="/privacy.html" target="_blank" className="font-bold text-[#173f70] underline">個人情報保護方針</a>に同意したものとします。</p>
-          <button type="button" onClick={() => void submit()} disabled={!cardData || submitRequest.isPending || reading} className="flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white disabled:opacity-40">
+          <label className="flex items-start gap-3 border border-[#d6dee8] bg-[#f7f9fb] p-3 text-xs leading-5 text-[#526176]"><input type="checkbox" className="mt-1 size-4 shrink-0" checked={acceptedTerms} onChange={event => setAcceptedTerms(event.target.checked)}/><span><a href="/terms.html" target="_blank" rel="noopener noreferrer" className="font-bold text-[#173f70] underline">利用規約</a>および<a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="font-bold text-[#173f70] underline">個人情報保護方針</a>を確認し、名刺に記載された本人の了承を得たうえで同意します。</span></label>
+          <button type="button" onClick={() => void submit()} disabled={!cardData || !acceptedTerms || submitRequest.isPending || reading} className="flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white disabled:opacity-40">
             {submitRequest.isPending ? <Loader2 size={18} className="animate-spin"/> : <Send size={18}/>}名刺を送信する
           </button>
           <button type="button" onClick={() => setLocation("/")} className="w-full text-sm font-semibold text-[#65748a]">← ログイン画面へ戻る</button>

@@ -58,6 +58,8 @@ import { useAuth } from "./_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import { trpc } from "./lib/trpc";
 import { useEffect } from "react";
+import LegalConsentGate from "./components/LegalConsentGate";
+import { CURRENT_LEGAL_VERSION } from "@shared/legal";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "";
 
@@ -113,7 +115,7 @@ function usePushNotification() {
 }
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading, refresh } = useAuth();
+  const { user, isAuthenticated, loading, refresh, logout } = useAuth();
   usePushNotification();
 
   if (loading) {
@@ -126,6 +128,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <Login onLoginSuccess={() => refresh()} />;
+  }
+
+  if (user?.termsAgreedVersion !== CURRENT_LEGAL_VERSION) {
+    return <LegalConsentGate onAccepted={refresh} onLogout={logout} />;
   }
 
   return <>{children}</>;

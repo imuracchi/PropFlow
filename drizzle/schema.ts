@@ -47,6 +47,7 @@ export const users = mysqlTable("users", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   termsAgreedAt: timestamp("termsAgreedAt"),
+  termsAgreedVersion: varchar("termsAgreedVersion", { length: 20 }),
   notifyNewProperty: int("notifyNewProperty").default(1).notNull(),
   notifyPropertySearch: int("notifyPropertySearch").default(1).notNull(),
   notifyDm: int("notifyDm").default(1).notNull(),
@@ -106,6 +107,9 @@ export const properties = mysqlTable("properties", {
     .notNull(),
   proposalTargetUserId: int("proposalTargetUserId"),
   proposalRequestId: int("proposalRequestId"),
+  externalListingConsent: int("externalListingConsent").default(0).notNull(),
+  externalListingConsentedAt: timestamp("externalListingConsentedAt"),
+  externalListingConsentVersion: varchar("externalListingConsentVersion", { length: 20 }),
   lineNotifiedAt: timestamp("lineNotifiedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -142,14 +146,24 @@ export const propertyFiles = mysqlTable("property_files", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-export const directMessages = mysqlTable("direct_messages", {
-  id: int("id").autoincrement().primaryKey(),
-  senderId: int("senderId").notNull(),
-  receiverId: int("receiverId").notNull(),
-  propertyId: int("propertyId"),
-  content: text("content").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+export const directMessages = mysqlTable(
+  "direct_messages",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    senderId: int("senderId").notNull(),
+    receiverId: int("receiverId").notNull(),
+    propertyId: int("propertyId"),
+    content: text("content").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    attentionIdx: index("idx_direct_messages_attention").on(
+      table.createdAt,
+      table.propertyId,
+      table.senderId
+    ),
+  })
+);
 
 export const dmReadStatus = mysqlTable("dm_read_status", {
   id: int("id").autoincrement().primaryKey(),
@@ -184,9 +198,11 @@ export const registrationRequests = mysqlTable(
     url: varchar("url", { length: 500 }),
     license: varchar("license", { length: 128 }),
     businessCardBase64: longtext("businessCardBase64").notNull(),
-    businessCardMimeType: varchar("businessCardMimeType", { length: 64 })
-      .default("image/jpeg")
-      .notNull(),
+      businessCardMimeType: varchar("businessCardMimeType", { length: 64 })
+        .default("image/jpeg")
+        .notNull(),
+      termsAgreedAt: timestamp("termsAgreedAt"),
+      termsAgreedVersion: varchar("termsAgreedVersion", { length: 20 }),
     status: mysqlEnum("status", [
       "pending",
       "approved",
@@ -323,12 +339,22 @@ export const generatedDocuments = mysqlTable("generated_documents", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-export const favorites = mysqlTable("favorites", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  propertyId: int("propertyId").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+export const favorites = mysqlTable(
+  "favorites",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    propertyId: int("propertyId").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    attentionIdx: index("idx_favorites_attention").on(
+      table.createdAt,
+      table.propertyId,
+      table.userId
+    ),
+  })
+);
 
 export const propertyExclusions = mysqlTable("property_exclusions", {
   id: int("id").autoincrement().primaryKey(),
@@ -360,6 +386,11 @@ export const propertyViewEvents = mysqlTable(
     userViewedAtIdx: index("idx_property_view_events_user_viewed").on(
       table.userId,
       table.viewedAt
+    ),
+    attentionIdx: index("idx_property_view_events_attention").on(
+      table.viewedAt,
+      table.propertyId,
+      table.userId
     ),
   })
 );

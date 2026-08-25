@@ -13,6 +13,10 @@ import { parsePropertyFromPdfs } from "./_core/pdfParser";
 import * as db from "./db";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import {
+  CURRENT_LEGAL_VERSION,
+  EXTERNAL_LISTING_CONSENT_VERSION,
+} from "../shared/legal";
 
 async function canViewProperty(
   propertyId: number,
@@ -285,6 +289,7 @@ export const appRouter = router({
             "image/png",
             "image/webp",
           ]),
+          acceptedTerms: z.literal(true),
         })
       )
       .mutation(async ({ input }) => {
@@ -308,7 +313,13 @@ export const appRouter = router({
             error: "このメールアドレスの申請は確認中です",
           } as const;
         }
-        await db.createRegistrationRequest({ ...input, email });
+        const { acceptedTerms: _acceptedTerms, ...requestInput } = input;
+        await db.createRegistrationRequest({
+          ...requestInput,
+          email,
+          termsAgreedAt: new Date(),
+          termsAgreedVersion: CURRENT_LEGAL_VERSION,
+        });
 
         const escapeHtml = (value: string) =>
           value
@@ -454,6 +465,7 @@ export const appRouter = router({
           fax: z.string().optional(),
           url: z.string().optional(),
           businessCardBase64: z.string().optional(),
+          acceptedTerms: z.literal(true),
         })
       )
       .mutation(async ({ input }) => {
@@ -478,6 +490,8 @@ export const appRouter = router({
             loginMethod: "email",
             role: "user",
             status: "active",
+            termsAgreedAt: new Date(),
+            termsAgreedVersion: CURRENT_LEGAL_VERSION,
           });
           if (input.businessCardBase64 && newUser) {
             await db.updateUserBusinessCard(
@@ -559,6 +573,7 @@ JSONのみ返してください。`,
           fax: z.string().optional(),
           url: z.string().optional(),
           businessCardBase64: z.string().optional(),
+          acceptedTerms: z.literal(true),
         })
       )
       .mutation(async ({ input }) => {
@@ -604,6 +619,8 @@ JSONのみ返してください。`,
             loginMethod: "email",
             role: "user",
             status: "active",
+            termsAgreedAt: new Date(),
+            termsAgreedVersion: CURRENT_LEGAL_VERSION,
           });
           const businessCardBase64 =
             input.businessCardBase64 ?? approvedRequest?.businessCardBase64;
@@ -916,6 +933,12 @@ JSONのみ返してください。`,
   }),
 
   property: router({
+    publicHighlights: publicProcedure.query(() =>
+      db.getPublicPropertyHighlights()
+    ),
+    publicShowcase: publicProcedure.query(() =>
+      db.getPublicPropertyShowcase()
+    ),
     list: protectedProcedure.query(async ({ ctx }) => {
       return db.listProperties(ctx.user.id);
     }),
@@ -1022,6 +1045,7 @@ JSONのみ返してください。`,
           published: z.boolean().optional(),
           proposalRequestId: z.number().nullable().optional(),
           proposalOnly: z.boolean().optional(),
+          externalListingConsent: z.boolean().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -1088,6 +1112,21 @@ JSONのみ返してください。`,
             otherRestrictions: input.otherRestrictions ?? null,
             faqs: input.faqs ?? null,
             files: input.files ?? null,
+            externalListingConsent:
+              input.externalListingConsent &&
+              (!proposalRequest || input.proposalOnly === false)
+                ? 1
+                : 0,
+            externalListingConsentedAt:
+              input.externalListingConsent &&
+              (!proposalRequest || input.proposalOnly === false)
+                ? new Date()
+                : null,
+            externalListingConsentVersion:
+              input.externalListingConsent &&
+              (!proposalRequest || input.proposalOnly === false)
+                ? EXTERNAL_LISTING_CONSENT_VERSION
+                : null,
           });
           if (result) {
             db.logActivity(
@@ -1158,6 +1197,26 @@ JSONのみ返してください。`,
             ? { priceNegotiable: priceNegotiable ? 1 : 0 }
             : {}),
         });
+      }),
+
+    setExternalListingConsent: protectedProcedure
+      .input(z.object({ id: z.number(), consent: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        const property = await requirePropertyOwner(input.id, ctx.user);
+        if (input.consent && property.visibilityScope !== "public") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "提案先限定の物件は外部掲載できません",
+          });
+        }
+        await db.setPropertyExternalListingConsent(input.id, input.consent);
+        db.logActivity(
+          ctx.user.id,
+          input.consent ? "external_listing_consent" : "external_listing_revoke",
+          `物件「${property.name}」の外部掲載を${input.consent ? "申請" : "停止"}`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return { success: true };
       }),
 
     delete: protectedProcedure
@@ -2701,6 +2760,8 @@ ${propList}`,
       .input(
         z.object({
           category: z.enum([
+            "improvement",
+            "feature",
             "display",
             "operation",
             "email",
@@ -2720,6 +2781,8 @@ ${propList}`,
       )
       .mutation(async ({ input, ctx }) => {
         const labels: Record<typeof input.category, string> = {
+          improvement: "改善してほしいこと",
+          feature: "追加してほしい機能",
           display: "画面が表示されない",
           operation: "操作できない",
           email: "メールが届かない",
@@ -2739,14 +2802,14 @@ ${propList}`,
         const { sendMail } = await import("./_core/mail");
         const sent = await sendMail(
           "support@gspec.me",
-          `【PropFlow・管理者への連絡】${labels[input.category]} - ${ctx.user.name ?? ctx.user.email}`,
+          `【PropFlow・ご意見箱】${labels[input.category]} - ${ctx.user.name ?? ctx.user.email}`,
           `<div style="font-family:sans-serif;max-width:680px;margin:0 auto;">
-            <h2 style="color:#173f70;">管理者への連絡</h2>
+            <h2 style="color:#173f70;">ご意見箱</h2>
             <table style="width:100%;border-collapse:collapse;font-size:14px;">
               <tr><th style="width:150px;text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">カテゴリ</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(labels[input.category])}</td></tr>
               <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">ユーザー</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(ctx.user.name ?? "未設定")}（${escapeHtml(ctx.user.company ?? "会社名未設定")}）</td></tr>
               <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">返信先</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.replyEmail)}</td></tr>
-              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">発生した画面</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.page || "未入力")}</td></tr>
+              <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">関連する画面</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.page || "未入力")}</td></tr>
               <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">発生日時</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.occurredAt)}</td></tr>
               <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">URL</th><td style="padding:8px;border:1px solid #d8e0e8;word-break:break-all;">${escapeHtml(input.currentUrl)}</td></tr>
               <tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">端末・ブラウザ</th><td style="padding:8px;border:1px solid #d8e0e8;word-break:break-all;">${escapeHtml(input.deviceInfo)}</td></tr>
@@ -2764,7 +2827,7 @@ ${propList}`,
         db.logActivity(
           ctx.user.id,
           "support_report",
-          `管理者へ連絡（${labels[input.category]}）`,
+          `ご意見箱へ送信（${labels[input.category]}）`,
           ctx.req.headers["user-agent"]
         ).catch(() => {});
         return { success: true };

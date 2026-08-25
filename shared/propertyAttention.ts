@@ -14,8 +14,8 @@ function nonNegative(value: number | null | undefined) {
 }
 
 /**
- * Current aggregate-data score. When dated events are available, these inputs
- * can be changed to rolling seven-day unique counts here.
+ * Attention score. Production callers provide rolling seven-day unique counts;
+ * aggregate counts remain as a backwards-compatible fallback.
  */
 export function getPropertyAttentionScore({
   viewCount,

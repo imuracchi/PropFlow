@@ -24,6 +24,22 @@ describe("property attention score", () => {
     })).toBe(false);
   });
 
+  it("requires meaningful recent engagement instead of lifetime traffic", () => {
+    expect(isPropertyAttentionWorthy({
+      viewCount: 500,
+      favoriteCount: 50,
+      inquiryCount: 20,
+      recentViewCount: 12,
+      recentFavoriteCount: 1,
+      recentInquiryCount: 1,
+    })).toBe(false);
+    expect(isPropertyAttentionWorthy({
+      recentViewCount: 10,
+      recentFavoriteCount: 2,
+      recentInquiryCount: 1,
+    })).toBe(true);
+  });
+
   it("does not allow negative or invalid counts to inflate the score", () => {
     expect(getPropertyAttentionScore({ viewCount: -10, favoriteCount: Number.NaN, inquiryCount: 2 })).toBe(20);
   });

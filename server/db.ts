@@ -42,6 +42,11 @@ import {
   propertyViewEvents,
   propertySearchNeedLogs,
 } from "../drizzle/schema";
+import {
+  CURRENT_LEGAL_VERSION,
+  EXTERNAL_LISTING_CONSENT_VERSION,
+} from "../shared/legal";
+import { isPropertyAttentionWorthy } from "../shared/propertyAttention";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _migrationsDone = false;
@@ -81,6 +86,9 @@ export async function runStartupMigrations() {
     "ALTER TABLE `properties` ADD COLUMN `visibilityScope` varchar(20) NOT NULL DEFAULT 'public'",
     "ALTER TABLE `properties` ADD COLUMN `proposalTargetUserId` int NULL",
     "ALTER TABLE `properties` ADD COLUMN `proposalRequestId` int NULL",
+    "ALTER TABLE `properties` ADD COLUMN `externalListingConsent` int NOT NULL DEFAULT 0",
+    "ALTER TABLE `properties` ADD COLUMN `externalListingConsentedAt` timestamp NULL",
+    "ALTER TABLE `properties` ADD COLUMN `externalListingConsentVersion` varchar(20) NULL",
     "ALTER TABLE `property_search_proposals` ADD COLUMN `viewedAt` datetime NULL",
     "ALTER TABLE `property_search_requests` ADD COLUMN `adminHidden` int NOT NULL DEFAULT 0",
     "ALTER TABLE `property_search_requests` ADD COLUMN `publishedAt` datetime NULL AFTER `status`",
@@ -92,6 +100,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` ADD COLUMN `showFax` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `showUrl` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `businessCardBase64` longtext NULL",
+    "ALTER TABLE `users` ADD COLUMN `termsAgreedVersion` varchar(20) NULL AFTER `termsAgreedAt`",
     "ALTER TABLE `users` ADD COLUMN `notifyAnnounce` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `notifyPropertySearch` int NOT NULL DEFAULT 1",
     "UPDATE `users` SET `notifyAnnounce` = 1 WHERE `notifyAnnounce` IS NULL",
@@ -116,6 +125,9 @@ export async function runStartupMigrations() {
       KEY \`idx_property_view_events_property_viewed\` (\`propertyId\`, \`viewedAt\`),
       KEY \`idx_property_view_events_user_viewed\` (\`userId\`, \`viewedAt\`)
     )`,
+    "ALTER TABLE `property_view_events` ADD INDEX `idx_property_view_events_attention` (`viewedAt`, `propertyId`, `userId`)",
+    "ALTER TABLE `favorites` ADD INDEX `idx_favorites_attention` (`createdAt`, `propertyId`, `userId`)",
+    "ALTER TABLE `direct_messages` ADD INDEX `idx_direct_messages_attention` (`createdAt`, `propertyId`, `senderId`)",
     `CREATE TABLE IF NOT EXISTS \`property_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`userId\` int NOT NULL,
@@ -205,6 +217,8 @@ export async function runStartupMigrations() {
       \`license\` varchar(128) NULL,
       \`businessCardBase64\` longtext NOT NULL,
       \`businessCardMimeType\` varchar(64) NOT NULL DEFAULT 'image/jpeg',
+      \`termsAgreedAt\` timestamp NULL,
+      \`termsAgreedVersion\` varchar(20) NULL,
       \`status\` enum('pending','approved','rejected','completed') NOT NULL DEFAULT 'pending',
       \`reviewedBy\` int NULL,
       \`reviewedAt\` timestamp NULL,
@@ -213,6 +227,8 @@ export async function runStartupMigrations() {
       KEY \`idx_registration_requests_status_created\` (\`status\`, \`createdAt\`),
       KEY \`idx_registration_requests_email\` (\`email\`)
     )`,
+    "ALTER TABLE `registration_requests` ADD COLUMN `termsAgreedAt` timestamp NULL AFTER `businessCardMimeType`",
+    "ALTER TABLE `registration_requests` ADD COLUMN `termsAgreedVersion` varchar(20) NULL AFTER `termsAgreedAt`",
     `CREATE TABLE IF NOT EXISTS \`property_search_requests\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`userId\` int NOT NULL,
@@ -272,8 +288,8 @@ export async function runStartupMigrations() {
         await conn.execute(stmt);
         console.log("[migration] OK:", stmt.split(" ").slice(0, 6).join(" "));
       } catch (e: any) {
-        if (e.errno !== 1060) {
-          // 1060 = Duplicate column name (already exists)
+        if (e.errno !== 1060 && e.errno !== 1061) {
+          // 1060 = Duplicate column name, 1061 = Duplicate key name
           console.warn("[migration] Warning:", e.message);
         }
       }
@@ -734,6 +750,310 @@ export async function completePropertySearchDigest(
 
 // ---- Properties ----
 
+type RecentAttentionCounts = {
+  recentViewCount: number;
+  recentFavoriteCount: number;
+  recentInquiryCount: number;
+};
+
+const RECENT_ATTENTION_CACHE_MS = 5 * 60 * 1000;
+let recentAttentionCache:
+  | { expiresAt: number; data: Map<number, RecentAttentionCounts> }
+  | undefined;
+let recentAttentionPromise: Promise<Map<number, RecentAttentionCounts>> | undefined;
+let publicHighlightsCache:
+  | { expiresAt: number; data: PublicPropertyHighlight[] }
+  | undefined;
+let publicShowcaseCache:
+  | {
+      expiresAt: number;
+      data: { attention: PublicPropertyHighlight[]; newest: PublicPropertyHighlight[] };
+    }
+  | undefined;
+
+function invalidatePublicHighlights() {
+  publicHighlightsCache = undefined;
+  publicShowcaseCache = undefined;
+}
+
+function getRecentPropertyAttentionCounts() {
+  if (recentAttentionCache && recentAttentionCache.expiresAt > Date.now()) {
+    return recentAttentionCache.data;
+  }
+  const current = recentAttentionCache?.data ?? new Map<number, RecentAttentionCounts>();
+  if (recentAttentionPromise) return current;
+
+  recentAttentionPromise = (async () => {
+    const db = await getDb();
+    if (!db) return new Map<number, RecentAttentionCounts>();
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [views, favoriteRows, inquiries] = await Promise.all([
+      db
+        .select({
+          propertyId: propertyViewEvents.propertyId,
+          count: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as(
+            "recentViewCount"
+          ),
+        })
+        .from(propertyViewEvents)
+        .innerJoin(properties, eq(propertyViewEvents.propertyId, properties.id))
+        .where(
+          and(
+            gte(propertyViewEvents.viewedAt, cutoff),
+            ne(propertyViewEvents.userId, properties.userId)
+          )
+        )
+        .groupBy(propertyViewEvents.propertyId),
+      db
+        .select({
+          propertyId: favorites.propertyId,
+          count: sql<number>`COUNT(DISTINCT ${favorites.userId})`.as(
+            "recentFavoriteCount"
+          ),
+        })
+        .from(favorites)
+        .where(gte(favorites.createdAt, cutoff))
+        .groupBy(favorites.propertyId),
+      db
+        .select({
+          propertyId: directMessages.propertyId,
+          count: sql<number>`COUNT(DISTINCT ${directMessages.senderId})`.as(
+            "recentInquiryCount"
+          ),
+        })
+        .from(directMessages)
+        .innerJoin(properties, eq(directMessages.propertyId, properties.id))
+        .where(
+          and(
+            gte(directMessages.createdAt, cutoff),
+            ne(directMessages.senderId, properties.userId)
+          )
+        )
+        .groupBy(directMessages.propertyId),
+    ]);
+    const data = new Map<number, RecentAttentionCounts>();
+    const getCounts = (propertyId: number) => {
+      const existing = data.get(propertyId);
+      if (existing) return existing;
+      const counts = {
+        recentViewCount: 0,
+        recentFavoriteCount: 0,
+        recentInquiryCount: 0,
+      };
+      data.set(propertyId, counts);
+      return counts;
+    };
+    for (const row of views) {
+      getCounts(row.propertyId).recentViewCount = Number(row.count);
+    }
+    for (const row of favoriteRows) {
+      getCounts(row.propertyId).recentFavoriteCount = Number(row.count);
+    }
+    for (const row of inquiries) {
+      if (row.propertyId !== null) {
+        getCounts(row.propertyId).recentInquiryCount = Number(row.count);
+      }
+    }
+    recentAttentionCache = {
+      expiresAt: Date.now() + RECENT_ATTENTION_CACHE_MS,
+      data,
+    };
+    return data;
+  })()
+    .catch(error => {
+      // Attention badges are optional. A failed aggregate must never take the
+      // property list or detail page down; keep serving the last good result.
+      console.warn("[attention] Failed to refresh recent counts:", error);
+      return current;
+    })
+    .finally(() => {
+      recentAttentionPromise = undefined;
+    });
+  return current;
+}
+
+async function getRecentPropertyAttentionCountsForPublicPage() {
+  const current = getRecentPropertyAttentionCounts();
+  if (!recentAttentionPromise) return current;
+  return Promise.race([
+    recentAttentionPromise,
+    new Promise<Map<number, RecentAttentionCounts>>(resolve =>
+      setTimeout(() => resolve(current), 1500)
+    ),
+  ]);
+}
+
+function withRecentAttention<T extends { id: number }>(
+  property: T,
+  counts: Map<number, RecentAttentionCounts>
+) {
+  return {
+    ...property,
+    ...(counts.get(property.id) ?? {
+      recentViewCount: 0,
+      recentFavoriteCount: 0,
+      recentInquiryCount: 0,
+    }),
+  };
+}
+
+export type PublicPropertyHighlight = {
+  area: string;
+  type: string;
+  priceBand: string;
+  sizeLabel: string | null;
+  attention: boolean;
+};
+
+function publicArea(address: string) {
+  const prefecture = address.match(/^(東京都|北海道|大阪府|京都府|.{2,3}県)/)?.[1];
+  if (!prefecture) return "エリア非公開";
+  const rest = address.slice(prefecture.length);
+  const county = rest.match(/^(.+?郡.+?[町村])/);
+  if (county) return `${prefecture}${county[1]}`;
+  const designatedWard = rest.match(/^(.+?市.+?区)/);
+  if (designatedWard) return `${prefecture}${designatedWard[1]}`;
+  const municipality = rest.match(/^(.+?[市区町村])/);
+  return municipality ? `${prefecture}${municipality[1]}` : prefecture;
+}
+
+function publicPriceBand(price: number | null) {
+  if (price === null) return "価格応相談";
+  if (price < 10_000_000) return "1,000万円未満";
+  if (price < 100_000_000) return `${Math.floor(price / 10_000_000)}千万円台`;
+  return `${Math.floor(price / 100_000_000)}億円台`;
+}
+
+function publicSizeLabel(
+  type: string,
+  landArea: number | null,
+  buildingArea: number | null
+) {
+  const isLand = type === "土地";
+  const area = isLand ? landArea : (buildingArea ?? landArea);
+  if (area === null || area <= 0) return null;
+  const rounded = Math.round(area * 100) / 100;
+  return `${isLand || buildingArea === null ? "土地" : "建物"} ${rounded.toLocaleString("ja-JP")}㎡`;
+}
+
+export async function getPublicPropertyHighlights() {
+  if (publicHighlightsCache && publicHighlightsCache.expiresAt > Date.now()) {
+    return publicHighlightsCache.data;
+  }
+  const previous = publicHighlightsCache?.data ?? [];
+  try {
+    const db = await getDb();
+    if (!db) return previous;
+    const rows = await db.select({
+      id: properties.id,
+      address: properties.address,
+      type: properties.type,
+      price: properties.price,
+      landArea: properties.landArea,
+      buildingArea: properties.buildingArea,
+      createdAt: properties.createdAt,
+    }).from(properties).where(and(
+      eq(properties.deleted, 0),
+      eq(properties.published, 1),
+      eq(properties.visibilityScope, "public"),
+      eq(properties.status, "available"),
+      eq(properties.externalListingConsent, 1)
+    )).orderBy(desc(properties.createdAt)).limit(20);
+    const counts = await getRecentPropertyAttentionCountsForPublicPage();
+    const candidates = rows.map(row => {
+      const recent = counts.get(row.id);
+      return {
+        id: row.id,
+        area: publicArea(row.address),
+        type: row.type,
+        priceBand: publicPriceBand(row.price),
+        sizeLabel: publicSizeLabel(row.type, row.landArea, row.buildingArea),
+        registeredAt: row.createdAt,
+        attention: isPropertyAttentionWorthy(recent ?? {}),
+      };
+    });
+    const attentionCandidates = candidates.filter(item => item.attention);
+    const chosenAttention = attentionCandidates.length > 0
+      ? attentionCandidates[Math.floor(Math.random() * attentionCandidates.length)]
+      : undefined;
+    const newest = candidates
+      .filter(item => item.id !== chosenAttention?.id)
+      .sort((a, b) => b.registeredAt.getTime() - a.registeredAt.getTime())
+      .slice(0, chosenAttention ? 2 : 3)
+      .map(({ id: _id, registeredAt: _registeredAt, ...item }) => ({ ...item, attention: false }));
+    const data: PublicPropertyHighlight[] = chosenAttention
+      ? [
+          (({ id: _id, registeredAt: _registeredAt, ...item }) => item)(chosenAttention),
+          ...newest,
+        ]
+      : newest;
+    publicHighlightsCache = { expiresAt: Date.now() + 5 * 60 * 1000, data };
+    return data;
+  } catch (error) {
+    console.warn("[public-highlights] Failed to refresh:", error);
+    return previous;
+  }
+}
+
+export async function getPublicPropertyShowcase() {
+  if (publicShowcaseCache && publicShowcaseCache.expiresAt > Date.now()) {
+    return publicShowcaseCache.data;
+  }
+  const previous = publicShowcaseCache?.data ?? { attention: [], newest: [] };
+  try {
+    const db = await getDb();
+    if (!db) return previous;
+    const rows = await db.select({
+      id: properties.id,
+      address: properties.address,
+      type: properties.type,
+      price: properties.price,
+      landArea: properties.landArea,
+      buildingArea: properties.buildingArea,
+      createdAt: properties.createdAt,
+    }).from(properties).where(and(
+      eq(properties.deleted, 0),
+      eq(properties.published, 1),
+      eq(properties.visibilityScope, "public"),
+      eq(properties.status, "available"),
+      eq(properties.externalListingConsent, 1)
+    )).orderBy(desc(properties.createdAt)).limit(50);
+    const counts = await getRecentPropertyAttentionCountsForPublicPage();
+    const candidates = rows.map(row => ({
+      id: row.id,
+      area: publicArea(row.address),
+      type: row.type,
+      priceBand: publicPriceBand(row.price),
+      sizeLabel: publicSizeLabel(row.type, row.landArea, row.buildingArea),
+      registeredAt: row.createdAt,
+      attention: isPropertyAttentionWorthy(counts.get(row.id) ?? {}),
+    }));
+    const attentionCandidates = candidates
+      .filter(item => item.attention)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    const attentionIds = new Set(attentionCandidates.map(item => item.id));
+    const newestCandidates = candidates
+      .filter(item => !attentionIds.has(item.id))
+      .sort((a, b) => b.registeredAt.getTime() - a.registeredAt.getTime())
+      .slice(0, 6);
+    const toPublicHighlight = ({
+      id: _id,
+      registeredAt: _registeredAt,
+      ...item
+    }: typeof candidates[number]): PublicPropertyHighlight => item;
+    const data = {
+      attention: attentionCandidates.map(toPublicHighlight),
+      newest: newestCandidates.map(item => ({ ...toPublicHighlight(item), attention: false })),
+    };
+    publicShowcaseCache = { expiresAt: Date.now() + 5 * 60 * 1000, data };
+    return data;
+  } catch (error) {
+    console.warn("[public-showcase] Failed to refresh:", error);
+    return previous;
+  }
+}
+
 export async function listProperties(viewerUserId?: number) {
   const db = await getDb();
   if (!db) return [];
@@ -765,7 +1085,7 @@ export async function listProperties(viewerUserId?: number) {
         ))
       )`
     : sql`${properties.published} = 1 AND ${properties.visibilityScope} = 'public'`;
-  return db
+  const rows = await db
     .select({
       id: properties.id,
       userId: properties.userId,
@@ -796,6 +1116,8 @@ export async function listProperties(viewerUserId?: number) {
       visibilityScope: properties.visibilityScope,
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
+      externalListingConsent: properties.externalListingConsent,
+      externalListingConsentedAt: properties.externalListingConsentedAt,
       proposalRequestTitle: propertySearchRequests.title,
       createdAt: properties.createdAt,
       userName: users.name,
@@ -821,6 +1143,8 @@ export async function listProperties(viewerUserId?: number) {
     .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
     .where(visibilityFilter ? and(baseWhere, visibilityFilter) : baseWhere)
     .orderBy(desc(properties.createdAt));
+  const attentionCounts = getRecentPropertyAttentionCounts();
+  return rows.map(property => withRecentAttention(property, attentionCounts));
 }
 
 type PropertyMatchCriteria = {
@@ -1146,6 +1470,8 @@ export async function getPropertyById(id: number) {
       visibilityScope: properties.visibilityScope,
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
+      externalListingConsent: properties.externalListingConsent,
+      externalListingConsentedAt: properties.externalListingConsentedAt,
       proposalRequestTitle: propertySearchRequests.title,
       lineNotifiedAt: properties.lineNotifiedAt,
       createdAt: properties.createdAt,
@@ -1177,7 +1503,9 @@ export async function getPropertyById(id: number) {
     .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
     .where(eq(properties.id, id))
     .limit(1);
-  return result[0] ?? null;
+  if (!result[0]) return null;
+  const attentionCounts = getRecentPropertyAttentionCounts();
+  return withRecentAttention(result[0], attentionCounts);
 }
 
 export async function createProperty(
@@ -1247,6 +1575,25 @@ export async function updateProperty(
   await db.update(properties).set(data).where(eq(properties.id, id));
   return getPropertyById(id);
 }
+
+export async function setPropertyExternalListingConsent(
+  id: number,
+  consent: boolean
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(properties).set(consent ? {
+    externalListingConsent: 1,
+    externalListingConsentedAt: new Date(),
+    externalListingConsentVersion: EXTERNAL_LISTING_CONSENT_VERSION,
+  } : {
+    externalListingConsent: 0,
+    externalListingConsentedAt: null,
+    externalListingConsentVersion: null,
+  }).where(eq(properties.id, id));
+  invalidatePublicHighlights();
+}
+
 
 export async function deleteProperty(id: number) {
   const db = await getDb();
@@ -1366,6 +1713,8 @@ export async function listAllPropertiesAdmin() {
       deleted: properties.deleted,
       published: properties.published,
       publishedAt: properties.publishedAt,
+      externalListingConsent: properties.externalListingConsent,
+      externalListingConsentedAt: properties.externalListingConsentedAt,
       viewCount: properties.viewCount,
       inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as(
         "inquiryCount"
@@ -3671,7 +4020,10 @@ export async function agreeToTerms(userId: number) {
   if (!db) return;
   await db
     .update(users)
-    .set({ termsAgreedAt: new Date() })
+    .set({
+      termsAgreedAt: new Date(),
+      termsAgreedVersion: CURRENT_LEGAL_VERSION,
+    })
     .where(eq(users.id, userId));
 }
 

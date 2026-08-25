@@ -1,10 +1,12 @@
 import V2Layout from "@/components/v2/V2Layout";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { CheckCircle2, Send, TriangleAlert } from "lucide-react";
+import { CheckCircle2, MessageSquareText, Send } from "lucide-react";
 import { useState } from "react";
 
 const categories = [
+  ["improvement", "改善してほしいこと"],
+  ["feature", "追加してほしい機能"],
   ["display", "画面が表示されない"],
   ["operation", "操作できない"],
   ["email", "メールが届かない"],
@@ -45,14 +47,14 @@ export default function V2IssueReport() {
       <main className="w-full max-w-[1000px] p-4 pb-24 lg:p-7 lg:pb-10">
         <div className="flex items-start gap-3">
           <div className="grid size-11 shrink-0 place-items-center bg-[#e8eef5] text-[#173f70]">
-            <TriangleAlert size={22} />
+            <MessageSquareText size={22} />
           </div>
           <div>
             <p className="text-[14px] leading-6 text-[#758194]">
-              不具合報告のほか、使い方の質問やユーザー間のトラブルも連絡できます。
+              改善してほしいこと、欲しい機能、不具合などをお気軽にお寄せください。
             </p>
             <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
-              管理者への連絡
+              ご意見箱
             </h1>
           </div>
         </div>
@@ -61,7 +63,7 @@ export default function V2IssueReport() {
           <section className="mt-6 border border-[#d4dde7] bg-white px-5 py-12 text-center">
             <CheckCircle2 className="mx-auto size-11 text-[#35724f]" />
             <h2 className="mt-4 text-[20px] font-bold text-[#102d50]">
-              管理者へ送信しました
+              ご意見を送信しました
             </h2>
             <p className="mt-2 text-[13px] text-[#65748a]">
               内容を確認後、必要に応じてご連絡します。
@@ -75,13 +77,13 @@ export default function V2IssueReport() {
               }}
               className="mt-6 h-11 border border-[#173f70] px-5 text-[13px] font-bold text-[#173f70]"
             >
-              続けて連絡する
+              続けて送信する
             </button>
           </section>
         ) : (
           <section className="mt-6 border border-[#d4dde7] bg-white">
             <div className="border-b border-[#d4dde7] bg-[#edf1f5] px-4 py-4 lg:px-6">
-              <h2 className="text-[17px] font-bold text-[#102d50]">連絡内容</h2>
+              <h2 className="text-[17px] font-bold text-[#102d50]">ご意見・お問い合わせ内容</h2>
               <p className="mt-1 text-[12px] text-[#65748a]">
                 ユーザー名・会社名・利用端末・現在のURL・送信日時は自動で添付されます。
               </p>
@@ -106,7 +108,7 @@ export default function V2IssueReport() {
               </label>
               <label className="block">
                 <span className="text-[13px] font-bold text-[#263b58]">
-                  発生した画面
+                  関連する画面
                 </span>
                 <input
                   value={page}
@@ -117,12 +119,12 @@ export default function V2IssueReport() {
               </label>
               <label className="block">
                 <span className="text-[13px] font-bold text-[#263b58]">
-                  状況・操作手順 <b className="text-[#c43d32]">必須</b>
+                  ご意見・お問い合わせ内容 <b className="text-[#c43d32]">必須</b>
                 </span>
                 <textarea
                   value={message}
                   onChange={event => setMessage(event.target.value)}
-                  placeholder="何をしようとして、どのような状態になったかを詳しくご記入ください。"
+                  placeholder="改善してほしいこと、欲しい機能、不具合の状況などをご記入ください。"
                   rows={7}
                   className="mt-2 w-full resize-y border border-[#bfcbd8] p-3 text-[14px] leading-6 outline-none focus:border-[#173f70]"
                 />
@@ -155,7 +157,7 @@ export default function V2IssueReport() {
                   className="flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] px-7 text-[14px] font-bold text-white disabled:bg-[#9bacc0] sm:w-auto"
                 >
                   <Send size={17} />
-                  {report.isPending ? "送信中…" : "管理者へ送信"}
+                  {report.isPending ? "送信中…" : "ご意見を送信"}
                 </button>
               </div>
             </div>

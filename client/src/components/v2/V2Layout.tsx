@@ -7,10 +7,10 @@ import {
   List,
   LogOut,
   MessageCircle,
+  MessageSquareText,
   Plus,
   ShieldCheck,
   Target,
-  TriangleAlert,
   UserRound,
   Users,
   X,
@@ -175,11 +175,30 @@ export default function V2Layout({
             onClick={openAdminReport}
             className="mb-1 flex h-10 w-full items-center gap-3 px-3 text-[13px] text-white/65 hover:bg-white/10"
           >
-            <TriangleAlert size={17} />
-            障害報告
+            <MessageSquareText size={17} />
+            ご意見箱
           </button>
         </nav>
         <div className="border-t border-white/10 p-4">
+          <div className="mb-4 flex items-center justify-center gap-3 text-[10px] text-white/50">
+            <a
+              href="/terms.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white hover:underline"
+            >
+              利用規約
+            </a>
+            <span className="text-white/20">|</span>
+            <a
+              href="/privacy.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white hover:underline"
+            >
+              個人情報保護方針
+            </a>
+          </div>
           {(user?.role === "admin" || user?.role === "management") && (
             <button
               onClick={() => setLocation("/v2/admin")}
@@ -295,9 +314,9 @@ export default function V2Layout({
                 onClick={openAdminReport}
                 className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
               >
-                <TriangleAlert size={23} />
+                <MessageSquareText size={23} />
                 <span className="mt-2 text-[11px] font-bold leading-4">
-                  障害報告
+                  ご意見箱
                 </span>
               </button>
               {(user?.role === "admin" || user?.role === "management") && (
@@ -314,6 +333,25 @@ export default function V2Layout({
                   </span>
                 </button>
               )}
+            </div>
+            <div className="mt-4 flex items-center justify-center gap-4 border-t border-[#dfe4ea] pt-4 text-[11px] text-[#65748a]">
+              <a
+                href="/terms.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline-offset-2 hover:text-[#173f70] hover:underline"
+              >
+                利用規約
+              </a>
+              <span className="text-[#c5ced8]">|</span>
+              <a
+                href="/privacy.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline-offset-2 hover:text-[#173f70] hover:underline"
+              >
+                個人情報保護方針
+              </a>
             </div>
             <button
               onClick={() => {

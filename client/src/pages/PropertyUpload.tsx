@@ -116,6 +116,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
     "publish"
   );
   const [proposalOnly, setProposalOnly] = useState(proposalRequestId > 0);
+  const [externalListingConsent, setExternalListingConsent] = useState(false);
   const [excludedUsers, setExcludedUsers] = useState<
     { id: number; name: string | null; company: string | null }[]
   >([]);
@@ -316,6 +317,8 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
         published: publishMode === "publish",
         proposalRequestId: proposalRequestId || null,
         proposalOnly,
+        externalListingConsent:
+          externalListingConsent && (!proposalRequestId || !proposalOnly),
         files:
           pdfFiles.length > 0
             ? pdfFiles.map(f => ({ name: f.name, size: f.size }))
@@ -1976,6 +1979,12 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
         >
           下書きの物件は提案できません。物件を公開後、提案を送信してください。
         </p>
+      )}
+      {publishMode === "publish" && (!proposalRequestId || !proposalOnly) && (
+        <label className="flex items-start gap-3 border border-[#b9c9da] bg-[#f7f9fb] p-4 text-[12px] leading-5 text-[#526176]">
+          <input type="checkbox" className="mt-1 size-4 shrink-0" checked={externalListingConsent} onChange={event => setExternalListingConsent(event.target.checked)} />
+          <span><strong className="block text-[13px] text-[#173f70]">ログインページへの匿名掲載に同意する</strong>都道府県・物件種別・価格帯・登録時期のみ、ログイン前の方へ表示します。詳細住所、会社名、担当者名、連絡先、資料は表示されません。</span>
+        </label>
       )}
 
       <div className="flex flex-col-reverse gap-3 border-t border-[#d4dde7] pt-5 sm:flex-row sm:justify-end">
