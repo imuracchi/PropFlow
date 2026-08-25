@@ -7,6 +7,40 @@ a[x-apple-data-detectors] {
   pointer-events: none !important;
 }
 
+.propflow-readable .text-\[8px\],
+.propflow-readable .text-\[9px\] {
+  font-size: 10px !important;
+}
+
+.propflow-readable .text-\[10px\] {
+  font-size: 11px !important;
+}
+
+.propflow-readable .text-\[11px\] {
+  font-size: 12px !important;
+}
+
+@media (max-width: 640px) {
+  .propflow-readable .text-\[8px\],
+  .propflow-readable .text-\[9px\],
+  .propflow-readable .text-\[10px\] {
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+  }
+
+  .propflow-readable .text-\[11px\],
+  .propflow-readable .text-\[12px\],
+  .propflow-readable .text-xs {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+
+  .propflow-readable .text-\[13px\] {
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

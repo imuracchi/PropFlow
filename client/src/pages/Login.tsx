@@ -162,7 +162,7 @@ export default function Login({
   };
 
   return (
-    <div className="min-h-screen bg-[#f2f5f8] flex items-center justify-center px-4 py-8 relative overflow-hidden [&_.rounded-xl]:rounded-none [&_.rounded-lg]:rounded-none [&_.rounded-md]:rounded-none [&_.shadow-lg]:shadow-none [&_.shadow-md]:shadow-none [&_button]:rounded-none [&_select]:rounded-none [&_input]:text-[16px]">
+    <div className="propflow-readable min-h-screen bg-[#f2f5f8] flex items-center justify-center px-4 py-8 relative overflow-hidden [&_.rounded-xl]:rounded-none [&_.rounded-lg]:rounded-none [&_.rounded-md]:rounded-none [&_.shadow-lg]:shadow-none [&_.shadow-md]:shadow-none [&_button]:rounded-none [&_select]:rounded-none [&_input]:text-[16px]">
       <div className="relative z-10 w-full max-w-[1040px] overflow-hidden border border-[#d6dee8] bg-white shadow-[0_18px_55px_rgba(16,45,80,0.14)] lg:grid lg:min-h-[680px] lg:grid-cols-[0.92fr_1.08fr]">
         <aside className="hidden bg-[#123b6d] p-12 text-white lg:flex lg:flex-col">
           <div className="flex items-center gap-3">

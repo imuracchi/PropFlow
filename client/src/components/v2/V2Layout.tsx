@@ -80,7 +80,7 @@ export default function V2Layout({
     setLocation("/v2/issue-report");
   };
   return (
-    <div className="min-h-screen bg-[#f3f5f7] text-[#17211d]">
+    <div className="propflow-readable min-h-screen bg-[#f3f5f7] text-[#17211d]">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col bg-[#12365f] text-white lg:flex">
         <button
           onClick={() => setLocation(destination("/v2/properties"))}
