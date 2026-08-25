@@ -1099,7 +1099,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       "閲覧数",
                       "商談数",
                       "表示",
-                      "外部掲載",
+                      "簡易掲載",
                       "登録日",
                       ...(!isManagement ? ["操作"] : []),
                     ].map(h => (

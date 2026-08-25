@@ -1206,14 +1206,14 @@ JSONのみ返してください。`,
         if (input.consent && property.visibilityScope !== "public") {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "提案先限定の物件は外部掲載できません",
+            message: "提案先限定の物件はログインページへ簡易掲載できません",
           });
         }
         await db.setPropertyExternalListingConsent(input.id, input.consent);
         db.logActivity(
           ctx.user.id,
           input.consent ? "external_listing_consent" : "external_listing_revoke",
-          `物件「${property.name}」の外部掲載を${input.consent ? "申請" : "停止"}`,
+          `物件「${property.name}」の簡易掲載を${input.consent ? "開始" : "停止"}`,
           ctx.req.headers["user-agent"]
         ).catch(() => {});
         return { success: true };

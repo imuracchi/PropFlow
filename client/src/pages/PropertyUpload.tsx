@@ -1983,7 +1983,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
       {publishMode === "publish" && (!proposalRequestId || !proposalOnly) && (
         <label className="flex items-start gap-3 border border-[#b9c9da] bg-[#f7f9fb] p-4 text-[12px] leading-5 text-[#526176]">
           <input type="checkbox" className="mt-1 size-4 shrink-0" checked={externalListingConsent} onChange={event => setExternalListingConsent(event.target.checked)} />
-          <span><strong className="block text-[13px] text-[#173f70]">ログインページへの匿名掲載に同意する</strong>都道府県・物件種別・価格帯・登録時期のみ、ログイン前の方へ表示します。詳細住所、会社名、担当者名、連絡先、資料は表示されません。</span>
+          <span><strong className="block text-[13px] text-[#173f70]">ログインページへの簡易掲載に同意する</strong>市区・物件種別・価格帯・面積のみ、ログイン前の方へ表示します。詳細住所、会社名、担当者名、連絡先、資料は表示されません。</span>
         </label>
       )}
 
