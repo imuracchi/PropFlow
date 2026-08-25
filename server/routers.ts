@@ -342,9 +342,9 @@ export const appRouter = router({
             <h2 style="color:#1e3a5f;font-size:18px;">今後のお手続き</h2>
             <ol style="padding-left:24px;">
               <li>管理者が申請内容と名刺を確認します。</li>
-              <li>確認後、「【PropFlow】代理登録を行いました」というメールをお送りします。</li>
-              <li>メール内のリンクを開き、72時間以内にご自身でパスワードを設定してください。</li>
-              <li>設定したメールアドレスとパスワードでPropFlowへログインしてください。</li>
+              <li>確認後、PropFlowがアカウントを代理登録します。</li>
+              <li>「【PropFlow】代理登録を行いました」というメールで、ログインIDと初期パスワードをお送りします。</li>
+              <li>届いたログイン情報でPropFlowへログインしてください。</li>
             </ol>
             <p style="color:#64748b;font-size:13px;">確認にはお時間をいただく場合があります。承認メールが届かない場合は、迷惑メールフォルダもご確認ください。</p>
           </div>`
@@ -2981,14 +2981,35 @@ ${propList}`,
             error: "このメールアドレスは既に登録されています",
           } as const;
         }
-        const token = nanoid(32);
-        const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
-        await db.createRegistrationToken(request.email, token, expiresAt);
-
         const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(
           /\/$/,
           ""
         );
+        const phoneDigits = (request.phone ?? "").replace(/\D/g, "");
+        const initialPassword =
+          phoneDigits.length >= 8 ? phoneDigits.slice(-8) : nanoid(12);
+        const passwordHash = await hashPassword(initialPassword);
+        const newUser = await db.createUser({
+          openId: nanoid(),
+          email: request.email,
+          passwordHash,
+          name: request.name,
+          company: request.company,
+          phone: request.phone,
+          fax: request.fax,
+          zipCode: request.zipCode,
+          address: request.address,
+          url: request.url,
+          license: request.license,
+          businessCardBase64: request.businessCardBase64,
+          loginMethod: "proxy",
+          role: "user",
+          status: "active",
+          verified: 1,
+        });
+        if (!newUser) {
+          return { success: false, error: "ユーザーを登録できませんでした" } as const;
+        }
         const safeName = request.name
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
@@ -3002,21 +3023,22 @@ ${propList}`,
           `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
             <p>${safeName} 様</p>
             <p>PropFlowへの代理登録を行いました。</p>
-            <p>ログインに使用するパスワードは、ご自身で決めていただく必要があります。</p>
-            <p>以下のリンクから登録内容をご確認のうえ、パスワードを設定してください。</p>
-            <a href="${siteUrl}/register/${token}" style="display:inline-block;background:#173f70;color:white;padding:12px 24px;text-decoration:none;font-weight:600;margin:16px 0;">パスワードを設定する</a>
-            <p style="color:#64748b;font-size:13px;">リンクの有効期限は72時間です。</p>
+            <p>以下のログイン情報でご利用いただけます。</p>
+            <div style="background:#f4f6f8;border:1px solid #d8e0e8;padding:16px;margin:16px 0;">
+              <p style="margin:0 0 8px;">ログインURL：<a href="${siteUrl}/">${siteUrl}/</a></p>
+              <p style="margin:0 0 8px;">ログインID：${request.email}</p>
+              <p style="margin:0;">初期パスワード：${initialPassword}</p>
+            </div>
+            <p>ログイン後、安全のためマイページからパスワードを変更してください。</p>
           </div>`
         );
         if (!emailSent) {
-          return {
-            success: false,
-            error: "登録用メールを送信できませんでした。もう一度お試しください",
-          } as const;
+          await db.updateRegistrationRequestStatus(request.id, "completed", ctx.user.id);
+          return { success: true, emailSent: false } as const;
         }
         await db.updateRegistrationRequestStatus(
           request.id,
-          "approved",
+          "completed",
           ctx.user.id
         );
         db.logActivity(
