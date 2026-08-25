@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS `registration_requests` (
+  `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `email` varchar(320) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `company` varchar(255) NOT NULL,
+  `phone` varchar(32) NULL,
+  `fax` varchar(32) NULL,
+  `zipCode` varchar(10) NULL,
+  `address` text NULL,
+  `url` varchar(500) NULL,
+  `license` varchar(128) NULL,
+  `businessCardBase64` longtext NOT NULL,
+  `businessCardMimeType` varchar(64) NOT NULL DEFAULT 'image/jpeg',
+  `status` enum('pending','approved','rejected','completed') NOT NULL DEFAULT 'pending',
+  `reviewedBy` int NULL,
+  `reviewedAt` timestamp NULL,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `idx_registration_requests_status_created` (`status`, `createdAt`),
+  KEY `idx_registration_requests_email` (`email`)
+);

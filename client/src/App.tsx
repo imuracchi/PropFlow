@@ -24,6 +24,7 @@ import Simulation from "./pages/Simulation";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import RegistrationRequest from "./pages/RegistrationRequest";
 import ViewRanking from "./pages/ViewRanking";
 import NewDashboard from "./pages/NewDashboard";
 import DesignPropertyDetail from "./pages/DesignPropertyDetail";
@@ -280,6 +281,9 @@ function AppContent() {
       </Route>
       <Route path="/v2/preview">{() => <V2PropertyList preview />}</Route>
       <Route path="/register/:token">{() => <Register />}</Route>
+      <Route path="/registration-request">
+        {() => <RegistrationRequest />}
+      </Route>
       <Route path="/view-ranking">
         {() => (
           <ManagementRoute>

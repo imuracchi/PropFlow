@@ -1,8 +1,19 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Lock, User, Phone, Globe, Loader2, CheckCircle, AlertCircle, Camera, X } from "lucide-react";
+import {
+  Building2,
+  Lock,
+  User,
+  Phone,
+  Globe,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Camera,
+  X,
+} from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import AuthPageShell from "@/components/v2/AuthPageShell";
@@ -39,10 +50,31 @@ export default function Register() {
   const registerMutation = trpc.auth.register.useMutation();
   const readCardMutation = trpc.auth.readBusinessCard.useMutation();
 
+  useEffect(() => {
+    const request = tokenInfo?.request;
+    if (!request) return;
+    setName(request.name);
+    setCompany(request.company);
+    setPhone(request.phone ?? "");
+    setFax(request.fax ?? "");
+    setUrl(request.url ?? "");
+    if (request.license) {
+      if (request.license.includes("大臣")) setLicenseType("国土交通大臣免許");
+      const codeMatch = request.license.match(/\((\d+)\)/);
+      const numMatch = request.license.match(/第(\d+)号/);
+      if (codeMatch) setLicenseCode(codeMatch[1]);
+      if (numMatch) setLicenseNum(numMatch[1]);
+    }
+  }, [tokenInfo]);
+
   const toBase64 = (file: File): Promise<string> =>
-    file.arrayBuffer().then(buf =>
-      btoa(new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), ""))
-    );
+    file
+      .arrayBuffer()
+      .then(buf =>
+        btoa(
+          new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), "")
+        )
+      );
 
   const handleCardSelect = async (file: File) => {
     setCardError("");
@@ -51,7 +83,10 @@ export default function Register() {
       const b64 = await toBase64(file);
       setCardBase64(b64);
       setCardMime(file.type || "image/jpeg");
-      const result = await readCardMutation.mutateAsync({ imageBase64: b64, mimeType: file.type });
+      const result = await readCardMutation.mutateAsync({
+        imageBase64: b64,
+        mimeType: file.type,
+      });
       if (result.success && result.data) {
         const d = result.data as any;
         if (d.name) setName(d.name);
@@ -87,7 +122,9 @@ export default function Register() {
       setError("パスワードは8文字以上で入力してください");
       return;
     }
-    const license = licenseNum ? `${licenseType} (${licenseCode}) 第${licenseNum}号` : undefined;
+    const license = licenseNum
+      ? `${licenseType} (${licenseCode}) 第${licenseNum}号`
+      : undefined;
     const result = await registerMutation.mutateAsync({
       token,
       name,
@@ -120,9 +157,18 @@ export default function Register() {
       <AuthPageShell>
         <div className="w-full border border-[#d6dee8] bg-white p-8 text-center space-y-4">
           <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
-          <h2 className="text-xl font-bold text-foreground">無効なリンクです</h2>
-          <p className="text-sm text-muted-foreground">このリンクは有効期限切れか、既に使用されています。</p>
-          <Button className="h-11 bg-[#173f70] px-6 font-bold text-white" onClick={() => setLocation("/")}>ログインページへ</Button>
+          <h2 className="text-xl font-bold text-foreground">
+            無効なリンクです
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            このリンクは有効期限切れか、既に使用されています。
+          </p>
+          <Button
+            className="h-11 bg-[#173f70] px-6 font-bold text-white"
+            onClick={() => setLocation("/")}
+          >
+            ログインページへ
+          </Button>
         </div>
       </AuthPageShell>
     );
@@ -133,9 +179,18 @@ export default function Register() {
       <AuthPageShell>
         <div className="w-full border border-[#d6dee8] bg-white p-8 text-center space-y-4">
           <CheckCircle className="w-12 h-12 mx-auto text-green-500" />
-          <h2 className="text-xl font-bold text-foreground">登録が完了しました</h2>
-          <p className="text-sm text-muted-foreground">登録したメールアドレスとパスワードでログインできます。</p>
-          <Button className="h-11 bg-[#173f70] px-6 font-bold text-white" onClick={() => setLocation("/")}>ログインする</Button>
+          <h2 className="text-xl font-bold text-foreground">
+            登録が完了しました
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            登録したメールアドレスとパスワードでログインできます。
+          </p>
+          <Button
+            className="h-11 bg-[#173f70] px-6 font-bold text-white"
+            onClick={() => setLocation("/")}
+          >
+            ログインする
+          </Button>
         </div>
       </AuthPageShell>
     );
@@ -148,22 +203,40 @@ export default function Register() {
           <div className="px-6 py-6 border-b border-[#dce3eb]">
             <h2 className="text-[22px] font-bold text-[#102d50]">新規登録</h2>
             <p className="text-[13px] text-[#65748a] mt-1">
-              <span className="text-primary font-medium">{tokenInfo.email}</span> で登録します
+              <span className="text-primary font-medium">
+                {tokenInfo.email}
+              </span>{" "}
+              で登録します
             </p>
           </div>
           <div className="p-6 space-y-4">
-
             {/* 名刺読み取りセクション */}
             <div className="border border-[#b8c8da] overflow-hidden">
               <div className="bg-[#173f70] px-4 py-2.5 flex items-center gap-2">
                 <Camera className="w-4 h-4 text-white shrink-0" />
-                <p className="text-sm font-semibold text-white">名刺を登録して信頼度アップ</p>
+                <p className="text-sm font-semibold text-white">
+                  名刺を登録して信頼度アップ
+                </p>
               </div>
               <div className="bg-primary/5 px-4 py-3 space-y-2.5">
                 <ul className="text-xs text-foreground space-y-1">
-                  <li className="flex items-start gap-1.5"><span className="text-primary font-bold mt-0.5">✓</span>氏名・会社名・電話・FAX・URLを<span className="font-semibold">自動入力</span></li>
-                  <li className="flex items-start gap-1.5"><span className="text-primary font-bold mt-0.5">✓</span>管理者が本人確認に使用し、<span className="font-semibold">承認がスムーズ</span>になります</li>
-                  <li className="flex items-start gap-1.5"><span className="text-primary font-bold mt-0.5">✓</span>他の業者から見た際の<span className="font-semibold">信頼度・安心感</span>が高まります</li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-primary font-bold mt-0.5">✓</span>
+                    氏名・会社名・電話・FAX・URLを
+                    <span className="font-semibold">自動入力</span>
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-primary font-bold mt-0.5">✓</span>
+                    管理者が本人確認に使用し、
+                    <span className="font-semibold">承認がスムーズ</span>
+                    になります
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-primary font-bold mt-0.5">✓</span>
+                    他の業者から見た際の
+                    <span className="font-semibold">信頼度・安心感</span>
+                    が高まります
+                  </li>
                 </ul>
                 {cardBase64 ? (
                   <div className="space-y-2">
@@ -175,20 +248,28 @@ export default function Register() {
                       />
                       <button
                         className="absolute -top-2 -right-2 bg-background border border-border rounded-full p-0.5 text-muted-foreground hover:text-foreground"
-                        onClick={() => { setCardBase64(null); setCardError(""); }}
+                        onClick={() => {
+                          setCardBase64(null);
+                          setCardError("");
+                        }}
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                     {cardReading && (
                       <p className="text-xs text-primary flex items-center gap-1.5">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />読み取り中...
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        読み取り中...
                       </p>
                     )}
                     {!cardReading && !cardError && (
-                      <p className="text-xs text-green-600">✓ 読み取り完了。内容を確認してください。</p>
+                      <p className="text-xs text-green-600">
+                        ✓ 読み取り完了。内容を確認してください。
+                      </p>
                     )}
-                    {cardError && <p className="text-xs text-amber-600">{cardError}</p>}
+                    {cardError && (
+                      <p className="text-xs text-amber-600">{cardError}</p>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -198,7 +279,10 @@ export default function Register() {
                       accept="image/*"
                       capture="environment"
                       className="hidden"
-                      onChange={e => { const f = e.target.files?.[0]; if (f) handleCardSelect(f); }}
+                      onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) handleCardSelect(f);
+                      }}
                     />
                     <Button
                       type="button"
@@ -206,7 +290,8 @@ export default function Register() {
                       className="gap-2 bg-[#173f70] hover:bg-[#102f56] text-white"
                       onClick={() => cardInputRef.current?.click()}
                     >
-                      <Camera className="w-4 h-4" />名刺を撮影 / 選択する
+                      <Camera className="w-4 h-4" />
+                      名刺を撮影 / 選択する
                     </Button>
                   </div>
                 )}
@@ -215,33 +300,69 @@ export default function Register() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>氏名 <span className="text-red-500">*</span></Label>
+                <Label>
+                  氏名 <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="山田 太郎" className="pl-10" value={name} onChange={e => setName(e.target.value)} />
+                  <Input
+                    placeholder="山田 太郎"
+                    className="pl-10"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>社名 <span className="text-red-500">*</span></Label>
+                <Label>
+                  社名 <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="株式会社〇〇不動産" className="pl-10" value={company} onChange={e => setCompany(e.target.value)} />
+                  <Input
+                    placeholder="株式会社〇〇不動産"
+                    className="pl-10"
+                    value={company}
+                    onChange={e => setCompany(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>資格 <span className="text-xs text-muted-foreground font-normal">（任意）</span></Label>
+              <Label>
+                資格{" "}
+                <span className="text-xs text-muted-foreground font-normal">
+                  （任意）
+                </span>
+              </Label>
               <div className="flex gap-2">
-                <select className="border border-border rounded-md px-2 py-2 text-sm bg-background" value={licenseType} onChange={e => setLicenseType(e.target.value)}>
+                <select
+                  className="border border-border rounded-md px-2 py-2 text-sm bg-background"
+                  value={licenseType}
+                  onChange={e => setLicenseType(e.target.value)}
+                >
                   <option>国土交通大臣免許</option>
                   <option>都道府県知事免許</option>
                 </select>
-                <Input placeholder="回数" className="w-16" value={licenseCode} onChange={e => setLicenseCode(e.target.value)} />
+                <Input
+                  placeholder="回数"
+                  className="w-16"
+                  value={licenseCode}
+                  onChange={e => setLicenseCode(e.target.value)}
+                />
                 <div className="flex items-center gap-1 flex-1">
-                  <span className="text-sm text-muted-foreground shrink-0">第</span>
-                  <Input placeholder="番号" value={licenseNum} onChange={e => setLicenseNum(e.target.value)} />
-                  <span className="text-sm text-muted-foreground shrink-0">号</span>
+                  <span className="text-sm text-muted-foreground shrink-0">
+                    第
+                  </span>
+                  <Input
+                    placeholder="番号"
+                    value={licenseNum}
+                    onChange={e => setLicenseNum(e.target.value)}
+                  />
+                  <span className="text-sm text-muted-foreground shrink-0">
+                    号
+                  </span>
                 </div>
               </div>
             </div>
@@ -249,13 +370,22 @@ export default function Register() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>携帯番号</Label>
-                <Input placeholder="090-XXXX-XXXX" value={mobile} onChange={e => setMobile(e.target.value)} />
+                <Input
+                  placeholder="090-XXXX-XXXX"
+                  value={mobile}
+                  onChange={e => setMobile(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>電話番号</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="03-XXXX-XXXX" className="pl-10" value={phone} onChange={e => setPhone(e.target.value)} />
+                  <Input
+                    placeholder="03-XXXX-XXXX"
+                    className="pl-10"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
@@ -263,27 +393,46 @@ export default function Register() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>FAX番号</Label>
-                <Input placeholder="03-XXXX-XXXX" value={fax} onChange={e => setFax(e.target.value)} />
+                <Input
+                  placeholder="03-XXXX-XXXX"
+                  value={fax}
+                  onChange={e => setFax(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>URL</Label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="https://example.com" className="pl-10" value={url} onChange={e => setUrl(e.target.value)} />
+                  <Input
+                    placeholder="https://example.com"
+                    className="pl-10"
+                    value={url}
+                    onChange={e => setUrl(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>パスワード <span className="text-red-500">*</span></Label>
+              <Label>
+                パスワード <span className="text-red-500">*</span>
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input type="password" placeholder="8文字以上" className="pl-10" value={password} onChange={e => setPassword(e.target.value)} />
+                <Input
+                  type="password"
+                  placeholder="8文字以上"
+                  className="pl-10"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                />
               </div>
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {error}
+              </p>
             )}
 
             <Button
@@ -292,12 +441,16 @@ export default function Register() {
               onClick={handleSubmit}
               disabled={registerMutation.isPending || cardReading}
             >
-              {registerMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {registerMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
               登録する
             </Button>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground/40 text-center mt-3">運営：G-Spec合同会社</p>
+        <p className="text-[10px] text-muted-foreground/40 text-center mt-3">
+          運営：G-Spec合同会社
+        </p>
       </div>
     </AuthPageShell>
   );

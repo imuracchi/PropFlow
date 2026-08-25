@@ -170,6 +170,45 @@ export const registrationTokens = mysqlTable("registration_tokens", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const registrationRequests = mysqlTable(
+  "registration_requests",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    email: varchar("email", { length: 320 }).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    company: varchar("company", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 32 }),
+    fax: varchar("fax", { length: 32 }),
+    zipCode: varchar("zipCode", { length: 10 }),
+    address: text("address"),
+    url: varchar("url", { length: 500 }),
+    license: varchar("license", { length: 128 }),
+    businessCardBase64: longtext("businessCardBase64").notNull(),
+    businessCardMimeType: varchar("businessCardMimeType", { length: 64 })
+      .default("image/jpeg")
+      .notNull(),
+    status: mysqlEnum("status", [
+      "pending",
+      "approved",
+      "rejected",
+      "completed",
+    ])
+      .default("pending")
+      .notNull(),
+    reviewedBy: int("reviewedBy"),
+    reviewedAt: timestamp("reviewedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    statusCreatedIdx: index("idx_registration_requests_status_created").on(
+      table.status,
+      table.createdAt
+    ),
+    emailIdx: index("idx_registration_requests_email").on(table.email),
+  })
+);
+
 export const pushSubscriptions = mysqlTable("push_subscriptions", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
@@ -336,14 +375,21 @@ export const broadcastLogs = mysqlTable("broadcast_logs", {
   sentAt: timestamp("sentAt").defaultNow().notNull(),
 });
 
-export const announcementReads = mysqlTable("announcement_reads", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  broadcastLogId: int("broadcastLogId").notNull(),
-  readAt: timestamp("readAt").defaultNow().notNull(),
-}, table => ({
-  userBroadcastUnique: uniqueIndex("uq_announcement_reads").on(table.userId, table.broadcastLogId),
-}));
+export const announcementReads = mysqlTable(
+  "announcement_reads",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    broadcastLogId: int("broadcastLogId").notNull(),
+    readAt: timestamp("readAt").defaultNow().notNull(),
+  },
+  table => ({
+    userBroadcastUnique: uniqueIndex("uq_announcement_reads").on(
+      table.userId,
+      table.broadcastLogId
+    ),
+  })
+);
 
 export const propertyNameSnapshots = mysqlTable("property_name_snapshots", {
   propertyId: int("propertyId").primaryKey(),

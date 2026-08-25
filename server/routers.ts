@@ -266,6 +266,92 @@ async function sendBroadcastToAll(opts: {
 }
 
 export const appRouter = router({
+  registrationRequest: router({
+    submit: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          name: z.string().trim().min(1).max(255),
+          company: z.string().trim().min(1).max(255),
+          phone: z.string().trim().max(32).optional(),
+          fax: z.string().trim().max(32).optional(),
+          zipCode: z.string().trim().max(10).optional(),
+          address: z.string().trim().max(1000).optional(),
+          url: z.string().trim().max(500).optional(),
+          license: z.string().trim().max(128).optional(),
+          businessCardBase64: z.string().min(1).max(12_000_000),
+          businessCardMimeType: z.enum([
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+          ]),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const email = input.email.trim().toLowerCase();
+        if (await db.getUserByEmail(email)) {
+          return {
+            success: false,
+            error: "このメールアドレスは既に登録されています",
+          } as const;
+        }
+        const requests = await db.listRegistrationRequests();
+        if (
+          requests.some(
+            request =>
+              request.email.toLowerCase() === email &&
+              request.status === "pending"
+          )
+        ) {
+          return {
+            success: false,
+            error: "このメールアドレスの申請は確認中です",
+          } as const;
+        }
+        await db.createRegistrationRequest({ ...input, email });
+
+        const escapeHtml = (value: string) =>
+          value
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(
+          /\/$/,
+          ""
+        );
+        const { sendMail } = await import("./_core/mail");
+        sendMail(
+          "propflow@gspec.me",
+          "【PropFlow】代理登録申請が届きました",
+          `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+            <h2 style="color:#1e3a5f;">代理登録申請が届きました</h2>
+            <p>氏名：${escapeHtml(input.name)}</p>
+            <p>会社名：${escapeHtml(input.company)}</p>
+            <p>メール：${escapeHtml(email)}</p>
+            <a href="${siteUrl}/v2/admin" style="display:inline-block;background:#173f70;color:white;padding:10px 24px;text-decoration:none;font-weight:600;">管理画面で確認する</a>
+          </div>`
+        ).catch(() => {});
+        sendMail(
+          email,
+          "【PropFlow】代理登録申請を受け付けました",
+          `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#263b58;line-height:1.8;">
+            <p>${escapeHtml(input.name)} 様</p>
+            <p>PropFlowへの代理登録申請を受け付けました。</p>
+            <h2 style="color:#1e3a5f;font-size:18px;">今後のお手続き</h2>
+            <ol style="padding-left:24px;">
+              <li>管理者が申請内容と名刺を確認します。</li>
+              <li>確認後、「【PropFlow】代理登録を行いました」というメールをお送りします。</li>
+              <li>メール内のリンクを開き、72時間以内にご自身でパスワードを設定してください。</li>
+              <li>設定したメールアドレスとパスワードでPropFlowへログインしてください。</li>
+            </ol>
+            <p style="color:#64748b;font-size:13px;">確認にはお時間をいただく場合があります。承認メールが届かない場合は、迷惑メールフォルダもご確認ください。</p>
+          </div>`
+        ).catch(() => {});
+        return { success: true } as const;
+      }),
+  }),
   auth: router({
     me: publicProcedure.query(opts => {
       if (!opts.ctx.user) return null;
@@ -500,6 +586,9 @@ JSONのみ返してください。`,
             error: "このメールアドレスは既に登録されています",
           } as const;
         }
+        const approvedRequest = await db.getApprovedRegistrationRequestByEmail(
+          tokenData.email
+        );
         const hashed = await hashPassword(input.password);
         try {
           const newUser = await db.createUser({
@@ -516,11 +605,10 @@ JSONのみ返してください。`,
             role: "user",
             status: "active",
           });
-          if (input.businessCardBase64 && newUser) {
-            await db.updateUserBusinessCard(
-              newUser.id,
-              input.businessCardBase64
-            );
+          const businessCardBase64 =
+            input.businessCardBase64 ?? approvedRequest?.businessCardBase64;
+          if (businessCardBase64 && newUser) {
+            await db.updateUserBusinessCard(newUser.id, businessCardBase64);
           }
         } catch (err: any) {
           return {
@@ -529,6 +617,12 @@ JSONのみ返してください。`,
           } as const;
         }
         await db.markTokenUsed(input.token);
+        if (approvedRequest) {
+          await db.updateRegistrationRequestStatus(
+            approvedRequest.id,
+            "completed"
+          );
+        }
         return { success: true } as const;
       }),
 
@@ -543,7 +637,23 @@ JSONのみ返してください。`,
         ) {
           return { valid: false, email: null } as const;
         }
-        return { valid: true, email: tokenData.email } as const;
+        const request = await db.getApprovedRegistrationRequestByEmail(
+          tokenData.email
+        );
+        return {
+          valid: true,
+          email: tokenData.email,
+          request: request
+            ? {
+                name: request.name,
+                company: request.company,
+                phone: request.phone,
+                fax: request.fax,
+                url: request.url,
+                license: request.license,
+              }
+            : null,
+        } as const;
       }),
 
     updateLogo: protectedProcedure
@@ -557,7 +667,8 @@ JSONのみ返してください。`,
       .input(z.object({ businessCardBase64: z.string().nullable() }))
       .mutation(async ({ input, ctx }) => {
         await db.updateUserBusinessCard(ctx.user.id, input.businessCardBase64);
-        if (!input.businessCardBase64) return { success: true, emailSent: false };
+        if (!input.businessCardBase64)
+          return { success: true, emailSent: false };
 
         const escapeHtml = (value: unknown) =>
           String(value ?? "")
@@ -2125,7 +2236,7 @@ ${propList}`,
             messages: [
               {
                 role: "user",
-              content: `不動産業者が購入・仕入れを希望する物件条件を、次のJSONだけで整理してください。貸し出し募集ではありません。金額は円、面積は㎡の数値にしてください。不明項目はnullまたは空配列。propertyTypesは「土地」「一棟マンション」「区分マンション」「一棟アパート」「戸建」「事務所ビル」「店舗」「倉庫」の中からだけ選んでください。単に「マンション」とだけ書かれていて一棟・区分を判別できない場合は「一棟マンション」と「区分マンション」の両方を選び、どちらかが明記されている場合だけ一方を選んでください。入力に氏名・会社名・電話番号・メールアドレスがあればpiiWarningをtrueにしてください。
+                content: `不動産業者が購入・仕入れを希望する物件条件を、次のJSONだけで整理してください。貸し出し募集ではありません。金額は円、面積は㎡の数値にしてください。不明項目はnullまたは空配列。propertyTypesは「土地」「一棟マンション」「区分マンション」「一棟アパート」「戸建」「事務所ビル」「店舗」「倉庫」の中からだけ選んでください。単に「マンション」とだけ書かれていて一棟・区分を判別できない場合は「一棟マンション」と「区分マンション」の両方を選び、どちらかが明記されている場合だけ一方を選んでください。入力に氏名・会社名・電話番号・メールアドレスがあればpiiWarningをtrueにしてください。
 {"title":"短い募集タイトル","areas":["希望エリア"],"propertyTypes":["土地等"],"minPrice":null,"maxPrice":null,"minArea":null,"maxArea":null,"purpose":"開発用地/買取再販/投資・保有/自社利用/顧客への紹介/その他","purchaseTiming":null,"conditions":{"priorityConditions":null,"landCondition":null,"zoningPreference":null,"minFloorAreaRatio":null,"roadPreference":null,"surveyPreference":null,"minYield":null,"occupancyPreference":null,"structurePreference":null,"maxBuildingAge":null,"inspectionPreference":null},"notes":"その他条件","piiWarning":false}
 入力：${input.text}`,
               },
@@ -2143,42 +2254,50 @@ ${propList}`,
       }),
 
     matches: protectedProcedure
-      .input(z.object({
-        areas: z.array(z.string().max(100)).max(20),
-        propertyTypes: z.array(z.string().max(100)).max(20),
-        minPrice: z.number().nonnegative().nullable().optional(),
-        maxPrice: z.number().nonnegative().nullable().optional(),
-        minArea: z.number().nonnegative().nullable().optional(),
-        maxArea: z.number().nonnegative().nullable().optional(),
-      }))
-      .mutation(({ input, ctx }) => db.findMatchingProperties(ctx.user.id, input)),
-
-    logMatchEvent: protectedProcedure
-      .input(z.discriminatedUnion("event", [
+      .input(
         z.object({
-          event: z.literal("results_open"),
-          resultCount: z.number().int().nonnegative().max(10_000),
           areas: z.array(z.string().max(100)).max(20),
           propertyTypes: z.array(z.string().max(100)).max(20),
-          minPrice: z.number().nonnegative().nullable(),
-          maxPrice: z.number().nonnegative().nullable(),
-          minArea: z.number().nonnegative().nullable(),
-          maxArea: z.number().nonnegative().nullable(),
-        }),
-        z.object({
-          event: z.literal("property_open"),
-          propertyId: z.number().int().positive(),
-          score: z.number().int().min(0).max(100),
-        }),
-      ]))
+          minPrice: z.number().nonnegative().nullable().optional(),
+          maxPrice: z.number().nonnegative().nullable().optional(),
+          minArea: z.number().nonnegative().nullable().optional(),
+          maxArea: z.number().nonnegative().nullable().optional(),
+        })
+      )
+      .mutation(({ input, ctx }) =>
+        db.findMatchingProperties(ctx.user.id, input)
+      ),
+
+    logMatchEvent: protectedProcedure
+      .input(
+        z.discriminatedUnion("event", [
+          z.object({
+            event: z.literal("results_open"),
+            resultCount: z.number().int().nonnegative().max(10_000),
+            areas: z.array(z.string().max(100)).max(20),
+            propertyTypes: z.array(z.string().max(100)).max(20),
+            minPrice: z.number().nonnegative().nullable(),
+            maxPrice: z.number().nonnegative().nullable(),
+            minArea: z.number().nonnegative().nullable(),
+            maxArea: z.number().nonnegative().nullable(),
+          }),
+          z.object({
+            event: z.literal("property_open"),
+            propertyId: z.number().int().positive(),
+            score: z.number().int().min(0).max(100),
+          }),
+        ])
+      )
       .mutation(async ({ input, ctx }) => {
         if (input.event === "results_open") {
-          const priceRange = input.minPrice != null || input.maxPrice != null
-            ? `${input.minPrice != null ? Math.round(input.minPrice / 10_000).toLocaleString() : "指定なし"}〜${input.maxPrice != null ? Math.round(input.maxPrice / 10_000).toLocaleString() : "指定なし"}万円`
-            : "指定なし";
-          const areaRange = input.minArea != null || input.maxArea != null
-            ? `${input.minArea ?? "指定なし"}〜${input.maxArea ?? "指定なし"}㎡`
-            : "指定なし";
+          const priceRange =
+            input.minPrice != null || input.maxPrice != null
+              ? `${input.minPrice != null ? Math.round(input.minPrice / 10_000).toLocaleString() : "指定なし"}〜${input.maxPrice != null ? Math.round(input.maxPrice / 10_000).toLocaleString() : "指定なし"}万円`
+              : "指定なし";
+          const areaRange =
+            input.minArea != null || input.maxArea != null
+              ? `${input.minArea ?? "指定なし"}〜${input.maxArea ?? "指定なし"}㎡`
+              : "指定なし";
           await db.createPropertySearchNeedLog({
             userId: ctx.user.id,
             areas: input.areas,
@@ -2228,10 +2347,24 @@ ${propList}`,
         })
       )
       .mutation(async ({ input, ctx }) => {
-        if (input.minPrice != null && input.maxPrice != null && input.minPrice > input.maxPrice)
-          throw new TRPCError({ code: "BAD_REQUEST", message: "予算下限は予算上限以下にしてください。" });
-        if (input.minArea != null && input.maxArea != null && input.minArea > input.maxArea)
-          throw new TRPCError({ code: "BAD_REQUEST", message: "面積下限は面積上限以下にしてください。" });
+        if (
+          input.minPrice != null &&
+          input.maxPrice != null &&
+          input.minPrice > input.maxPrice
+        )
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "予算下限は予算上限以下にしてください。",
+          });
+        if (
+          input.minArea != null &&
+          input.maxArea != null &&
+          input.minArea > input.maxArea
+        )
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "面積下限は面積上限以下にしてください。",
+          });
         if (ctx.user.verified !== 1) {
           throw new TRPCError({
             code: "FORBIDDEN",
@@ -2291,10 +2424,24 @@ ${propList}`,
         })
       )
       .mutation(async ({ input, ctx }) => {
-        if (input.minPrice != null && input.maxPrice != null && input.minPrice > input.maxPrice)
-          throw new TRPCError({ code: "BAD_REQUEST", message: "予算下限は予算上限以下にしてください。" });
-        if (input.minArea != null && input.maxArea != null && input.minArea > input.maxArea)
-          throw new TRPCError({ code: "BAD_REQUEST", message: "面積下限は面積上限以下にしてください。" });
+        if (
+          input.minPrice != null &&
+          input.maxPrice != null &&
+          input.minPrice > input.maxPrice
+        )
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "予算下限は予算上限以下にしてください。",
+          });
+        if (
+          input.minArea != null &&
+          input.maxArea != null &&
+          input.minArea > input.maxArea
+        )
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "面積下限は面積上限以下にしてください。",
+          });
         if (ctx.user.verified !== 1) {
           throw new TRPCError({
             code: "FORBIDDEN",
@@ -2515,7 +2662,8 @@ ${propList}`,
           proposalContent,
           accepted.propertyId ?? null
         );
-        const acceptanceContent = "提案ありがとうございます。内容を確認しました。";
+        const acceptanceContent =
+          "提案ありがとうございます。内容を確認しました。";
         await db.sendDirectMessage(
           ctx.user.id,
           accepted.proposerId,
@@ -2813,6 +2961,97 @@ ${propList}`,
   }),
 
   admin: router({
+    registrationRequests: adminProcedure.query(async () => {
+      return db.listRegistrationRequests();
+    }),
+
+    approveRegistrationRequest: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const request = await db.getRegistrationRequest(input.id);
+        if (!request || request.status !== "pending") {
+          return {
+            success: false,
+            error: "確認待ちの申請が見つかりません",
+          } as const;
+        }
+        if (await db.getUserByEmail(request.email)) {
+          return {
+            success: false,
+            error: "このメールアドレスは既に登録されています",
+          } as const;
+        }
+        const token = nanoid(32);
+        const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+        await db.createRegistrationToken(request.email, token, expiresAt);
+
+        const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(
+          /\/$/,
+          ""
+        );
+        const safeName = request.name
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+        const { sendMail } = await import("./_core/mail");
+        const emailSent = await sendMail(
+          request.email,
+          "【PropFlow】代理登録を行いました",
+          `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+            <p>${safeName} 様</p>
+            <p>PropFlowへの代理登録を行いました。</p>
+            <p>ログインに使用するパスワードは、ご自身で決めていただく必要があります。</p>
+            <p>以下のリンクから登録内容をご確認のうえ、パスワードを設定してください。</p>
+            <a href="${siteUrl}/register/${token}" style="display:inline-block;background:#173f70;color:white;padding:12px 24px;text-decoration:none;font-weight:600;margin:16px 0;">パスワードを設定する</a>
+            <p style="color:#64748b;font-size:13px;">リンクの有効期限は72時間です。</p>
+          </div>`
+        );
+        if (!emailSent) {
+          return {
+            success: false,
+            error: "登録用メールを送信できませんでした。もう一度お試しください",
+          } as const;
+        }
+        await db.updateRegistrationRequestStatus(
+          request.id,
+          "approved",
+          ctx.user.id
+        );
+        db.logActivity(
+          ctx.user.id,
+          "approve_registration_request",
+          `代理登録申請 ${request.email} を承認`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return { success: true, emailSent: true } as const;
+      }),
+
+    rejectRegistrationRequest: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const request = await db.getRegistrationRequest(input.id);
+        if (!request || request.status !== "pending") {
+          return {
+            success: false,
+            error: "確認待ちの申請が見つかりません",
+          } as const;
+        }
+        await db.updateRegistrationRequestStatus(
+          request.id,
+          "rejected",
+          ctx.user.id
+        );
+        db.logActivity(
+          ctx.user.id,
+          "reject_registration_request",
+          `代理登録申請 ${request.email} を却下`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return { success: true } as const;
+      }),
+
     stats: managementProcedure.query(async () => {
       return db.getAdminStats();
     }),
@@ -2901,7 +3140,10 @@ ${propList}`,
       .mutation(async ({ input, ctx }) => {
         const request = await db.deletePropertySearchRequestAdmin(input.id);
         if (!request) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "募集内容が見つかりません" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "募集内容が見つかりません",
+          });
         }
         db.logActivity(
           ctx.user.id,
@@ -2915,13 +3157,21 @@ ${propList}`,
     setPropertySearchRequestHidden: adminProcedure
       .input(z.object({ id: z.number(), hidden: z.boolean() }))
       .mutation(async ({ input, ctx }) => {
-        const success = await db.setPropertySearchRequestHiddenAdmin(input.id, input.hidden);
+        const success = await db.setPropertySearchRequestHiddenAdmin(
+          input.id,
+          input.hidden
+        );
         if (!success) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "募集内容が見つかりません" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "募集内容が見つかりません",
+          });
         }
         db.logActivity(
           ctx.user.id,
-          input.hidden ? "property_search_admin_hide" : "property_search_admin_restore",
+          input.hidden
+            ? "property_search_admin_hide"
+            : "property_search_admin_restore",
           `物件募集ID:${input.id}を${input.hidden ? "非表示" : "表示に復元"}`,
           ctx.req.headers["user-agent"]
         ).catch(() => {});

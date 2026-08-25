@@ -28,6 +28,7 @@ import {
   chatExits,
   pushSubscriptions,
   registrationTokens,
+  registrationRequests,
   buyerPreferences,
   propertySearchRequests,
   propertySearchProposals,
@@ -191,6 +192,27 @@ export async function runStartupMigrations() {
       UNIQUE KEY \`uq_dm_notification_batch\` (\`senderId\`, \`receiverId\`, \`propertyKey\`),
       KEY \`idx_dm_notification_due\` (\`status\`, \`dueAt\`)
     )`,
+    `CREATE TABLE IF NOT EXISTS \`registration_requests\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`email\` varchar(320) NOT NULL,
+      \`name\` varchar(255) NOT NULL,
+      \`company\` varchar(255) NOT NULL,
+      \`phone\` varchar(32) NULL,
+      \`fax\` varchar(32) NULL,
+      \`zipCode\` varchar(10) NULL,
+      \`address\` text NULL,
+      \`url\` varchar(500) NULL,
+      \`license\` varchar(128) NULL,
+      \`businessCardBase64\` longtext NOT NULL,
+      \`businessCardMimeType\` varchar(64) NOT NULL DEFAULT 'image/jpeg',
+      \`status\` enum('pending','approved','rejected','completed') NOT NULL DEFAULT 'pending',
+      \`reviewedBy\` int NULL,
+      \`reviewedAt\` timestamp NULL,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      KEY \`idx_registration_requests_status_created\` (\`status\`, \`createdAt\`),
+      KEY \`idx_registration_requests_email\` (\`email\`)
+    )`,
     `CREATE TABLE IF NOT EXISTS \`property_search_requests\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`userId\` int NOT NULL,
@@ -282,6 +304,69 @@ export async function createUser(user: InsertUser) {
     throw err;
   }
   return getUserByEmail(user.email!);
+}
+
+export async function createRegistrationRequest(
+  request: typeof registrationRequests.$inferInsert
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(registrationRequests).values(request);
+  return result.insertId;
+}
+
+export async function listRegistrationRequests() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(registrationRequests)
+    .where(eq(registrationRequests.status, "pending"))
+    .orderBy(desc(registrationRequests.createdAt));
+}
+
+export async function getRegistrationRequest(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [request] = await db
+    .select()
+    .from(registrationRequests)
+    .where(eq(registrationRequests.id, id))
+    .limit(1);
+  return request;
+}
+
+export async function getApprovedRegistrationRequestByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [request] = await db
+    .select()
+    .from(registrationRequests)
+    .where(
+      and(
+        eq(registrationRequests.email, email),
+        eq(registrationRequests.status, "approved")
+      )
+    )
+    .orderBy(desc(registrationRequests.reviewedAt))
+    .limit(1);
+  return request;
+}
+
+export async function updateRegistrationRequestStatus(
+  id: number,
+  status: "approved" | "rejected" | "completed",
+  reviewedBy?: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(registrationRequests)
+    .set({
+      status,
+      ...(reviewedBy ? { reviewedBy, reviewedAt: new Date() } : {}),
+    })
+    .where(eq(registrationRequests.id, id));
 }
 
 export async function getUserByEmail(email: string) {
@@ -766,22 +851,27 @@ export async function findMatchingProperties(
       buildingArea: properties.buildingArea,
     })
     .from(properties)
-    .where(and(
-      eq(properties.deleted, 0),
-      eq(properties.published, 1),
-      ne(properties.status, "sold"),
-      ne(properties.userId, viewerUserId),
-      sql`(
+    .where(
+      and(
+        eq(properties.deleted, 0),
+        eq(properties.published, 1),
+        ne(properties.status, "sold"),
+        ne(properties.userId, viewerUserId),
+        sql`(
         (${properties.visibilityScope} = 'proposal' AND ${properties.proposalTargetUserId} = ${viewerUserId})
         OR (${properties.visibilityScope} = 'public' AND NOT EXISTS (
           SELECT 1 FROM property_exclusions pe
           WHERE pe.propertyId = ${properties.id} AND pe.userId = ${viewerUserId}
         ))
       )`
-    ));
+      )
+    );
 
   const normalize = (value: string) =>
-    value.replace(/[\s　,、]/g, "").replace(/[都道府県]/g, "").toLowerCase();
+    value
+      .replace(/[\s　,、]/g, "")
+      .replace(/[都道府県]/g, "")
+      .toLowerCase();
   const areaPairs = criteria.areas
     .map(original => ({
       original: original.replace(/[\s　,、]/g, ""),
@@ -802,90 +892,128 @@ export async function findMatchingProperties(
     return prefix.match(/^.*?[都道府県]/)?.[0] ?? prefix;
   };
   const ambiguousPairs = bareWardPairs.filter(area => {
-    const parents = new Set(candidates.flatMap(property => {
-      const parent = getWardParent(property.address ?? "", area.original);
-      return parent ? [parent] : [];
-    }));
+    const parents = new Set(
+      candidates.flatMap(property => {
+        const parent = getWardParent(property.address ?? "", area.original);
+        return parent ? [parent] : [];
+      })
+    );
     return parents.size > 1;
   });
   const ambiguousAreas = ambiguousPairs.map(area => area.normalized);
   const matchableAreas = areas.filter(area => !ambiguousAreas.includes(area));
-  const warnings = ambiguousPairs.map(area =>
-    `「${area.original}」に該当する掲載物件が複数地域にあるため、都道府県または市まで入力してください。`
+  const warnings = ambiguousPairs.map(
+    area =>
+      `「${area.original}」に該当する掲載物件が複数地域にあるため、都道府県または市まで入力してください。`
   );
-  const structuredAreas = matchableAreas.filter(area => /[市区町村]/.test(area));
-  const standaloneLocalities = matchableAreas.filter(area => !/[市区町村]/.test(area));
+  const structuredAreas = matchableAreas.filter(area =>
+    /[市区町村]/.test(area)
+  );
+  const standaloneLocalities = matchableAreas.filter(
+    area => !/[市区町村]/.test(area)
+  );
   const localityTerms = [
     ...structuredAreas.map(area => area.replace(/^.*?[市区町村]/, "")),
     ...standaloneLocalities,
-  ]
-    .filter(term => term.length >= 2);
-  const administrativeTerms = structuredAreas.flatMap(area =>
-    area.match(/[^市区町村]{1,12}[市区町村]/g) ?? []
+  ].filter(term => term.length >= 2);
+  const administrativeTerms = structuredAreas.flatMap(
+    area => area.match(/[^市区町村]{1,12}[市区町村]/g) ?? []
   );
   const hasBudget = criteria.minPrice != null || criteria.maxPrice != null;
   const hasSize = criteria.minArea != null || criteria.maxArea != null;
-  const inRange = (value: number | null, min?: number | null, max?: number | null) =>
-    value != null && (min == null || value >= min) && (max == null || value <= max);
+  const inRange = (
+    value: number | null,
+    min?: number | null,
+    max?: number | null
+  ) =>
+    value != null &&
+    (min == null || value >= min) &&
+    (max == null || value <= max);
 
-  const scored = candidates.flatMap(property => {
-    const reasons: string[] = [];
-    let score = 0;
-    let possible = 0;
-    const address = normalize(property.address ?? "");
-    const propertyName = normalize(property.name);
-    const fullAreaMatch = structuredAreas.some(area =>
-      address.includes(area) || (address.length >= 2 && area.includes(address))
-    );
-    const propertyAdministrativeTerms =
-      address.match(/[^市区町村]{1,12}[市区町村]/g) ?? [];
-    const administrativeMatch = !fullAreaMatch && administrativeTerms.some(term =>
-      propertyAdministrativeTerms.some(propertyTerm =>
-        term === propertyTerm || term.endsWith(propertyTerm) || propertyTerm.endsWith(term)
+  const scored = candidates
+    .flatMap(property => {
+      const reasons: string[] = [];
+      let score = 0;
+      let possible = 0;
+      const address = normalize(property.address ?? "");
+      const propertyName = normalize(property.name);
+      const fullAreaMatch = structuredAreas.some(
+        area =>
+          address.includes(area) ||
+          (address.length >= 2 && area.includes(address))
+      );
+      const propertyAdministrativeTerms =
+        address.match(/[^市区町村]{1,12}[市区町村]/g) ?? [];
+      const administrativeMatch =
+        !fullAreaMatch &&
+        administrativeTerms.some(term =>
+          propertyAdministrativeTerms.some(
+            propertyTerm =>
+              term === propertyTerm ||
+              term.endsWith(propertyTerm) ||
+              propertyTerm.endsWith(term)
+          )
+        );
+      const localityMatch =
+        !fullAreaMatch &&
+        !administrativeMatch &&
+        localityTerms.some(
+          term => address.includes(term) || propertyName.includes(term)
+        );
+      const areaMatch = fullAreaMatch || administrativeMatch || localityMatch;
+      if (areas.length) {
+        possible += 35;
+        if (fullAreaMatch) {
+          score += 35;
+          reasons.push("希望エリアに一致");
+        } else if (administrativeMatch) {
+          score += 25;
+          reasons.push("希望する区・市に一致");
+        } else if (localityMatch) {
+          score += 22;
+          reasons.push("希望エリアの町名に一致");
+        }
+      }
+      const typeMatch = criteria.propertyTypes.includes(property.type);
+      if (criteria.propertyTypes.length) {
+        possible += 25;
+        if (typeMatch) {
+          score += 25;
+          reasons.push("物件種別に一致");
+        }
+      }
+      if (hasBudget) {
+        possible += 25;
+        if (inRange(property.price, criteria.minPrice, criteria.maxPrice)) {
+          score += 25;
+          reasons.push("予算範囲内");
+        } else if (property.priceNegotiable === 1) {
+          score += 10;
+          reasons.push("価格相談可");
+        }
+      }
+      if (hasSize) {
+        possible += 15;
+        const size =
+          property.type === "土地"
+            ? property.landArea
+            : (property.buildingArea ?? property.landArea);
+        if (inRange(size, criteria.minArea, criteria.maxArea)) {
+          score += 15;
+          reasons.push("希望面積の範囲内");
+        }
+      }
+      if (
+        (areas.length && !areaMatch) ||
+        (!areas.length && !typeMatch) ||
+        possible === 0
       )
-    );
-    const localityMatch = !fullAreaMatch && !administrativeMatch && localityTerms.some(term =>
-      address.includes(term) || propertyName.includes(term)
-    );
-    const areaMatch = fullAreaMatch || administrativeMatch || localityMatch;
-    if (areas.length) {
-      possible += 35;
-      if (fullAreaMatch) {
-        score += 35; reasons.push("希望エリアに一致");
-      } else if (administrativeMatch) {
-        score += 25; reasons.push("希望する区・市に一致");
-      } else if (localityMatch) {
-        score += 22; reasons.push("希望エリアの町名に一致");
-      }
-    }
-    const typeMatch = criteria.propertyTypes.includes(property.type);
-    if (criteria.propertyTypes.length) {
-      possible += 25;
-      if (typeMatch) { score += 25; reasons.push("物件種別に一致"); }
-    }
-    if (hasBudget) {
-      possible += 25;
-      if (inRange(property.price, criteria.minPrice, criteria.maxPrice)) {
-        score += 25; reasons.push("予算範囲内");
-      } else if (property.priceNegotiable === 1) {
-        score += 10; reasons.push("価格相談可");
-      }
-    }
-    if (hasSize) {
-      possible += 15;
-      const size = property.type === "土地"
-        ? property.landArea
-        : property.buildingArea ?? property.landArea;
-      if (inRange(size, criteria.minArea, criteria.maxArea)) {
-        score += 15; reasons.push("希望面積の範囲内");
-      }
-    }
-    if ((areas.length && !areaMatch) || (!areas.length && !typeMatch) || possible === 0)
-      return [];
-    const matchScore = Math.round((score / possible) * 100);
-    if (matchScore < 70) return [];
-    return [{ ...property, score: matchScore, reasons }];
-  }).sort((a, b) => b.score - a.score || a.id - b.id);
+        return [];
+      const matchScore = Math.round((score / possible) * 100);
+      if (matchScore < 70) return [];
+      return [{ ...property, score: matchScore, reasons }];
+    })
+    .sort((a, b) => b.score - a.score || a.id - b.id);
 
   if (areas.length && !matchableAreas.length)
     return { matches: [], total: 0, warnings };
@@ -2174,7 +2302,9 @@ export async function queueDmNotificationBatch(
   const propertyKey = propertyId ?? 0;
   try {
     await connection.beginTransaction();
-    const [rows] = await connection.query<Array<RowDataPacket & { id: number }>>(
+    const [rows] = await connection.query<
+      Array<RowDataPacket & { id: number }>
+    >(
       `SELECT id FROM dm_notification_batches
        WHERE senderId = ? AND receiverId = ? AND propertyKey = ? FOR UPDATE`,
       [senderId, receiverId, propertyKey]
@@ -2216,13 +2346,15 @@ export async function claimDueDmNotificationBatches() {
        WHERE status = 'pending' AND dueAt <= NOW() AND JSON_LENGTH(messages) = 0`
     );
     const [rows] = await connection.query<
-      Array<RowDataPacket & {
-        id: number;
-        senderId: number;
-        receiverId: number;
-        propertyKey: number;
-        messages: string | string[];
-      }>
+      Array<
+        RowDataPacket & {
+          id: number;
+          senderId: number;
+          receiverId: number;
+          propertyKey: number;
+          messages: string | string[];
+        }
+      >
     >(
       `SELECT id, senderId, receiverId, propertyKey, messages
        FROM dm_notification_batches
@@ -2943,7 +3075,9 @@ export async function listPropertySearchRequests(
       requesterCompany: sql<
         string | null
       >`CASE WHEN ${propertySearchRequests.anonymous} = 1 AND ${propertySearchRequests.userId} != ${viewerUserId} AND ${canSeeAnonymous ? 0 : 1} = 1 THEN NULL ELSE ${users.company} END`,
-      requesterEmail: sql<string | null>`CASE WHEN ${canSeeAnonymous ? 1 : 0} = 1 THEN ${users.email} ELSE NULL END`,
+      requesterEmail: sql<
+        string | null
+      >`CASE WHEN ${canSeeAnonymous ? 1 : 0} = 1 THEN ${users.email} ELSE NULL END`,
       requesterVerified: sql<number>`CASE WHEN ${users.verified} = 1 AND ${users.businessCardBase64} IS NOT NULL THEN 1 ELSE 0 END`,
       proposalCount: sql<number>`CASE WHEN ${propertySearchRequests.userId} = ${viewerUserId} OR ${canSeeAnonymous ? 1 : 0} = 1 THEN COALESCE(${proposalCount.count}, 0) ELSE 0 END`,
       unreadProposalCount: sql<number>`CASE WHEN ${propertySearchRequests.userId} = ${viewerUserId} THEN COALESCE(${unreadProposalCount.count}, 0) ELSE 0 END`,
@@ -2966,7 +3100,10 @@ export async function listPropertySearchRequests(
             or(
               eq(propertySearchRequests.userId, viewerUserId),
               and(
-                inArray(propertySearchRequests.status, ["active", "negotiating"]),
+                inArray(propertySearchRequests.status, [
+                  "active",
+                  "negotiating",
+                ]),
                 sql`${propertySearchRequests.expiresAt} > NOW()`
               )
             )
@@ -3000,7 +3137,10 @@ export async function deletePropertySearchRequestAdmin(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [request] = await db
-    .select({ id: propertySearchRequests.id, title: propertySearchRequests.title })
+    .select({
+      id: propertySearchRequests.id,
+      title: propertySearchRequests.title,
+    })
     .from(propertySearchRequests)
     .where(eq(propertySearchRequests.id, id))
     .limit(1);
@@ -3020,7 +3160,10 @@ export async function deletePropertySearchRequestAdmin(id: number) {
   return request;
 }
 
-export async function setPropertySearchRequestHiddenAdmin(id: number, hidden: boolean) {
+export async function setPropertySearchRequestHiddenAdmin(
+  id: number,
+  hidden: boolean
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db
@@ -3966,7 +4109,10 @@ export async function getUnreadAnnouncementCount(userId: number) {
   return Number(row?.value ?? 0);
 }
 
-export async function markAnnouncementRead(userId: number, broadcastLogId: number) {
+export async function markAnnouncementRead(
+  userId: number,
+  broadcastLogId: number
+) {
   const db = await getDb();
   if (!db) return;
   await db
