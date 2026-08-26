@@ -2025,18 +2025,12 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   </section>
 
                   <section className="border border-border p-4">
-                    <h4 className="text-sm font-semibold">検索後の利用ジャーニー</h4>
-                    <p className="mb-4 text-xs text-muted-foreground">直近30日・閲覧後の資料作成とDMを独立して集計</p>
-                    <div className="grid items-center gap-3 sm:grid-cols-[1fr_32px_1fr_48px_1.2fr]">
+                    <h4 className="text-sm font-semibold">物件閲覧後の利用ジャーニー</h4>
+                    <p className="mb-4 text-xs text-muted-foreground">直近30日・閲覧経路を問わず、資料作成とDMを独立して集計</p>
+                    <div className="grid items-center gap-3 sm:grid-cols-[1fr_48px_1.4fr]">
                       <div className="bg-[#f3f6f9] p-4 text-center">
-                        <p className="text-xs font-medium text-muted-foreground">1. 検索</p>
-                        <p className="mt-1 text-2xl font-bold tabular-nums">{analytics.funnel.searched}社</p>
-                      </div>
-                      <span className="hidden text-center text-xl text-primary sm:block">→</span>
-                      <div className="bg-[#f3f6f9] p-4 text-center">
-                        <p className="text-xs font-medium text-muted-foreground">2. 物件閲覧</p>
+                        <p className="text-xs font-medium text-muted-foreground">物件閲覧</p>
                         <p className="mt-1 text-2xl font-bold tabular-nums">{analytics.funnel.viewed}社</p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">検索から {analytics.funnel.searched ? Math.round(analytics.funnel.viewed / analytics.funnel.searched * 100) : 0}%</p>
                       </div>
                       <div className="hidden text-center text-primary sm:block"><div>↗</div><div className="mt-5">↘</div></div>
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-1">
@@ -2047,7 +2041,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                         </div>)}
                       </div>
                     </div>
-                    <p className="mt-3 text-[10px] text-muted-foreground">資料作成とDMは順不同です。同じユーザーが両方を利用した場合は、それぞれに含まれます。</p>
+                    <p className="mt-3 text-[10px] text-muted-foreground">閲覧には一覧・お気に入り・提案・共有URLなど、すべての流入経路を含みます。資料作成とDMは順不同で、両方を利用したユーザーはそれぞれに含まれます。</p>
                   </section>
 
                   <div className="grid gap-5 xl:grid-cols-2">

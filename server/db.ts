@@ -577,7 +577,7 @@ export async function getPlatformAnalytics() {
     return {
       growth: [], propertyTypes: [], priceInterest: [],
       engagement: { total: 0, active: 0, power: 0, regular: 0, light: 0, dormant: 0 },
-      funnel: { searched: 0, viewed: 0, documented: 0, messaged: 0 },
+      funnel: { viewed: 0, documented: 0, messaged: 0 },
       features: [], generatedAt: new Date(),
     };
   }
@@ -660,21 +660,15 @@ export async function getPlatformAnalytics() {
         GROUP BY a.action ORDER BY count DESC LIMIT 12
       `),
       db.execute(sql`
-        WITH searched AS (
-          SELECT u.id AS userId, MIN(sl.createdAt) AS searchedAt
+        WITH viewed AS (
+          SELECT u.id AS userId, MIN(v.viewedAt) AS viewedAt
           FROM users u
-          INNER JOIN search_logs sl ON sl.userId = u.id
-            AND sl.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          INNER JOIN property_view_events v ON v.userId = u.id
+            AND v.viewedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
           WHERE u.role = 'user' AND u.status = 'active'
           GROUP BY u.id
-        ), viewed AS (
-          SELECT s.userId, s.searchedAt, MIN(v.viewedAt) AS viewedAt
-          FROM searched s
-          LEFT JOIN property_view_events v ON v.userId = s.userId
-            AND v.viewedAt >= s.searchedAt
-          GROUP BY s.userId, s.searchedAt
         ), outcomes AS (
-          SELECT v.userId, v.searchedAt, v.viewedAt,
+          SELECT v.userId, v.viewedAt,
             (SELECT MIN(d.createdAt) FROM generated_documents d
               WHERE d.userId = v.userId AND v.viewedAt IS NOT NULL
                 AND d.createdAt >= v.viewedAt) AS documentedAt,
@@ -683,8 +677,7 @@ export async function getPlatformAnalytics() {
                 AND dm.createdAt >= v.viewedAt) AS messagedAt
           FROM viewed v
         )
-        SELECT COUNT(*) AS searched,
-          SUM(viewedAt IS NOT NULL) AS viewed,
+        SELECT COUNT(*) AS viewed,
           SUM(documentedAt IS NOT NULL) AS documented,
           SUM(messagedAt IS NOT NULL) AS messaged
         FROM outcomes
@@ -723,7 +716,6 @@ export async function getPlatformAnalytics() {
       dormant: Math.max(0, total - active),
     },
     funnel: {
-      searched: Number(rows(funnelResult)[0]?.searched ?? 0),
       viewed: Number(rows(funnelResult)[0]?.viewed ?? 0),
       documented: Number(rows(funnelResult)[0]?.documented ?? 0),
       messaged: Number(rows(funnelResult)[0]?.messaged ?? 0),
