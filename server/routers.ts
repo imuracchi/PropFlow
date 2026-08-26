@@ -994,6 +994,11 @@ JSONのみ返してください。`,
   }),
 
   property: router({
+    previousWeekSummary: publicProcedure.query(async () => {
+      const { getOrCreateWeeklyPropertyDigest } = await import("./_core/weeklyPropertyDigest");
+      const digest = await getOrCreateWeeklyPropertyDigest();
+      return { weekStart: digest.weekStart, start: digest.start, end: digest.end, count: digest.count };
+    }),
     publicHighlights: publicProcedure.query(() =>
       db.getPublicPropertyHighlights()
     ),

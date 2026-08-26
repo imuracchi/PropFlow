@@ -8,6 +8,7 @@ import {
   longtext,
   mysqlEnum,
   mysqlTable,
+  primaryKey,
   text,
   timestamp,
   tinyint,
@@ -463,3 +464,34 @@ export const broadcastSchedules = mysqlTable("broadcast_schedules", {
   status: varchar("status", { length: 20 }).notNull().default("pending"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export const weeklyPropertyDigests = mysqlTable("weekly_property_digests", {
+  weekStart: varchar("weekStart", { length: 10 }).primaryKey(),
+  payload: json("payload").notNull(),
+  propertyCount: int("propertyCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const weeklyPropertyDigestDeliveries = mysqlTable(
+  "weekly_property_digest_deliveries",
+  {
+    weekStart: varchar("weekStart", { length: 10 }).notNull(),
+    userId: int("userId").notNull(),
+    status: varchar("status", { length: 20 }).default("sending").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    sentAt: timestamp("sentAt"),
+  },
+  table => [
+    primaryKey({
+      name: "pk_weekly_property_digest_delivery",
+      columns: [
+      table.weekStart,
+      table.userId
+      ],
+    }),
+    index("idx_weekly_property_digest_status").on(
+      table.weekStart,
+      table.status
+    ),
+  ]
+);

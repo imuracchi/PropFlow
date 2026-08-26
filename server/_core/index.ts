@@ -50,6 +50,27 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
+  app.post("/api/scheduled/weekly-property-digest", async (req, res) => {
+    try {
+      const { sdk } = await import("./sdk");
+      const user = await sdk.authenticateRequest(req);
+      if (!user.isCron || !user.taskUid) {
+        res.status(403).json({ error: "cron-only" });
+        return;
+      }
+      const { sendWeeklyPropertyDigest } = await import("./weeklyPropertyDigest");
+      res.json(await sendWeeklyPropertyDigest());
+    } catch (error) {
+      console.error("[weekly-property-digest] error:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        context: { url: req.originalUrl },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
   // Direct file serving endpoint — serves binary to let the native browser PDF viewer handle rendering
   app.get("/api/files/raw/:fileId", async (req, res) => {
     try {

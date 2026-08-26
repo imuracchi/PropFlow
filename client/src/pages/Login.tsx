@@ -66,6 +66,11 @@ export default function Login({
     retry: false,
   });
   const highlights = highlightsQuery.data ?? [];
+  const previousWeekQuery = trpc.property.previousWeekSummary.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const previousWeekCount = previousWeekQuery.data?.count ?? 0;
   const showClosingReport = Date.now() < CLOSING_REPORT_EXPIRES_AT;
   const toBase64 = (file: File): Promise<string> =>
     file
@@ -203,6 +208,12 @@ export default function Login({
                 </div>
               </div>
             )}
+            {previousWeekCount > 0 && (
+              <div className="mt-6 border border-[#d6a43e] bg-[#fffaf0] px-5 py-4 text-[#102d50]">
+                <p className="text-[11px] font-bold tracking-[0.14em] text-[#8a671d]">先週の新着</p>
+                <p className="mt-1 text-[18px] font-bold">先週、新たに{previousWeekCount}件の物件が公開されました</p>
+              </div>
+            )}
             {highlights.length > 0 && (
               <section className="mt-9 border-t-4 border-[#d6a43e] bg-white p-6 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
                 <div className="flex items-start justify-between gap-3">
@@ -258,6 +269,11 @@ export default function Login({
                   掲載者から成約のご報告が届きました。
                 </p>
               </div>
+            </div>
+          )}
+          {previousWeekCount > 0 && (
+            <div className="mb-5 border border-[#d6a43e] bg-[#fffaf0] px-4 py-3 text-center text-[#102d50] lg:hidden">
+              <p className="text-[13px] font-bold">先週、新たに{previousWeekCount}件の物件が公開されました</p>
             </div>
           )}
 

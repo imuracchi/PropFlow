@@ -2,6 +2,7 @@ import {
   Search, Upload, MessageCircle, StickyNote, Download, Smartphone, Bell,
   Heart, MapPin, FileText, Sparkles, Calculator, Globe, Users, Share2, Target, SlidersHorizontal, ArrowUpDown
 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 const sections = [
   {
@@ -122,12 +123,24 @@ const sections = [
 ];
 
 export default function Features() {
+  const previousWeekQuery = trpc.property.previousWeekSummary.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const previousWeekCount = previousWeekQuery.data?.count ?? 0;
   return (
     <div className="space-y-5 max-w-4xl">
       <div>
         <h1 className="text-lg font-semibold text-foreground">できること</h1>
         <p className="text-xs text-muted-foreground mt-0.5">PropFlowの主な機能をご紹介します</p>
       </div>
+
+      {previousWeekCount > 0 && (
+        <div className="border border-primary/20 bg-primary/5 px-4 py-4 text-center">
+          <p className="text-sm font-semibold text-primary">先週、新たに{previousWeekCount}件の物件が公開されました</p>
+          <p className="mt-1 text-xs text-muted-foreground">新着物件は物件一覧から確認できます</p>
+        </div>
+      )}
 
       <div className="bg-primary/5 border border-primary/15 rounded-lg px-4 py-3 text-center">
         <p className="text-sm text-primary font-medium">現在β版として全機能を無料でご利用いただけます</p>
