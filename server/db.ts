@@ -570,6 +570,132 @@ export async function getAdminStats() {
   };
 }
 
+/** 管理画面向けのプロダクト利用分析。個人情報を返さず、集計値だけを返す。 */
+export async function getPlatformAnalytics() {
+  const db = await getDb();
+  if (!db) {
+    return {
+      growth: [], propertyTypes: [], priceInterest: [],
+      engagement: { total: 0, active: 0, power: 0, regular: 0, light: 0, dormant: 0 },
+      features: [], generatedAt: new Date(),
+    };
+  }
+
+  const [growthResult, typeResult, priceResult, activityResult, featureResult, totalResult] =
+    await Promise.all([
+      db.execute(sql`
+        SELECT month,
+          SUM(newUsers) AS newUsers,
+          SUM(newProperties) AS newProperties
+        FROM (
+          SELECT DATE_FORMAT(createdAt, '%Y-%m') AS month, COUNT(*) AS newUsers, 0 AS newProperties
+          FROM users
+          WHERE role = 'user' AND createdAt >= DATE_SUB(CURRENT_DATE, INTERVAL 11 MONTH)
+          GROUP BY DATE_FORMAT(createdAt, '%Y-%m')
+          UNION ALL
+          SELECT DATE_FORMAT(createdAt, '%Y-%m') AS month, 0 AS newUsers, COUNT(*) AS newProperties
+          FROM properties
+          WHERE createdAt >= DATE_SUB(CURRENT_DATE, INTERVAL 11 MONTH)
+          GROUP BY DATE_FORMAT(createdAt, '%Y-%m')
+        ) growth
+        GROUP BY month ORDER BY month
+      `),
+      db.execute(sql`
+        SELECT type AS name, COUNT(*) AS count,
+          ROUND(AVG(price)) AS averagePrice
+        FROM properties
+        WHERE deleted = 0
+        GROUP BY type ORDER BY count DESC
+      `),
+      db.execute(sql`
+        SELECT bucket AS label, sortOrder,
+          COUNT(*) AS properties,
+          SUM(viewCount) AS views,
+          SUM(favoriteCount) AS favorites
+        FROM (
+          SELECT p.id AS propertyId,
+            CASE
+              WHEN p.price IS NULL THEN '価格未設定'
+              WHEN p.price < 30000000 THEN '3,000万円未満'
+              WHEN p.price < 50000000 THEN '3,000〜5,000万円'
+              WHEN p.price < 100000000 THEN '5,000万〜1億円'
+              ELSE '1億円以上'
+            END AS bucket,
+            CASE WHEN p.price IS NULL THEN 5 WHEN p.price < 30000000 THEN 1
+              WHEN p.price < 50000000 THEN 2 WHEN p.price < 100000000 THEN 3 ELSE 4 END AS sortOrder,
+            COALESCE(v.viewCount, 0) AS viewCount,
+            COALESCE(f.favoriteCount, 0) AS favoriteCount
+          FROM properties p
+          LEFT JOIN (
+            SELECT propertyId, COUNT(*) AS viewCount
+            FROM property_view_events GROUP BY propertyId
+          ) v ON v.propertyId = p.id
+          LEFT JOIN (
+            SELECT propertyId, COUNT(*) AS favoriteCount
+            FROM favorites GROUP BY propertyId
+          ) f ON f.propertyId = p.id
+          WHERE p.deleted = 0
+        ) interest
+        GROUP BY bucket, sortOrder ORDER BY sortOrder
+      `),
+      db.execute(sql`
+        SELECT a.userId, COUNT(*) AS events
+        FROM activity_logs a
+        INNER JOIN users u ON u.id = a.userId
+        WHERE a.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          AND u.role = 'user' AND u.status = 'active'
+        GROUP BY a.userId
+      `),
+      db.execute(sql`
+        SELECT a.action, COUNT(*) AS count, COUNT(DISTINCT a.userId) AS users
+        FROM activity_logs a
+        INNER JOIN users u ON u.id = a.userId
+        WHERE a.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          AND u.role = 'user' AND u.status = 'active'
+          AND a.action NOT LIKE 'admin_%' AND a.action NOT IN ('login_error')
+        GROUP BY a.action ORDER BY count DESC LIMIT 12
+      `),
+      db.execute(sql`SELECT COUNT(*) AS total FROM users WHERE role = 'user' AND status = 'active'`),
+    ]);
+
+  const rows = (result: any) => (result?.[0] ?? []) as any[];
+  const activity = rows(activityResult).map(row => Number(row.events));
+  const total = Number(rows(totalResult)[0]?.total ?? 0);
+  const active = activity.length;
+  const actionLabels: Record<string, string> = {
+    property_create: "物件登録", search: "AI・キーワード検索", memo_save: "物件メモ",
+    dm_send: "DM送信", contact_share: "連絡先共有", business_card_send: "名刺送付",
+    buyer_preference_save: "希望条件登録", property_match_results_open: "物件マッチング",
+    property_search_create: "物件募集", property_search_propose: "物件提案",
+    property_search_accept: "提案承認", document_generate: "紹介資料作成",
+    terms_agree: "利用規約同意", support_report: "ご意見箱",
+  };
+
+  return {
+    growth: rows(growthResult).map(row => ({
+      month: String(row.month), newUsers: Number(row.newUsers), newProperties: Number(row.newProperties),
+    })),
+    propertyTypes: rows(typeResult).map(row => ({
+      name: String(row.name), count: Number(row.count), averagePrice: Number(row.averagePrice ?? 0),
+    })),
+    priceInterest: rows(priceResult).map(row => ({
+      label: String(row.label), properties: Number(row.properties), views: Number(row.views),
+      favorites: Number(row.favorites),
+    })),
+    engagement: {
+      total, active, power: activity.filter(n => n >= 10).length,
+      regular: activity.filter(n => n >= 3 && n < 10).length,
+      light: activity.filter(n => n >= 1 && n < 3).length,
+      dormant: Math.max(0, total - active),
+    },
+    features: rows(featureResult).map(row => ({
+      action: String(row.action), label: actionLabels[String(row.action)] ?? String(row.action),
+      count: Number(row.count), users: Number(row.users),
+    })),
+    generatedAt: new Date(),
+  };
+}
+
 export async function getAllActiveUserEmails(): Promise<string[]> {
   const db = await getDb();
   if (!db) return [];

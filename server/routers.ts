@@ -3220,6 +3220,10 @@ ${propList}`,
       return db.getAdminStats();
     }),
 
+    platformAnalytics: adminProcedure.query(async () => {
+      return db.getPlatformAnalytics();
+    }),
+
     pendingUsers: adminProcedure.query(async () => {
       const users = await db.listPendingUsers();
       return users.map(({ passwordHash, ...u }) => u);

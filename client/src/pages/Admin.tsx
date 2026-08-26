@@ -40,6 +40,8 @@ import {
   Send,
   Sparkles,
   BarChart2,
+  TrendingUp,
+  Activity,
   Smartphone,
   Monitor,
   ChevronDown,
@@ -226,6 +228,10 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const analyzeDmsMutation = trpc.admin.analyzeDms.useMutation({
     onSuccess: data => setAnalysisResult(data),
   });
+  const platformAnalyticsQuery = trpc.admin.platformAnalytics.useQuery(
+    undefined,
+    { enabled: !isManagement }
+  );
   const addBroadcastLogMutation = trpc.admin.addBroadcastLog.useMutation({
     onSuccess: () => {
       utils.admin.broadcastLogs.invalidate();
@@ -1917,12 +1923,134 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
 
         {/* AI分析タブ */}
         <TabsContent value="ai" className="mt-4 space-y-4">
+          <div className="bg-card border border-border rounded-xl p-5 space-y-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  プラットフォーム全体分析
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  登録・物件・関心・機能利用を、蓄積済みデータから集計します
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={platformAnalyticsQuery.isFetching}
+                onClick={() => platformAnalyticsQuery.refetch()}
+              >
+                {platformAnalyticsQuery.isFetching && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                最新データに更新
+              </Button>
+            </div>
+
+            {platformAnalyticsQuery.isLoading && (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />集計中...
+              </div>
+            )}
+            {platformAnalyticsQuery.error && (
+              <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                全体分析の取得に失敗しました: {platformAnalyticsQuery.error.message}
+              </div>
+            )}
+
+            {platformAnalyticsQuery.data && (() => {
+              const analytics = platformAnalyticsQuery.data;
+              const maxGrowth = Math.max(1, ...analytics.growth.flatMap(row => [row.newUsers, row.newProperties]));
+              const maxType = Math.max(1, ...analytics.propertyTypes.map(row => row.count));
+              const maxFeature = Math.max(1, ...analytics.features.map(row => row.count));
+              const activeRate = analytics.engagement.total
+                ? Math.round((analytics.engagement.active / analytics.engagement.total) * 100)
+                : 0;
+              const formatPrice = (price: number) => price
+                ? `${Math.round(price / 10000).toLocaleString()}万円`
+                : "—";
+              return (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    {[
+                      ["登録ユーザー", `${analytics.engagement.total}社`],
+                      ["30日アクティブ", `${analytics.engagement.active}社`],
+                      ["アクティブ率", `${activeRate}%`],
+                      ["高頻度ユーザー", `${analytics.engagement.power}社`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="border border-border bg-muted/20 p-4">
+                        <p className="text-xs text-muted-foreground">{label}</p>
+                        <p className="mt-1 text-xl font-bold tabular-nums">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-5 xl:grid-cols-2">
+                    <section className="border border-border p-4">
+                      <h4 className="text-sm font-semibold">登録者・物件登録の増加推移</h4>
+                      <p className="mb-4 text-xs text-muted-foreground">月別の新規件数（直近12か月）</p>
+                      <div className="space-y-3">
+                        {analytics.growth.length === 0 && <p className="text-xs text-muted-foreground">期間内のデータはありません</p>}
+                        {analytics.growth.map(row => (
+                          <div key={row.month} className="grid grid-cols-[62px_1fr_68px] items-center gap-2 text-xs">
+                            <span className="text-muted-foreground">{row.month.slice(2).replace("-", "/")}</span>
+                            <div className="space-y-1">
+                              <div className="h-2 bg-muted"><div className="h-full bg-blue-600" style={{ width: `${row.newUsers / maxGrowth * 100}%` }} /></div>
+                              <div className="h-2 bg-muted"><div className="h-full bg-emerald-500" style={{ width: `${row.newProperties / maxGrowth * 100}%` }} /></div>
+                            </div>
+                            <span className="text-right tabular-nums"><span className="text-blue-600">{row.newUsers}</span> / <span className="text-emerald-600">{row.newProperties}</span></span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex gap-4 text-[11px] text-muted-foreground"><span>● <b className="text-blue-600">登録者</b></span><span>● <b className="text-emerald-600">物件</b></span></div>
+                    </section>
+
+                    <section className="border border-border p-4">
+                      <h4 className="text-sm font-semibold">物件種別の傾向</h4>
+                      <p className="mb-4 text-xs text-muted-foreground">登録数と平均価格</p>
+                      <div className="space-y-3">
+                        {analytics.propertyTypes.slice(0, 8).map(row => (
+                          <div key={row.name}>
+                            <div className="mb-1 flex justify-between text-xs"><span>{row.name}</span><span className="tabular-nums">{row.count}件 · 平均 {formatPrice(row.averagePrice)}</span></div>
+                            <div className="h-2 bg-muted"><div className="h-full bg-primary" style={{ width: `${row.count / maxType * 100}%` }} /></div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
+
+                  <section className="border border-border overflow-x-auto">
+                    <div className="p-4"><h4 className="text-sm font-semibold">価格帯別の興味度</h4><p className="text-xs text-muted-foreground">閲覧とお気に入りを価格帯ごとに比較</p></div>
+                    <table className="w-full min-w-[560px] text-sm">
+                      <thead className="bg-muted/50 text-xs text-muted-foreground"><tr><th className="px-4 py-2 text-left">価格帯</th><th className="px-4 py-2 text-right">物件数</th><th className="px-4 py-2 text-right">閲覧</th><th className="px-4 py-2 text-right">お気に入り</th><th className="px-4 py-2 text-right">1物件あたり閲覧</th></tr></thead>
+                      <tbody className="divide-y divide-border">{analytics.priceInterest.map(row => <tr key={row.label}><td className="px-4 py-2 font-medium">{row.label}</td><td className="px-4 py-2 text-right tabular-nums">{row.properties}</td><td className="px-4 py-2 text-right tabular-nums">{row.views}</td><td className="px-4 py-2 text-right tabular-nums">{row.favorites}</td><td className="px-4 py-2 text-right font-medium tabular-nums">{row.properties ? (row.views / row.properties).toFixed(1) : "0.0"}</td></tr>)}</tbody>
+                    </table>
+                  </section>
+
+                  <div className="grid gap-5 xl:grid-cols-2">
+                    <section className="border border-border p-4">
+                      <h4 className="flex items-center gap-2 text-sm font-semibold"><Activity className="h-4 w-4" />登録者の活用頻度</h4>
+                      <p className="mb-4 text-xs text-muted-foreground">直近30日の操作回数で分類</p>
+                      <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+                        {[["高頻度", analytics.engagement.power, "10回以上"], ["継続利用", analytics.engagement.regular, "3〜9回"], ["低頻度", analytics.engagement.light, "1〜2回"], ["休眠", analytics.engagement.dormant, "0回"]].map(([label, count, note]) => <div key={String(label)} className="bg-muted/40 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-bold tabular-nums">{count}社</p><p className="text-[10px] text-muted-foreground">{note}</p></div>)}
+                      </div>
+                    </section>
+                    <section className="border border-border p-4">
+                      <h4 className="text-sm font-semibold">利用されている機能</h4>
+                      <p className="mb-4 text-xs text-muted-foreground">直近30日の操作ログ</p>
+                      <div className="space-y-2.5">{analytics.features.slice(0, 8).map(row => <div key={row.action} className="grid grid-cols-[110px_1fr_80px] items-center gap-2 text-xs"><span className="truncate" title={row.label}>{row.label}</span><div className="h-2 bg-muted"><div className="h-full bg-violet-500" style={{ width: `${row.count / maxFeature * 100}%` }} /></div><span className="text-right tabular-nums">{row.count}回 / {row.users}社</span></div>)}</div>
+                    </section>
+                  </div>
+                  <p className="text-right text-[10px] text-muted-foreground">集計日時: {fmtDateTime(analytics.generatedAt)}</p>
+                </div>
+              );
+            })()}
+          </div>
+
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  DMコンテンツ AI分析
+                  DMコンテンツ AI分析（内容・質問傾向）
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   AIがDMメッセージを分析し、質問カテゴリと傾向をまとめます
