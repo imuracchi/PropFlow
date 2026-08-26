@@ -483,14 +483,14 @@ export default function V2PropertyList({
   return (
     <V2Layout preview={preview}>
       <main className="w-full max-w-[1500px] p-4 lg:p-7">
-        <div className="flex items-end justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[14px] text-[#758194]">{pageDescription}</p>
             <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
               {pageTitle}
             </h1>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
             <p className="text-[14px] text-[#65748a]">
               検索結果{" "}
               <strong className="text-[18px] text-[#102d50]">
@@ -669,8 +669,8 @@ export default function V2PropertyList({
             )}
           </div>
           {filtersOpen && (
-            <div className="mt-3 grid gap-3 border-t border-[#e1e6ec] pt-3 sm:grid-cols-3">
-              <label className="text-[11px] font-bold text-[#65748a]">
+            <div className="mt-3 grid min-w-0 gap-3 border-t border-[#e1e6ec] pt-3 sm:grid-cols-3">
+              <label className="block min-w-0 text-[11px] font-bold text-[#65748a]">
                 物件種別
                 <select
                   value={type}
@@ -683,37 +683,45 @@ export default function V2PropertyList({
                   ))}
                 </select>
               </label>
-              <label className="text-[11px] font-bold text-[#65748a]">
+              <label className="block min-w-0 text-[11px] font-bold text-[#65748a]">
                 価格（万円）
-                <div className="mt-1 flex gap-1">
+                <div className="mt-1 grid w-full min-w-0 grid-cols-2 gap-2">
                   <input
+                    type="number"
+                    inputMode="numeric"
                     value={minPrice}
                     onChange={e => setMinPrice(e.target.value)}
                     placeholder="下限"
-                    className="h-10 min-w-0 flex-1 border border-[#cbd5df] px-2"
+                    className="h-10 w-full min-w-0 border border-[#cbd5df] px-2"
                   />
                   <input
+                    type="number"
+                    inputMode="numeric"
                     value={maxPrice}
                     onChange={e => setMaxPrice(e.target.value)}
                     placeholder="上限"
-                    className="h-10 min-w-0 flex-1 border border-[#cbd5df] px-2"
+                    className="h-10 w-full min-w-0 border border-[#cbd5df] px-2"
                   />
                 </div>
               </label>
-              <label className="text-[11px] font-bold text-[#65748a]">
+              <label className="block min-w-0 text-[11px] font-bold text-[#65748a]">
                 土地面積（㎡）
-                <div className="mt-1 flex gap-1">
+                <div className="mt-1 grid w-full min-w-0 grid-cols-2 gap-2">
                   <input
+                    type="number"
+                    inputMode="decimal"
                     value={minArea}
                     onChange={e => setMinArea(e.target.value)}
                     placeholder="下限"
-                    className="h-10 min-w-0 flex-1 border border-[#cbd5df] px-2"
+                    className="h-10 w-full min-w-0 border border-[#cbd5df] px-2"
                   />
                   <input
+                    type="number"
+                    inputMode="decimal"
                     value={maxArea}
                     onChange={e => setMaxArea(e.target.value)}
                     placeholder="上限"
-                    className="h-10 min-w-0 flex-1 border border-[#cbd5df] px-2"
+                    className="h-10 w-full min-w-0 border border-[#cbd5df] px-2"
                   />
                 </div>
               </label>
@@ -798,10 +806,14 @@ export default function V2PropertyList({
                       </span>
                     )}
                     <span className="ml-auto text-[11px] text-[#8490a0]">
-                      {new Date(p.createdAt).toLocaleDateString("ja-JP", {
-                        month: "numeric",
-                        day: "numeric",
-                      })}
+                      {p.published === 0
+                        ? "未公開"
+                        : new Date(
+                            p.publishedAt ?? p.createdAt
+                          ).toLocaleDateString("ja-JP", {
+                            month: "numeric",
+                            day: "numeric",
+                          })}
                     </span>
                   </div>
                   <div className="mt-1.5 min-w-0">
