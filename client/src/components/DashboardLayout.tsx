@@ -103,6 +103,17 @@ const baseSections: MenuSection[] = [
       },
     ],
   },
+  {
+    title: "ヘルプ・サポート",
+    items: [
+      {
+        icon: HelpCircle,
+        label: "ヘルプ・お問い合わせ",
+        path: "/support-ext",
+        href: "/support.html",
+      },
+    ],
+  },
 ];
 
 const adminSection: MenuSection = {

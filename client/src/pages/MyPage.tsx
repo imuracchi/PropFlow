@@ -552,7 +552,9 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
                         </p>
                         {remainingDays !== null && (
                           <p className="mt-1 text-[11px] font-bold text-[#a35f0a]">
-                            完全削除まで残り{remainingDays}日
+                            {remainingDays > 0
+                              ? `非表示・写真と添付ファイルの削除まで残り${remainingDays}日`
+                              : "まもなくユーザー画面から非表示になります"}
                           </p>
                         )}
                       </div>
@@ -756,7 +758,7 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
                   if (!result.success) {
                     alert(
                       result.expired
-                        ? "復元期限の30日を過ぎたため、この物件は完全に削除されました"
+                        ? "削除から30日が経過したため、この物件はユーザー画面から復元できません"
                         : "物件を復元できませんでした"
                     );
                     setRestoreTarget(null);

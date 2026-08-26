@@ -3,6 +3,7 @@ import {
   Building2,
   Download,
   Heart,
+  HelpCircle,
   LayoutGrid,
   List,
   LogOut,
@@ -178,6 +179,18 @@ export default function V2Layout({
             <MessageSquareText size={17} />
             ご意見箱
           </button>
+          <p className="mt-5 px-3 pb-2 text-[10px] font-bold tracking-widest text-white/40">
+            ヘルプ・サポート
+          </p>
+          <a
+            href="/support.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-1 flex h-10 w-full items-center gap-3 px-3 text-[13px] text-white/65 hover:bg-white/10"
+          >
+            <HelpCircle size={17} />
+            ヘルプ・お問い合わせ
+          </a>
         </nav>
         <div className="border-t border-white/10 p-4">
           <div className="mb-4 flex items-center justify-center gap-3 text-[10px] text-white/50">
@@ -310,6 +323,18 @@ export default function V2Layout({
                   </span>
                 </button>
               ))}
+              <a
+                href="/support.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMoreOpen(false)}
+                className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
+              >
+                <HelpCircle size={23} />
+                <span className="mt-2 text-[11px] font-bold leading-4">
+                  ヘルプ・お問い合わせ
+                </span>
+              </a>
               <button
                 onClick={openAdminReport}
                 className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"

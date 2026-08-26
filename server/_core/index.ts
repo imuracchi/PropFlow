@@ -445,7 +445,7 @@ async function startServer() {
   });
   console.log("[CRON] Expired document cleanup scheduled at 0:00 JST daily");
 
-  // 毎日深夜0時（JST）に、削除済み物件の添付を消去（概要は分析用に保持）
+  // 毎日深夜0時（JST）に、削除操作から30日を過ぎた物件の写真・添付ファイルを削除
   cron.schedule("0 15 * * *", async () => {
     try {
       const db = await import("../db");

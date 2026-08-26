@@ -1912,12 +1912,8 @@ ${propList}`,
     chatProperties: protectedProcedure.query(async ({ ctx }) => {
       return db.getChatPropertiesByUserId(ctx.user.id);
     }),
-    deletedProperties: protectedProcedure.query(async () => {
-      // 登録者の画面には削除済み物件を戻さない。DB上の概要は管理・分析用に保持する。
-      const hidden: Awaited<
-        ReturnType<typeof db.getDeletedPropertiesByUserId>
-      > = [];
-      return hidden;
+    deletedProperties: protectedProcedure.query(async ({ ctx }) => {
+      return db.getDeletedPropertiesByUserId(ctx.user.id);
     }),
     restoreProperty: protectedProcedure
       .input(
@@ -1927,9 +1923,41 @@ ${propList}`,
           message: z.string().max(2000).optional(),
         })
       )
-      .mutation(async () => {
-        // 登録者による削除は取り消せない。概要レコードのみ内部で保持する。
-        return { success: false, expired: false, notifiedCount: 0 };
+      .mutation(async ({ input, ctx }) => {
+        const property = await db.getPropertyById(input.id);
+        if (!property || property.userId !== ctx.user.id || property.deleted !== 1)
+          return { success: false, expired: false, notifiedCount: 0 };
+
+        const deletedAt = property.ownerDeletedAt
+          ? new Date(property.ownerDeletedAt).getTime()
+          : 0;
+        const expired = !deletedAt || deletedAt < Date.now() - 30 * 86400000;
+        if (expired) {
+          // 30日経過後はユーザーによる復元を受け付けない。
+          // 写真・添付ファイルだけを削除し、物件本体・概要・商談履歴は
+          // マーケティングデータとして活用するため保持する。
+          await db.purgeExpiredOwnerDeletedProperties();
+          return { success: false, expired: true, notifiedCount: 0 };
+        }
+
+        await db.restoreProperty(input.id);
+        let notifiedCount = 0;
+        if (input.notifyPartners && input.message?.trim()) {
+          const partnerIds = await db.getDmPartnersForProperty(
+            input.id,
+            ctx.user.id
+          );
+          for (const partnerId of partnerIds) {
+            await db.sendDirectMessage(
+              ctx.user.id,
+              partnerId,
+              input.message.trim(),
+              input.id
+            );
+          }
+          notifiedCount = partnerIds.length;
+        }
+        return { success: true, expired: false, notifiedCount };
       }),
   }),
 

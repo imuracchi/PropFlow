@@ -2175,7 +2175,7 @@ export default function V2PropertyDetail({
             {dialog === "delete" && (
               <div className="mt-4 space-y-4">
                 <p className="text-[13px] leading-6 text-[#a72e2e]">
-                  この物件を一覧とマイページから削除します。写真・資料も削除され、この操作は取り消せません。
+                  この物件を一覧から取り下げます。削除後30日間は、写真・添付ファイルを含めてマイページから復元できます。30日後はユーザー画面から非表示となり、写真・添付ファイルだけが削除されます。物件概要と商談履歴はマーケティングデータとして保持されます。
                 </p>
                 <label className="block text-[12px] font-bold text-[#526176]">
                   やり取りした相手へのメッセージ（任意）

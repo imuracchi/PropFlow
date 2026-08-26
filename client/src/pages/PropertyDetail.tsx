@@ -2094,7 +2094,7 @@ export default function PropertyDetail() {
                 </p>
               </div>
               <div className="px-4 py-4">
-                <p className="text-xs text-muted-foreground mb-3">この物件を完全に削除します。削除後は復元できません。</p>
+                <p className="text-xs text-muted-foreground mb-3">この物件を一覧から取り下げます。削除後30日間はマイページから復元できます。</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -2258,8 +2258,8 @@ export default function PropertyDetail() {
               <>
                 <div className="px-5 py-4 space-y-4">
                   <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 space-y-1">
-                    <p className="text-sm font-semibold text-red-700">⚠️ この操作は取り消せません</p>
-                    <p className="text-xs text-red-600">削除した物件は完全に削除され、復元できません。写真・資料・やり取りの履歴もすべて消去されます。</p>
+                    <p className="text-sm font-semibold text-red-700">⚠️ 物件一覧から取り下げます</p>
+                    <p className="text-xs text-red-600">削除後30日間は、写真・添付ファイルを含めてマイページから復元できます。30日後はユーザー画面から非表示となり、写真・添付ファイルだけが削除されます。物件概要と商談履歴はマーケティングデータとして保持されます。</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">やり取りした相手へのメッセージ（任意）</label>
@@ -2297,7 +2297,7 @@ export default function PropertyDetail() {
                   )}
                   <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
                     <p className="text-sm font-semibold text-red-700">本当に削除しますか？</p>
-                    <p className="text-xs text-red-600 mt-0.5">この操作は取り消せません。復元できません。</p>
+                    <p className="text-xs text-red-600 mt-0.5">削除後30日間はマイページの「削除した物件」から復元できます。</p>
                   </div>
                 </div>
                 <div className="px-5 py-4 border-t border-border flex gap-3">
