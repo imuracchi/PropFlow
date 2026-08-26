@@ -577,11 +577,12 @@ export async function getPlatformAnalytics() {
     return {
       growth: [], propertyTypes: [], priceInterest: [],
       engagement: { total: 0, active: 0, power: 0, regular: 0, light: 0, dormant: 0 },
+      funnel: { searched: 0, viewed: 0, documented: 0, messaged: 0 },
       features: [], generatedAt: new Date(),
     };
   }
 
-  const [growthResult, typeResult, priceResult, activityResult, featureResult, totalResult] =
+  const [growthResult, typeResult, priceResult, activityResult, featureResult, funnelResult, totalResult] =
     await Promise.all([
       db.execute(sql`
         SELECT month,
@@ -658,6 +659,40 @@ export async function getPlatformAnalytics() {
           AND a.action NOT LIKE 'admin_%' AND a.action NOT IN ('login_error')
         GROUP BY a.action ORDER BY count DESC LIMIT 12
       `),
+      db.execute(sql`
+        WITH searched AS (
+          SELECT u.id AS userId, MIN(sl.createdAt) AS searchedAt
+          FROM users u
+          INNER JOIN search_logs sl ON sl.userId = u.id
+            AND sl.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          WHERE u.role = 'user' AND u.status = 'active'
+          GROUP BY u.id
+        ), viewed AS (
+          SELECT s.userId, s.searchedAt, MIN(v.viewedAt) AS viewedAt
+          FROM searched s
+          LEFT JOIN property_view_events v ON v.userId = s.userId
+            AND v.viewedAt >= s.searchedAt
+          GROUP BY s.userId, s.searchedAt
+        ), documented AS (
+          SELECT v.userId, v.searchedAt, v.viewedAt, MIN(d.createdAt) AS documentedAt
+          FROM viewed v
+          LEFT JOIN generated_documents d ON d.userId = v.userId
+            AND v.viewedAt IS NOT NULL AND d.createdAt >= v.viewedAt
+          GROUP BY v.userId, v.searchedAt, v.viewedAt
+        ), messaged AS (
+          SELECT d.userId, d.searchedAt, d.viewedAt, d.documentedAt,
+            MIN(dm.createdAt) AS messagedAt
+          FROM documented d
+          LEFT JOIN direct_messages dm ON dm.senderId = d.userId
+            AND d.documentedAt IS NOT NULL AND dm.createdAt >= d.documentedAt
+          GROUP BY d.userId, d.searchedAt, d.viewedAt, d.documentedAt
+        )
+        SELECT COUNT(*) AS searched,
+          SUM(viewedAt IS NOT NULL) AS viewed,
+          SUM(documentedAt IS NOT NULL) AS documented,
+          SUM(messagedAt IS NOT NULL) AS messaged
+        FROM messaged
+      `),
       db.execute(sql`SELECT COUNT(*) AS total FROM users WHERE role = 'user' AND status = 'active'`),
     ]);
 
@@ -690,6 +725,12 @@ export async function getPlatformAnalytics() {
       regular: activity.filter(n => n >= 3 && n < 10).length,
       light: activity.filter(n => n >= 1 && n < 3).length,
       dormant: Math.max(0, total - active),
+    },
+    funnel: {
+      searched: Number(rows(funnelResult)[0]?.searched ?? 0),
+      viewed: Number(rows(funnelResult)[0]?.viewed ?? 0),
+      documented: Number(rows(funnelResult)[0]?.documented ?? 0),
+      messaged: Number(rows(funnelResult)[0]?.messaged ?? 0),
     },
     features: rows(featureResult).map(row => ({
       action: String(row.action), label: actionLabels[String(row.action)] ?? String(row.action),

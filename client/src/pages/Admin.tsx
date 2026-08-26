@@ -2024,6 +2024,28 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                     </table>
                   </section>
 
+                  <section className="border border-border p-4">
+                    <h4 className="text-sm font-semibold">利用ファネル</h4>
+                    <p className="mb-4 text-xs text-muted-foreground">直近30日・同一ユーザーが順番に進んだ社数</p>
+                    <div className="grid gap-2 sm:grid-cols-4">
+                      {[
+                        ["検索", analytics.funnel.searched, analytics.funnel.searched],
+                        ["物件閲覧", analytics.funnel.viewed, analytics.funnel.searched],
+                        ["資料作成", analytics.funnel.documented, analytics.funnel.viewed],
+                        ["DM送信", analytics.funnel.messaged, analytics.funnel.documented],
+                      ].map(([label, count, previous], index) => {
+                        const rate = Number(previous) ? Math.round(Number(count) / Number(previous) * 100) : 0;
+                        return <div key={String(label)} className="relative bg-[#f3f6f9] p-4 text-center">
+                          <p className="text-xs font-medium text-muted-foreground">{index + 1}. {label}</p>
+                          <p className="mt-1 text-2xl font-bold tabular-nums">{count}社</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">{index === 0 ? "起点" : `前段階から ${rate}%`}</p>
+                          {index < 3 && <span className="absolute -right-2.5 top-1/2 z-10 hidden -translate-y-1/2 text-lg text-primary sm:block">→</span>}
+                        </div>;
+                      })}
+                    </div>
+                    <p className="mt-3 text-[10px] text-muted-foreground">検索後に閲覧し、その後に資料を作成してからDMを送信したユーザーを段階ごとに集計しています。</p>
+                  </section>
+
                   <div className="grid gap-5 xl:grid-cols-2">
                     <section className="border border-border p-4">
                       <h4 className="flex items-center gap-2 text-sm font-semibold"><Activity className="h-4 w-4" />登録者の活用頻度</h4>
