@@ -529,10 +529,20 @@ export default function V2PropertyList({
             onClick={() =>
               setLocation(preview ? "/v2/preview/upload" : "/v2/upload")
             }
-            className="mt-3 flex h-11 w-full items-center justify-center gap-2 bg-[#173f70] text-[13px] font-bold text-white lg:hidden"
+            className="mt-4 flex min-h-16 w-full items-center gap-3 border border-[#0f3159] bg-[#173f70] px-4 py-3 text-left text-white shadow-[0_7px_18px_rgba(23,63,112,0.2)] lg:hidden"
           >
-            <Plus size={17} />
-            物件を登録する
+            <span className="grid size-10 shrink-0 place-items-center bg-white text-[#173f70]">
+              <Plus size={22} strokeWidth={2.5} />
+            </span>
+            <span>
+              <span className="block text-[15px] font-bold">
+                物件を登録する
+              </span>
+              <span className="mt-0.5 block text-[11px] font-medium text-white/70">
+                概要書の読み取り・手動入力に対応
+              </span>
+            </span>
+            <ChevronRight className="ml-auto size-5 shrink-0 text-white/70" />
           </button>
         )}
         <section className="mt-4 border border-[#d9e0e8] bg-white p-3 lg:p-4">

@@ -2906,6 +2906,27 @@ ${propList}`,
             code: "INTERNAL_SERVER_ERROR",
             message: "送信に失敗しました。時間をおいて再度お試しください。",
           });
+        if (input.replyEmail) {
+          await sendMail(
+            input.replyEmail,
+            "【自動返信・PropFlow】ご意見を受け付けました",
+            `<div style="font-family:sans-serif;max-width:680px;margin:0 auto;color:#263b58;line-height:1.8;">
+              <p style="font-weight:700;color:#173f70;">このメールは、ご意見の受付をお知らせする自動返信メールです。</p>
+              <p>${input.name ? `${escapeHtml(input.name)} 様` : "ご意見をお寄せいただいた方へ"}</p>
+              <p>PropFlowへご意見・お問い合わせをお送りいただき、ありがとうございます。以下の内容で受け付けました。</p>
+              <div style="background:#f4f6f8;border:1px solid #d8e0e8;padding:16px;margin:16px 0;">
+                <p style="margin:0 0 8px;"><strong>カテゴリ：</strong>${escapeHtml(labels[input.category])}</p>
+                <p style="margin:0;white-space:pre-wrap;"><strong>内容：</strong><br>${escapeHtml(input.message)}</p>
+              </div>
+              <p>お送りいただいた内容を確認いたします。確認や回答が必要な場合は、担当者よりご連絡いたします。</p>
+              <p style="color:#64748b;font-size:12px;">※このメールは自動送信されています。</p>
+              <p>PropFlowサポート</p>
+            </div>`,
+            { replyTo: "support@gspec.me" }
+          ).catch(error =>
+            console.error("[support.publicReport] Auto-reply failed:", error)
+          );
+        }
         return { success: true };
       }),
     report: protectedProcedure
@@ -2976,6 +2997,25 @@ ${propList}`,
             code: "INTERNAL_SERVER_ERROR",
             message: "送信に失敗しました。時間をおいて再度お試しください。",
           });
+        await sendMail(
+          input.replyEmail,
+          "【自動返信・PropFlow】ご意見を受け付けました",
+          `<div style="font-family:sans-serif;max-width:680px;margin:0 auto;color:#263b58;line-height:1.8;">
+            <p style="font-weight:700;color:#173f70;">このメールは、ご意見の受付をお知らせする自動返信メールです。</p>
+            <p>${ctx.user.name ? `${escapeHtml(ctx.user.name)} 様` : "ご意見をお寄せいただいた方へ"}</p>
+            <p>PropFlowへご意見・お問い合わせをお送りいただき、ありがとうございます。以下の内容で受け付けました。</p>
+            <div style="background:#f4f6f8;border:1px solid #d8e0e8;padding:16px;margin:16px 0;">
+              <p style="margin:0 0 8px;"><strong>カテゴリ：</strong>${escapeHtml(labels[input.category])}</p>
+              <p style="margin:0;white-space:pre-wrap;"><strong>内容：</strong><br>${escapeHtml(input.message)}</p>
+            </div>
+            <p>お送りいただいた内容を確認いたします。確認や回答が必要な場合は、担当者よりご連絡いたします。</p>
+            <p style="color:#64748b;font-size:12px;">※このメールは自動送信されています。</p>
+            <p>PropFlowサポート</p>
+          </div>`,
+          { replyTo: "support@gspec.me" }
+        ).catch(error =>
+          console.error("[support.report] Auto-reply failed:", error)
+        );
         db.logActivity(
           ctx.user.id,
           "support_report",
