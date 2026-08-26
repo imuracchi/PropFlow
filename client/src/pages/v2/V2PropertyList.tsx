@@ -180,6 +180,30 @@ const PREVIEW_PROPERTIES = [
 ];
 const PREVIEW_FAVORITES_KEY = "propflow-v2-preview-favorites";
 
+type SortKey =
+  | "name"
+  | "type"
+  | "landArea"
+  | "buildingArea"
+  | "buildingAge"
+  | "price"
+  | "publishedAt"
+  | "viewCount"
+  | "status";
+type SortDirection = "asc" | "desc";
+
+const SORT_FIELDS: { key: SortKey; label: string }[] = [
+  { key: "name", label: "物件名・住所" },
+  { key: "type", label: "種別" },
+  { key: "landArea", label: "土地面積" },
+  { key: "buildingArea", label: "建物面積" },
+  { key: "buildingAge", label: "築年数" },
+  { key: "price", label: "価格" },
+  { key: "publishedAt", label: "初回公開日" },
+  { key: "viewCount", label: "閲覧数" },
+  { key: "status", label: "状態" },
+];
+
 export default function V2PropertyList({
   preview = false,
   collection = "all",
@@ -206,9 +230,9 @@ export default function V2PropertyList({
   const [hotOnly, setHotOnly] = useState(false);
   const [negotiatingOnly, setNegotiatingOnly] = useState(false);
   const [favoriteOnly, setFavoriteOnly] = useState(false);
-  const [sortOrder, setSortOrder] = useState<
-    "published_desc" | "published_asc" | "price_asc" | "price_desc"
-  >("published_desc");
+  const [sortKey, setSortKey] = useState<SortKey>("publishedAt");
+  const [sortDirection, setSortDirection] =
+    useState<SortDirection>("desc");
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
@@ -316,27 +340,51 @@ export default function V2PropertyList({
 
   const sortedProperties = useMemo(() => {
     const result = [...filtered];
-    const publishedTime = (property: any) =>
-      property.publishedAt ? new Date(property.publishedAt).getTime() : null;
-    result.sort((a: any, b: any) => {
-      if (sortOrder === "price_asc" || sortOrder === "price_desc") {
-        if (a.price == null && b.price == null) return b.id - a.id;
-        if (a.price == null) return 1;
-        if (b.price == null) return -1;
-        const difference = a.price - b.price;
-        return sortOrder === "price_asc" ? difference : -difference;
+    const sortValue = (property: any): string | number | null => {
+      switch (sortKey) {
+        case "name":
+          return `${property.name ?? ""} ${property.address ?? ""}`;
+        case "type":
+          return property.type ?? "";
+        case "buildingAge": {
+          const label = String(property.buildingAge ?? "");
+          if (label.startsWith("新築")) return 0;
+          const years = label.match(/(\d+)/)?.[1];
+          return years ? Number(years) : null;
+        }
+        case "publishedAt":
+          return property.publishedAt
+            ? new Date(property.publishedAt).getTime()
+            : null;
+        case "status":
+          return property.published === 0 ? "下書き" : property.status ?? "";
+        default:
+          return property[sortKey] ?? null;
       }
-
-      const aPublishedAt = publishedTime(a);
-      const bPublishedAt = publishedTime(b);
-      if (aPublishedAt == null && bPublishedAt == null) return b.id - a.id;
-      if (aPublishedAt == null) return 1;
-      if (bPublishedAt == null) return -1;
-      const difference = aPublishedAt - bPublishedAt;
-      return sortOrder === "published_asc" ? difference : -difference;
+    };
+    result.sort((a: any, b: any) => {
+      const aValue = sortValue(a);
+      const bValue = sortValue(b);
+      if (aValue == null && bValue == null) return b.id - a.id;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      const difference =
+        typeof aValue === "number" && typeof bValue === "number"
+          ? aValue - bValue
+          : String(aValue).localeCompare(String(bValue), "ja");
+      return sortDirection === "asc" ? difference : -difference;
     });
     return result;
-  }, [filtered, sortOrder]);
+  }, [filtered, sortDirection, sortKey]);
+
+  const changeSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDirection(current => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDirection(key === "publishedAt" ? "desc" : "asc");
+  };
 
   const openProperty = (id: number) => {
     if (preview) {
@@ -452,14 +500,25 @@ export default function V2PropertyList({
             <label className="flex items-center gap-2 text-[11px] font-bold text-[#65748a]">
               表示順
               <select
-                value={sortOrder}
-                onChange={e => setSortOrder(e.target.value as typeof sortOrder)}
+                value={`${sortKey}:${sortDirection}`}
+                onChange={e => {
+                  const [key, direction] = e.target.value.split(":") as [
+                    SortKey,
+                    SortDirection,
+                  ];
+                  setSortKey(key);
+                  setSortDirection(direction);
+                }}
                 className="h-9 border border-[#cbd5df] bg-white px-2 text-[12px] text-[#263b58]"
               >
-                <option value="published_desc">初回公開日が新しい順</option>
-                <option value="published_asc">初回公開日が古い順</option>
-                <option value="price_asc">価格が安い順</option>
-                <option value="price_desc">価格が高い順</option>
+                {SORT_FIELDS.flatMap(field => [
+                  <option key={`${field.key}:asc`} value={`${field.key}:asc`}>
+                    {field.label}：昇順
+                  </option>,
+                  <option key={`${field.key}:desc`} value={`${field.key}:desc`}>
+                    {field.label}：降順
+                  </option>,
+                ])}
               </select>
             </label>
           </div>
@@ -825,25 +884,39 @@ export default function V2PropertyList({
                 </colgroup>
                 <thead className="bg-[#edf1f5] text-[13px] font-bold text-[#65748a]">
                   <tr>
-                    {[
-                      "物件名・住所",
-                      "種別",
-                      "土地面積",
-                      "建物面積",
-                      "築年数",
-                      "価格",
-                      "公開日",
-                      "閲覧",
-                      "状態",
-                      "",
-                    ].map(label => (
+                    {SORT_FIELDS.map(field => (
                       <th
-                        key={label}
+                        key={field.key}
                         className="whitespace-nowrap border-b border-[#d9e0e8] px-3 py-3 text-left"
                       >
-                        {label}
+                        <button
+                          type="button"
+                          onClick={() => changeSort(field.key)}
+                          className="flex items-center gap-1 hover:text-[#173f70]"
+                          aria-label={`${field.label}で並び替え`}
+                        >
+                          {field.key === "publishedAt"
+                            ? "公開日"
+                            : field.label === "閲覧数"
+                              ? "閲覧"
+                              : field.label}
+                          <span
+                            className={
+                              sortKey === field.key
+                                ? "text-[#173f70]"
+                                : "text-[#aab4c0]"
+                            }
+                          >
+                            {sortKey === field.key
+                              ? sortDirection === "asc"
+                                ? "▲"
+                                : "▼"
+                              : "↕"}
+                          </span>
+                        </button>
                       </th>
                     ))}
+                    <th className="border-b border-[#d9e0e8] px-3 py-3" />
                   </tr>
                 </thead>
                 <tbody>
