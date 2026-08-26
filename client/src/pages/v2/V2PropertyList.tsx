@@ -1,6 +1,7 @@
 import { useMemo, useState, type MouseEvent } from "react";
 import {
   Building2,
+  CheckCircle2,
   ChevronRight,
   Eye,
   Heart,
@@ -765,7 +766,7 @@ export default function V2PropertyList({
                 <article
                   key={p.id}
                   onClick={() => openProperty(p.id)}
-                  className={`relative bg-white px-4 py-3 ${i < sortedProperties.length - 1 ? "mb-1.5" : ""}`}
+                  className={`relative px-4 py-3 ${p.status === "sold" ? "border-l-[3px] border-[#3f7d5a] bg-[#f5faf7]" : "bg-white"} ${i < sortedProperties.length - 1 ? "mb-1.5" : ""}`}
                 >
                   <span
                     className={`absolute inset-y-0 left-0 w-[3px] ${p.userId !== user?.id && !readSet.has(p.id) ? "bg-[#173f70]" : "bg-transparent"}`}
@@ -801,7 +802,8 @@ export default function V2PropertyList({
                       </span>
                     )}
                     {p.published !== 0 && p.status === "sold" && (
-                      <span className="bg-[#eceff2] px-2 py-0.5 text-[#526176]">
+                      <span className="inline-flex items-center gap-1 border border-[#acd0ba] bg-[#e8f5ed] px-2 py-0.5 font-bold text-[#286342]">
+                        <CheckCircle2 size={12} strokeWidth={2.5} />
                         成約済み
                       </span>
                     )}
@@ -936,7 +938,7 @@ export default function V2PropertyList({
                     <tr
                       key={p.id}
                       onClick={() => openProperty(p.id)}
-                      className="cursor-pointer border-b border-[#e1e6ec] text-[15px] hover:bg-[#f6f8fa]"
+                      className={`cursor-pointer border-b text-[15px] ${p.status === "sold" ? "border-l-[3px] border-b-[#d8e8de] border-l-[#3f7d5a] bg-[#f5faf7] hover:bg-[#edf6f0]" : "border-b-[#e1e6ec] hover:bg-[#f6f8fa]"}`}
                     >
                       <td className="px-3 py-4">
                         <div className="flex items-center gap-2">
@@ -1015,7 +1017,8 @@ export default function V2PropertyList({
                               </span>
                             )}
                           {p.published !== 0 && p.status === "sold" && (
-                            <span className="bg-[#eceff2] px-2 py-1 text-[12px] font-bold text-[#526176]">
+                            <span className="inline-flex items-center gap-1.5 whitespace-nowrap border border-[#acd0ba] bg-[#e8f5ed] px-2.5 py-1 text-[12px] font-bold text-[#286342] shadow-[0_1px_2px_rgba(40,99,66,0.08)]">
+                              <CheckCircle2 size={14} strokeWidth={2.5} />
                               成約済み
                             </span>
                           )}

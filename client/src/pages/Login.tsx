@@ -18,6 +18,10 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
+const CLOSING_REPORT_EXPIRES_AT = new Date(
+  "2026-09-27T00:00:00+09:00"
+).getTime();
+
 export default function Login({
   onLoginSuccess,
 }: {
@@ -62,6 +66,7 @@ export default function Login({
     retry: false,
   });
   const highlights = highlightsQuery.data ?? [];
+  const showClosingReport = Date.now() < CLOSING_REPORT_EXPIRES_AT;
   const toBase64 = (file: File): Promise<string> =>
     file
       .arrayBuffer()
@@ -183,6 +188,19 @@ export default function Login({
             <p className="mt-5 max-w-sm text-[14px] leading-7 text-[#d8e4f0]">
               物件の確認から商談、資料共有まで。日々の不動産取引をひとつの場所で進められます。
             </p>
+            {showClosingReport && (
+              <div className="mt-7 flex items-center gap-3 border border-[#54769d] bg-[#0d315b] px-4 py-3">
+                <CheckCircle className="size-5 shrink-0 text-[#e1b95e]" />
+                <div>
+                  <p className="text-[10px] font-bold tracking-[0.14em] text-[#b8cce3]">
+                    利用実績
+                  </p>
+                  <p className="mt-0.5 text-[13px] font-bold leading-5 text-white">
+                    PropFlow掲載者から成約のご報告が届きました。
+                  </p>
+                </div>
+              </div>
+            )}
             {highlights.length > 0 && (
               <section className="mt-9 border-t-4 border-[#d6a43e] bg-white p-6 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
                 <div className="flex items-start justify-between gap-3">
@@ -224,6 +242,20 @@ export default function Login({
               不動産情報プラットフォーム
             </p>
           </div>
+
+          {showClosingReport && (
+            <div className="mb-5 flex items-center gap-3 border border-[#c7d6e5] bg-[#edf4fa] px-4 py-3 lg:hidden">
+              <CheckCircle className="size-5 shrink-0 text-[#b0780a]" />
+              <div>
+                <p className="text-[9px] font-bold tracking-[0.14em] text-[#5275a0]">
+                  利用実績
+                </p>
+                <p className="mt-0.5 text-[12px] font-bold leading-5 text-[#102d50]">
+                  PropFlow掲載者から成約のご報告が届きました。
+                </p>
+              </div>
+            </div>
+          )}
 
           {highlights.length > 0 && (
             <section className="mb-5 border border-[#b9c9da] bg-[#f7f9fb] p-3 lg:hidden">
