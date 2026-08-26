@@ -189,14 +189,16 @@ export default function Login({
               物件の確認から商談、資料共有まで。日々の不動産取引をひとつの場所で進められます。
             </p>
             {showClosingReport && (
-              <div className="mt-7 flex items-center gap-3 border border-[#54769d] bg-[#0d315b] px-4 py-3">
-                <CheckCircle className="size-5 shrink-0 text-[#e1b95e]" />
+              <div className="mt-8 flex items-center gap-4 border border-[#e0c57e] border-t-4 border-t-[#d6a43e] bg-white px-5 py-4 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+                <div className="grid size-10 shrink-0 place-items-center bg-[#d6a43e] text-white">
+                  <CheckCircle className="size-6" strokeWidth={2.5} />
+                </div>
                 <div>
-                  <p className="text-[10px] font-bold tracking-[0.14em] text-[#b8cce3]">
+                  <p className="text-[11px] font-bold tracking-[0.16em] text-[#8a671d]">
                     利用実績
                   </p>
-                  <p className="mt-0.5 text-[13px] font-bold leading-5 text-white">
-                    PropFlow掲載者から成約のご報告が届きました。
+                  <p className="mt-1 text-[18px] font-bold leading-7">
+                    掲載者から成約のご報告が届きました。
                   </p>
                 </div>
               </div>
@@ -244,14 +246,16 @@ export default function Login({
           </div>
 
           {showClosingReport && (
-            <div className="mb-5 flex items-center gap-3 border border-[#c7d6e5] bg-[#edf4fa] px-4 py-3 lg:hidden">
-              <CheckCircle className="size-5 shrink-0 text-[#b0780a]" />
+            <div className="mb-6 flex items-center gap-3 border border-[#e0c57e] border-t-4 border-t-[#d6a43e] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(16,45,80,0.14)] lg:hidden">
+              <div className="grid size-9 shrink-0 place-items-center bg-[#d6a43e] text-white">
+                <CheckCircle className="size-5" strokeWidth={2.5} />
+              </div>
               <div>
-                <p className="text-[9px] font-bold tracking-[0.14em] text-[#5275a0]">
+                <p className="text-[10px] font-bold tracking-[0.16em] text-[#8a671d]">
                   利用実績
                 </p>
-                <p className="mt-0.5 text-[12px] font-bold leading-5 text-[#102d50]">
-                  PropFlow掲載者から成約のご報告が届きました。
+                <p className="mt-1 text-[16px] font-bold leading-6 text-[#102d50]">
+                  掲載者から成約のご報告が届きました。
                 </p>
               </div>
             </div>
