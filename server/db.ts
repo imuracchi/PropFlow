@@ -673,25 +673,21 @@ export async function getPlatformAnalytics() {
           LEFT JOIN property_view_events v ON v.userId = s.userId
             AND v.viewedAt >= s.searchedAt
           GROUP BY s.userId, s.searchedAt
-        ), documented AS (
-          SELECT v.userId, v.searchedAt, v.viewedAt, MIN(d.createdAt) AS documentedAt
+        ), outcomes AS (
+          SELECT v.userId, v.searchedAt, v.viewedAt,
+            (SELECT MIN(d.createdAt) FROM generated_documents d
+              WHERE d.userId = v.userId AND v.viewedAt IS NOT NULL
+                AND d.createdAt >= v.viewedAt) AS documentedAt,
+            (SELECT MIN(dm.createdAt) FROM direct_messages dm
+              WHERE dm.senderId = v.userId AND v.viewedAt IS NOT NULL
+                AND dm.createdAt >= v.viewedAt) AS messagedAt
           FROM viewed v
-          LEFT JOIN generated_documents d ON d.userId = v.userId
-            AND v.viewedAt IS NOT NULL AND d.createdAt >= v.viewedAt
-          GROUP BY v.userId, v.searchedAt, v.viewedAt
-        ), messaged AS (
-          SELECT d.userId, d.searchedAt, d.viewedAt, d.documentedAt,
-            MIN(dm.createdAt) AS messagedAt
-          FROM documented d
-          LEFT JOIN direct_messages dm ON dm.senderId = d.userId
-            AND d.documentedAt IS NOT NULL AND dm.createdAt >= d.documentedAt
-          GROUP BY d.userId, d.searchedAt, d.viewedAt, d.documentedAt
         )
         SELECT COUNT(*) AS searched,
           SUM(viewedAt IS NOT NULL) AS viewed,
           SUM(documentedAt IS NOT NULL) AS documented,
           SUM(messagedAt IS NOT NULL) AS messaged
-        FROM messaged
+        FROM outcomes
       `),
       db.execute(sql`SELECT COUNT(*) AS total FROM users WHERE role = 'user' AND status = 'active'`),
     ]);

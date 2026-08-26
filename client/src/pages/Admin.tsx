@@ -2025,25 +2025,29 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   </section>
 
                   <section className="border border-border p-4">
-                    <h4 className="text-sm font-semibold">利用ファネル</h4>
-                    <p className="mb-4 text-xs text-muted-foreground">直近30日・同一ユーザーが順番に進んだ社数</p>
-                    <div className="grid gap-2 sm:grid-cols-4">
-                      {[
-                        ["検索", analytics.funnel.searched, analytics.funnel.searched],
-                        ["物件閲覧", analytics.funnel.viewed, analytics.funnel.searched],
-                        ["資料作成", analytics.funnel.documented, analytics.funnel.viewed],
-                        ["DM送信", analytics.funnel.messaged, analytics.funnel.documented],
-                      ].map(([label, count, previous], index) => {
-                        const rate = Number(previous) ? Math.round(Number(count) / Number(previous) * 100) : 0;
-                        return <div key={String(label)} className="relative bg-[#f3f6f9] p-4 text-center">
-                          <p className="text-xs font-medium text-muted-foreground">{index + 1}. {label}</p>
-                          <p className="mt-1 text-2xl font-bold tabular-nums">{count}社</p>
-                          <p className="mt-1 text-[11px] text-muted-foreground">{index === 0 ? "起点" : `前段階から ${rate}%`}</p>
-                          {index < 3 && <span className="absolute -right-2.5 top-1/2 z-10 hidden -translate-y-1/2 text-lg text-primary sm:block">→</span>}
-                        </div>;
-                      })}
+                    <h4 className="text-sm font-semibold">検索後の利用ジャーニー</h4>
+                    <p className="mb-4 text-xs text-muted-foreground">直近30日・閲覧後の資料作成とDMを独立して集計</p>
+                    <div className="grid items-center gap-3 sm:grid-cols-[1fr_32px_1fr_48px_1.2fr]">
+                      <div className="bg-[#f3f6f9] p-4 text-center">
+                        <p className="text-xs font-medium text-muted-foreground">1. 検索</p>
+                        <p className="mt-1 text-2xl font-bold tabular-nums">{analytics.funnel.searched}社</p>
+                      </div>
+                      <span className="hidden text-center text-xl text-primary sm:block">→</span>
+                      <div className="bg-[#f3f6f9] p-4 text-center">
+                        <p className="text-xs font-medium text-muted-foreground">2. 物件閲覧</p>
+                        <p className="mt-1 text-2xl font-bold tabular-nums">{analytics.funnel.viewed}社</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">検索から {analytics.funnel.searched ? Math.round(analytics.funnel.viewed / analytics.funnel.searched * 100) : 0}%</p>
+                      </div>
+                      <div className="hidden text-center text-primary sm:block"><div>↗</div><div className="mt-5">↘</div></div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-1">
+                        {[["資料作成", analytics.funnel.documented], ["DM送信", analytics.funnel.messaged]].map(([label, count]) => <div key={String(label)} className="bg-blue-50 p-3 text-center">
+                          <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                          <p className="text-xl font-bold tabular-nums">{count}社</p>
+                          <p className="text-[11px] text-muted-foreground">閲覧から {analytics.funnel.viewed ? Math.round(Number(count) / analytics.funnel.viewed * 100) : 0}%</p>
+                        </div>)}
+                      </div>
                     </div>
-                    <p className="mt-3 text-[10px] text-muted-foreground">検索後に閲覧し、その後に資料を作成してからDMを送信したユーザーを段階ごとに集計しています。</p>
+                    <p className="mt-3 text-[10px] text-muted-foreground">資料作成とDMは順不同です。同じユーザーが両方を利用した場合は、それぞれに含まれます。</p>
                   </section>
 
                   <div className="grid gap-5 xl:grid-cols-2">
