@@ -1915,20 +1915,38 @@ export default function V2PropertyDetail({
                 ["lotNumber", "地番", "text"],
                 ["otherRestrictions", "その他制限", "text"],
               ].map(([key, label, type]) => (
-                <label
+                <div
                   key={key}
-                  className={`text-[11px] font-bold text-[#65748a] ${key === "address" ? "sm:col-span-2" : ""}`}
+                  className={key === "address" ? "sm:col-span-2" : ""}
                 >
-                  {label}
-                  <input
-                    type={type}
-                    value={String(editForm[key] ?? "")}
-                    onChange={e =>
-                      setEditForm(f => ({ ...f, [key]: e.target.value }))
-                    }
-                    className="mt-1 h-11 w-full border border-[#cbd5df] px-3 text-[13px] text-[#17211d] outline-none focus:border-[#173f70]"
-                  />
-                </label>
+                  <label className="block text-[11px] font-bold text-[#65748a]">
+                    {label}
+                    <input
+                      type={type}
+                      value={String(editForm[key] ?? "")}
+                      onChange={e =>
+                        setEditForm(f => ({ ...f, [key]: e.target.value }))
+                      }
+                      className="mt-1 h-11 w-full border border-[#cbd5df] px-3 text-[13px] text-[#17211d] outline-none focus:border-[#173f70]"
+                    />
+                  </label>
+                  {key === "price" && (
+                    <label className="mt-2 flex items-center gap-2 text-[12px] font-bold text-[#263b58]">
+                      <input
+                        type="checkbox"
+                        checked={!!editForm.priceNegotiable}
+                        onChange={e =>
+                          setEditForm(f => ({
+                            ...f,
+                            priceNegotiable: e.target.checked,
+                          }))
+                        }
+                        className="size-4"
+                      />
+                      価格は応相談
+                    </label>
+                  )}
+                </div>
               ))}
               <label className="text-[11px] font-bold text-[#65748a] sm:col-span-2">
                 交通
@@ -1964,20 +1982,6 @@ export default function V2PropertyDetail({
                     {transportError}
                   </span>
                 )}
-              </label>
-              <label className="flex items-center gap-2 text-[12px] font-bold">
-                <input
-                  type="checkbox"
-                  checked={!!editForm.priceNegotiable}
-                  onChange={e =>
-                    setEditForm(f => ({
-                      ...f,
-                      priceNegotiable: e.target.checked,
-                    }))
-                  }
-                  className="size-4"
-                />
-                価格は応相談
               </label>
               {[
                 ["remarks", "備考"],
