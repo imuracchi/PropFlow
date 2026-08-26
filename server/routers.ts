@@ -20,12 +20,27 @@ import {
 
 const publicFeedbackAttempts = new Map<string, number[]>();
 
-function checkPublicFeedbackRateLimit(req: { headers: Record<string, unknown>; socket?: { remoteAddress?: string } }) {
+function checkPublicFeedbackRateLimit(req: {
+  headers: Record<string, unknown>;
+  socket?: { remoteAddress?: string };
+}) {
   const forwarded = req.headers["x-forwarded-for"];
-  const key = (Array.isArray(forwarded) ? forwarded[0] : String(forwarded ?? "").split(",")[0]).trim() || req.socket?.remoteAddress || "unknown";
+  const key =
+    (Array.isArray(forwarded)
+      ? forwarded[0]
+      : String(forwarded ?? "").split(",")[0]
+    ).trim() ||
+    req.socket?.remoteAddress ||
+    "unknown";
   const now = Date.now();
-  const recent = (publicFeedbackAttempts.get(key) ?? []).filter(time => now - time < 60 * 60 * 1000);
-  if (recent.length >= 5) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "送信回数が上限に達しました。時間をおいて再度お試しください。" });
+  const recent = (publicFeedbackAttempts.get(key) ?? []).filter(
+    time => now - time < 60 * 60 * 1000
+  );
+  if (recent.length >= 5)
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "送信回数が上限に達しました。時間をおいて再度お試しください。",
+    });
   recent.push(now);
   publicFeedbackAttempts.set(key, recent);
 }
@@ -177,9 +192,10 @@ async function sendBroadcastToAll(opts: {
       message: "物件登録者のみの配信はメール専用です",
     });
   }
-  const emails = audience === "propertyOwners"
-    ? await db.getActivePropertyOwnerEmails()
-    : await db.getAllActiveUserEmails();
+  const emails =
+    audience === "propertyOwners"
+      ? await db.getActivePropertyOwnerEmails()
+      : await db.getAllActiveUserEmails();
   let emailSent = 0;
   if (!opts.skipEmail && emailBody) {
     const imageBlock = opts.imageUrl
@@ -981,9 +997,7 @@ JSONのみ返してください。`,
     publicHighlights: publicProcedure.query(() =>
       db.getPublicPropertyHighlights()
     ),
-    publicShowcase: publicProcedure.query(() =>
-      db.getPublicPropertyShowcase()
-    ),
+    publicShowcase: publicProcedure.query(() => db.getPublicPropertyShowcase()),
     list: protectedProcedure.query(async ({ ctx }) => {
       return db.listProperties(ctx.user.id);
     }),
@@ -1257,7 +1271,9 @@ JSONのみ返してください。`,
         await db.setPropertyExternalListingConsent(input.id, input.consent);
         db.logActivity(
           ctx.user.id,
-          input.consent ? "external_listing_consent" : "external_listing_revoke",
+          input.consent
+            ? "external_listing_consent"
+            : "external_listing_revoke",
           `物件「${property.name}」の簡易掲載を${input.consent ? "開始" : "停止"}`,
           ctx.req.headers["user-agent"]
         ).catch(() => {});
@@ -2809,22 +2825,47 @@ ${propList}`,
 
   support: router({
     publicReport: publicProcedure
-      .input(z.object({
-        category: z.enum(["possibility", "industry_issue", "idea", "before_registration", "login", "other"]),
-        message: z.string().trim().min(5).max(5000),
-        name: z.string().trim().max(100).optional().default(""),
-        company: z.string().trim().max(255).optional().default(""),
-        replyEmail: z.union([z.string().email().max(320), z.literal("")]).optional().default(""),
-        website: z.string().max(500).optional().default(""),
-        elapsedMs: z.number().int().nonnegative().max(86_400_000),
-        currentUrl: z.string().max(2000).optional().default(""),
-        deviceInfo: z.string().max(2000).optional().default(""),
-      }))
+      .input(
+        z.object({
+          category: z.enum([
+            "possibility",
+            "industry_issue",
+            "idea",
+            "before_registration",
+            "login",
+            "other",
+          ]),
+          message: z.string().trim().min(5).max(5000),
+          name: z.string().trim().max(100).optional().default(""),
+          company: z.string().trim().max(255).optional().default(""),
+          replyEmail: z
+            .union([z.string().email().max(320), z.literal("")])
+            .optional()
+            .default(""),
+          website: z.string().max(500).optional().default(""),
+          elapsedMs: z.number().int().nonnegative().max(86_400_000),
+          currentUrl: z.string().max(2000).optional().default(""),
+          deviceInfo: z.string().max(2000).optional().default(""),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         if (input.website || input.elapsedMs < 1500) return { success: true };
         checkPublicFeedbackRateLimit(ctx.req);
-        const labels = { possibility: "こんなことはできますか？", industry_issue: "今、こんなことで困っています", idea: "こんな機能・仕組みが欲しい", before_registration: "登録前に確認したいこと", login: "ログインできない", other: "その他" } as const;
-        const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
+        const labels = {
+          possibility: "こんなことはできますか？",
+          industry_issue: "今、こんなことで困っています",
+          idea: "こんな機能・仕組みが欲しい",
+          before_registration: "登録前に確認したいこと",
+          login: "ログインできない",
+          other: "その他",
+        } as const;
+        const escapeHtml = (value: string) =>
+          value
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#039;");
         const { sendMail } = await import("./_core/mail");
         const sent = await sendMail(
           "support@gspec.me",
@@ -2832,7 +2873,11 @@ ${propList}`,
           `<div style="font-family:sans-serif;max-width:680px;margin:0 auto;"><h2 style="color:#173f70;">不動産の情報収集へのご意見箱</h2><table style="width:100%;border-collapse:collapse;font-size:14px;"><tr><th style="width:150px;text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">カテゴリ</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(labels[input.category])}</td></tr><tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">お名前</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.name || "未入力")}</td></tr><tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">会社名</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.company || "未入力")}</td></tr><tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">返信先</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.replyEmail || "未入力")}</td></tr><tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">送信元URL</th><td style="padding:8px;border:1px solid #d8e0e8;word-break:break-all;">${escapeHtml(input.currentUrl)}</td></tr></table><h3 style="margin-top:20px;color:#173f70;">内容</h3><div style="white-space:pre-wrap;border:1px solid #d8e0e8;padding:16px;">${escapeHtml(input.message)}</div><p style="margin-top:16px;color:#718096;font-size:12px;word-break:break-all;">端末: ${escapeHtml(input.deviceInfo)}</p></div>`,
           input.replyEmail ? { replyTo: input.replyEmail } : undefined
         );
-        if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "送信に失敗しました。時間をおいて再度お試しください。" });
+        if (!sent)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "送信に失敗しました。時間をおいて再度お試しください。",
+          });
         return { success: true };
       }),
     report: protectedProcedure
@@ -3150,7 +3195,10 @@ ${propList}`,
           verified: 1,
         });
         if (!newUser) {
-          return { success: false, error: "ユーザーを登録できませんでした" } as const;
+          return {
+            success: false,
+            error: "ユーザーを登録できませんでした",
+          } as const;
         }
         const safeName = request.name
           .replace(/&/g, "&amp;")
@@ -3172,10 +3220,17 @@ ${propList}`,
               <p style="margin:0;">初期パスワード：${initialPassword}</p>
             </div>
             <p>ログイン後、安全のためマイページからパスワードを変更してください。</p>
-          </div>`
+          </div>`,
+          {
+            bcc: "imuracchi@gmail.com",
+          }
         );
         if (!emailSent) {
-          await db.updateRegistrationRequestStatus(request.id, "completed", ctx.user.id);
+          await db.updateRegistrationRequestStatus(
+            request.id,
+            "completed",
+            ctx.user.id
+          );
           return { success: true, emailSent: false } as const;
         }
         await db.updateRegistrationRequestStatus(

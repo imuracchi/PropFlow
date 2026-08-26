@@ -575,16 +575,33 @@ export async function getPlatformAnalytics() {
   const db = await getDb();
   if (!db) {
     return {
-      growth: [], propertyTypes: [], priceInterest: [],
-      engagement: { total: 0, active: 0, power: 0, regular: 0, light: 0, dormant: 0 },
+      growth: [],
+      propertyTypes: [],
+      priceInterest: [],
+      engagement: {
+        total: 0,
+        active: 0,
+        power: 0,
+        regular: 0,
+        light: 0,
+        dormant: 0,
+      },
       funnel: { viewed: 0, documented: 0, messaged: 0 },
-      features: [], generatedAt: new Date(),
+      features: [],
+      generatedAt: new Date(),
     };
   }
 
-  const [growthResult, typeResult, priceResult, activityResult, featureResult, funnelResult, totalResult] =
-    await Promise.all([
-      db.execute(sql`
+  const [
+    growthResult,
+    typeResult,
+    priceResult,
+    activityResult,
+    featureResult,
+    funnelResult,
+    totalResult,
+  ] = await Promise.all([
+    db.execute(sql`
         SELECT month,
           SUM(newUsers) AS newUsers,
           SUM(newProperties) AS newProperties
@@ -601,14 +618,14 @@ export async function getPlatformAnalytics() {
         ) growth
         GROUP BY month ORDER BY month
       `),
-      db.execute(sql`
+    db.execute(sql`
         SELECT type AS name, COUNT(*) AS count,
           ROUND(AVG(price)) AS averagePrice
         FROM properties
         WHERE deleted = 0
         GROUP BY type ORDER BY count DESC
       `),
-      db.execute(sql`
+    db.execute(sql`
         SELECT bucket AS label, sortOrder,
           COUNT(*) AS properties,
           SUM(viewCount) AS views,
@@ -642,7 +659,7 @@ export async function getPlatformAnalytics() {
         ) interest
         GROUP BY bucket, sortOrder ORDER BY sortOrder
       `),
-      db.execute(sql`
+    db.execute(sql`
         SELECT a.userId, COUNT(*) AS events
         FROM activity_logs a
         INNER JOIN users u ON u.id = a.userId
@@ -650,7 +667,7 @@ export async function getPlatformAnalytics() {
           AND u.role = 'user' AND u.status = 'active'
         GROUP BY a.userId
       `),
-      db.execute(sql`
+    db.execute(sql`
         SELECT a.action, COUNT(*) AS count, COUNT(DISTINCT a.userId) AS users
         FROM activity_logs a
         INNER JOIN users u ON u.id = a.userId
@@ -659,7 +676,7 @@ export async function getPlatformAnalytics() {
           AND a.action NOT LIKE 'admin_%' AND a.action NOT IN ('login_error')
         GROUP BY a.action ORDER BY count DESC LIMIT 12
       `),
-      db.execute(sql`
+    db.execute(sql`
         WITH viewed AS (
           SELECT u.id AS userId, MIN(v.viewedAt) AS viewedAt
           FROM users u
@@ -682,35 +699,53 @@ export async function getPlatformAnalytics() {
           SUM(messagedAt IS NOT NULL) AS messaged
         FROM outcomes
       `),
-      db.execute(sql`SELECT COUNT(*) AS total FROM users WHERE role = 'user' AND status = 'active'`),
-    ]);
+    db.execute(
+      sql`SELECT COUNT(*) AS total FROM users WHERE role = 'user' AND status = 'active'`
+    ),
+  ]);
 
   const rows = (result: any) => (result?.[0] ?? []) as any[];
   const activity = rows(activityResult).map(row => Number(row.events));
   const total = Number(rows(totalResult)[0]?.total ?? 0);
   const active = activity.length;
   const actionLabels: Record<string, string> = {
-    property_create: "物件登録", search: "AI・キーワード検索", memo_save: "物件メモ",
-    dm_send: "DM送信", contact_share: "連絡先共有", business_card_send: "名刺送付",
-    buyer_preference_save: "希望条件登録", property_match_results_open: "物件マッチング",
-    property_search_create: "物件募集", property_search_propose: "物件提案",
-    property_search_accept: "提案承認", document_generate: "紹介資料作成",
-    terms_agree: "利用規約同意", support_report: "ご意見箱",
+    property_create: "物件登録",
+    search: "AI・キーワード検索",
+    memo_save: "物件メモ",
+    dm_send: "DM送信",
+    contact_share: "連絡先共有",
+    business_card_send: "名刺送付",
+    buyer_preference_save: "希望条件登録",
+    property_match_results_open: "物件マッチング",
+    property_search_create: "物件募集",
+    property_search_propose: "物件提案",
+    property_search_accept: "提案承認",
+    document_generate: "紹介資料作成",
+    terms_agree: "利用規約同意",
+    support_report: "ご意見箱",
   };
 
   return {
     growth: rows(growthResult).map(row => ({
-      month: String(row.month), newUsers: Number(row.newUsers), newProperties: Number(row.newProperties),
+      month: String(row.month),
+      newUsers: Number(row.newUsers),
+      newProperties: Number(row.newProperties),
     })),
     propertyTypes: rows(typeResult).map(row => ({
-      name: String(row.name), count: Number(row.count), averagePrice: Number(row.averagePrice ?? 0),
+      name: String(row.name),
+      count: Number(row.count),
+      averagePrice: Number(row.averagePrice ?? 0),
     })),
     priceInterest: rows(priceResult).map(row => ({
-      label: String(row.label), properties: Number(row.properties), views: Number(row.views),
+      label: String(row.label),
+      properties: Number(row.properties),
+      views: Number(row.views),
       favorites: Number(row.favorites),
     })),
     engagement: {
-      total, active, power: activity.filter(n => n >= 10).length,
+      total,
+      active,
+      power: activity.filter(n => n >= 10).length,
       regular: activity.filter(n => n >= 3 && n < 10).length,
       light: activity.filter(n => n >= 1 && n < 3).length,
       dormant: Math.max(0, total - active),
@@ -721,8 +756,10 @@ export async function getPlatformAnalytics() {
       messaged: Number(rows(funnelResult)[0]?.messaged ?? 0),
     },
     features: rows(featureResult).map(row => ({
-      action: String(row.action), label: actionLabels[String(row.action)] ?? String(row.action),
-      count: Number(row.count), users: Number(row.users),
+      action: String(row.action),
+      label: actionLabels[String(row.action)] ?? String(row.action),
+      count: Number(row.count),
+      users: Number(row.users),
     })),
     generatedAt: new Date(),
   };
@@ -931,14 +968,19 @@ const RECENT_ATTENTION_CACHE_MS = 5 * 60 * 1000;
 let recentAttentionCache:
   | { expiresAt: number; data: Map<number, RecentAttentionCounts> }
   | undefined;
-let recentAttentionPromise: Promise<Map<number, RecentAttentionCounts>> | undefined;
+let recentAttentionPromise:
+  | Promise<Map<number, RecentAttentionCounts>>
+  | undefined;
 let publicHighlightsCache:
   | { expiresAt: number; data: PublicPropertyHighlight[] }
   | undefined;
 let publicShowcaseCache:
   | {
       expiresAt: number;
-      data: { attention: PublicPropertyHighlight[]; newest: PublicPropertyHighlight[] };
+      data: {
+        attention: PublicPropertyHighlight[];
+        newest: PublicPropertyHighlight[];
+      };
     }
   | undefined;
 
@@ -951,7 +993,8 @@ function getRecentPropertyAttentionCounts() {
   if (recentAttentionCache && recentAttentionCache.expiresAt > Date.now()) {
     return recentAttentionCache.data;
   }
-  const current = recentAttentionCache?.data ?? new Map<number, RecentAttentionCounts>();
+  const current =
+    recentAttentionCache?.data ?? new Map<number, RecentAttentionCounts>();
   if (recentAttentionPromise) return current;
 
   recentAttentionPromise = (async () => {
@@ -1077,7 +1120,9 @@ export type PublicPropertyHighlight = {
 };
 
 function publicArea(address: string) {
-  const prefecture = address.match(/^(東京都|北海道|大阪府|京都府|.{2,3}県)/)?.[1];
+  const prefecture = address.match(
+    /^(東京都|北海道|大阪府|京都府|.{2,3}県)/
+  )?.[1];
   if (!prefecture) return "エリア非公開";
   const rest = address.slice(prefecture.length);
   const county = rest.match(/^(.+?郡.+?[町村])/);
@@ -1115,21 +1160,28 @@ export async function getPublicPropertyHighlights() {
   try {
     const db = await getDb();
     if (!db) return previous;
-    const rows = await db.select({
-      id: properties.id,
-      address: properties.address,
-      type: properties.type,
-      price: properties.price,
-      landArea: properties.landArea,
-      buildingArea: properties.buildingArea,
-      createdAt: properties.createdAt,
-    }).from(properties).where(and(
-      eq(properties.deleted, 0),
-      eq(properties.published, 1),
-      eq(properties.visibilityScope, "public"),
-      ne(properties.status, "sold"),
-      eq(properties.externalListingConsent, 1)
-    )).orderBy(desc(properties.createdAt)).limit(20);
+    const rows = await db
+      .select({
+        id: properties.id,
+        address: properties.address,
+        type: properties.type,
+        price: properties.price,
+        landArea: properties.landArea,
+        buildingArea: properties.buildingArea,
+        createdAt: properties.createdAt,
+      })
+      .from(properties)
+      .where(
+        and(
+          eq(properties.deleted, 0),
+          eq(properties.published, 1),
+          eq(properties.visibilityScope, "public"),
+          ne(properties.status, "sold"),
+          eq(properties.externalListingConsent, 1)
+        )
+      )
+      .orderBy(desc(properties.createdAt))
+      .limit(20);
     const counts = await getRecentPropertyAttentionCountsForPublicPage();
     const candidates = rows.map(row => {
       const recent = counts.get(row.id);
@@ -1144,17 +1196,25 @@ export async function getPublicPropertyHighlights() {
       };
     });
     const attentionCandidates = candidates.filter(item => item.attention);
-    const chosenAttention = attentionCandidates.length > 0
-      ? attentionCandidates[Math.floor(Math.random() * attentionCandidates.length)]
-      : undefined;
+    const chosenAttention =
+      attentionCandidates.length > 0
+        ? attentionCandidates[
+            Math.floor(Math.random() * attentionCandidates.length)
+          ]
+        : undefined;
     const newest = candidates
       .filter(item => item.id !== chosenAttention?.id)
       .sort((a, b) => b.registeredAt.getTime() - a.registeredAt.getTime())
       .slice(0, chosenAttention ? 2 : 3)
-      .map(({ id: _id, registeredAt: _registeredAt, ...item }) => ({ ...item, attention: false }));
+      .map(({ id: _id, registeredAt: _registeredAt, ...item }) => ({
+        ...item,
+        attention: false,
+      }));
     const data: PublicPropertyHighlight[] = chosenAttention
       ? [
-          (({ id: _id, registeredAt: _registeredAt, ...item }) => item)(chosenAttention),
+          (({ id: _id, registeredAt: _registeredAt, ...item }) => item)(
+            chosenAttention
+          ),
           ...newest,
         ]
       : newest;
@@ -1177,21 +1237,28 @@ export async function getPublicPropertyShowcase() {
   try {
     const db = await getDb();
     if (!db) return previous;
-    const rows = await db.select({
-      id: properties.id,
-      address: properties.address,
-      type: properties.type,
-      price: properties.price,
-      landArea: properties.landArea,
-      buildingArea: properties.buildingArea,
-      createdAt: properties.createdAt,
-    }).from(properties).where(and(
-      eq(properties.deleted, 0),
-      eq(properties.published, 1),
-      eq(properties.visibilityScope, "public"),
-      ne(properties.status, "sold"),
-      eq(properties.externalListingConsent, 1)
-    )).orderBy(desc(properties.createdAt)).limit(50);
+    const rows = await db
+      .select({
+        id: properties.id,
+        address: properties.address,
+        type: properties.type,
+        price: properties.price,
+        landArea: properties.landArea,
+        buildingArea: properties.buildingArea,
+        createdAt: properties.createdAt,
+      })
+      .from(properties)
+      .where(
+        and(
+          eq(properties.deleted, 0),
+          eq(properties.published, 1),
+          eq(properties.visibilityScope, "public"),
+          ne(properties.status, "sold"),
+          eq(properties.externalListingConsent, 1)
+        )
+      )
+      .orderBy(desc(properties.createdAt))
+      .limit(50);
     const counts = await getRecentPropertyAttentionCountsForPublicPage();
     const candidates = rows.map(row => ({
       id: row.id,
@@ -1215,15 +1282,20 @@ export async function getPublicPropertyShowcase() {
       id: _id,
       registeredAt: _registeredAt,
       ...item
-    }: typeof candidates[number]): PublicPropertyHighlight => item;
+    }: (typeof candidates)[number]): PublicPropertyHighlight => item;
     const data = {
       attention: attentionCandidates.map(toPublicHighlight),
-      newest: newestCandidates.map(item => ({ ...toPublicHighlight(item), attention: false })),
+      newest: newestCandidates.map(item => ({
+        ...toPublicHighlight(item),
+        attention: false,
+      })),
     };
     publicShowcaseCache = {
       expiresAt:
         Date.now() +
-        (data.attention.length + data.newest.length > 0 ? 5 * 60 * 1000 : 15 * 1000),
+        (data.attention.length + data.newest.length > 0
+          ? 5 * 60 * 1000
+          : 15 * 1000),
       data,
     };
     return data;
@@ -1321,7 +1393,7 @@ export async function listProperties(viewerUserId?: number) {
     .leftJoin(favCountSub, eq(properties.id, favCountSub.propertyId))
     .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
     .where(visibilityFilter ? and(baseWhere, visibilityFilter) : baseWhere)
-    .orderBy(desc(properties.createdAt));
+    .orderBy(desc(properties.publishedAt), desc(properties.createdAt));
   const attentionCounts = getRecentPropertyAttentionCounts();
   return rows.map(property => withRecentAttention(property, attentionCounts));
 }
@@ -1761,18 +1833,24 @@ export async function setPropertyExternalListingConsent(
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(properties).set(consent ? {
-    externalListingConsent: 1,
-    externalListingConsentedAt: new Date(),
-    externalListingConsentVersion: EXTERNAL_LISTING_CONSENT_VERSION,
-  } : {
-    externalListingConsent: 0,
-    externalListingConsentedAt: null,
-    externalListingConsentVersion: null,
-  }).where(eq(properties.id, id));
+  await db
+    .update(properties)
+    .set(
+      consent
+        ? {
+            externalListingConsent: 1,
+            externalListingConsentedAt: new Date(),
+            externalListingConsentVersion: EXTERNAL_LISTING_CONSENT_VERSION,
+          }
+        : {
+            externalListingConsent: 0,
+            externalListingConsentedAt: null,
+            externalListingConsentVersion: null,
+          }
+    )
+    .where(eq(properties.id, id));
   invalidatePublicHighlights();
 }
-
 
 export async function deleteProperty(id: number) {
   const db = await getDb();

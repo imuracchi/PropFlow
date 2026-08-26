@@ -206,11 +206,16 @@ export default function V2PropertyList({
   const [hotOnly, setHotOnly] = useState(false);
   const [negotiatingOnly, setNegotiatingOnly] = useState(false);
   const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [sortOrder, setSortOrder] = useState<
+    "published_desc" | "published_asc" | "price_asc" | "price_desc"
+  >("published_desc");
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
       return saved ? JSON.parse(saved) : [902];
-    } catch { return [902]; }
+    } catch {
+      return [902];
+    }
   });
   const propertyQuery = trpc.property.list.useQuery(undefined, {
     enabled: !preview,
@@ -309,6 +314,30 @@ export default function V2PropertyList({
     ]
   );
 
+  const sortedProperties = useMemo(() => {
+    const result = [...filtered];
+    const publishedTime = (property: any) =>
+      property.publishedAt ? new Date(property.publishedAt).getTime() : null;
+    result.sort((a: any, b: any) => {
+      if (sortOrder === "price_asc" || sortOrder === "price_desc") {
+        if (a.price == null && b.price == null) return b.id - a.id;
+        if (a.price == null) return 1;
+        if (b.price == null) return -1;
+        const difference = a.price - b.price;
+        return sortOrder === "price_asc" ? difference : -difference;
+      }
+
+      const aPublishedAt = publishedTime(a);
+      const bPublishedAt = publishedTime(b);
+      if (aPublishedAt == null && bPublishedAt == null) return b.id - a.id;
+      if (aPublishedAt == null) return 1;
+      if (bPublishedAt == null) return -1;
+      const difference = aPublishedAt - bPublishedAt;
+      return sortOrder === "published_asc" ? difference : -difference;
+    });
+    return result;
+  }, [filtered, sortOrder]);
+
   const openProperty = (id: number) => {
     if (preview) {
       setLocation("/v2/preview/property");
@@ -321,7 +350,9 @@ export default function V2PropertyList({
     event.stopPropagation();
     if (preview) {
       setPreviewFavoriteIds(current => {
-        const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id];
+        const next = current.includes(id)
+          ? current.filter(item => item !== id)
+          : [...current, id];
         sessionStorage.setItem(PREVIEW_FAVORITES_KEY, JSON.stringify(next));
         return next;
       });
@@ -353,8 +384,15 @@ export default function V2PropertyList({
     if (!query || preview) return;
     const lower = query.toLowerCase();
     const resultCount = (properties ?? []).filter((property: any) =>
-      [property.name, property.address, property.lotNumber, property.remarks].some(value =>
-        String(value ?? "").toLowerCase().includes(lower)
+      [
+        property.name,
+        property.address,
+        property.lotNumber,
+        property.remarks,
+      ].some(value =>
+        String(value ?? "")
+          .toLowerCase()
+          .includes(lower)
       )
     ).length;
     logSearch.mutate({ query, resultCount });
@@ -397,26 +435,43 @@ export default function V2PropertyList({
   return (
     <V2Layout preview={preview}>
       <main className="w-full max-w-[1500px] p-4 lg:p-7">
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between gap-3">
           <div>
             <p className="text-[14px] text-[#758194]">{pageDescription}</p>
             <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
               {pageTitle}
             </h1>
           </div>
-          <p className="text-[14px] text-[#65748a]">
-            検索結果{" "}
-            <strong className="text-[18px] text-[#102d50]">
-              {filtered.length}件
-            </strong>
-          </p>
+          <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+            <p className="text-[14px] text-[#65748a]">
+              検索結果{" "}
+              <strong className="text-[18px] text-[#102d50]">
+                {sortedProperties.length}件
+              </strong>
+            </p>
+            <label className="flex items-center gap-2 text-[11px] font-bold text-[#65748a]">
+              表示順
+              <select
+                value={sortOrder}
+                onChange={e => setSortOrder(e.target.value as typeof sortOrder)}
+                className="h-9 border border-[#cbd5df] bg-white px-2 text-[12px] text-[#263b58]"
+              >
+                <option value="published_desc">初回公開日が新しい順</option>
+                <option value="published_asc">初回公開日が古い順</option>
+                <option value="price_asc">価格が安い順</option>
+                <option value="price_desc">価格が高い順</option>
+              </select>
+            </label>
+          </div>
         </div>
         {collection === "mine" && (
           <button
-            onClick={() => setLocation(preview ? "/v2/preview/upload" : "/v2/upload")}
+            onClick={() =>
+              setLocation(preview ? "/v2/preview/upload" : "/v2/upload")
+            }
             className="mt-3 flex h-11 w-full items-center justify-center gap-2 bg-[#173f70] text-[13px] font-bold text-white lg:hidden"
           >
-            <Plus size={17}/>
+            <Plus size={17} />
             物件を登録する
           </button>
         )}
@@ -501,10 +556,15 @@ export default function V2PropertyList({
               {(mode === "ai" || mode === "keyword") && (
                 <button
                   onClick={mode === "ai" ? runAi : runKeyword}
-                  disabled={mode === "ai" ? aiSearch.isPending : logSearch.isPending}
+                  disabled={
+                    mode === "ai" ? aiSearch.isPending : logSearch.isPending
+                  }
                   className="bg-[#173f70] px-4 py-2 text-[11px] font-bold text-white disabled:opacity-50"
                 >
-                  {(mode === "ai" && aiSearch.isPending) || (mode === "keyword" && logSearch.isPending) ? "検索中" : "検索"}
+                  {(mode === "ai" && aiSearch.isPending) ||
+                  (mode === "keyword" && logSearch.isPending)
+                    ? "検索中"
+                    : "検索"}
                 </button>
               )}
             </div>
@@ -542,7 +602,10 @@ export default function V2PropertyList({
                 aria-label="お気に入りで絞り込む"
                 title="お気に入り"
               >
-                <Heart size={16} fill={favoriteOnly ? "currentColor" : "none"}/>
+                <Heart
+                  size={16}
+                  fill={favoriteOnly ? "currentColor" : "none"}
+                />
               </button>
             )}
           </div>
@@ -615,22 +678,27 @@ export default function V2PropertyList({
           <div className="mt-4 bg-white py-20 text-center">
             <p className="font-bold">物件の読み込みに失敗しました</p>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : sortedProperties.length === 0 ? (
           <div className="mt-4 grid min-h-[210px] place-items-center border border-[#d4dde7] bg-white text-center">
-            <div><Building2 size={36} strokeWidth={1.7} className="mx-auto text-[#9aa8b8]" />
-            <p className="mt-3 text-[14px] font-bold text-[#526176]">
-              条件に一致する物件がありません
-            </p>
+            <div>
+              <Building2
+                size={36}
+                strokeWidth={1.7}
+                className="mx-auto text-[#9aa8b8]"
+              />
+              <p className="mt-3 text-[14px] font-bold text-[#526176]">
+                条件に一致する物件がありません
+              </p>
             </div>
           </div>
         ) : (
           <>
             <section className="mt-4 lg:hidden">
-              {filtered.map((p: any, i) => (
+              {sortedProperties.map((p: any, i) => (
                 <article
                   key={p.id}
                   onClick={() => openProperty(p.id)}
-                  className={`relative bg-white px-4 py-3 ${i < filtered.length - 1 ? "mb-1.5" : ""}`}
+                  className={`relative bg-white px-4 py-3 ${i < sortedProperties.length - 1 ? "mb-1.5" : ""}`}
                 >
                   <span
                     className={`absolute inset-y-0 left-0 w-[3px] ${p.userId !== user?.id && !readSet.has(p.id) ? "bg-[#173f70]" : "bg-transparent"}`}
@@ -638,18 +706,23 @@ export default function V2PropertyList({
                   <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#5f6e82]">
                     <span>{p.type}</span>
                     {p.published === 0 && (
-                      <span className="bg-[#eef1f5] px-2 py-0.5 text-[#526176]">下書き</span>
-                    )}
-                    {collection === "mine" && p.visibilityScope === "proposal" && (
-                      <span className="bg-[#e8f0f8] px-2 py-0.5 text-[#173f70]">
-                        提案先限定
+                      <span className="bg-[#eef1f5] px-2 py-0.5 text-[#526176]">
+                        下書き
                       </span>
                     )}
-                    {p.published !== 0 && p.userId !== user?.id && !readSet.has(p.id) && (
-                      <span className="bg-[#173f70] px-2 py-0.5 text-white">
-                        新着・未読
-                      </span>
-                    )}
+                    {collection === "mine" &&
+                      p.visibilityScope === "proposal" && (
+                        <span className="bg-[#e8f0f8] px-2 py-0.5 text-[#173f70]">
+                          提案先限定
+                        </span>
+                      )}
+                    {p.published !== 0 &&
+                      p.userId !== user?.id &&
+                      !readSet.has(p.id) && (
+                        <span className="bg-[#173f70] px-2 py-0.5 text-white">
+                          新着・未読
+                        </span>
+                      )}
                     {p.published !== 0 && p.status === "negotiating" && (
                       <span className="bg-[#fff1b8] px-2 py-0.5 text-[#765500]">
                         商談中
@@ -673,36 +746,49 @@ export default function V2PropertyList({
                     </span>
                   </div>
                   <div className="mt-1.5 min-w-0">
-                    <h2 className="text-[17px] font-bold leading-6 text-[#102d50]">{p.name}</h2>
+                    <h2 className="text-[17px] font-bold leading-6 text-[#102d50]">
+                      {p.name}
+                    </h2>
                     <p className="mt-0.5 truncate text-[13px] leading-5 text-[#65748a]">
                       {p.address}
                     </p>
                     <div className="mt-2 flex items-center border-t border-[#edf0ee] pt-2">
-                      <span className="text-[11px] font-bold text-[#65748a]">販売価格</span>
+                      <span className="text-[11px] font-bold text-[#65748a]">
+                        販売価格
+                      </span>
                       <p className="ml-auto whitespace-nowrap text-[18px] font-bold text-[#102d50]">
                         {priceLabel(p.price, p.priceNegotiable)}
                       </p>
-                      {p.userId !== user?.id && <button className="ml-3" onClick={e => toggleFavorite(p.id, e)}>
-                        <Heart
-                          size={21}
-                          fill={favSet.has(p.id) ? "currentColor" : "none"}
-                          className={
-                            favSet.has(p.id)
-                              ? "text-[#a13b50]"
-                              : "text-[#718096]"
-                          }
-                        />
-                      </button>}
+                      {p.userId !== user?.id && (
+                        <button
+                          className="ml-3"
+                          onClick={e => toggleFavorite(p.id, e)}
+                        >
+                          <Heart
+                            size={21}
+                            fill={favSet.has(p.id) ? "currentColor" : "none"}
+                            className={
+                              favSet.has(p.id)
+                                ? "text-[#a13b50]"
+                                : "text-[#718096]"
+                            }
+                          />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="mt-2 flex items-start gap-1.5 border-y border-[#edf0ee] py-2 text-[12px] font-semibold text-[#4f5f72]">
-                    <span className="shrink-0 whitespace-nowrap">土地 {p.landArea ? `${p.landArea}㎡` : "—"}</span>
+                    <span className="shrink-0 whitespace-nowrap">
+                      土地 {p.landArea ? `${p.landArea}㎡` : "—"}
+                    </span>
                     <span className="shrink-0 text-[#c1c8d0]">｜</span>
                     <span className="shrink-0 whitespace-nowrap">
                       建物 {p.buildingArea ? `${p.buildingArea}㎡` : "—"}
                     </span>
                     <span className="shrink-0 text-[#c1c8d0]">｜</span>
-                    <span className="min-w-0 break-words">{buildingAgeListLabel(p.buildingAge)}</span>
+                    <span className="min-w-0 break-words">
+                      {buildingAgeListLabel(p.buildingAge)}
+                    </span>
                   </div>
                   <div className="mt-2 flex items-center">
                     <span className="flex items-center gap-1 text-[12px] text-[#6f7d90]">
@@ -761,7 +847,7 @@ export default function V2PropertyList({
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((p: any) => (
+                  {sortedProperties.map((p: any) => (
                     <tr
                       key={p.id}
                       onClick={() => openProperty(p.id)}
@@ -769,9 +855,14 @@ export default function V2PropertyList({
                     >
                       <td className="px-3 py-4">
                         <div className="flex items-center gap-2">
-                          <p className="min-w-0 truncate text-[16px] font-bold text-[#102d50]">{p.name}</p>
+                          <p className="min-w-0 truncate text-[16px] font-bold text-[#102d50]">
+                            {p.name}
+                          </p>
                           {memoSet.has(p.id) && (
-                            <span title="自分用メモあり" className="flex shrink-0 items-center gap-1 bg-[#fff8e8] px-2 py-1 text-[11px] font-bold text-[#815307]">
+                            <span
+                              title="自分用メモあり"
+                              className="flex shrink-0 items-center gap-1 bg-[#fff8e8] px-2 py-1 text-[11px] font-bold text-[#815307]"
+                            >
                               <StickyNote size={13} />
                               メモ
                             </span>
@@ -795,7 +886,11 @@ export default function V2PropertyList({
                         {priceLabel(p.price, p.priceNegotiable)}
                       </td>
                       <td className="px-3 py-3">
-                        {p.published === 0 ? "—" : new Date(p.publishedAt ?? p.createdAt).toLocaleDateString("ja-JP")}
+                        {p.published === 0
+                          ? "—"
+                          : new Date(
+                              p.publishedAt ?? p.createdAt
+                            ).toLocaleDateString("ja-JP")}
                       </td>
                       <td className="px-3 py-3">
                         <span className="flex items-center gap-1">
@@ -805,49 +900,64 @@ export default function V2PropertyList({
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex min-w-[118px] flex-wrap gap-1.5">
-                        {p.published === 0 && (
-                          <span className="bg-[#eef1f5] px-2 py-1 text-[12px] font-bold text-[#526176]">下書き</span>
-                        )}
-                        {collection === "mine" && p.visibilityScope === "proposal" && (
-                          <span className="whitespace-nowrap bg-[#e8f0f8] px-2 py-1 text-[12px] font-bold text-[#173f70]">
-                            提案先限定
-                          </span>
-                        )}
-                        {p.published !== 0 && p.userId !== user?.id && !readSet.has(p.id) && (
-                          <span className="bg-[#173f70] px-2 py-1 text-[12px] font-bold text-white">
-                            新着・未読
-                          </span>
-                        )}
-                        {p.published !== 0 && p.status === "negotiating" && (
-                          <span className="bg-[#fff1b8] px-2 py-1 text-[12px] font-bold text-[#765500]">
-                            商談中
-                          </span>
-                        )}
-                        {p.published !== 0 && isPropertyAttentionWorthy(p) && (
-                          <span className="bg-[#fde2d3] px-2 py-1 text-[12px] font-bold text-[#b43b16]">
-                            注目
-                          </span>
-                        )}
-                        {p.published !== 0 && p.status === "sold" && (
-                          <span className="bg-[#eceff2] px-2 py-1 text-[12px] font-bold text-[#526176]">成約済み</span>
-                        )}
-                        {p.published !== 0 && p.status !== "negotiating" && p.status !== "sold" && p.userId === user?.id && (
-                          <span className="bg-[#f1f4f8] px-2 py-1 text-[12px] font-bold text-[#65748a]">公開中</span>
-                        )}
+                          {p.published === 0 && (
+                            <span className="bg-[#eef1f5] px-2 py-1 text-[12px] font-bold text-[#526176]">
+                              下書き
+                            </span>
+                          )}
+                          {collection === "mine" &&
+                            p.visibilityScope === "proposal" && (
+                              <span className="whitespace-nowrap bg-[#e8f0f8] px-2 py-1 text-[12px] font-bold text-[#173f70]">
+                                提案先限定
+                              </span>
+                            )}
+                          {p.published !== 0 &&
+                            p.userId !== user?.id &&
+                            !readSet.has(p.id) && (
+                              <span className="bg-[#173f70] px-2 py-1 text-[12px] font-bold text-white">
+                                新着・未読
+                              </span>
+                            )}
+                          {p.published !== 0 && p.status === "negotiating" && (
+                            <span className="bg-[#fff1b8] px-2 py-1 text-[12px] font-bold text-[#765500]">
+                              商談中
+                            </span>
+                          )}
+                          {p.published !== 0 &&
+                            isPropertyAttentionWorthy(p) && (
+                              <span className="bg-[#fde2d3] px-2 py-1 text-[12px] font-bold text-[#b43b16]">
+                                注目
+                              </span>
+                            )}
+                          {p.published !== 0 && p.status === "sold" && (
+                            <span className="bg-[#eceff2] px-2 py-1 text-[12px] font-bold text-[#526176]">
+                              成約済み
+                            </span>
+                          )}
+                          {p.published !== 0 &&
+                            p.status !== "negotiating" &&
+                            p.status !== "sold" &&
+                            p.userId === user?.id && (
+                              <span className="bg-[#f1f4f8] px-2 py-1 text-[12px] font-bold text-[#65748a]">
+                                公開中
+                              </span>
+                            )}
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        {p.userId !== user?.id && <button onClick={e => toggleFavorite(p.id, e)}>
-                          <Heart
-                            size={16}
-                            fill={favSet.has(p.id) ? "currentColor" : "none"}
-                            className={
-                              favSet.has(p.id)
-                                ? "text-[#a13b50]"
-                                : "text-[#8190a2]"
-                            }
-                          />
-                        </button>}
+                        {p.userId !== user?.id && (
+                          <button onClick={e => toggleFavorite(p.id, e)}>
+                            <Heart
+                              size={16}
+                              fill={favSet.has(p.id) ? "currentColor" : "none"}
+                              className={
+                                favSet.has(p.id)
+                                  ? "text-[#a13b50]"
+                                  : "text-[#8190a2]"
+                              }
+                            />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
