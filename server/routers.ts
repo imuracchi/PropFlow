@@ -3220,7 +3220,7 @@ ${propList}`,
       return db.getAdminStats();
     }),
 
-    platformAnalytics: adminProcedure.query(async () => {
+    platformAnalytics: managementProcedure.query(async () => {
       return db.getPlatformAnalytics();
     }),
 

@@ -17,10 +17,10 @@ export default function V2Admin() {
     { id: "search", label: "検索ログ", icon: Search },
     { id: "needs", label: "募集ニーズログ", icon: Target },
     { id: "dm", label: "DM管理", icon: MessageCircle },
+    { id: "ai", label: "AI分析", icon: Sparkles },
     ...(!management ? [
       { id: "logs", label: "操作ログ", icon: ScrollText },
       { id: "broadcast", label: "一斉・予約配信", icon: Send },
-      { id: "ai", label: "AI分析", icon: Sparkles },
     ] : []),
   ];
   const selectSection = (id: string) => {

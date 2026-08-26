@@ -229,8 +229,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
     onSuccess: data => setAnalysisResult(data),
   });
   const platformAnalyticsQuery = trpc.admin.platformAnalytics.useQuery(
-    undefined,
-    { enabled: !isManagement }
+    undefined
   );
   const addBroadcastLogMutation = trpc.admin.addBroadcastLog.useMutation({
     onSuccess: () => {
@@ -503,6 +502,10 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
             <MessageCircle className="w-3.5 h-3.5" />
             DM管理
           </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            AI分析
+          </TabsTrigger>
           {!isManagement && (
             <>
               <TabsTrigger value="logs" className="gap-1.5">
@@ -512,10 +515,6 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               <TabsTrigger value="broadcast" className="gap-1.5">
                 <Send className="w-3.5 h-3.5" />
                 一斉配信
-              </TabsTrigger>
-              <TabsTrigger value="ai" className="gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                AI分析
               </TabsTrigger>
             </>
           )}
@@ -2045,7 +2044,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
             })()}
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+          {!isManagement && <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
@@ -2206,7 +2205,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   </p>
                 </div>
               )}
-          </div>
+          </div>}
         </TabsContent>
 
         {/* 操作ログタブ */}

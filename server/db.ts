@@ -619,10 +619,13 @@ export async function getPlatformAnalytics() {
               WHEN p.price < 30000000 THEN '3,000万円未満'
               WHEN p.price < 50000000 THEN '3,000〜5,000万円'
               WHEN p.price < 100000000 THEN '5,000万〜1億円'
-              ELSE '1億円以上'
+              WHEN p.price < 500000000 THEN '1億〜5億円'
+              WHEN p.price < 1000000000 THEN '5億〜10億円'
+              ELSE '10億円以上'
             END AS bucket,
-            CASE WHEN p.price IS NULL THEN 5 WHEN p.price < 30000000 THEN 1
-              WHEN p.price < 50000000 THEN 2 WHEN p.price < 100000000 THEN 3 ELSE 4 END AS sortOrder,
+            CASE WHEN p.price IS NULL THEN 7 WHEN p.price < 30000000 THEN 1
+              WHEN p.price < 50000000 THEN 2 WHEN p.price < 100000000 THEN 3
+              WHEN p.price < 500000000 THEN 4 WHEN p.price < 1000000000 THEN 5 ELSE 6 END AS sortOrder,
             COALESCE(v.viewCount, 0) AS viewCount,
             COALESCE(f.favoriteCount, 0) AS favoriteCount
           FROM properties p
