@@ -86,6 +86,8 @@ a { color: inherit; }
   font-size: 13.5px; font-weight: 600; color: var(--text-sub); text-decoration: none;
 }
 .topbar-links a:hover { color: var(--blue); }
+.topbar-links .topbar-feedback { border-radius: 999px; background: #fff1c7; padding: 7px 12px; color: #704b00; font-weight: 800; }
+.topbar-links .topbar-feedback:hover { background: #ffd166; color: #432d00; }
 .topbar-cta {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--blue); color: #fff; font-weight: 700; font-size: 14px;
@@ -95,10 +97,11 @@ a { color: inherit; }
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
 .topbar-login {
   display: inline-flex; align-items: center; gap: 6px;
-  background: transparent; color: var(--text); font-weight: 700; font-size: 14px;
+  background: var(--navy); color: #fff; font-weight: 800; font-size: 14px;
   padding: 10px 18px; border-radius: 999px; text-decoration: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--navy); box-shadow: 0 7px 18px -10px rgba(15,49,91,.8);
 }
+.topbar-login:hover { background: #0b2a50; border-color: #0b2a50; }
 .topbar-login:hover { border-color: var(--blue); color: var(--blue); }
 
 /* hero */
@@ -297,6 +300,18 @@ a { color: inherit; }
 .method-card p { font-size: 16px; color: var(--text-sub); margin: 0; line-height: 1.8; flex: 1; }
 .method-card .btn-primary, .method-card .btn-secondary { align-self: flex-start; padding: 12px 22px; font-size: 16px; }
 
+.feedback-invite { position: relative; overflow: hidden; padding: 76px 20px; background: #0f315b; text-align: center; }
+.feedback-invite:before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 15% 20%, rgba(48,132,255,.35), transparent 34%), radial-gradient(circle at 88% 80%, rgba(255,184,64,.18), transparent 30%); pointer-events: none; }
+.feedback-invite-inner { position: relative; max-width: 900px; margin: 0 auto; border: 1px solid rgba(255,255,255,.32); border-radius: 22px; background: rgba(255,255,255,.08); padding: 48px 34px; box-shadow: 0 28px 70px -38px rgba(0,0,0,.8); }
+.feedback-invite-badge { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; border-radius: 999px; background: #ffd166; padding: 8px 16px; color: #102d50; font-size: 13px; font-weight: 900; letter-spacing: .08em; }
+.feedback-invite-badge:before { content: "●"; color: #e05a3f; font-size: 10px; }
+.feedback-invite h2 { max-width: 760px; margin: 0 auto; color: #fff; font-size: clamp(29px, 5vw, 46px); font-weight: 900; line-height: 1.45; }
+.feedback-invite h2 strong { color: #ffd166; }
+.feedback-invite p { max-width: 700px; margin: 20px auto 30px; color: #e1ebf7; font-size: 18px; line-height: 2; }
+.feedback-invite a { display: inline-flex; min-height: 58px; align-items: center; justify-content: center; padding: 15px 34px; border-radius: 10px; background: #fff; color: var(--navy); font-size: 17px; font-weight: 900; text-decoration: none; box-shadow: 0 12px 28px -16px rgba(0,0,0,.8); }
+.feedback-invite a:hover { background: #ffd166; transform: translateY(-1px); }
+.feedback-invite-note { display: block; margin-top: 18px; color: #fff; font-size: 17px; font-weight: 900; letter-spacing: .02em; }
+
 footer { padding: 40px 0 24px; text-align: center; border-top: 1px solid var(--border); }
 .footer-links {
   display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;
@@ -429,6 +444,7 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
 .faq-answer p{margin:0}
 @media(max-width:900px){.use-case-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.role-grid,.use-case-grid{grid-template-columns:1fr}.recruitment,.use-cases,.faq{padding:64px 0}.role-card,.use-case-card{padding:24px 20px}.screen-showcase{padding:7px}.faq summary{padding-left:18px}.faq-answer{padding-left:18px;padding-right:18px}}
+@media(max-width:600px){.feedback-invite{padding:52px 14px}.feedback-invite-inner{padding:36px 18px}.feedback-invite p{font-size:16px;line-height:1.85}.feedback-invite a{width:100%;padding:14px 12px;font-size:15px}.feedback-invite-note{font-size:16px}}
 </style>
 </head>
 <body>
@@ -439,9 +455,10 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
     <div class="topbar-links">
       <a href="#features">PropFlowとは</a>
       <a href="#recruitment">物件募集</a>
+      <a href="#use-cases">活用例</a>
       <a href="#faq">よくある質問</a>
+      <a class="topbar-feedback" href="/feedback">ご意見箱</a>
       <a href="#closing">まずは登録する</a>
-      <a href="https://gspec.me/" target="_blank" rel="noopener noreferrer">運営企業</a>
     </div>
     <div class="topbar-actions">
       <a class="topbar-login" href="https://propflow.jp/">ログイン</a>
@@ -670,6 +687,7 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
       <details><summary>掲載後の反響を確認できますか？</summary><div class="faq-answer"><p>はい。閲覧状況やお気に入りなどの反響を確認でき、問い合わせが届いた後はPropFlow内の商談画面でやり取りを進められます。</p></div></details>
       <h3 class="faq-category">ご利用について</h3>
       <details><summary>利用料金はかかりますか？</summary><div class="faq-answer"><p>現在はベータ版として無料で利用できます。今後、一部機能に有料プランを導入する場合は事前にお知らせします。</p></div></details>
+      <details><summary>登録前でも質問や困りごとを送れますか？</summary><div class="faq-answer"><p>はい。<a href="/feedback" style="color:var(--blue);font-weight:700;">不動産の情報収集へのご意見箱</a>から、「PropFlowでこんなことはできるか」「今の不動産情報共有で、こんなことができず困っている」といった内容を、登録せずにお寄せいただけます。</p></div></details>
     </div>
   </div>
 </section>
@@ -709,6 +727,16 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
       </div>
     </div>
     <a class="btn-primary" href="https://propflow.jp/" style="margin-top:32px;">PropFlowへ移動 →</a>
+  </div>
+</section>
+
+<section class="feedback-invite" aria-labelledby="feedback-invite-title">
+  <div class="feedback-invite-inner">
+    <span class="feedback-invite-badge">現場の声 募集中</span>
+    <h2 id="feedback-invite-title">不動産の情報収集を、<br><strong>もっと良くする活動</strong>をしています。</h2>
+    <p>「こんな情報を探せたら便利」「今、こんなことができず困っている」。不動産業に携わる皆さまの声を集め、PropFlowの機能や仕組みづくりに活かしています。</p>
+    <a href="/feedback">不動産の情報収集へのご意見箱 →</a>
+    <span class="feedback-invite-note">登録・ログイン不要で投稿できます</span>
   </div>
 </section>
 

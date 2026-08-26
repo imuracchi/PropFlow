@@ -52,6 +52,7 @@ import V2MyPage from "./pages/v2/V2MyPage";
 import V2Documents from "./pages/v2/V2Documents";
 import V2Admin from "./pages/v2/V2Admin";
 import V2IssueReport from "./pages/v2/V2IssueReport";
+import PublicFeedback from "./pages/PublicFeedback";
 
 import V2Layout from "./components/v2/V2Layout";
 import { useAuth } from "./_core/hooks/useAuth";
@@ -317,6 +318,7 @@ function AppContent() {
       <Route path="/registration-request">
         {() => <RegistrationRequest />}
       </Route>
+      <Route path="/feedback">{() => <PublicFeedback />}</Route>
       <Route path="/view-ranking">
         {() => (
           <ManagementRoute>

@@ -21,7 +21,7 @@
 <div id="faq-list">
  <section class="section" id="account"><h2>アカウント・LINE</h2>
   <details class="faq"><summary>PropFlowの利用を始めるには？</summary><div class="answer"><p><a href="https://propflow.jp/register?utm_source=line&amp;utm_medium=help&amp;utm_campaign=signup">新規登録ページ</a>から必要事項を入力してください。登録後、物件検索や募集、メッセージ機能を利用できます。</p></div></details>
-  <details class="faq"><summary>ログインできません</summary><div class="answer"><p>登録したメールアドレスに誤りがないか確認してください。解決しない場合は、ページ下部のLINE窓口からご連絡ください。</p></div></details>
+  <details class="faq"><summary>ログインできません</summary><div class="answer"><p>登録したメールアドレスに誤りがないか確認してください。解決しない場合は、<a href="/feedback">ご意見箱</a>から「ログインできない」を選び、登録したメールアドレスと状況をお知らせください。</p></div></details>
   <details class="faq"><summary>LINEとPropFlowを連携するには？</summary><div class="answer"><p>公式LINEのトーク画面に、PropFlowへ登録したメールアドレスを送信してください。連携完了の返信後、DMなどの通知をLINEで受け取れます。</p></div></details>
  </section>
  <section class="section" id="property"><h2>物件を探す・募集する</h2>
@@ -41,7 +41,7 @@
  </section>
 </div>
 <p class="empty" id="empty">該当する質問が見つかりませんでした。別の言葉で検索するか、LINEでお問い合わせください。</p>
-<section class="contact"><h2>解決しませんでしたか？</h2><p>操作方法や登録について、公式LINEでサポートします。</p><a class="line-button" href="https://lin.ee/Ueg4j5Q">LINEで質問する</a><div class="notice">個別物件の内容・条件・交渉については、対象物件のチャットからお問い合わせください。</div></section>
+<section class="contact"><h2>登録前の質問・困りごと</h2><p>「こんなことはできるか」「今、こんなことができず困っている」を、ログインせずに投稿できます。</p><a class="line-button" href="/feedback" style="background:var(--navy);">不動産の情報収集へのご意見箱</a><p style="margin:16px 0 8px;">操作方法や登録については、公式LINEでもサポートします。</p><a class="line-button" href="https://lin.ee/Ueg4j5Q">LINEで質問する</a><div class="notice">個別物件の内容・条件・交渉については、対象物件のチャットからお問い合わせください。</div></section>
 <div class="links"><a href="https://propflow.jp/propflow-intro.html">PropFlowとは</a><a href="https://propflow.jp/">物件を探す</a></div>
 </main>
 <script>const input=document.getElementById('faq-search'),faqs=[...document.querySelectorAll('.faq')],sections=[...document.querySelectorAll('.section')],empty=document.getElementById('empty');input.addEventListener('input',()=>{const q=input.value.trim().toLowerCase();let n=0;faqs.forEach(f=>{const show=!q||f.textContent.toLowerCase().includes(q);f.style.display=show?'':'none';if(show)n++});sections.forEach(s=>s.style.display=[...s.querySelectorAll('.faq')].some(f=>f.style.display!=='none')?'':'none');empty.style.display=n?'none':'block'});</script>

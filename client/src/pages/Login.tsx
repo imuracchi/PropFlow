@@ -326,16 +326,14 @@ export default function Login({
                   </div>
                   <div className="border-t border-[#dce3eb] pt-4 text-center">
                     <p className="text-[12px] text-[#65748a]">
-                      ログインできないときは？
+                      ログインできないとき・登録前のご意見（ログイン不要）
                     </p>
                     <a
-                      href="https://lin.ee/Ueg4j5Q"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center justify-center gap-1.5 font-bold text-[#16713a] hover:underline"
+                      href="/feedback"
+                      className="mt-2 inline-flex items-center justify-center gap-1.5 font-bold text-[#173f70] hover:underline"
                     >
                       <MessageCircle size={15} />
-                      公式LINEへ相談する
+                      不動産の情報収集へのご意見箱
                     </a>
                   </div>
                 </div>

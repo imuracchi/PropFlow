@@ -18,6 +18,18 @@ import {
   EXTERNAL_LISTING_CONSENT_VERSION,
 } from "../shared/legal";
 
+const publicFeedbackAttempts = new Map<string, number[]>();
+
+function checkPublicFeedbackRateLimit(req: { headers: Record<string, unknown>; socket?: { remoteAddress?: string } }) {
+  const forwarded = req.headers["x-forwarded-for"];
+  const key = (Array.isArray(forwarded) ? forwarded[0] : String(forwarded ?? "").split(",")[0]).trim() || req.socket?.remoteAddress || "unknown";
+  const now = Date.now();
+  const recent = (publicFeedbackAttempts.get(key) ?? []).filter(time => now - time < 60 * 60 * 1000);
+  if (recent.length >= 5) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "送信回数が上限に達しました。時間をおいて再度お試しください。" });
+  recent.push(now);
+  publicFeedbackAttempts.set(key, recent);
+}
+
 async function canViewProperty(
   propertyId: number,
   user: { id: number; role: string }
@@ -2796,6 +2808,33 @@ ${propList}`,
   }),
 
   support: router({
+    publicReport: publicProcedure
+      .input(z.object({
+        category: z.enum(["possibility", "industry_issue", "idea", "before_registration", "login", "other"]),
+        message: z.string().trim().min(5).max(5000),
+        name: z.string().trim().max(100).optional().default(""),
+        company: z.string().trim().max(255).optional().default(""),
+        replyEmail: z.union([z.string().email().max(320), z.literal("")]).optional().default(""),
+        website: z.string().max(500).optional().default(""),
+        elapsedMs: z.number().int().nonnegative().max(86_400_000),
+        currentUrl: z.string().max(2000).optional().default(""),
+        deviceInfo: z.string().max(2000).optional().default(""),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (input.website || input.elapsedMs < 1500) return { success: true };
+        checkPublicFeedbackRateLimit(ctx.req);
+        const labels = { possibility: "こんなことはできますか？", industry_issue: "今、こんなことで困っています", idea: "こんな機能・仕組みが欲しい", before_registration: "登録前に確認したいこと", login: "ログインできない", other: "その他" } as const;
+        const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
+        const { sendMail } = await import("./_core/mail");
+        const sent = await sendMail(
+          "support@gspec.me",
+          `【PropFlow・公開ご意見箱】${labels[input.category]}${input.name ? ` - ${input.name}` : ""}`,
+          `<div style="font-family:sans-serif;max-width:680px;margin:0 auto;"><h2 style="color:#173f70;">不動産の情報収集へのご意見箱</h2><table style="width:100%;border-collapse:collapse;font-size:14px;"><tr><th style="width:150px;text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">カテゴリ</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(labels[input.category])}</td></tr><tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">お名前</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.name || "未入力")}</td></tr><tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">会社名</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.company || "未入力")}</td></tr><tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">返信先</th><td style="padding:8px;border:1px solid #d8e0e8;">${escapeHtml(input.replyEmail || "未入力")}</td></tr><tr><th style="text-align:left;padding:8px;border:1px solid #d8e0e8;background:#edf1f5;">送信元URL</th><td style="padding:8px;border:1px solid #d8e0e8;word-break:break-all;">${escapeHtml(input.currentUrl)}</td></tr></table><h3 style="margin-top:20px;color:#173f70;">内容</h3><div style="white-space:pre-wrap;border:1px solid #d8e0e8;padding:16px;">${escapeHtml(input.message)}</div><p style="margin-top:16px;color:#718096;font-size:12px;word-break:break-all;">端末: ${escapeHtml(input.deviceInfo)}</p></div>`,
+          input.replyEmail ? { replyTo: input.replyEmail } : undefined
+        );
+        if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "送信に失敗しました。時間をおいて再度お試しください。" });
+        return { success: true };
+      }),
     report: protectedProcedure
       .input(
         z.object({
