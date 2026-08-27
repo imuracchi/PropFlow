@@ -46,6 +46,7 @@ import {
   Monitor,
   ChevronDown,
   Target,
+  Wrench,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -81,6 +82,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
 
   const [userSearch, setUserSearch] = useState("");
   const [propSearch, setPropSearch] = useState("");
+  const [propStatusFilter, setPropStatusFilter] = useState("all");
   const [requestSearch, setRequestSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{
     id: number;
@@ -351,6 +353,16 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   });
 
   const filteredProperties = (adminProperties ?? []).filter(p => {
+    const isHidden = (p as any).deleted === 1;
+    const isScheduled = !isHidden && p.published === 0 && !!p.scheduledPublishAt;
+    const isDraft = !isHidden && p.published === 0 && !p.scheduledPublishAt;
+    const matchesStatus =
+      propStatusFilter === "all" ||
+      (propStatusFilter === "published" && !isHidden && p.published !== 0) ||
+      (propStatusFilter === "scheduled" && isScheduled) ||
+      (propStatusFilter === "draft" && isDraft) ||
+      (propStatusFilter === "hidden" && isHidden);
+    if (!matchesStatus) return false;
     if (!propSearch) return true;
     const q = propSearch.toLowerCase();
     return (
@@ -481,6 +493,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   dm: "DM管理",
                   logs: "操作ログ",
                   broadcast: "一斉配信",
+                  maintenance: "保守",
                   ai: "AI分析",
                 }[activeSection]
               }
@@ -538,6 +551,10 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               <TabsTrigger value="broadcast" className="gap-1.5">
                 <Send className="w-3.5 h-3.5" />
                 一斉配信
+              </TabsTrigger>
+              <TabsTrigger value="maintenance" className="gap-1.5">
+                <Wrench className="w-3.5 h-3.5" />
+                保守
               </TabsTrigger>
             </>
           )}
@@ -823,14 +840,15 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                         ...(!isManagement ? ["プラン"] : []),
                         "ステータス",
                         "登録日",
+                        "最終利用",
                         "最終ログイン",
                         ...(isManagement
                           ? ["名刺"]
                           : ["名刺/認証", "規約同意", "操作"]),
-                      ].map(h => (
+                      ].map((h, index) => (
                         <th
                           key={h}
-                          className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap"
+                          className={`text-left py-3 text-xs font-medium text-muted-foreground whitespace-nowrap ${index === 0 ? "w-[190px] pl-3 pr-2" : index === 1 ? "w-[210px] px-2" : "px-4"}`}
                         >
                           {h}
                         </th>
@@ -851,7 +869,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           key={user.id}
                           className="hover:bg-muted/30 transition-colors"
                         >
-                          <td className="px-4 py-3">
+                          <td className="w-[190px] max-w-[190px] py-3 pl-3 pr-2">
                             <button
                               className="flex items-center gap-2 text-left hover:opacity-70 transition-opacity"
                               onClick={() => setSelectedUserId(user.id)}
@@ -878,8 +896,8 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                               </div>
                             </button>
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground text-xs">
-                            {user.email}
+                          <td className="w-[210px] max-w-[210px] px-2 py-3 text-muted-foreground text-xs">
+                            <span className="block truncate" title={user.email}>{user.email}</span>
                           </td>
                           <td className="px-4 py-3">
                             {user.loginMethod === "email" ? (
@@ -935,6 +953,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                             {fmtDate(user.createdAt)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                            {(user as any).lastActiveAt ? fmtDateTime((user as any).lastActiveAt) : "—"}
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                             {fmtDateTime(user.lastSignedIn)}
@@ -1142,33 +1163,28 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
 
         {/* 物件管理タブ */}
         <TabsContent value="properties" className="mt-4 space-y-4">
-          {!isManagement && (
-            <section className="border border-[#b9c9da] bg-white p-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-sm font-bold text-[#173f70]">公開予約スケジューラー疎通テスト</h2>
-                  <p className="mt-1 text-xs text-[#65748a]">2分後にテスト用URLを呼びます。物件・メール・LINE・プッシュは一切変更しません。</p>
-                </div>
-                <Button disabled={runSchedulerProbeMutation.isPending || schedulerProbesQuery.data?.some(probe => probe.status === "pending")} onClick={() => runSchedulerProbeMutation.mutate()}>
-                  {runSchedulerProbeMutation.isPending ? "登録中…" : "2分後に安全テスト"}
-                </Button>
-              </div>
-              {(schedulerProbesQuery.data ?? []).slice(0, 3).map(probe => (
-                <div key={probe.id} className="mt-2 flex gap-3 border-t border-[#e2e7ec] pt-2 text-xs">
-                  <span>{fmtDateTime(probe.scheduledAt)}</span>
-                  <span className={probe.status === "executed" ? "font-bold text-green-700" : "font-bold text-amber-700"}>{probe.status === "executed" ? "正常実行" : "待機中"}</span>
-                </div>
-              ))}
-            </section>
-          )}
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="物件名・業者名で検索..."
-              className="pl-10 bg-card border-border"
-              value={propSearch}
-              onChange={e => setPropSearch(e.target.value)}
-            />
+          <div className="flex flex-wrap gap-3">
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="物件名・業者名で検索..."
+                className="pl-10 bg-card border-border"
+                value={propSearch}
+                onChange={e => setPropSearch(e.target.value)}
+              />
+            </div>
+            <Select value={propStatusFilter} onValueChange={setPropStatusFilter}>
+              <SelectTrigger className="w-[150px] bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべての状態</SelectItem>
+                <SelectItem value="published">公開中</SelectItem>
+                <SelectItem value="scheduled">予約中</SelectItem>
+                <SelectItem value="draft">下書き</SelectItem>
+                <SelectItem value="hidden">非表示</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           {filteredProperties.length === 0 ? (
             <div className="bg-card border border-border rounded-lg py-12 text-center">
@@ -1207,7 +1223,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                 <tbody className="divide-y divide-border">
                   {filteredProperties.map(prop => {
                     const isHidden = (prop as any).deleted === 1;
-                    const isDraft = !isHidden && (prop as any).published === 0;
+                    const isScheduled = !isHidden && (prop as any).published === 0 && !!prop.scheduledPublishAt;
+                    const isDraft = !isHidden && (prop as any).published === 0 && !prop.scheduledPublishAt;
+                    const scheduleIsLate = isScheduled && new Date(prop.scheduledPublishAt!).getTime() < Date.now();
                     return (
                       <tr
                         key={prop.id}
@@ -1216,7 +1234,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                         <td className="px-4 py-3 text-xs text-muted-foreground">
                           #{prop.id}
                         </td>
-                        <td className="px-4 py-3 font-medium text-primary text-xs">
+                        <td className="w-[240px] max-w-[240px] px-4 py-3 font-medium text-primary text-xs">
                           <a
                             href={
                               v2
@@ -1241,9 +1259,6 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           <p className="text-muted-foreground">
                             {prop.userCompany ?? "会社名未設定"}
                           </p>
-                          <p className="text-muted-foreground">
-                            {prop.userEmail ?? "メール未設定"}
-                          </p>
                         </td>
                         <td className="px-4 py-3 text-foreground text-xs font-semibold">
                           {prop.price?.toLocaleString() ?? "応相談"}
@@ -1263,6 +1278,12 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                               <EyeOff className="w-3 h-3" />
                               非表示
                             </span>
+                          ) : isScheduled ? (
+                            <div className={`w-fit px-2 py-1 text-xs ${scheduleIsLate ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
+                              <p className="font-bold">{scheduleIsLate ? "公開遅延" : "予約中"}</p>
+                              <p className="mt-0.5 whitespace-nowrap">{fmtDateTime(prop.scheduledPublishAt!)}</p>
+                              <p className="mt-0.5 font-medium">{(prop as any).scheduledPublishNotify === 0 ? "通知なし" : "通知あり"}</p>
+                            </div>
                           ) : isDraft ? (
                             <span className="text-xs font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-700 flex items-center gap-1 w-fit">
                               <EyeOff className="w-3 h-3" />
@@ -2942,6 +2963,28 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
             </div>
           </div>
         </TabsContent>
+
+        {!isManagement && (
+          <TabsContent value="maintenance" className="mt-4 space-y-4">
+            <section className="border border-[#b9c9da] bg-white p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-bold text-[#173f70]">公開予約スケジューラー疎通テスト</h2>
+                  <p className="mt-1 text-xs text-[#65748a]">2分後にテスト処理を実行します。物件・メール・LINE・プッシュは一切変更しません。</p>
+                </div>
+                <Button disabled={runSchedulerProbeMutation.isPending || schedulerProbesQuery.data?.some(probe => probe.status === "pending")} onClick={() => runSchedulerProbeMutation.mutate()}>
+                  {runSchedulerProbeMutation.isPending ? "登録中…" : "2分後に安全テスト"}
+                </Button>
+              </div>
+              {(schedulerProbesQuery.data ?? []).slice(0, 3).map(probe => (
+                <div key={probe.id} className="mt-2 flex gap-3 border-t border-[#e2e7ec] pt-2 text-xs">
+                  <span>{fmtDateTime(probe.scheduledAt)}</span>
+                  <span className={probe.status === "executed" ? "font-bold text-green-700" : "font-bold text-amber-700"}>{probe.status === "executed" ? "正常実行" : "待機中"}</span>
+                </div>
+              ))}
+            </section>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* 管理者による非表示確認ダイアログ */}
@@ -3230,7 +3273,8 @@ function UserDetailModal({
           )}
           <div className="pt-3 border-t border-border text-xs text-muted-foreground space-y-1">
             <p>登録日: {fmtDate(user.createdAt)}</p>
-            <p>最終ログイン: {fmtDate(user.lastSignedIn)}</p>
+            <p>最終利用: {(user as any).lastActiveAt ? fmtDateTime((user as any).lastActiveAt) : "—"}</p>
+            <p>最終ログイン: {fmtDateTime(user.lastSignedIn)}</p>
           </div>
           {canDelete && (
             <button

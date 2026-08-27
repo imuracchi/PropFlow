@@ -3321,10 +3321,6 @@ ${propList}`,
             error: "このメールアドレスは既に登録されています",
           } as const;
         }
-        const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(
-          /\/$/,
-          ""
-        );
         const phoneDigits = (request.phone ?? "").replace(/\D/g, "");
         const initialPassword =
           phoneDigits.length >= 8 ? phoneDigits.slice(-8) : nanoid(12);
@@ -3362,20 +3358,32 @@ ${propList}`,
         const { sendMail } = await import("./_core/mail");
         const emailSent = await sendMail(
           request.email,
-          "【PropFlow】代理登録を行いました",
-          `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-            <p>${safeName} 様</p>
-            <p>PropFlowへの代理登録を行いました。</p>
-            <p>以下のログイン情報でご利用いただけます。</p>
-            <div style="background:#f4f6f8;border:1px solid #d8e0e8;padding:16px;margin:16px 0;">
-              <p style="margin:0 0 8px;">ログインURL：<a href="${siteUrl}/">${siteUrl}/</a></p>
-              <p style="margin:0 0 8px;">ログインID：${request.email}</p>
-              <p style="margin:0;">初期パスワード：${initialPassword}</p>
-            </div>
-            <p>ログイン後、安全のためマイページからパスワードを変更してください。</p>
-          </div>`,
+          "【PropFlow】ご登録完了のお知らせ",
+          `
+<p>${safeName}　様</p>
+<p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
+<p>下記にてご登録をさせて頂きました。</p>
+<p>
+  ログインURL：<a href="https://propflow.jp/">https://propflow.jp/</a><br>
+  ログインID：${request.email}<br>
+  初期パスワード：${initialPassword}
+</p>
+<p>パスワードは、ログイン後にマイページから変更頂けます。</p>
+<p>
+  個別物件のご質問に関しては、<br>
+  物件詳細画面から「問い合わせる」にてご登録企業様にご連絡頂けます。<br>
+  ※1on1ですので、他の方から見える事はございません。
+</p>
+<p>
+  使い方などのご不明点ございましたら、<br>
+  support@gspec.me、または公式LINEからご連絡くださいませ。
+</p>
+<p>宜しくお願い致します。</p>
+<p>PropFlowサポート　加藤</p>
+          `.trim(),
           {
-            bcc: "imuracchi@gmail.com",
+            replyTo: "support@gspec.me",
+            bcc: "support@gspec.me",
           }
         );
         if (!emailSent) {
@@ -3730,14 +3738,14 @@ ${propList}`,
 </p>
 <p>
   使い方などのご不明点ございましたら、<br>
-  こちらのメールか、公式LINEからご連絡くださいませ。
+  support@gspec.me、または公式LINEからご連絡くださいませ。
 </p>
 <p>宜しくお願い致します。</p>
 <p>PropFlowサポート　加藤</p>
         `.trim(),
           {
             replyTo: "support@gspec.me",
-            bcc: "imuracchi@gmail.com",
+            bcc: "support@gspec.me",
           }
         );
 
@@ -3781,14 +3789,14 @@ ${propList}`,
 </p>
 <p>
   使い方などのご不明点ございましたら、<br>
-  こちらのメールか、公式LINEからご連絡くださいませ。
+  support@gspec.me、または公式LINEからご連絡くださいませ。
 </p>
 <p>宜しくお願い致します。</p>
 <p>PropFlowサポート　加藤</p>
         `.trim(),
           {
             replyTo: "support@gspec.me",
-            bcc: "imuracchi@gmail.com",
+            bcc: "support@gspec.me",
           }
         );
         return { success: true, emailSent } as const;

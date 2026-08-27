@@ -106,6 +106,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` ADD COLUMN `showUrl` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `businessCardBase64` longtext NULL",
     "ALTER TABLE `users` ADD COLUMN `termsAgreedVersion` varchar(20) NULL AFTER `termsAgreedAt`",
+    "ALTER TABLE `users` ADD COLUMN `lastActiveAt` timestamp NULL AFTER `lastSignedIn`",
     "ALTER TABLE `users` ADD COLUMN `notifyAnnounce` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `announcementExcluded` int NOT NULL DEFAULT 0",
     "ALTER TABLE `users` ADD COLUMN `announcementExclusionNote` text NULL",
@@ -487,7 +488,16 @@ export async function updateLastSignedIn(id: number) {
   if (!db) return;
   await db
     .update(users)
-    .set({ lastSignedIn: new Date() })
+    .set({ lastSignedIn: new Date(), lastActiveAt: new Date() })
+    .where(eq(users.id, id));
+}
+
+export async function updateLastActiveAt(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(users)
+    .set({ lastActiveAt: new Date() })
     .where(eq(users.id, id));
 }
 
@@ -524,6 +534,7 @@ export async function listActiveUsers() {
       status: users.status,
       createdAt: users.createdAt,
       lastSignedIn: users.lastSignedIn,
+      lastActiveAt: users.lastActiveAt,
       loginMethod: users.loginMethod,
       termsAgreedAt: users.termsAgreedAt,
       hasBusinessCard: sql<number>`CASE WHEN ${users.businessCardBase64} IS NOT NULL THEN 1 ELSE 0 END`,
@@ -2133,6 +2144,7 @@ export async function listAllPropertiesAdmin() {
       published: properties.published,
       publishedAt: properties.publishedAt,
       scheduledPublishAt: properties.scheduledPublishAt,
+      scheduledPublishNotify: properties.scheduledPublishNotify,
       externalListingConsent: properties.externalListingConsent,
       externalListingConsentedAt: properties.externalListingConsentedAt,
       viewCount: properties.viewCount,

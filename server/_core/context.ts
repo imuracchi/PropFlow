@@ -21,6 +21,10 @@ export async function createContext(
       const found = await db.getUserById(session.userId);
       if (found && found.status === "active") {
         user = found;
+        const lastActiveAt = found.lastActiveAt?.getTime() ?? 0;
+        if (Date.now() - lastActiveAt >= 24 * 60 * 60 * 1000) {
+          await db.updateLastActiveAt(found.id);
+        }
       }
     }
   }
