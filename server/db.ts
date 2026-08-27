@@ -5094,6 +5094,15 @@ export async function markPropertyPublishSchedulerProbeExecuted(taskUid: string)
     WHERE taskUid = ${taskUid} AND status = 'pending'`);
 }
 
+export async function executeDuePropertyPublishSchedulerProbes() {
+  const db = await getDb();
+  if (!db) return 0;
+  const result: any = await db.execute(sql`UPDATE property_publish_scheduler_probes
+    SET status = 'executed', executedAt = NOW()
+    WHERE status = 'pending' AND scheduledAt <= NOW()`);
+  return Number(result?.[0]?.affectedRows ?? 0);
+}
+
 export async function listPropertyPublishSchedulerProbes() {
   const db = await getDb();
   if (!db) return [];

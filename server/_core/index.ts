@@ -520,6 +520,18 @@ async function startServer() {
     "[CRON] Owner-deleted property attachment cleanup scheduled at 0:00 JST daily"
   );
 
+  // 毎分：物件や通知に触れない、公開予約スケジューラーの疎通テスト
+  cron.schedule("* * * * *", async () => {
+    try {
+      const db = await import("../db");
+      const executed = await db.executeDuePropertyPublishSchedulerProbes();
+      if (executed > 0)
+        console.log(`[CRON] Executed ${executed} property publish scheduler probes`);
+    } catch (error) {
+      console.error("[CRON] property publish scheduler probe error:", error);
+    }
+  });
+
   // 毎分：予約配信チェック
   cron.schedule("* * * * *", async () => {
     try {

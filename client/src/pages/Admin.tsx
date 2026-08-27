@@ -119,6 +119,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   });
   const runSchedulerProbeMutation = trpc.admin.runPropertyPublishSchedulerProbe.useMutation({
     onSuccess: () => schedulerProbesQuery.refetch(),
+    onError: error => alert(`安全テストの登録に失敗しました：${error.message}`),
   });
   const { data: adminRequests } = trpc.propertySearch.list.useQuery();
   const { data: activityLogs } = trpc.admin.activityLogs.useQuery();

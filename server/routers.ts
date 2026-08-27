@@ -3550,22 +3550,9 @@ ${propList}`,
 
     runPropertyPublishSchedulerProbe: adminProcedure.mutation(async ({ ctx }) => {
       const scheduledAt = new Date(Date.now() + 2 * 60_000);
-      const cron = `0 ${scheduledAt.getUTCMinutes()} ${scheduledAt.getUTCHours()} ${scheduledAt.getUTCDate()} ${scheduledAt.getUTCMonth() + 1} *`;
-      const { createHeartbeatJob, deleteHeartbeatJob } = await import("./_core/heartbeat");
-      const job = await createHeartbeatJob({
-        name: `property-publish-probe-${scheduledAt.getTime()}`,
-        cron,
-        path: "/api/scheduled/property-publish-probe",
-        method: "POST",
-        description: "物件公開予約の安全な疎通テスト（物件・通知は変更しない）",
-      }, "");
-      try {
-        await db.createPropertyPublishSchedulerProbe(ctx.user.id, job.taskUid, scheduledAt);
-      } catch (error) {
-        await deleteHeartbeatJob(job.taskUid, "").catch(() => {});
-        throw error;
-      }
-      return { success: true, scheduledAt, taskUid: job.taskUid };
+      const taskUid = `internal-probe-${ctx.user.id}-${scheduledAt.getTime()}`;
+      await db.createPropertyPublishSchedulerProbe(ctx.user.id, taskUid, scheduledAt);
+      return { success: true, scheduledAt, taskUid };
     }),
 
     hideProperty: adminProcedure
