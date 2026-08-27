@@ -7,6 +7,7 @@ import { ChevronLeft, Send, Loader2, User, Home, Bookmark, CheckCircle2, IdCard,
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { AttachmentPicker, AttachmentSelection, MessageAttachments, filesToPayload, validateSelectedFiles } from "@/components/DmAttachments";
 
 export default function DirectMessage() {
   const [, setLocation] = useLocation();
@@ -73,6 +74,9 @@ export default function DirectMessage() {
   const [includePropertyLink, setIncludePropertyLink] = useState(true);
   const [contactModal, setContactModal] = useState<"partner" | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const copyToClipboard = async (text: string, field: string) => {
@@ -105,9 +109,15 @@ export default function DirectMessage() {
   }, [contactModal]);
 
   const sendMessage = async () => {
-    if (!input.trim() || !partnerId || isClosed) return;
-    await sendMutation.mutateAsync({ receiverId: partnerId, content: input.trim(), propertyId });
-    setInput("");
+    if ((!input.trim() && !attachmentFiles.length) || !partnerId || isClosed) return;
+    try {
+      setAttachmentError(null);
+      await sendMutation.mutateAsync({ receiverId: partnerId, content: input.trim(), propertyId, attachments: await filesToPayload(attachmentFiles) });
+      setInput("");
+      setAttachmentFiles([]);
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : "送信に失敗しました");
+    }
   };
 
   if (isLoading) {
@@ -189,7 +199,8 @@ export default function DirectMessage() {
                         ? "bg-primary text-primary-foreground rounded-tr-sm"
                         : "bg-card border border-border text-foreground rounded-tl-sm shadow-sm"
                     }`}>
-                      {msg.content}
+                      {msg.content && <span>{msg.content}</span>}
+                      <MessageAttachments attachments={(msg as any).attachments} mine={isMe}/>
                     </div>
                     <span className="text-[10px] text-muted-foreground shrink-0 mb-0.5">
                       {fmtTime(msg.createdAt)}
@@ -239,7 +250,10 @@ export default function DirectMessage() {
             {isRestricted ? "この物件は閲覧制限中です。過去の問い合わせ履歴のみ確認できます" : propertyDeleted ? "この物件は削除されたため、これ以上メッセージを送信できません" : "この物件は成約済みのため、これ以上メッセージを送信できません"}
           </div>
         ) : (
+          <>
+          <AttachmentSelection files={attachmentFiles} onRemove={index => setAttachmentFiles(files => files.filter((_, i) => i !== index))} error={attachmentError}/>
           <div className="flex items-end gap-2">
+            <AttachmentPicker inputRef={attachmentInputRef} files={attachmentFiles} onFiles={incoming => { try { setAttachmentFiles(validateSelectedFiles(attachmentFiles, incoming)); setAttachmentError(null); } catch (error) { setAttachmentError(error instanceof Error ? error.message : "添付できません"); } }} disabled={sendMutation.isPending}/>
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
@@ -264,11 +278,12 @@ export default function DirectMessage() {
               className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 h-10 w-10 shadow-sm"
               size="icon"
               onClick={sendMessage}
-              disabled={!input.trim() || sendMutation.isPending}
+              disabled={(!input.trim() && !attachmentFiles.length) || sendMutation.isPending}
             >
               <Send className="w-4 h-4" />
             </Button>
           </div>
+          </>
         )}
       </div>
 

@@ -25,6 +25,7 @@ import {
   propertyFiles,
   propertyMemos,
   directMessages,
+  dmAttachments,
   chatExits,
   pushSubscriptions,
   registrationTokens,
@@ -136,6 +137,17 @@ export async function runStartupMigrations() {
     "ALTER TABLE `property_view_events` ADD INDEX `idx_property_view_events_attention` (`viewedAt`, `propertyId`, `userId`)",
     "ALTER TABLE `favorites` ADD INDEX `idx_favorites_attention` (`createdAt`, `propertyId`, `userId`)",
     "ALTER TABLE `direct_messages` ADD INDEX `idx_direct_messages_attention` (`createdAt`, `propertyId`, `senderId`)",
+    `CREATE TABLE IF NOT EXISTS \`dm_attachments\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`messageId\` int NOT NULL, \`uploaderId\` int NOT NULL,
+      \`objectKey\` varchar(500) NOT NULL, \`fileName\` varchar(255) NOT NULL,
+      \`mimeType\` varchar(64) NOT NULL, \`size\` int NOT NULL,
+      \`expiresAt\` timestamp NOT NULL, \`deletedAt\` timestamp NULL,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY \`idx_dm_attachments_message\` (\`messageId\`),
+      KEY \`idx_dm_attachments_expiry\` (\`deletedAt\`, \`expiresAt\`),
+      KEY \`idx_dm_attachments_uploader_created\` (\`uploaderId\`, \`createdAt\`)
+    )`,
     `CREATE TABLE IF NOT EXISTS \`property_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`userId\` int NOT NULL,
@@ -770,6 +782,7 @@ export async function getPlatformAnalytics() {
     search: "AI・キーワード検索",
     memo_save: "物件メモ",
     dm_send: "DM送信",
+    dm_attachment_send: "添付付きDM",
     contact_share: "連絡先共有",
     business_card_send: "名刺送付",
     buyer_preference_save: "希望条件登録",
@@ -2895,7 +2908,7 @@ export async function getDirectMessages(
   const condition = propertyId
     ? and(partnerCondition, eq(directMessages.propertyId, propertyId))
     : and(partnerCondition, sql`${directMessages.propertyId} IS NULL`);
-  return db
+  const rows = await db
     .select({
       id: directMessages.id,
       senderId: directMessages.senderId,
@@ -2908,6 +2921,19 @@ export async function getDirectMessages(
     .leftJoin(users, eq(directMessages.senderId, users.id))
     .where(condition!)
     .orderBy(directMessages.createdAt);
+  if (!rows.length) return [];
+  const attachments = await db.select({
+    id: dmAttachments.id, messageId: dmAttachments.messageId, fileName: dmAttachments.fileName,
+    mimeType: dmAttachments.mimeType, size: dmAttachments.size, expiresAt: dmAttachments.expiresAt,
+    deletedAt: dmAttachments.deletedAt,
+  }).from(dmAttachments).where(inArray(dmAttachments.messageId, rows.map(row => row.id)));
+  const byMessage = new Map<number, typeof attachments>();
+  for (const attachment of attachments) {
+    const list = byMessage.get(attachment.messageId) ?? [];
+    list.push(attachment);
+    byMessage.set(attachment.messageId, list);
+  }
+  return rows.map(row => ({ ...row, attachments: byMessage.get(row.id) ?? [] }));
 }
 
 export async function getPropertyNegotiationStatus(
@@ -3073,9 +3099,54 @@ export async function sendDirectMessage(
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db
+  const result = await db
     .insert(directMessages)
     .values({ senderId, receiverId, content, propertyId });
+  return Number(result[0].insertId);
+}
+
+export async function createDmAttachments(messageId: number, uploaderId: number, items: Array<{ objectKey: string; fileName: string; mimeType: string; size: number; expiresAt: Date }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (items.length) await db.insert(dmAttachments).values(items.map(item => ({ ...item, messageId, uploaderId })));
+}
+
+export async function getDmAttachmentForUser(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select({
+    id: dmAttachments.id, objectKey: dmAttachments.objectKey, fileName: dmAttachments.fileName,
+    mimeType: dmAttachments.mimeType, size: dmAttachments.size, expiresAt: dmAttachments.expiresAt,
+    deletedAt: dmAttachments.deletedAt, senderId: directMessages.senderId, receiverId: directMessages.receiverId,
+  }).from(dmAttachments).innerJoin(directMessages, eq(dmAttachments.messageId, directMessages.id))
+    .where(and(eq(dmAttachments.id, id), or(eq(directMessages.senderId, userId), eq(directMessages.receiverId, userId)))).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getDmUploadBytesSince(userId: number, since: Date) {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db.select({ total: sql<number>`COALESCE(SUM(${dmAttachments.size}), 0)` }).from(dmAttachments)
+    .where(and(eq(dmAttachments.uploaderId, userId), gte(dmAttachments.createdAt, since)));
+  return Number(rows[0]?.total ?? 0);
+}
+
+export async function getExpiredDmAttachments(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: dmAttachments.id, objectKey: dmAttachments.objectKey }).from(dmAttachments)
+    .where(and(isNull(dmAttachments.deletedAt), lte(dmAttachments.expiresAt, new Date()))).limit(limit);
+}
+
+export async function markDmAttachmentDeleted(id: number) {
+  const db = await getDb();
+  if (db) await db.update(dmAttachments).set({ deletedAt: new Date() }).where(eq(dmAttachments.id, id));
+}
+
+export async function getDmAttachmentsForMessage(messageId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: dmAttachments.id, objectKey: dmAttachments.objectKey }).from(dmAttachments).where(eq(dmAttachments.messageId, messageId));
 }
 
 export async function queueDmNotificationBatch(

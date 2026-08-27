@@ -177,6 +177,27 @@ export const directMessages = mysqlTable(
   })
 );
 
+export const dmAttachments = mysqlTable(
+  "dm_attachments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    messageId: int("messageId").notNull(),
+    uploaderId: int("uploaderId").notNull(),
+    objectKey: varchar("objectKey", { length: 500 }).notNull(),
+    fileName: varchar("fileName", { length: 255 }).notNull(),
+    mimeType: varchar("mimeType", { length: 64 }).notNull(),
+    size: int("size").notNull(),
+    expiresAt: timestamp("expiresAt").notNull(),
+    deletedAt: timestamp("deletedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    messageIdx: index("idx_dm_attachments_message").on(table.messageId),
+    expiryIdx: index("idx_dm_attachments_expiry").on(table.deletedAt, table.expiresAt),
+    uploaderCreatedIdx: index("idx_dm_attachments_uploader_created").on(table.uploaderId, table.createdAt),
+  })
+);
+
 export const dmReadStatus = mysqlTable("dm_read_status", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

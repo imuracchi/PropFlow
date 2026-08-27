@@ -50,6 +50,33 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
+  app.get("/api/dm-attachments/:attachmentId", async (req, res) => {
+    try {
+      const { getSessionCookie, verifySessionToken } = await import("./auth");
+      const db = await import("../db");
+      const cookie = getSessionCookie(req);
+      const session = cookie ? await verifySessionToken(cookie) : null;
+      if (!session) return res.status(401).end();
+      const attachmentId = Number(req.params.attachmentId);
+      if (!Number.isInteger(attachmentId)) return res.status(400).end();
+      const attachment = await db.getDmAttachmentForUser(attachmentId, session.userId);
+      if (!attachment) return res.status(404).end();
+      if (attachment.deletedAt || attachment.expiresAt.getTime() <= Date.now()) return res.status(410).json({ error: "添付ファイルの保存期限が終了しました" });
+      const { getDmAttachmentObject } = await import("./dmAttachmentStorage");
+      const object = await getDmAttachmentObject(attachment.objectKey);
+      if (!object.Body) return res.status(404).end();
+      const bytes = await object.Body.transformToByteArray();
+      res.setHeader("Content-Type", attachment.mimeType);
+      res.setHeader("Content-Length", bytes.byteLength);
+      res.setHeader("Cache-Control", "private, no-store");
+      res.setHeader("Content-Disposition", `${req.query.download === "1" ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`);
+      return res.send(Buffer.from(bytes));
+    } catch (error) {
+      console.error("[dm-attachments] download error:", error);
+      return res.status(500).end();
+    }
+  });
+
   app.post("/api/scheduled/weekly-property-digest", async (req, res) => {
     try {
       const { sdk } = await import("./sdk");
@@ -502,6 +529,16 @@ async function startServer() {
     }
   });
   console.log("[CRON] Expired document cleanup scheduled at 0:00 JST daily");
+
+  cron.schedule("0 15 * * *", async () => {
+    try {
+      const { cleanupExpiredDmAttachments } = await import("./dmAttachmentStorage");
+      console.log(`[CRON] Deleted ${await cleanupExpiredDmAttachments()} expired DM attachments`);
+    } catch (error) {
+      console.error("[CRON] DM attachment cleanup error:", error);
+    }
+  });
+  console.log("[CRON] Expired DM attachment cleanup scheduled at 0:00 JST daily");
 
   // 毎日深夜0時（JST）に、削除操作から30日を過ぎた物件の写真・添付ファイルを削除
   cron.schedule("0 15 * * *", async () => {

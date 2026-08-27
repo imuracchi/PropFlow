@@ -20,6 +20,7 @@ import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
+import { AttachmentPicker, AttachmentSelection, MessageAttachments, filesToPayload, validateSelectedFiles } from "@/components/DmAttachments";
 
 const previewMessages: any[] = [
   {
@@ -80,6 +81,9 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const [includePropertyLink, setIncludePropertyLink] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
   const [previewFlagged, setPreviewFlagged] = useState(false);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const messages: any[] = preview ? previewItems : (messagesQuery.data ?? []);
   const thread: any = preview
@@ -158,18 +162,39 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   }, [partnerId, propertyId, messages.length]);
   const sendMessage = async () => {
     const content = input.trim();
-    if (!content) return;
+    if (!content && !attachmentFiles.length) return;
     if (preview)
       setPreviewItems(items => [
         ...items,
-        { id: Date.now(), senderId: 1, content, createdAt: new Date() },
+        {
+          id: Date.now(),
+          senderId: 1,
+          content,
+          createdAt: new Date(),
+          attachments: attachmentFiles.map((file, index) => ({
+            id: Date.now() + index + 1,
+            fileName: file.name,
+            mimeType: file.type,
+            size: file.size,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            deletedAt: null,
+            previewUrl: URL.createObjectURL(file),
+          })),
+        },
       ]);
     else {
-      await send.mutateAsync({ receiverId: partnerId, propertyId, content });
-      await messagesQuery.refetch();
-      utils.dm.threads.invalidate();
+      try {
+        setAttachmentError(null);
+        await send.mutateAsync({ receiverId: partnerId, propertyId, content, attachments: await filesToPayload(attachmentFiles) });
+        await messagesQuery.refetch();
+        utils.dm.threads.invalidate();
+      } catch (error) {
+        setAttachmentError(error instanceof Error ? error.message : "送信に失敗しました");
+        return;
+      }
     }
     setInput("");
+    setAttachmentFiles([]);
   };
   const share = async () => {
     if (preview)
@@ -277,7 +302,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                   >
                     <div className={`flex items-end gap-1.5 ${mine ? "flex-row-reverse" : ""}`}><div
                         className={`whitespace-pre-wrap px-3 py-2 text-[14px] leading-5 lg:px-4 lg:py-2.5 lg:leading-6 ${mine ? "bg-[#173f70] text-white" : "border border-[#d9e0e8] bg-white text-[#263b58]"}`}
-                      >{message.content}</div><p className="shrink-0 pb-0.5 text-[9px] text-[#8a96a5]">
+                      >{message.content && <span>{message.content}</span>}<MessageAttachments attachments={message.attachments} mine={mine}/></div><p className="shrink-0 pb-0.5 text-[9px] text-[#8a96a5]">
                       {new Date(message.createdAt).toLocaleTimeString("ja-JP", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -328,7 +353,8 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             <div className="border border-[#e1c88f] bg-[#fff8e8] px-4 py-3 text-center text-[12px] font-bold text-[#8b5a08]">この物件は閲覧制限中です。過去の問い合わせ履歴のみ確認できます。</div>
           ) : isClosed ? (
             <div className="border border-[#d4dde7] bg-[#f2f5f8] px-4 py-3 text-center text-[12px] font-bold text-[#65748a]">この物件は成約済みのため、メッセージや連絡先を送信できません。</div>
-          ) : <div className="flex items-end gap-2">
+          ) : <><AttachmentSelection files={attachmentFiles} onRemove={index => setAttachmentFiles(files => files.filter((_, i) => i !== index))} error={attachmentError} compact/><div className="flex items-end gap-2">
+            <AttachmentPicker inputRef={attachmentInputRef} files={attachmentFiles} onFiles={incoming => { try { setAttachmentFiles(validateSelectedFiles(attachmentFiles, incoming)); setAttachmentError(null); } catch (error) { setAttachmentError(error instanceof Error ? error.message : "添付できません"); } }} disabled={send.isPending}/>
             <textarea
               value={input}
               onChange={event => setInput(event.target.value)}
@@ -348,15 +374,12 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             />
             <button
               onClick={sendMessage}
-              disabled={!input.trim() || send.isPending}
+              disabled={(!input.trim() && !attachmentFiles.length) || send.isPending}
               className="grid size-11 shrink-0 place-items-center bg-[#173f70] text-white disabled:opacity-40"
             >
               <Send size={18} />
             </button>
-          </div>}
-          {!isClosed && <p className="mt-1.5 hidden text-[9px] text-[#8a96a5] lg:block">
-            ファイル添付には対応していません
-          </p>}
+          </div></>}
         </footer>
         </div>
         {modal && (

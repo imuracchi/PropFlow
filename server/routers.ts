@@ -13,6 +13,7 @@ import { parsePropertyFromPdfs } from "./_core/pdfParser";
 import * as db from "./db";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { DAILY_DM_UPLOAD_BYTES, DM_ATTACHMENT_TTL_MS, MAX_DM_ATTACHMENTS, MAX_DM_ATTACHMENT_TOTAL_BYTES, deleteDmAttachmentObject, putDmAttachment } from "./_core/dmAttachmentStorage";
 import {
   CURRENT_LEGAL_VERSION,
   EXTERNAL_LISTING_CONSENT_VERSION,
@@ -2078,9 +2079,10 @@ ${propList}`,
       .input(
         z.object({
           receiverId: z.number(),
-          content: z.string().min(1),
+          content: z.string().max(5000).default(""),
           propertyId: z.number().nullable().optional(),
-        })
+          attachments: z.array(z.object({ fileName: z.string().min(1).max(255), dataBase64: z.string().min(1).max(14_100_000) })).max(MAX_DM_ATTACHMENTS).optional().default([]),
+        }).refine(value => value.content.trim().length > 0 || value.attachments.length > 0, { message: "メッセージまたは添付ファイルを指定してください" })
       )
       .mutation(async ({ input, ctx }) => {
         if (input.propertyId) {
@@ -2097,16 +2099,29 @@ ${propList}`,
           input.receiverId,
           input.propertyId ?? null
         );
-        await db.sendDirectMessage(
-          ctx.user.id,
-          input.receiverId,
-          input.content,
-          input.propertyId ?? null
-        );
+        const decodedTotal = input.attachments.reduce((total, file) => total + Buffer.from(file.dataBase64, "base64").length, 0);
+        if (decodedTotal > MAX_DM_ATTACHMENT_TOTAL_BYTES) throw new TRPCError({ code: "BAD_REQUEST", message: "添付ファイルの合計は20MB以下にしてください" });
+        if (input.attachments.length) {
+          const used = await db.getDmUploadBytesSince(ctx.user.id, new Date(Date.now() - 24 * 60 * 60 * 1000));
+          if (used + decodedTotal > DAILY_DM_UPLOAD_BYTES) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "24時間のアップロード上限（100MB）に達しました" });
+        }
+        const uploaded: Awaited<ReturnType<typeof putDmAttachment>>[] = [];
+        let messageId: number | null = null;
+        try {
+          for (const attachment of input.attachments) uploaded.push(await putDmAttachment(ctx.user.id, attachment));
+          messageId = await db.sendDirectMessage(ctx.user.id, input.receiverId, input.content.trim(), input.propertyId ?? null);
+          await db.createDmAttachments(messageId, ctx.user.id, uploaded.map(file => ({ ...file, expiresAt: new Date(Date.now() + DM_ATTACHMENT_TTL_MS) })));
+        } catch (error) {
+          await Promise.all(uploaded.map(file => deleteDmAttachmentObject(file.objectKey).catch(() => {})));
+          if (messageId) await db.deleteOwnDirectMessage(messageId, ctx.user.id).catch(() => false);
+          throw error instanceof TRPCError ? error : new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error instanceof Error ? error.message : "添付ファイルの送信に失敗しました" });
+        }
         db.logActivity(
           ctx.user.id,
-          "dm_send",
-          `DM送信 (相手ID:${input.receiverId})`,
+          uploaded.length ? "dm_attachment_send" : "dm_send",
+          uploaded.length
+            ? `添付付きDM送信 (相手ID:${input.receiverId}, 物件ID:${input.propertyId ?? "なし"}, ファイル数:${uploaded.length}, 合計:${uploaded.reduce((sum, file) => sum + file.size, 0)}bytes, 形式:${[...new Set(uploaded.map(file => file.mimeType))].join(",")})`
+            : `DM送信 (相手ID:${input.receiverId})`,
           ctx.req.headers["user-agent"]
         ).catch(() => {});
 
@@ -2115,7 +2130,7 @@ ${propList}`,
           ctx.user.id,
           input.receiverId,
           input.propertyId ?? null,
-          input.content
+          input.content.trim() || "添付ファイルを送信しました"
         );
         const propInfo = await sendDmNotifications({
           senderId: ctx.user.id,
@@ -2123,7 +2138,7 @@ ${propList}`,
           senderCompany: ctx.user.company ?? "",
           receiverId: input.receiverId,
           propertyId: input.propertyId ?? null,
-          content: input.content,
+          content: input.content.trim() || "📎 添付ファイルが届きました",
           title: `💬 ${senderName}さんからDM`,
           emailSubject: `【PropFlow】${senderName}さんからDMが届きました`,
           emailHeading: "💬 DMが届きました",
@@ -2156,6 +2171,7 @@ ${propList}`,
         }
         if (message.propertyId)
           await requirePropertyAccess(message.propertyId, ctx.user);
+        const attachments = await db.getDmAttachmentsForMessage(input.messageId);
         const success = await db.deleteOwnDirectMessage(
           input.messageId,
           ctx.user.id
@@ -2165,6 +2181,7 @@ ${propList}`,
             code: "FORBIDDEN",
             message: "このメッセージは削除できません",
           });
+        await Promise.all(attachments.map(item => deleteDmAttachmentObject(item.objectKey).catch(() => {})));
         db.logActivity(
           ctx.user.id,
           "dm_delete",
