@@ -308,6 +308,11 @@ export default function V2PropertyDetail({
   );
   const [previewOverride, setPreviewOverride] = useState<any>(null);
   const [viewingFile, setViewingFile] = useState<{ id: number; name: string } | null>(null);
+  const [scheduleEditorOpen, setScheduleEditorOpen] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleHour, setScheduleHour] = useState("10");
+  const [scheduleMinute, setScheduleMinute] = useState("00");
+  const [scheduleNotify, setScheduleNotify] = useState(false);
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
@@ -352,6 +357,29 @@ export default function V2PropertyDetail({
   const schedulePublication = trpc.property.schedulePublication.useMutation({ onSuccess: () => propertyQuery.refetch() });
   const cancelScheduledPublication = trpc.property.cancelScheduledPublication.useMutation({ onSuccess: () => propertyQuery.refetch() });
   const publishScheduledNow = trpc.property.publishScheduledNow.useMutation({ onSuccess: () => propertyQuery.refetch() });
+  const openScheduleEditor = (date?: Date, notify = false) => {
+    const value = date ?? new Date(Date.now() + 20 * 60_000);
+    if (!date) value.setMinutes(Math.ceil(value.getMinutes() / 10) * 10, 0, 0);
+    const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000).toISOString();
+    setScheduleDate(local.slice(0, 10));
+    setScheduleHour(local.slice(11, 13));
+    setScheduleMinute(String(Math.floor(Number(local.slice(14, 16)) / 10) * 10).padStart(2, "0"));
+    setScheduleNotify(notify);
+    setScheduleEditorOpen(true);
+  };
+  const submitScheduleEditor = async () => {
+    const scheduledAt = new Date(`${scheduleDate}T${scheduleHour}:${scheduleMinute}`);
+    if (!scheduleDate || !Number.isFinite(scheduledAt.getTime())) {
+      alert("公開日時を正しく指定してください");
+      return;
+    }
+    try {
+      await schedulePublication.mutateAsync({ propertyId, scheduledAt: scheduledAt.toISOString(), sendNotifications: scheduleNotify });
+      setScheduleEditorOpen(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "公開予約に失敗しました");
+    }
+  };
   const setExternalListingConsent =
     trpc.property.setExternalListingConsent.useMutation({
       onSuccess: async () => {
@@ -836,6 +864,31 @@ export default function V2PropertyDetail({
     <V2Layout preview={preview}>
       {viewingFile && (
         <FileViewerModal fileId={viewingFile.id} name={viewingFile.name} onClose={() => setViewingFile(null)} />
+      )}
+      {scheduleEditorOpen && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center" onClick={() => setScheduleEditorOpen(false)}>
+          <div className="w-full bg-white p-5 sm:max-w-md" onClick={event => event.stopPropagation()}>
+            <h3 className="text-[18px] font-bold text-[#102d50]">公開日時を指定</h3>
+            <p className="mt-1 text-[12px] text-[#65748a]">10分以上先を、10分刻みで選択してください。</p>
+            <div className="mt-4 grid grid-cols-[minmax(0,1fr)_80px_80px] gap-2">
+              <input type="date" value={scheduleDate} onChange={event => setScheduleDate(event.target.value)} className="h-11 min-w-0 border border-[#cbd5df] px-2 text-[14px]" />
+              <select aria-label="公開時" value={scheduleHour} onChange={event => setScheduleHour(event.target.value)} className="h-11 border border-[#cbd5df] px-2 text-[14px]">
+                {Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")).map(hour => <option key={hour} value={hour}>{hour}時</option>)}
+              </select>
+              <select aria-label="公開分" value={scheduleMinute} onChange={event => setScheduleMinute(event.target.value)} className="h-11 border border-[#cbd5df] px-2 text-[14px]">
+                {["00", "10", "20", "30", "40", "50"].map(minute => <option key={minute} value={minute}>{minute}分</option>)}
+              </select>
+            </div>
+            <label className="mt-4 flex items-start gap-2 text-[12px] leading-5 text-[#526176]">
+              <input type="checkbox" checked={scheduleNotify} onChange={event => setScheduleNotify(event.target.checked)} className="mt-0.5 size-4" />
+              公開時に新着メール・LINE・Webプッシュを送信する
+            </label>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setScheduleEditorOpen(false)} className="h-11 flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]">キャンセル</button>
+              <button disabled={schedulePublication.isPending} onClick={submitScheduleEditor} className="h-11 flex-1 bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50">{schedulePublication.isPending ? "予約中…" : "予約する"}</button>
+            </div>
+          </div>
+        </div>
       )}
       <main className="min-w-0 w-full max-w-[1600px] overflow-x-hidden pb-20 lg:overflow-visible lg:p-7 lg:pb-10">
         <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
@@ -1417,11 +1470,21 @@ export default function V2PropertyDetail({
                     </div>
                     {property.scheduledPublishAt ? (
                       <div className="ml-auto flex flex-wrap justify-end gap-1.5">
-                        <button onClick={async () => { const value = window.prompt("新しい公開日時を入力してください（例: 2026-09-02T10:00）"); if (value) await schedulePublication.mutateAsync({ propertyId, scheduledAt: new Date(value).toISOString(), sendNotifications: property.scheduledPublishNotify !== 0 }); }} className="h-9 border border-[#173f70] px-2 text-[10px] font-bold text-[#173f70]">日時変更</button>
+                        <button onClick={() => openScheduleEditor(new Date(property.scheduledPublishAt), property.scheduledPublishNotify !== 0)} className="h-9 border border-[#173f70] px-2 text-[10px] font-bold text-[#173f70]">日時変更</button>
                         <button onClick={() => cancelScheduledPublication.mutate({ propertyId })} className="h-9 border border-[#9aabc0] px-2 text-[10px] font-bold text-[#526176]">予約取消</button>
                         <button onClick={() => publishScheduledNow.mutate({ propertyId })} className="h-9 bg-[#173f70] px-2 text-[10px] font-bold text-white">今すぐ公開</button>
                       </div>
-                    ) : <button
+                    ) : <div className="ml-auto flex flex-wrap justify-end gap-1.5">
+                    {property.published === 0 && (
+                      <button
+                        disabled={schedulePublication.isPending}
+                        onClick={() => openScheduleEditor()}
+                        className="h-10 border border-[#8b6508] px-3 text-[11px] font-bold text-[#8b6508] disabled:opacity-50"
+                      >
+                        {schedulePublication.isPending ? "予約中…" : "公開を予約する"}
+                      </button>
+                    )}
+                    <button
                       disabled={setPublished.isPending}
                       onClick={async () => {
                         const nextPublished = property.published === 0;
@@ -1446,7 +1509,7 @@ export default function V2PropertyDetail({
                           }
                         }
                       }}
-                      className="ml-auto h-10 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50"
+                      className="h-10 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50"
                     >
                       {setPublished.isPending
                         ? "変更中…"
@@ -1457,7 +1520,7 @@ export default function V2PropertyDetail({
                           : property.published === 0
                             ? "公開する"
                             : "非公開にする"}
-                    </button>}
+                    </button></div>}
                   </div>
                 </div>
                 {(isRegistrant || user?.role === "admin") && property.visibilityScope === "public" && (

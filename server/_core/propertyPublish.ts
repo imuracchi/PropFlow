@@ -39,3 +39,17 @@ export async function executeScheduledPropertyPublish(taskUid: string) {
   await deleteHeartbeatJob(taskUid, "").catch(() => {});
   return property.id;
 }
+
+export async function executeDueScheduledPropertyPublishes() {
+  const due = await db.getDueScheduledProperties();
+  let published = 0;
+  for (const property of due) {
+    const claimed = await db.claimScheduledPropertyPublish(property.id);
+    if (!claimed) continue;
+    published++;
+    if (property.scheduledPublishNotify !== 0) {
+      await sendScheduledPropertyNotifications(property.id);
+    }
+  }
+  return published;
+}

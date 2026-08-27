@@ -84,6 +84,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `properties` ADD COLUMN `scheduledPublishAt` timestamp NULL AFTER `publishedAt`",
     "ALTER TABLE `properties` ADD COLUMN `scheduleCronTaskUid` varchar(65) NULL AFTER `scheduledPublishAt`",
     "ALTER TABLE `properties` ADD COLUMN `scheduledPublishNotify` int NOT NULL DEFAULT 1 AFTER `scheduleCronTaskUid`",
+    "ALTER TABLE `properties` ADD COLUMN `scheduledPublishCreatedAt` timestamp NULL AFTER `scheduledPublishNotify`",
     "ALTER TABLE `properties` ADD INDEX `idx_properties_schedule_cron_task_uid` (`scheduleCronTaskUid`)",
     "UPDATE `properties` SET `publishedAt` = `createdAt` WHERE `published` = 1 AND `publishedAt` IS NULL",
     "ALTER TABLE `properties` ADD COLUMN `lineNotifiedAt` timestamp NULL",
@@ -1413,6 +1414,7 @@ export async function listProperties(viewerUserId?: number) {
       scheduledPublishAt: properties.scheduledPublishAt,
       scheduleCronTaskUid: properties.scheduleCronTaskUid,
       scheduledPublishNotify: properties.scheduledPublishNotify,
+      scheduledPublishCreatedAt: properties.scheduledPublishCreatedAt,
       visibilityScope: properties.visibilityScope,
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
@@ -1770,6 +1772,7 @@ export async function getPropertyById(id: number) {
       scheduledPublishAt: properties.scheduledPublishAt,
       scheduleCronTaskUid: properties.scheduleCronTaskUid,
       scheduledPublishNotify: properties.scheduledPublishNotify,
+      scheduledPublishCreatedAt: properties.scheduledPublishCreatedAt,
       visibilityScope: properties.visibilityScope,
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
@@ -1885,6 +1888,7 @@ export async function setPropertyPublishSchedule(
       scheduledPublishAt,
       scheduleCronTaskUid,
       scheduledPublishNotify: scheduledPublishNotify ? 1 : 0,
+      scheduledPublishCreatedAt: scheduledPublishAt ? new Date() : null,
     })
     .where(eq(properties.id, id));
 }
@@ -1900,6 +1904,54 @@ export async function getPropertyByScheduleTaskUid(taskUid: string) {
   return rows[0] ?? null;
 }
 
+export async function getDueScheduledProperties() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(properties).where(and(
+    eq(properties.published, 0),
+    eq(properties.deleted, 0),
+    sql`${properties.scheduledPublishCreatedAt} IS NOT NULL`,
+    lte(properties.scheduledPublishAt, new Date())
+  ));
+}
+
+export async function claimScheduledPropertyPublish(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result: any = await db.update(properties).set({
+    published: 1,
+    publishedAt: new Date(),
+    scheduledPublishAt: null,
+    scheduleCronTaskUid: null,
+    scheduledPublishNotify: 1,
+    scheduledPublishCreatedAt: null,
+  }).where(and(
+    eq(properties.id, id),
+    eq(properties.published, 0),
+    sql`${properties.scheduledPublishCreatedAt} IS NOT NULL`,
+    lte(properties.scheduledPublishAt, new Date())
+  ));
+  return Number(result?.[0]?.affectedRows ?? result?.affectedRows ?? 0) === 1;
+}
+
+export async function claimScheduledPropertyPublishNow(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result: any = await db.update(properties).set({
+    published: 1,
+    publishedAt: new Date(),
+    scheduledPublishAt: null,
+    scheduleCronTaskUid: null,
+    scheduledPublishNotify: 1,
+    scheduledPublishCreatedAt: null,
+  }).where(and(
+    eq(properties.id, id),
+    eq(properties.published, 0),
+    sql`${properties.scheduledPublishCreatedAt} IS NOT NULL`
+  ));
+  return Number(result?.[0]?.affectedRows ?? result?.affectedRows ?? 0) === 1;
+}
+
 export async function completeScheduledPropertyPublish(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1911,6 +1963,7 @@ export async function completeScheduledPropertyPublish(id: number) {
       scheduledPublishAt: null,
       scheduleCronTaskUid: null,
       scheduledPublishNotify: 1,
+      scheduledPublishCreatedAt: null,
     })
     .where(and(eq(properties.id, id), eq(properties.published, 0)));
 }

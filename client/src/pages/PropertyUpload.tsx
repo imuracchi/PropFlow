@@ -32,7 +32,6 @@ import {
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { useAuth } from "@/_core/hooks/useAuth";
 
 type FaqItem = { q: string; a: string };
 
@@ -50,7 +49,6 @@ const PROPERTY_TYPES = [
 type Step = "upload" | "form";
 
 export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
-  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const proposalRequestId = v2
     ? Number(
@@ -120,6 +118,12 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
   );
   const [scheduledAt, setScheduledAt] = useState("");
   const [scheduledPublishNotify, setScheduledPublishNotify] = useState(false);
+  const setSchedulePart = (part: "date" | "hour" | "minute", value: string) => {
+    const currentDate = scheduledAt.slice(0, 10) || new Date().toISOString().slice(0, 10);
+    const currentHour = scheduledAt.slice(11, 13) || "10";
+    const currentMinute = scheduledAt.slice(14, 16) || "00";
+    setScheduledAt(`${part === "date" ? value : currentDate}T${part === "hour" ? value : currentHour}:${part === "minute" ? value : currentMinute}`);
+  };
   const [proposalOnly, setProposalOnly] = useState(proposalRequestId > 0);
   const [externalListingConsent, setExternalListingConsent] = useState(true);
   const [excludedUsers, setExcludedUsers] = useState<
@@ -1972,7 +1976,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
             </div>
           </div>
         </button>
-        {false && user?.role === "admin" && (!proposalRequestId || !proposalOnly) && (
+        {(!proposalRequestId || !proposalOnly) && (
           <button
             type="button"
             onClick={() => setPublishMode("schedule")}
@@ -2005,8 +2009,16 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
       {publishMode === "schedule" && (
         <label className="block border border-[#b9c9da] bg-[#f7f9fb] p-4">
           <span className="block text-[13px] font-bold text-[#173f70]">公開予定日時（日本時間）</span>
-          <input type="datetime-local" value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} className="mt-2 h-11 w-full border border-[#cbd5df] bg-white px-3 text-[14px]" />
-          <span className="mt-1 block text-[11px] text-[#65748a]">10分以上先を指定してください</span>
+          <div className="mt-2 grid w-full grid-cols-[minmax(0,1fr)_80px_80px] gap-2 sm:max-w-[480px]">
+            <input type="date" value={scheduledAt.slice(0, 10)} onChange={event => setSchedulePart("date", event.target.value)} className="h-11 min-w-0 border border-[#cbd5df] bg-white px-2 text-[14px]" />
+            <select aria-label="公開時" value={scheduledAt.slice(11, 13) || "10"} onChange={event => setSchedulePart("hour", event.target.value)} className="h-11 border border-[#cbd5df] bg-white px-2 text-[14px]">
+              {Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")).map(hour => <option key={hour} value={hour}>{hour}時</option>)}
+            </select>
+            <select aria-label="公開分" value={scheduledAt.slice(14, 16) || "00"} onChange={event => setSchedulePart("minute", event.target.value)} className="h-11 border border-[#cbd5df] bg-white px-2 text-[14px]">
+              {["00", "10", "20", "30", "40", "50"].map(minute => <option key={minute} value={minute}>{minute}分</option>)}
+            </select>
+          </div>
+          <span className="mt-1 block text-[11px] text-[#65748a]">10分以上先を、10分刻みで指定してください</span>
           <span className="mt-3 flex items-start gap-2 text-[12px] text-[#526176]">
             <input type="checkbox" checked={scheduledPublishNotify} onChange={event => setScheduledPublishNotify(event.target.checked)} className="mt-0.5 size-4" />
             公開時に新着メール・LINE・Webプッシュを送信する

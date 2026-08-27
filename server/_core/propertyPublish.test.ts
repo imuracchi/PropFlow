@@ -4,6 +4,9 @@ const getByTask = vi.fn();
 const complete = vi.fn();
 const removeJob = vi.fn();
 const getProperty = vi.fn();
+const getDue = vi.fn();
+const claim = vi.fn();
+const claimNow = vi.fn();
 
 vi.mock("../db", () => ({
   getPropertyByScheduleTaskUid: getByTask,
@@ -13,6 +16,9 @@ vi.mock("../db", () => ({
   markPropertyLineNotified: vi.fn(),
   getActiveUserEmailsForNotify: vi.fn(),
   listActiveUsers: vi.fn(),
+  getDueScheduledProperties: getDue,
+  claimScheduledPropertyPublish: claim,
+  claimScheduledPropertyPublishNow: claimNow,
 }));
 vi.mock("./heartbeat", () => ({ deleteHeartbeatJob: removeJob }));
 vi.mock("./mail", () => ({ sendMail: vi.fn() }));
@@ -40,5 +46,22 @@ describe("executeScheduledPropertyPublish", () => {
     await expect(executeScheduledPropertyPublish("missing")).resolves.toBeNull();
     expect(complete).not.toHaveBeenCalled();
     expect(removeJob).not.toHaveBeenCalled();
+  });
+
+  it("claims each due silent reservation once without sending notifications", async () => {
+    getDue.mockResolvedValue([{ id: 51, scheduledPublishNotify: 0 }]);
+    claim.mockResolvedValue(true);
+    const { executeDueScheduledPropertyPublishes } = await import("./propertyPublish");
+    await expect(executeDueScheduledPropertyPublishes()).resolves.toBe(1);
+    expect(claim).toHaveBeenCalledWith(51);
+    expect(getProperty).not.toHaveBeenCalled();
+  });
+
+  it("does not notify when another worker already claimed the reservation", async () => {
+    getDue.mockResolvedValue([{ id: 52, scheduledPublishNotify: 1 }]);
+    claim.mockResolvedValue(false);
+    const { executeDueScheduledPropertyPublishes } = await import("./propertyPublish");
+    await expect(executeDueScheduledPropertyPublishes()).resolves.toBe(0);
+    expect(getProperty).not.toHaveBeenCalled();
   });
 });

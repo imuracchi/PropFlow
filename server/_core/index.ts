@@ -89,9 +89,8 @@ async function startServer() {
 
   app.post("/api/scheduled/publish-property", async (req, res) => {
     try {
-      if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED !== "true") {
-        return res.status(503).json({ error: "scheduled-property-publishing-disabled" });
-      }
+      if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED !== "legacy-heartbeat")
+        return res.status(410).json({ error: "legacy-scheduled-publishing-removed" });
       const { sdk } = await import("./sdk");
       const user = await sdk.authenticateRequest(req);
       if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
@@ -529,6 +528,18 @@ async function startServer() {
         console.log(`[CRON] Executed ${executed} property publish scheduler probes`);
     } catch (error) {
       console.error("[CRON] property publish scheduler probe error:", error);
+    }
+  });
+
+  // 10分ごと：DBに保存された公開予約を処理（外部Heartbeatには依存しない）
+  cron.schedule("*/10 * * * *", async () => {
+    if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED === "false") return;
+    try {
+      const { executeDueScheduledPropertyPublishes } = await import("./propertyPublish");
+      const published = await executeDueScheduledPropertyPublishes();
+      if (published > 0) console.log(`[CRON] Published ${published} scheduled properties`);
+    } catch (error) {
+      console.error("[CRON] scheduled property publish error:", error);
     }
   });
 

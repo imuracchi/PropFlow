@@ -1754,13 +1754,10 @@ ${propList}`,
       }),
 
     schedulePublication: protectedProcedure
-      .input(z.object({ propertyId: z.number(), scheduledAt: z.string(), sendNotifications: z.boolean().default(true) }))
+      .input(z.object({ propertyId: z.number(), scheduledAt: z.string(), sendNotifications: z.boolean().default(false) }))
       .mutation(async ({ input, ctx }) => {
-        if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED !== "true") {
+        if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED === "false") {
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "公開予約機能は現在停止中です" });
-        }
-        if (ctx.user.role !== "admin") {
-          throw new TRPCError({ code: "FORBIDDEN", message: "公開予約は現在、管理者による検証中です" });
         }
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
         if (prop.visibilityScope === "proposal")
@@ -1777,37 +1774,19 @@ ${propList}`,
             code: "BAD_REQUEST",
             message: "公開日時は10分以上先を指定してください",
           });
-        const { createHeartbeatJob, updateHeartbeatJob } = await import(
-          "./_core/heartbeat"
+        if (scheduledAt.getMinutes() % 10 !== 0 || scheduledAt.getSeconds() !== 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "公開日時は10分刻みで指定してください",
+          });
+        }
+        const taskUid = `internal-property-${prop.id}-${scheduledAt.getTime()}`;
+        await db.setPropertyPublishSchedule(
+          prop.id,
+          scheduledAt,
+          taskUid,
+          input.sendNotifications
         );
-        const cron = `0 ${scheduledAt.getUTCMinutes()} ${scheduledAt.getUTCHours()} ${scheduledAt.getUTCDate()} ${scheduledAt.getUTCMonth() + 1} *`;
-        let taskUid = prop.scheduleCronTaskUid;
-        if (taskUid) {
-          await updateHeartbeatJob(taskUid, { cron, enable: true }, "");
-        } else {
-          const job = await createHeartbeatJob(
-            {
-              name: `property-publish-${prop.id}-${scheduledAt.getTime()}`,
-              cron,
-              path: "/api/scheduled/publish-property",
-              method: "POST",
-              description: `${prop.name} の予約公開`,
-            },
-            ""
-          );
-          taskUid = job.taskUid;
-        }
-        try {
-          await db.setPropertyPublishSchedule(prop.id, scheduledAt, taskUid, input.sendNotifications);
-        } catch (error) {
-          // A newly created scheduler job must not survive if the property row
-          // could not be updated, otherwise it could publish an unscheduled item.
-          if (!prop.scheduleCronTaskUid && taskUid) {
-            const { deleteHeartbeatJob } = await import("./_core/heartbeat");
-            await deleteHeartbeatJob(taskUid, "").catch(() => {});
-          }
-          throw error;
-        }
         return { success: true, scheduledAt };
       }),
 
@@ -1815,10 +1794,6 @@ ${propList}`,
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
-        if (prop.scheduleCronTaskUid) {
-          const { deleteHeartbeatJob } = await import("./_core/heartbeat");
-          await deleteHeartbeatJob(prop.scheduleCronTaskUid, "");
-        }
         await db.setPropertyPublishSchedule(prop.id, null, null, true);
         return { success: true };
       }),
@@ -1826,21 +1801,17 @@ ${propList}`,
     publishScheduledNow: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
-        if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED !== "true") {
+        if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED === "false") {
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "公開予約機能は現在停止中です" });
         }
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
-        if (prop.scheduleCronTaskUid) {
-          const { deleteHeartbeatJob } = await import("./_core/heartbeat");
-          await deleteHeartbeatJob(prop.scheduleCronTaskUid, "");
-        }
         const sendNotifications = prop.scheduledPublishNotify !== 0;
-        await db.completeScheduledPropertyPublish(prop.id);
-        if (sendNotifications) {
+        const claimed = await db.claimScheduledPropertyPublishNow(prop.id);
+        if (claimed && sendNotifications) {
           const { sendScheduledPropertyNotifications } = await import("./_core/propertyPublish");
           await sendScheduledPropertyNotifications(prop.id);
         }
-        return { success: true };
+        return { success: true, published: claimed };
       }),
 
     setPublished: protectedProcedure
@@ -1849,11 +1820,8 @@ ${propList}`,
         const prop = await db.getPropertyById(input.propertyId);
         if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin"))
           return { success: false };
-        if (prop.scheduleCronTaskUid) {
-          const { deleteHeartbeatJob } = await import("./_core/heartbeat");
-          await deleteHeartbeatJob(prop.scheduleCronTaskUid, "");
+        if (prop.scheduleCronTaskUid)
           await db.setPropertyPublishSchedule(prop.id, null, null);
-        }
         await db.setPropertyPublished(
           input.propertyId,
           input.published ? 1 : 0
