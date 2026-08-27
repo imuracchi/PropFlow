@@ -81,6 +81,9 @@ export async function runStartupMigrations() {
   const stmts = [
     "ALTER TABLE `properties` ADD COLUMN `published` int NOT NULL DEFAULT 1",
     "ALTER TABLE `properties` ADD COLUMN `publishedAt` timestamp NULL",
+    "ALTER TABLE `properties` ADD COLUMN `scheduledPublishAt` timestamp NULL AFTER `publishedAt`",
+    "ALTER TABLE `properties` ADD COLUMN `scheduleCronTaskUid` varchar(65) NULL AFTER `scheduledPublishAt`",
+    "ALTER TABLE `properties` ADD INDEX `idx_properties_schedule_cron_task_uid` (`scheduleCronTaskUid`)",
     "UPDATE `properties` SET `publishedAt` = `createdAt` WHERE `published` = 1 AND `publishedAt` IS NULL",
     "ALTER TABLE `properties` ADD COLUMN `lineNotifiedAt` timestamp NULL",
     "ALTER TABLE `properties` ADD COLUMN `visibilityScope` varchar(20) NOT NULL DEFAULT 'public'",
@@ -102,6 +105,8 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` ADD COLUMN `businessCardBase64` longtext NULL",
     "ALTER TABLE `users` ADD COLUMN `termsAgreedVersion` varchar(20) NULL AFTER `termsAgreedAt`",
     "ALTER TABLE `users` ADD COLUMN `notifyAnnounce` int NOT NULL DEFAULT 1",
+    "ALTER TABLE `users` ADD COLUMN `announcementExcluded` int NOT NULL DEFAULT 0",
+    "ALTER TABLE `users` ADD COLUMN `announcementExclusionNote` text NULL",
     "ALTER TABLE `users` ADD COLUMN `notifyPropertySearch` int NOT NULL DEFAULT 1",
     "UPDATE `users` SET `notifyAnnounce` = 1 WHERE `notifyAnnounce` IS NULL",
     "ALTER TABLE `property_files` ADD COLUMN `visible` int NOT NULL DEFAULT 1",
@@ -513,6 +518,8 @@ export async function listActiveUsers() {
       hasBusinessCard: sql<number>`CASE WHEN ${users.businessCardBase64} IS NOT NULL THEN 1 ELSE 0 END`,
       verified: users.verified,
       notifyAnnounce: users.notifyAnnounce,
+      announcementExcluded: users.announcementExcluded,
+      announcementExclusionNote: users.announcementExclusionNote,
     })
     .from(users)
     .where(sql`${users.status} != 'pending'`)
@@ -548,6 +555,19 @@ export async function updateUserStatus(
   await db.update(users).set({ status }).where(eq(users.id, id));
 }
 
+export async function setUserAnnouncementExclusion(
+  id: number,
+  excluded: boolean,
+  note: string | null
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({
+    announcementExcluded: excluded ? 1 : 0,
+    announcementExclusionNote: excluded ? note : null,
+  }).where(eq(users.id, id));
+}
+
 export async function updateUserPlan(
   id: number,
   plan: "standard" | "gold" | "platinum"
@@ -569,7 +589,7 @@ export async function getAdminStats() {
   const [activeResult] = await db
     .select({ c: count() })
     .from(users)
-    .where(eq(users.status, "active"));
+    .where(and(eq(users.status, "active"), eq(users.announcementExcluded, 0)));
   const [pendingResult] = await db
     .select({ c: count() })
     .from(users)
@@ -797,7 +817,7 @@ export async function getActivePropertyOwnerEmails(): Promise<string[]> {
     .selectDistinct({ email: users.email })
     .from(users)
     .innerJoin(properties, eq(properties.userId, users.id))
-    .where(and(eq(users.status, "active"), eq(properties.deleted, 0)));
+    .where(and(eq(users.status, "active"), eq(users.announcementExcluded, 0), eq(properties.deleted, 0)));
   return rows.map(row => row.email);
 }
 
@@ -814,6 +834,7 @@ export async function getActiveUserEmailsForNotify(
         ? users.notifyDm
         : users.notifyAnnounce;
   const conditions = [eq(users.status, "active"), eq(col, 1)];
+  if (type !== "dm") conditions.push(eq(users.announcementExcluded, 0));
   if (excludeUserIds && excludeUserIds.length > 0)
     conditions.push(notInArray(users.id, excludeUserIds));
   const rows = await db
@@ -838,7 +859,7 @@ export async function getUserEmailIfNotify(
   const rows = await db
     .select({ email: users.email })
     .from(users)
-    .where(and(eq(users.id, userId), eq(col, 1)))
+    .where(and(eq(users.id, userId), eq(col, 1), ...(type === "dm" ? [] : [eq(users.announcementExcluded, 0)])))
     .limit(1);
   return rows[0]?.email ?? null;
 }
@@ -938,7 +959,7 @@ export async function getPropertySearchDigestData(start: Date, end: Date) {
   const recipients = await db
     .select({ email: users.email })
     .from(users)
-    .where(and(eq(users.status, "active"), eq(users.notifyPropertySearch, 1)));
+    .where(and(eq(users.status, "active"), eq(users.notifyPropertySearch, 1), eq(users.announcementExcluded, 0)));
   return { requests, recipients };
 }
 
@@ -1379,6 +1400,8 @@ export async function listProperties(viewerUserId?: number) {
       viewCount: properties.viewCount,
       published: properties.published,
       publishedAt: properties.publishedAt,
+      scheduledPublishAt: properties.scheduledPublishAt,
+      scheduleCronTaskUid: properties.scheduleCronTaskUid,
       visibilityScope: properties.visibilityScope,
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
@@ -1733,6 +1756,8 @@ export async function getPropertyById(id: number) {
       ownerDeletedAt: properties.ownerDeletedAt,
       published: properties.published,
       publishedAt: properties.publishedAt,
+      scheduledPublishAt: properties.scheduledPublishAt,
+      scheduleCronTaskUid: properties.scheduleCronTaskUid,
       visibilityScope: properties.visibilityScope,
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
@@ -1832,6 +1857,49 @@ export async function setPropertyPublished(id: number, published: 0 | 1) {
     .where(eq(properties.id, id));
 }
 
+export async function setPropertyPublishSchedule(
+  id: number,
+  scheduledPublishAt: Date | null,
+  scheduleCronTaskUid: string | null
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(properties)
+    .set({
+      published: 0,
+      publishedAt: null,
+      scheduledPublishAt,
+      scheduleCronTaskUid,
+    })
+    .where(eq(properties.id, id));
+}
+
+export async function getPropertyByScheduleTaskUid(taskUid: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(properties)
+    .where(eq(properties.scheduleCronTaskUid, taskUid))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function completeScheduledPropertyPublish(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(properties)
+    .set({
+      published: 1,
+      publishedAt: new Date(),
+      scheduledPublishAt: null,
+      scheduleCronTaskUid: null,
+    })
+    .where(and(eq(properties.id, id), eq(properties.published, 0)));
+}
+
 export async function updateProperty(
   id: number,
   data: Partial<InsertProperty>
@@ -1896,6 +1964,8 @@ export async function hardDeleteProperty(id: number) {
 
   await db.delete(favorites).where(eq(favorites.propertyId, id));
   await db.delete(messages).where(eq(messages.propertyId, id));
+  // 添付本体はDBにBase64で保存されているため、物件本体と同時に削除する。
+  await db.delete(propertyFiles).where(eq(propertyFiles.propertyId, id));
   await db.delete(properties).where(eq(properties.id, id));
   // directMessages はDMスレッドを残すため削除しない
 }
@@ -1961,9 +2031,10 @@ export async function listAllPropertiesAdmin() {
   const viewCountSub = db
     .select({
       propertyId: propertyViewEvents.propertyId,
-      uniqueViewers: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as(
-        "uniqueViewers"
-      ),
+      uniqueViewers:
+        sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as(
+          "uniqueViewers"
+        ),
     })
     .from(propertyViewEvents)
     .groupBy(propertyViewEvents.propertyId)
@@ -1993,6 +2064,7 @@ export async function listAllPropertiesAdmin() {
       deleted: properties.deleted,
       published: properties.published,
       publishedAt: properties.publishedAt,
+      scheduledPublishAt: properties.scheduledPublishAt,
       externalListingConsent: properties.externalListingConsent,
       externalListingConsentedAt: properties.externalListingConsentedAt,
       viewCount: properties.viewCount,
@@ -2051,6 +2123,7 @@ export async function getMyProperties(userId: number) {
         "inquiryCount"
       ),
       publishedAt: properties.publishedAt,
+      scheduledPublishAt: properties.scheduledPublishAt,
       createdAt: properties.createdAt,
     })
     .from(properties)
@@ -3113,7 +3186,7 @@ export async function getDirectMessageThreads(userId: number) {
     // 旧仕様では、募集への提案承認時の最初のDMを募集者から送信していた。
     // この自動生成文に限り、商談を始めた側は実際の提案者（受信者）として扱う。
     const initiatedByCurrentUser = dm.content.includes(
-      "へのご提案を確認しました。商談を開始します。"
+      "へのご提案を確認しました。メッセージを開始します。"
     )
       ? dm.receiverId === userId
       : dm.senderId === userId;
@@ -4874,9 +4947,10 @@ export async function getTopViewedProperties(limit = 20) {
   const viewCountSub = db
     .select({
       propertyId: propertyViewEvents.propertyId,
-      uniqueViewers: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as(
-        "uniqueViewers"
-      ),
+      uniqueViewers:
+        sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as(
+          "uniqueViewers"
+        ),
     })
     .from(propertyViewEvents)
     .groupBy(propertyViewEvents.propertyId)

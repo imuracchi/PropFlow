@@ -797,7 +797,7 @@ export default function V2PropertyList({
                     <span>{p.type}</span>
                     {p.published === 0 && (
                       <span className="bg-[#eef1f5] px-2 py-0.5 text-[#526176]">
-                        下書き
+                        {p.scheduledPublishAt ? "予約中" : "下書き"}
                       </span>
                     )}
                     {collection === "mine" &&
@@ -831,7 +831,7 @@ export default function V2PropertyList({
                     )}
                     <span className="ml-auto text-[11px] text-[#8490a0]">
                       {p.published === 0
-                        ? "未公開"
+                        ? p.scheduledPublishAt ? `${new Date(p.scheduledPublishAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })} 公開予定` : "未公開"
                         : new Date(
                             p.publishedAt ?? p.createdAt
                           ).toLocaleDateString("ja-JP", {
@@ -996,7 +996,7 @@ export default function V2PropertyList({
                       </td>
                       <td className="px-3 py-3">
                         {p.published === 0
-                          ? "—"
+                          ? p.scheduledPublishAt ? `${new Date(p.scheduledPublishAt).toLocaleString("ja-JP")} 公開予定` : "—"
                           : new Date(
                               p.publishedAt ?? p.createdAt
                             ).toLocaleDateString("ja-JP")}
@@ -1011,7 +1011,7 @@ export default function V2PropertyList({
                         <div className="flex min-w-[118px] flex-wrap gap-1.5">
                           {p.published === 0 && (
                             <span className="bg-[#eef1f5] px-2 py-1 text-[12px] font-bold text-[#526176]">
-                              下書き
+                              {p.scheduledPublishAt ? "予約中" : "下書き"}
                             </span>
                           )}
                           {collection === "mine" &&

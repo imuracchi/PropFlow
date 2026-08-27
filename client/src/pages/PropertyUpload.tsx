@@ -27,6 +27,7 @@ import {
   Eye,
   EyeOff,
   UserX,
+  Clock,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -112,9 +113,10 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
 
   const [generatingComment, setGeneratingComment] = useState(false);
   const [analyzingTransport, setAnalyzingTransport] = useState(false);
-  const [publishMode, setPublishMode] = useState<"publish" | "draft">(
+  const [publishMode, setPublishMode] = useState<"publish" | "schedule" | "draft">(
     "publish"
   );
+  const [scheduledAt, setScheduledAt] = useState("");
   const [proposalOnly, setProposalOnly] = useState(proposalRequestId > 0);
   const [externalListingConsent, setExternalListingConsent] = useState(true);
   const [excludedUsers, setExcludedUsers] = useState<
@@ -134,6 +136,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
   const transportMutation = trpc.property.analyzeTransport.useMutation();
   const addExclusionMutation = trpc.property.addExclusion.useMutation();
   const notifyLineMutation = trpc.property.notifyLine.useMutation();
+  const schedulePublicationMutation = trpc.property.schedulePublication.useMutation();
   const { data: allUsers } = trpc.user.list.useQuery();
 
   const fillFormFromData = (data: Record<string, unknown>) => {
@@ -262,6 +265,10 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
 
   const handleSubmit = async () => {
     setError("");
+    if (publishMode === "schedule" && (!scheduledAt || new Date(scheduledAt).getTime() < Date.now() + 10 * 60_000)) {
+      setError("公開予定日時は10分以上先を指定してください");
+      return;
+    }
     if (!name || !address || !type) {
       setError("必須項目を入力してください");
       return;
@@ -396,7 +403,16 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
         }
         setSubmitting(false);
         // 公開モードの場合のみ通知ダイアログを表示
-        if (publishMode === "publish") {
+        if (publishMode === "schedule") {
+          if (!scheduledAt) throw new Error("公開予定日時を指定してください");
+          setSubmitProgress("公開予約を登録中...");
+          await schedulePublicationMutation.mutateAsync({
+            propertyId: result.id,
+            scheduledAt: new Date(scheduledAt).toISOString(),
+          });
+          toast.success(`公開予約を登録しました（${new Date(scheduledAt).toLocaleString("ja-JP")}）`);
+          setLocation(v2 ? `/v2/property/${result.id}` : `/property/${result.id}`);
+        } else if (publishMode === "publish") {
           if (proposalRequestId) {
             toast.success("提案用の物件を掲載しました");
             setLocation(
@@ -1931,7 +1947,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
         </div>
       )}
       <div
-        className={`grid grid-cols-1 gap-3 ${proposalRequestId && proposalOnly ? "" : "sm:grid-cols-2"}`}
+        className={`grid grid-cols-1 gap-3 ${proposalRequestId && proposalOnly ? "" : "sm:grid-cols-3"}`}
       >
         <button
           type="button"
@@ -1955,6 +1971,16 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
         {(!proposalRequestId || !proposalOnly) && (
           <button
             type="button"
+            onClick={() => setPublishMode("schedule")}
+            className={`flex min-h-[72px] items-center gap-3 border px-4 py-3 text-[14px] font-bold transition-colors ${publishMode === "schedule" ? "border-[#173f70] bg-[#edf3fa] text-[#173f70]" : "border-border text-muted-foreground hover:bg-muted/50"}`}
+          >
+            <Clock className="w-4 h-4 shrink-0" />
+            <div className="text-left"><div>日時を指定して公開</div><div className="text-xs font-normal opacity-70">指定日時までは非公開</div></div>
+          </button>
+        )}
+        {(!proposalRequestId || !proposalOnly) && (
+          <button
+            type="button"
             onClick={() => setPublishMode("draft")}
             className={`flex min-h-[72px] items-center gap-3 border px-4 py-3 text-[14px] font-bold transition-colors ${
               publishMode === "draft"
@@ -1972,6 +1998,13 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
           </button>
         )}
       </div>
+      {publishMode === "schedule" && (
+        <label className="block border border-[#b9c9da] bg-[#f7f9fb] p-4">
+          <span className="block text-[13px] font-bold text-[#173f70]">公開予定日時（日本時間）</span>
+          <input type="datetime-local" value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} className="mt-2 h-11 w-full border border-[#cbd5df] bg-white px-3 text-[14px]" />
+          <span className="mt-1 block text-[11px] text-[#65748a]">10分以上先を指定してください</span>
+        </label>
+      )}
       {proposalRequestId > 0 && !proposalOnly && publishMode === "draft" && (
         <p
           role="alert"
@@ -1980,7 +2013,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
           下書きの物件は提案できません。物件を公開後、提案を送信してください。
         </p>
       )}
-      {publishMode === "publish" && (!proposalRequestId || !proposalOnly) && (
+      {publishMode !== "draft" && (!proposalRequestId || !proposalOnly) && (
         <label className="flex items-start gap-3 border border-[#b9c9da] bg-[#f7f9fb] p-4 text-[12px] leading-5 text-[#526176]">
           <input type="checkbox" className="mt-1 size-4 shrink-0" checked={externalListingConsent} onChange={event => setExternalListingConsent(event.target.checked)} />
           <span><strong className="block text-[13px] text-[#173f70]">ログインページへの簡易掲載に同意する</strong>市区・物件種別・価格帯・面積のみ、ログイン前の方へ表示します。詳細住所、会社名、担当者名、連絡先、資料は表示されません。</span>
@@ -2013,7 +2046,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
           ) : (
             <CheckCircle2 className="w-4 h-4" />
           )}
-          {publishMode === "publish" ? "今すぐ公開する" : "下書き保存する"}
+          {publishMode === "publish" ? "今すぐ公開する" : publishMode === "schedule" ? "公開を予約する" : "下書き保存する"}
         </Button>
       </div>
 

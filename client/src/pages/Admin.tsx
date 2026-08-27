@@ -86,6 +86,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
     id: number;
     name: string;
   } | null>(null);
+  const [hideTarget, setHideTarget] = useState<{ id: number; name: string } | null>(null);
+  const [hideReason, setHideReason] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [viewDm, setViewDm] = useState<any | null>(null);
   const [dmDateFrom, setDmDateFrom] = useState("");
@@ -152,6 +155,12 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
       utils.admin.allUsers.invalidate();
     },
   });
+  const announcementExclusionMutation = trpc.admin.setAnnouncementExclusion.useMutation({
+    onSuccess: () => {
+      utils.admin.allUsers.invalidate();
+      utils.admin.activityLogs.invalidate();
+    },
+  });
   const approveRegistrationRequestMutation =
     trpc.admin.approveRegistrationRequest.useMutation({
       onSuccess: result => {
@@ -181,19 +190,25 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
     onSuccess: () => {
       utils.admin.allProperties.invalidate();
       utils.admin.stats.invalidate();
+      utils.admin.activityLogs.invalidate();
+      setHideTarget(null);
+      setHideReason("");
     },
   });
   const restorePropMutation = trpc.admin.restoreProperty.useMutation({
     onSuccess: () => {
       utils.admin.allProperties.invalidate();
       utils.admin.stats.invalidate();
+      utils.admin.activityLogs.invalidate();
     },
   });
   const hardDeleteMutation = trpc.admin.hardDeleteProperty.useMutation({
     onSuccess: () => {
       utils.admin.allProperties.invalidate();
       utils.admin.stats.invalidate();
+      utils.admin.activityLogs.invalidate();
       setDeleteTarget(null);
+      setDeleteReason("");
     },
   });
   const deleteRequestMutation =
@@ -684,6 +699,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           <p className="mt-0.5 break-words text-[12px] text-[#65748a]">
                             {user.company || "会社名未設定"}
                           </p>
+                          {(user as any).announcementExcluded === 1 && (
+                            <span className="mt-1 inline-block bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">案内対象外</span>
+                          )}
                         </button>
                         <span
                           className={`shrink-0 px-2 py-1 text-[10px] font-bold ${user.status === "active" ? "bg-[#e8f3ec] text-[#27613c]" : "bg-[#fff0f0] text-[#a72e2e]"}`}
@@ -750,6 +768,23 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           </button>
                         )}
                       </div>
+                      {!isManagement && (
+                        <button
+                          type="button"
+                          className={`mt-2 h-10 w-full border text-[12px] font-bold ${(user as any).announcementExcluded === 1 ? "border-[#8b6508] bg-[#fffaf0] text-[#8b6508]" : "border-[#8490a0] text-[#526176]"}`}
+                          onClick={() => {
+                            const excluded = (user as any).announcementExcluded === 1;
+                            if (excluded) {
+                              if (confirm(`${user.name}を案内対象に戻しますか？`)) announcementExclusionMutation.mutate({ id: user.id, excluded: false, note: null });
+                            } else {
+                              const note = prompt(`${user.name}を案内対象外にする理由を入力してください`);
+                              if (note?.trim()) announcementExclusionMutation.mutate({ id: user.id, excluded: true, note: note.trim() });
+                            }
+                          }}
+                        >
+                          {(user as any).announcementExcluded === 1 ? "案内対象に戻す" : "案内対象外にする"}
+                        </button>
+                      )}
                       {!isManagement && (
                         <button
                           type="button"
@@ -828,6 +863,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                                   <p className="text-xs text-muted-foreground">
                                     {user.company}
                                   </p>
+                                )}
+                                {(user as any).announcementExcluded === 1 && (
+                                  <span className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">案内対象外</span>
                                 )}
                               </div>
                             </button>
@@ -966,6 +1004,22 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    className="gap-2 text-xs"
+                                    onClick={() => {
+                                      const excluded = (user as any).announcementExcluded === 1;
+                                      if (excluded) {
+                                        if (confirm(`${user.name}を案内対象に戻しますか？`)) announcementExclusionMutation.mutate({ id: user.id, excluded: false, note: null });
+                                        return;
+                                      }
+                                      const note = prompt(`${user.name}を案内対象外にする理由を入力してください`);
+                                      if (note?.trim()) announcementExclusionMutation.mutate({ id: user.id, excluded: true, note: note.trim() });
+                                    }}
+                                  >
+                                    <Ban className="w-3.5 h-3.5" />
+                                    {(user as any).announcementExcluded === 1 ? "案内対象に戻す" : "案内対象外にする"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
                                   {user.status === "active" ? (
                                     <DropdownMenuItem
                                       className="gap-2 text-xs text-destructive"
@@ -1232,9 +1286,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                                 ) : (
                                   <DropdownMenuItem
                                     className="gap-2 text-xs"
-                                    onClick={() =>
-                                      hidePropMutation.mutate({ id: prop.id })
-                                    }
+                                    onClick={() => setHideTarget({ id: prop.id, name: prop.name })}
                                   >
                                     <EyeOff className="w-3.5 h-3.5" />
                                     非表示にする
@@ -2322,6 +2374,14 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                                         : log.action ===
                                             "property_match_property_open"
                                           ? "候補物件表示"
+                                          : log.action === "property_delete_own"
+                                            ? "自社物件の削除"
+                                            : log.action === "property_hide_admin"
+                                              ? "管理者による非表示"
+                                              : log.action === "property_restore_admin"
+                                                ? "管理者による再表示"
+                                                : log.action === "property_hard_delete_admin"
+                                                  ? "管理者による完全削除"
                                           : log.action}
                           </span>
                         </td>
@@ -2857,6 +2917,26 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
         </TabsContent>
       </Tabs>
 
+      {/* 管理者による非表示確認ダイアログ */}
+      {hideTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-xl shadow-lg p-6 max-w-sm w-full mx-4 space-y-4">
+            <div>
+              <h3 className="font-semibold text-foreground">物件を非表示にしますか？</h3>
+              <p className="text-sm text-muted-foreground mt-1">一覧・詳細・添付へのアクセスを停止します。データとDM履歴は保持され、管理者が再表示できます。登録者には理由が通知されます。</p>
+            </div>
+            <p className="text-sm text-foreground bg-muted rounded-lg px-3 py-2">{hideTarget.name}</p>
+            <textarea value={hideReason} onChange={e => setHideReason(e.target.value)} maxLength={500} rows={3} placeholder="非表示にする理由（必須）" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => { setHideTarget(null); setHideReason(""); }}>キャンセル</Button>
+              <Button className="flex-1" disabled={hidePropMutation.isPending || !hideReason.trim()} onClick={() => hidePropMutation.mutate({ id: hideTarget.id, reason: hideReason.trim() })}>
+                {hidePropMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-1" />}非表示にする
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 完全削除確認ダイアログ */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -2870,26 +2950,27 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   完全に削除しますか？
                 </h3>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  この操作は取り消せません。関連するチャット・お気に入りも削除されます。
+                  この操作は取り消せません。物件・写真・添付・お気に入りは削除されます。DM履歴は保持されます。
                 </p>
               </div>
             </div>
             <p className="text-sm text-foreground bg-muted rounded-lg px-3 py-2">
               {deleteTarget.name}
             </p>
+            <textarea value={deleteReason} onChange={e => setDeleteReason(e.target.value)} maxLength={500} rows={3} placeholder="完全削除する理由（必須）" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
             <div className="flex gap-3">
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => setDeleteTarget(null)}
+                onClick={() => { setDeleteTarget(null); setDeleteReason(""); }}
               >
                 キャンセル
               </Button>
               <Button
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                disabled={hardDeleteMutation.isPending}
+                disabled={hardDeleteMutation.isPending || !deleteReason.trim()}
                 onClick={() =>
-                  hardDeleteMutation.mutate({ id: deleteTarget.id })
+                  hardDeleteMutation.mutate({ id: deleteTarget.id, reason: deleteReason.trim() })
                 }
               >
                 {hardDeleteMutation.isPending ? (

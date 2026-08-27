@@ -71,6 +71,28 @@ async function startServer() {
     }
   });
 
+  app.post("/api/scheduled/publish-property", async (req, res) => {
+    try {
+      const { sdk } = await import("./sdk");
+      const user = await sdk.authenticateRequest(req);
+      if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
+      const db = await import("../db");
+      const property = await db.getPropertyByScheduleTaskUid(user.taskUid);
+      if (!property) return res.status(404).json({ error: "schedule-not-found" });
+      if (property.published === 0) {
+        await db.completeScheduledPropertyPublish(property.id);
+        const { sendScheduledPropertyNotifications } = await import("./propertyPublish");
+        await sendScheduledPropertyNotifications(property.id);
+      }
+      const { deleteHeartbeatJob } = await import("./heartbeat");
+      await deleteHeartbeatJob(user.taskUid, "").catch(() => {});
+      return res.json({ success: true, propertyId: property.id });
+    } catch (error) {
+      console.error("[publish-property] error:", error);
+      return res.status(500).json({ error: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() });
+    }
+  });
+
   // Direct file serving endpoint — serves binary to let the native browser PDF viewer handle rendering
   app.get("/api/files/raw/:fileId", async (req, res) => {
     try {
@@ -148,7 +170,7 @@ async function startServer() {
       res.setHeader("Content-Type", contentType);
       res.setHeader(
         "Content-Disposition",
-        `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`
+        `${req.query.download === "1" ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(file.name)}`
       );
       res.setHeader("Content-Length", binary.length);
       res.setHeader("Cache-Control", "private, max-age=300");

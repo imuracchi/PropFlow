@@ -995,9 +995,16 @@ JSONのみ返してください。`,
 
   property: router({
     previousWeekSummary: publicProcedure.query(async () => {
-      const { getOrCreateWeeklyPropertyDigest } = await import("./_core/weeklyPropertyDigest");
+      const { getOrCreateWeeklyPropertyDigest } = await import(
+        "./_core/weeklyPropertyDigest"
+      );
       const digest = await getOrCreateWeeklyPropertyDigest();
-      return { weekStart: digest.weekStart, start: digest.start, end: digest.end, count: digest.count };
+      return {
+        weekStart: digest.weekStart,
+        start: digest.start,
+        end: digest.end,
+        count: digest.count,
+      };
     }),
     publicHighlights: publicProcedure.query(() =>
       db.getPublicPropertyHighlights()
@@ -1406,7 +1413,7 @@ JSONのみ返してください。`,
         db.logActivity(
           ctx.user.id,
           "property_delete_own",
-          `物件「${prop.name}」を削除（添付を消去、概要は分析用に保持）`,
+          `物件「${prop.name}」を削除（30日間復元可能。期限後に写真・添付のみ削除し、概要・問い合わせ履歴は保持）`,
           ctx.req.headers["user-agent"]
         ).catch(() => {});
         return { success: true };
@@ -1746,12 +1753,97 @@ ${propList}`,
         return { success: true, hasExclusions };
       }),
 
+    schedulePublication: protectedProcedure
+      .input(z.object({ propertyId: z.number(), scheduledAt: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const prop = await requirePropertyOwner(input.propertyId, ctx.user);
+        if (prop.visibilityScope === "proposal")
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "提案先限定物件は予約公開できません",
+          });
+        const scheduledAt = new Date(input.scheduledAt);
+        if (
+          !Number.isFinite(scheduledAt.getTime()) ||
+          scheduledAt.getTime() < Date.now() + 10 * 60_000
+        )
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "公開日時は10分以上先を指定してください",
+          });
+        const { createHeartbeatJob, updateHeartbeatJob } = await import(
+          "./_core/heartbeat"
+        );
+        const cron = `0 ${scheduledAt.getUTCMinutes()} ${scheduledAt.getUTCHours()} ${scheduledAt.getUTCDate()} ${scheduledAt.getUTCMonth() + 1} *`;
+        let taskUid = prop.scheduleCronTaskUid;
+        if (taskUid) {
+          await updateHeartbeatJob(taskUid, { cron, enable: true }, "");
+        } else {
+          const job = await createHeartbeatJob(
+            {
+              name: `property-publish-${prop.id}-${scheduledAt.getTime()}`,
+              cron,
+              path: "/api/scheduled/publish-property",
+              method: "POST",
+              description: `${prop.name} の予約公開`,
+            },
+            ""
+          );
+          taskUid = job.taskUid;
+        }
+        try {
+          await db.setPropertyPublishSchedule(prop.id, scheduledAt, taskUid);
+        } catch (error) {
+          // A newly created scheduler job must not survive if the property row
+          // could not be updated, otherwise it could publish an unscheduled item.
+          if (!prop.scheduleCronTaskUid && taskUid) {
+            const { deleteHeartbeatJob } = await import("./_core/heartbeat");
+            await deleteHeartbeatJob(taskUid, "").catch(() => {});
+          }
+          throw error;
+        }
+        return { success: true, scheduledAt };
+      }),
+
+    cancelScheduledPublication: protectedProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const prop = await requirePropertyOwner(input.propertyId, ctx.user);
+        if (prop.scheduleCronTaskUid) {
+          const { deleteHeartbeatJob } = await import("./_core/heartbeat");
+          await deleteHeartbeatJob(prop.scheduleCronTaskUid, "");
+        }
+        await db.setPropertyPublishSchedule(prop.id, null, null);
+        return { success: true };
+      }),
+
+    publishScheduledNow: protectedProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const prop = await requirePropertyOwner(input.propertyId, ctx.user);
+        if (prop.scheduleCronTaskUid) {
+          const { deleteHeartbeatJob } = await import("./_core/heartbeat");
+          await deleteHeartbeatJob(prop.scheduleCronTaskUid, "");
+        }
+        await db.completeScheduledPropertyPublish(prop.id);
+        const { sendScheduledPropertyNotifications } = await import(
+          "./_core/propertyPublish"
+        );
+        await sendScheduledPropertyNotifications(prop.id);
+        return { success: true };
+      }),
+
     setPublished: protectedProcedure
       .input(z.object({ propertyId: z.number(), published: z.boolean() }))
       .mutation(async ({ input, ctx }) => {
         const prop = await db.getPropertyById(input.propertyId);
         if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin"))
           return { success: false };
+        if (prop.scheduleCronTaskUid) {
+          const { deleteHeartbeatJob } = await import("./_core/heartbeat");
+          await deleteHeartbeatJob(prop.scheduleCronTaskUid, "");
+          await db.setPropertyPublishSchedule(prop.id, null, null);
+        }
         await db.setPropertyPublished(
           input.propertyId,
           input.published ? 1 : 0
@@ -1936,7 +2028,11 @@ ${propList}`,
       )
       .mutation(async ({ input, ctx }) => {
         const property = await db.getPropertyById(input.id);
-        if (!property || property.userId !== ctx.user.id || property.deleted !== 1)
+        if (
+          !property ||
+          property.userId !== ctx.user.id ||
+          property.deleted !== 1
+        )
           return { success: false, expired: false, notifiedCount: 0 };
 
         const deletedAt = property.ownerDeletedAt
@@ -1945,7 +2041,7 @@ ${propList}`,
         const expired = !deletedAt || deletedAt < Date.now() - 30 * 86400000;
         if (expired) {
           // 30日経過後はユーザーによる復元を受け付けない。
-          // 写真・添付ファイルだけを削除し、物件本体・概要・商談履歴は
+          // 写真・添付ファイルだけを削除し、物件本体・概要・問い合わせ履歴は
           // マーケティングデータとして活用するため保持する。
           await db.purgeExpiredOwnerDeletedProperties();
           return { success: false, expired: true, notifiedCount: 0 };
@@ -3381,6 +3477,28 @@ ${propList}`,
         return { success: true };
       }),
 
+    setAnnouncementExclusion: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        excluded: z.boolean(),
+        note: z.string().trim().max(1000).nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (input.excluded && !input.note) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "案内対象外にする理由を入力してください" });
+        }
+        const user = await db.getUserById(input.id);
+        if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "ユーザーが見つかりません" });
+        await db.setUserAnnouncementExclusion(input.id, input.excluded, input.note);
+        db.logActivity(
+          ctx.user.id,
+          input.excluded ? "user_announcement_exclude" : "user_announcement_include",
+          `${user.name ?? user.email}（ID:${user.id}）を案内${input.excluded ? "対象外" : "対象に復帰"}${input.excluded ? `（理由：${input.note}）` : ""}`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
+        return { success: true };
+      }),
+
     setManagement: adminProcedure
       .input(z.object({ id: z.number(), management: z.boolean() }))
       .mutation(async ({ input }) => {
@@ -3417,23 +3535,68 @@ ${propList}`,
     }),
 
     hideProperty: adminProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .input(
+        z.object({ id: z.number(), reason: z.string().trim().min(1).max(500) })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const property = await db.getPropertyById(input.id);
+        if (!property) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "物件が見つかりません",
+          });
+        }
         await db.deleteProperty(input.id);
+        await db.sendDirectMessage(
+          ctx.user.id,
+          property.userId,
+          `【運営からのお知らせ】\n物件「${property.name}」を非表示にしました。\n理由：${input.reason}`,
+          input.id
+        );
+        db.logActivity(
+          ctx.user.id,
+          "property_hide_admin",
+          `管理者が物件「${property.name}」（ID:${property.id}）を非表示（理由：${input.reason}、データ・DM履歴は保持）`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true };
       }),
 
     restoreProperty: adminProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const property = await db.getPropertyById(input.id);
         await db.restoreProperty(input.id);
+        if (property) {
+          db.logActivity(
+            ctx.user.id,
+            "property_restore_admin",
+            `管理者が物件「${property.name}」（ID:${property.id}）を再表示`,
+            ctx.req.headers["user-agent"]
+          ).catch(() => {});
+        }
         return { success: true };
       }),
 
     hardDeleteProperty: adminProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .input(
+        z.object({ id: z.number(), reason: z.string().trim().min(1).max(500) })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const property = await db.getPropertyById(input.id);
+        if (!property) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "物件が見つかりません",
+          });
+        }
         await db.hardDeleteProperty(input.id);
+        db.logActivity(
+          ctx.user.id,
+          "property_hard_delete_admin",
+          `管理者が物件「${property.name}」（ID:${property.id}）を完全削除（理由：${input.reason}、復元不可）`,
+          ctx.req.headers["user-agent"]
+        ).catch(() => {});
         return { success: true };
       }),
 

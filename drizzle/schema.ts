@@ -53,6 +53,8 @@ export const users = mysqlTable("users", {
   notifyPropertySearch: int("notifyPropertySearch").default(1).notNull(),
   notifyDm: int("notifyDm").default(1).notNull(),
   notifyAnnounce: int("notifyAnnounce").default(1).notNull(),
+  announcementExcluded: int("announcementExcluded").default(0).notNull(),
+  announcementExclusionNote: text("announcementExclusionNote"),
   showCompany: int("showCompany").default(1).notNull(),
   showPhone: int("showPhone").default(1).notNull(),
   showFax: int("showFax").default(1).notNull(),
@@ -103,6 +105,8 @@ export const properties = mysqlTable("properties", {
   ownerDeletedAt: timestamp("ownerDeletedAt"),
   published: int("published").default(1).notNull(),
   publishedAt: timestamp("publishedAt"),
+  scheduledPublishAt: timestamp("scheduledPublishAt"),
+  scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }),
   visibilityScope: varchar("visibilityScope", { length: 20 })
     .default("public")
     .notNull(),
@@ -114,7 +118,11 @@ export const properties = mysqlTable("properties", {
   lineNotifiedAt: timestamp("lineNotifiedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, table => ({
+  scheduleCronTaskUidIdx: index("idx_properties_schedule_cron_task_uid").on(
+    table.scheduleCronTaskUid
+  ),
+}));
 
 export type Property = typeof properties.$inferSelect;
 export type InsertProperty = typeof properties.$inferInsert;

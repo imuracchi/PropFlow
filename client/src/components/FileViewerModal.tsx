@@ -10,7 +10,6 @@ interface Props {
 export function FileViewerModal({ fileId, name, onClose }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -19,14 +18,30 @@ export function FileViewerModal({ fileId, name, onClose }: Props) {
       try {
         const res = await fetch(`/api/files/raw/${fileId}`, { credentials: "same-origin" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-
-        objectUrl = URL.createObjectURL(blob);
         const ext = name.split(".").pop()?.toLowerCase() ?? "";
 
         if (ext === "pdf") {
-          setPdfUrl(objectUrl);
+          const pdfjs = await loadPdfJs();
+          const pdf = await pdfjs.getDocument({ data: await res.arrayBuffer() }).promise;
+          const container = containerRef.current;
+          if (!container) return;
+          container.innerHTML = "";
+          const dpr = window.devicePixelRatio || 1;
+          for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+            const page = await pdf.getPage(pageNumber);
+            const base = page.getViewport({ scale: 1 });
+            const cssScale = Math.max(0.25, (container.clientWidth - 16) / base.width);
+            const viewport = page.getViewport({ scale: cssScale * dpr });
+            const canvas = document.createElement("canvas");
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            canvas.style.cssText = `display:block;width:${viewport.width / dpr}px;height:${viewport.height / dpr}px;margin:8px auto;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3)`;
+            container.appendChild(canvas);
+            await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+          }
         } else {
+          const blob = await res.blob();
+          objectUrl = URL.createObjectURL(blob);
           const img = document.createElement("img");
           img.src = objectUrl;
           img.style.cssText = "display:block;width:100%;height:auto;";
@@ -74,16 +89,27 @@ export function FileViewerModal({ fileId, name, onClose }: Props) {
             <p className="text-sm opacity-80">ファイルの読み込みに失敗しました</p>
           </div>
         )}
-        {pdfUrl ? (
-          <embed
-            src={pdfUrl}
-            type="application/pdf"
-            style={{ width: "100%", height: "100%", border: "none", display: status === "done" ? "block" : "none" }}
-          />
-        ) : (
-          <div ref={containerRef} style={{ padding: "8px 4px" }} />
-        )}
+        <div ref={containerRef} style={{ padding: "8px 4px" }} />
       </div>
     </div>
   );
+}
+
+const PDFJS_VERSION = "3.11.174";
+let pdfJsPromise: Promise<any> | null = null;
+function loadPdfJs() {
+  if ((window as any).pdfjsLib) return Promise.resolve((window as any).pdfjsLib);
+  if (pdfJsPromise) return pdfJsPromise;
+  pdfJsPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`;
+    script.onload = () => {
+      const pdfjs = (window as any).pdfjsLib;
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`;
+      resolve(pdfjs);
+    };
+    script.onerror = () => reject(new Error("PDF viewer load failed"));
+    document.head.appendChild(script);
+  });
+  return pdfJsPromise;
 }

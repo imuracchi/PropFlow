@@ -31,6 +31,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
 import { printProperty } from "@/pages/PropertyDetail";
 import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
+import { FileViewerModal } from "@/components/FileViewerModal";
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "";
 
@@ -306,6 +307,7 @@ export default function V2PropertyDetail({
     { enabled: !preview && !!propertyId }
   );
   const [previewOverride, setPreviewOverride] = useState<any>(null);
+  const [viewingFile, setViewingFile] = useState<{ id: number; name: string } | null>(null);
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
@@ -347,6 +349,9 @@ export default function V2PropertyDetail({
       await utils.property.list.invalidate();
     },
   });
+  const schedulePublication = trpc.property.schedulePublication.useMutation({ onSuccess: () => propertyQuery.refetch() });
+  const cancelScheduledPublication = trpc.property.cancelScheduledPublication.useMutation({ onSuccess: () => propertyQuery.refetch() });
+  const publishScheduledNow = trpc.property.publishScheduledNow.useMutation({ onSuccess: () => propertyQuery.refetch() });
   const setExternalListingConsent =
     trpc.property.setExternalListingConsent.useMutation({
       onSuccess: async () => {
@@ -500,11 +505,17 @@ export default function V2PropertyDetail({
   const download = async (file: any) => {
     if (preview) return;
     setDownloading(file.id);
-    const result = await utils.property.downloadFile.fetch({ fileId: file.id });
-    if (result) saveBase64(result.name, result.contentBase64);
+    const anchor = document.createElement("a");
+    anchor.href = `/api/files/raw/${file.id}?download=1`;
+    anchor.download = file.name;
+    anchor.click();
     setDownloading(null);
   };
   const previewPdf = async (file: any) => {
+    if (!preview) {
+      setViewingFile({ id: file.id, name: file.name });
+      return;
+    }
     const tab = window.open("", "_blank");
     if (!tab) {
       alert("別タブを開けませんでした。ポップアップを許可してください。");
@@ -823,6 +834,9 @@ export default function V2PropertyDetail({
 
   return (
     <V2Layout preview={preview}>
+      {viewingFile && (
+        <FileViewerModal fileId={viewingFile.id} name={viewingFile.name} onClose={() => setViewingFile(null)} />
+      )}
       <main className="min-w-0 w-full max-w-[1600px] overflow-x-hidden pb-20 lg:overflow-visible lg:p-7 lg:pb-10">
         <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
           <div className="min-w-0 space-y-2 lg:space-y-5">
@@ -1392,10 +1406,21 @@ export default function V2PropertyDetail({
                         ) : (
                           <Eye size={13} />
                         )}
-                        {property.published === 0 ? "非公開・下書き" : "公開中"}
+                        {property.scheduledPublishAt ? "予約公開" : property.published === 0 ? "非公開・下書き" : "公開中"}
                       </span>
+                      {property.scheduledPublishAt && (
+                        <p className="mt-1 text-[11px] font-semibold text-[#526176]">
+                          {new Date(property.scheduledPublishAt).toLocaleString("ja-JP")} 公開予定
+                        </p>
+                      )}
                     </div>
-                    <button
+                    {property.scheduledPublishAt ? (
+                      <div className="ml-auto flex flex-wrap justify-end gap-1.5">
+                        <button onClick={async () => { const value = window.prompt("新しい公開日時を入力してください（例: 2026-09-02T10:00）"); if (value) await schedulePublication.mutateAsync({ propertyId, scheduledAt: new Date(value).toISOString() }); }} className="h-9 border border-[#173f70] px-2 text-[10px] font-bold text-[#173f70]">日時変更</button>
+                        <button onClick={() => cancelScheduledPublication.mutate({ propertyId })} className="h-9 border border-[#9aabc0] px-2 text-[10px] font-bold text-[#526176]">予約取消</button>
+                        <button onClick={() => publishScheduledNow.mutate({ propertyId })} className="h-9 bg-[#173f70] px-2 text-[10px] font-bold text-white">今すぐ公開</button>
+                      </div>
+                    ) : <button
                       disabled={setPublished.isPending}
                       onClick={async () => {
                         const nextPublished = property.published === 0;
@@ -1431,7 +1456,7 @@ export default function V2PropertyDetail({
                           : property.published === 0
                             ? "公開する"
                             : "非公開にする"}
-                    </button>
+                    </button>}
                   </div>
                 </div>
                 {(isRegistrant || user?.role === "admin") && property.visibilityScope === "public" && (

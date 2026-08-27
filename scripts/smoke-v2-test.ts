@@ -240,7 +240,10 @@ try {
   const restoredDraftDetail = await query("property.getById", sellerCookie, { id: draftCreated.data.id });
   assert(restoredDraftDetail?.deleted === 0, "restored property returns to active state");
   await mutate("property.deleteOwn", sellerCookie, { propertyId: draftCreated.data.id });
-  const permanentCleanup = await mutate("admin.hardDeleteProperty", adminCookie, { id: draftCreated.data.id });
+  const permanentCleanup = await mutate("admin.hardDeleteProperty", adminCookie, {
+    id: draftCreated.data.id,
+    reason: "スモークテスト用データの後片付け",
+  });
   assert(permanentCleanup.ok && permanentCleanup.data?.success === true, "draft audit property permanently cleaned up by admin");
 }
 
