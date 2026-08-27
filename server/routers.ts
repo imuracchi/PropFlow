@@ -1334,6 +1334,13 @@ JSONのみ返してください。`,
           dealPrice: input.dealPrice,
         });
 
+        await db.logActivity(
+          ctx.user.id,
+          "property_mark_sold",
+          `物件「${prop.name}」（PF-${prop.id}）を成約済みに変更。成約金額：${input.dealPrice ? `${input.dealPrice.toLocaleString("ja-JP")}円` : "未入力"}。全体告知：${input.announcePublic ? "あり" : "なし"}`,
+          ctx.req.headers["user-agent"]
+        );
+
         // 問い合わせのあった方に成約を通知
         const partnerIds = await db.getDmPartnersForProperty(
           input.id,
@@ -1826,6 +1833,12 @@ ${propList}`,
         await db.setPropertyPublished(
           input.propertyId,
           input.published ? 1 : 0
+        );
+        await db.logActivity(
+          ctx.user.id,
+          input.published ? "property_publish" : "property_unpublish",
+          `物件「${prop.name}」（PF-${prop.id}）を${input.published ? "公開" : "非公開"}に変更`,
+          ctx.req.headers["user-agent"]
         );
         return { success: true };
       }),
