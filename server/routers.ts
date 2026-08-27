@@ -1477,11 +1477,17 @@ JSONのみ返してください。`,
         const file = await db.getPropertyFileContent(input.fileId);
         if (!file) return null;
         await requirePropertyAccess(file.propertyId, ctx.user);
+        const property = await db.getPropertyById(file.propertyId);
+        if (property?.status === "sold") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "成約済み物件の資料はダウンロードできません",
+          });
+        }
         if (file.visible === 0) {
-          const prop = await db.getPropertyById(file.propertyId);
           const isOwner =
-            !!prop &&
-            (prop.userId === ctx.user.id || ctx.user.role === "admin");
+            !!property &&
+            (property.userId === ctx.user.id || ctx.user.role === "admin");
           if (!isOwner) return null;
         }
         return { name: file.name, contentBase64: file.contentBase64 };

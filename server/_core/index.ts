@@ -115,6 +115,10 @@ async function startServer() {
         res.status(404).end();
         return;
       }
+      if (prop.status === "sold") {
+        res.status(403).json({ error: "成約済み物件の資料は表示・ダウンロードできません" });
+        return;
+      }
       const isOwner = prop.userId === user.id || user.role === "admin";
       if (!isOwner) {
         const exclusions = await getPropertyExclusions(file.propertyId);

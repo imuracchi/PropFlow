@@ -209,13 +209,13 @@ export default function Login({
               </div>
             )}
             {previousWeekCount > 0 && (
-              <div className="mt-6 border border-[#d6a43e] bg-[#fffaf0] px-5 py-4 text-[#102d50]">
+              <div className="mt-3 border border-[#d6a43e] bg-[#fffaf0] px-5 py-4 text-[#102d50]">
                 <p className="text-[11px] font-bold tracking-[0.14em] text-[#8a671d]">先週の新着</p>
                 <p className="mt-1 text-[18px] font-bold">先週、新たに{previousWeekCount}件の物件が公開されました</p>
               </div>
             )}
             {highlights.length > 0 && (
-              <section className="mt-9 border-t-4 border-[#d6a43e] bg-white p-6 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
+              <section className="mt-5 border-t-4 border-[#d6a43e] bg-white p-6 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[9px] font-bold tracking-[.16em] text-[#8a671d]">NEW & TRENDING</p>
@@ -266,7 +266,7 @@ export default function Login({
                   利用実績
                 </p>
                 <p className="mt-1 text-[16px] font-bold leading-6 text-[#102d50]">
-                  掲載者から成約のご報告が届きました。
+                  掲載者から成約のご報告
                 </p>
               </div>
             </div>

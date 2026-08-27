@@ -831,6 +831,11 @@ export default function V2PropertyDetail({
                 <span className="bg-[#173f70] px-2 py-1 text-[10px] font-bold text-white">
                   {property.type}
                 </span>
+                {property.status === "sold" && (
+                  <span className="flex items-center gap-1 bg-[#e8f3ec] px-2 py-1 text-[10px] font-bold text-[#27613c]">
+                    <CheckCircle2 size={12} /> 成約済み
+                  </span>
+                )}
                 {isPropertyAttentionWorthy(property) && (
                   <span className="bg-[#fde2d3] px-2 py-1 text-[10px] font-bold text-[#b43b16]">
                     注目
@@ -1017,7 +1022,7 @@ export default function V2PropertyDetail({
                   {uploadStatus}
                 </p>
               )}
-              <button
+              {property.status !== "sold" && <button
                 onClick={downloadAll}
                 disabled={!visibleFiles.length || downloading === "all"}
                 className="mt-4 flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-[14px] font-bold text-white disabled:bg-[#9aa7b6]"
@@ -1026,7 +1031,7 @@ export default function V2PropertyDetail({
                 {downloading === "all"
                   ? "ダウンロード中…"
                   : "資料を一括ダウンロード"}
-              </button>
+              </button>}
               <div className="mt-3 border-t border-[#dce3eb]">
                 {files.map(file => (
                   <div
@@ -1034,12 +1039,18 @@ export default function V2PropertyDetail({
                     className="flex items-center border-b border-[#e2e7ec] py-3.5"
                   >
                     <FileText size={20} className="shrink-0 text-[#173f70]" />
-                    <button
-                      onClick={() => previewPdf(file)}
-                      className="ml-3 min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[#173f70] hover:underline lg:text-[14px]"
-                    >
-                      {file.name}
-                    </button>
+                    {property.status === "sold" ? (
+                      <span className="ml-3 min-w-0 flex-1 truncate text-[13px] font-semibold text-[#65748a] lg:text-[14px]">
+                        {file.name}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => previewPdf(file)}
+                        className="ml-3 min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[#173f70] hover:underline lg:text-[14px]"
+                      >
+                        {file.name}
+                      </button>
+                    )}
                     {isOwner && (
                       <button
                         onClick={() => toggleFileVisibility(file)}
@@ -1050,7 +1061,7 @@ export default function V2PropertyDetail({
                         {file.visible === 0 ? "非公開" : "公開中"}
                       </button>
                     )}
-                    {(file.visible !== 0 || isOwner) && (
+                    {property.status !== "sold" && (file.visible !== 0 || isOwner) && (
                       <button
                         onClick={() => download(file)}
                         className="ml-2 flex items-center gap-1 border border-[#173f70] px-2.5 py-1.5 text-[11px] font-bold text-[#173f70]"
@@ -1299,16 +1310,16 @@ export default function V2PropertyDetail({
                   問い合わせる
                 </button>
               )}
-              <button
+              {property.status !== "sold" && <button
                 onClick={downloadAll}
                 disabled={!visibleFiles.length || downloading === "all"}
                 className="mt-2 flex h-12 w-full items-center justify-center gap-2 border-2 border-[#173f70] text-[14px] font-bold text-[#173f70] disabled:border-[#9aa7b6] disabled:text-[#9aa7b6]"
               >
                 <Download size={17} />
                 資料を一括DL
-              </button>
+              </button>}
             </section>
-            <section className="bg-white p-4 lg:border lg:border-[#d9e0e8]">
+            {property.status !== "sold" && <section className="bg-white p-4 lg:border lg:border-[#d9e0e8]">
               <p className="text-[11px] font-bold tracking-wider text-[#5275a0]">
                 この物件を検討する
               </p>
@@ -1353,7 +1364,7 @@ export default function V2PropertyDetail({
                 <Calculator size={19} />
                 利益を試算する
               </button>
-            </section>
+            </section>}
             {isOwner && (
               <section className="bg-white p-4 lg:border lg:border-[#d9e0e8]">
                 <div className="flex gap-2">
@@ -1510,14 +1521,14 @@ export default function V2PropertyDetail({
               問い合わせる
             </button>
           )}
-          <button
+          {property.status !== "sold" && <button
             onClick={downloadAll}
             disabled={!visibleFiles.length || downloading === "all"}
             className="flex h-12 flex-1 items-center justify-center gap-2 border-2 border-[#173f70] text-[12px] font-bold text-[#173f70] disabled:border-[#9aa7b6] disabled:text-[#9aa7b6]"
           >
             <Download size={17} />
             資料一括DL
-          </button>
+          </button>}
         </div>
       </div>
       {introOpen && (

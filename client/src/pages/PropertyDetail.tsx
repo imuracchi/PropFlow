@@ -1710,7 +1710,7 @@ export default function PropertyDetail() {
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-3">
-              {visibleFileCount > 0 && (
+              {property.status !== "sold" && visibleFileCount > 0 && (
                 <button
                   className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-primary/5 border border-primary/20 text-left hover:bg-primary/10 transition-colors"
                   onClick={() => setActiveTab("files")}
@@ -1720,7 +1720,7 @@ export default function PropertyDetail() {
                   <span className="text-xs text-primary shrink-0">資料タブを見る →</span>
                 </button>
               )}
-              {isOwner && hiddenFileCount > 0 && (
+              {property.status !== "sold" && isOwner && hiddenFileCount > 0 && (
                 <button
                   className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-left hover:bg-amber-100 transition-colors"
                   onClick={() => setActiveTab("files")}
@@ -1730,7 +1730,7 @@ export default function PropertyDetail() {
                   <span className="text-xs text-amber-700 shrink-0">資料タブを見る →</span>
                 </button>
               )}
-              {isOwner && visibleFileCount === 0 && hiddenFileCount === 0 && (
+              {property.status !== "sold" && isOwner && visibleFileCount === 0 && hiddenFileCount === 0 && (
                 <button
                   className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-muted/50 border border-border text-left hover:bg-muted transition-colors"
                   onClick={() => setActiveTab("files")}
@@ -1836,10 +1836,13 @@ export default function PropertyDetail() {
             </TabsContent>
 
             <TabsContent value="files" className="mt-4 space-y-4">
-              <PropertyFiles
-                isOwner={!!isOwner}
-                propertyId={propertyId}
-              />
+              {property.status === "sold" ? (
+                <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-4 text-sm font-medium text-green-800">
+                  成約済み物件の資料はダウンロードできません。
+                </div>
+              ) : (
+                <PropertyFiles isOwner={!!isOwner} propertyId={propertyId} />
+              )}
             </TabsContent>
 
             <TabsContent value="map" className="mt-4 space-y-4">
@@ -2011,7 +2014,7 @@ export default function PropertyDetail() {
           )}
 
           {/* 活用ツール */}
-          <div className="border border-border rounded-xl overflow-hidden">
+          {property.status !== "sold" && <div className="border border-border rounded-xl overflow-hidden">
             <div className="px-4 py-3 bg-muted/50 border-b border-border">
               <p className="text-sm font-semibold text-foreground">活用ツール</p>
             </div>
@@ -2049,7 +2052,7 @@ export default function PropertyDetail() {
                 >開始</button>
               </div>
             </div>
-          </div>
+          </div>}
 
           {/* 成約にする（オーナーのみ） */}
           {user && property && user.id === property.userId && !isEditing && property.status !== "sold" && (
