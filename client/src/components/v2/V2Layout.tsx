@@ -70,12 +70,6 @@ export default function V2Layout({
     refetchInterval: 30000,
   });
   const unreadAnnouncementCount = unreadAnnouncementCountQuery.data ?? 0;
-  const hasEverListedPropertyQuery =
-    trpc.mypage.hasEverListedProperty.useQuery(undefined, {
-      enabled: !preview && !!user,
-      staleTime: 5 * 60 * 1000,
-    });
-  const canShareReferral = hasEverListedPropertyQuery.data === true;
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
   const [referralCopied, setReferralCopied] = useState(false);
@@ -295,7 +289,7 @@ export default function V2Layout({
             <span className="text-[12px] font-bold">お知らせ</span>
             {unreadAnnouncementCount > 0 && <span className="absolute -right-1 -top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-[#d95532] px-1 text-[9px] font-bold leading-none text-white">{unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}</span>}
           </button>
-          {canShareReferral && (
+          {!preview && user && (
             <button
               onClick={() => setReferralOpen(true)}
               className="ml-1 flex h-9 items-center gap-1.5 border-l border-[#d9e0e8] pl-3 pr-1 text-[#173f70]"

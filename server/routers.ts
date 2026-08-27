@@ -1987,10 +1987,6 @@ ${propList}`,
       return db.getMyProperties(ctx.user.id);
     }),
 
-    hasEverListedProperty: protectedProcedure.query(async ({ ctx }) => {
-      return db.hasEverListedProperty(ctx.user.id);
-    }),
-
     interestedUsers: protectedProcedure.query(async ({ ctx }) => {
       return db.getInterestedUsersForMyProperties(ctx.user.id);
     }),

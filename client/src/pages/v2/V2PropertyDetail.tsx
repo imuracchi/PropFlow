@@ -4,6 +4,7 @@ import {
   Camera,
   CheckCircle2,
   ChevronDown,
+  Copy,
   Download,
   Eye,
   EyeOff,
@@ -17,6 +18,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Share2,
   ShieldCheck,
   Sparkles,
   StickyNote,
@@ -194,6 +196,41 @@ function priceLabel(price: number | null, negotiable: number | boolean) {
   return oku
     ? `${oku}億${man ? `${man.toLocaleString()}万円` : "円"}`
     : `${man.toLocaleString()}万円`;
+}
+
+function publicAreaLabel(address: string) {
+  const prefecture = address.match(/^(東京都|北海道|大阪府|京都府|.{2,3}県)/)?.[1];
+  if (!prefecture) return address;
+  const rest = address.slice(prefecture.length);
+  const county = rest.match(/^(.+?郡.+?[町村])/);
+  if (county) return `${prefecture}${county[1]}`;
+  const designatedWard = rest.match(/^(.+?市.+?区)/);
+  if (designatedWard) return `${prefecture}${designatedWard[1]}`;
+  const municipality = rest.match(/^(.+?[市区町村])/);
+  return municipality ? `${prefecture}${municipality[1]}` : prefecture;
+}
+
+function buildPropertyShareText(property: any, mode: "propflow" | "email") {
+  const details = [
+    ["物件種別", property.type],
+    ["所在地", publicAreaLabel(property.address ?? "")],
+    ["価格", priceLabel(property.price, property.priceNegotiable)],
+    ["想定利回り", property.estimatedYield ? `${property.estimatedYield}%` : null],
+    ["土地面積", property.landArea ? `${property.landArea}㎡` : null],
+    ["建物面積", property.buildingArea ? `${property.buildingArea}㎡` : null],
+    ["構造", property.structure],
+    ["築年月", property.buildingAge],
+    ["交通", property.transport],
+    ["用途地域", property.zoning],
+  ]
+    .filter(([, value]) => value)
+    .map(([label, value]) => `${label}：${value}`)
+    .join("\n");
+  const header = `【物件情報】\n\n■ ${property.name}\n${details}`;
+  if (mode === "propflow") {
+    return `${header}\n\n物件の詳細や資料は、PropFlowでご確認いただけます。\n\n▼PropFlowのご案内\nhttps://propflow.jp/propflow-intro.html\n\n▼登録申請\nhttps://propflow.jp/registration-request\n\n物件番号：PF-${property.id}`;
+  }
+  return `${header}\n\n物件の詳細や資料をご希望の不動産業者様は、下記までお気軽にお問い合わせください。\n\nお問い合わせ先\nproperty@gspec.me\n\nメールの件名または本文に\n「物件番号：PF-${property.id}」\nとご記載ください。`;
 }
 
 function saveBase64(name: string, contentBase64: string) {
@@ -424,6 +461,10 @@ export default function V2PropertyDetail({
   const [excludeSearch, setExcludeSearch] = useState("");
   const [previewExclusions, setPreviewExclusions] = useState<any[]>([]);
   const [introOpen, setIntroOpen] = useState(false);
+  const [ownerToolsOpen, setOwnerToolsOpen] = useState(false);
+  const [shareTextOpen, setShareTextOpen] = useState(false);
+  const [shareTextMode, setShareTextMode] = useState<"propflow" | "email">("propflow");
+  const [shareTextCopied, setShareTextCopied] = useState(false);
   const [introGenerating, setIntroGenerating] = useState(false);
   const [introAttachments, setIntroAttachments] = useState<Set<number>>(
     new Set()
@@ -468,6 +509,26 @@ export default function V2PropertyDetail({
   const negotiationStatus = preview
     ? { mine: true, others: true }
     : (negotiationQuery.data ?? { mine: false, others: false });
+
+  const propertyShareText = property
+    ? buildPropertyShareText(property, shareTextMode)
+    : "";
+  const copyPropertyShareText = async () => {
+    try {
+      await navigator.clipboard.writeText(propertyShareText);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = propertyShareText;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+    setShareTextCopied(true);
+    window.setTimeout(() => setShareTextCopied(false), 2500);
+  };
 
   useEffect(() => {
     if (!preview && property && user && !isOwner)
@@ -1434,8 +1495,13 @@ export default function V2PropertyDetail({
             </section>}
             {isOwner && (
               <section className="bg-white p-4 lg:border lg:border-[#d9e0e8]">
-                <div className="flex gap-2">
-                  <ShieldCheck size={20} className="text-[#173f70]" />
+                <button
+                  type="button"
+                  onClick={() => setOwnerToolsOpen(current => !current)}
+                  className="flex w-full items-center gap-2 text-left lg:cursor-default"
+                  aria-expanded={ownerToolsOpen}
+                >
+                  <ShieldCheck size={20} className="shrink-0 text-[#173f70]" />
                   <div>
                     <h2 className="text-[16px] font-bold text-[#102d50] lg:text-[17px]">
                       物件管理
@@ -1444,6 +1510,32 @@ export default function V2PropertyDetail({
                       物件登録者だけに表示
                     </p>
                   </div>
+                  <ChevronDown
+                    size={20}
+                    className={`ml-auto text-[#65748a] transition-transform lg:hidden ${ownerToolsOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+                <div className={ownerToolsOpen ? "block" : "hidden lg:block"}>
+                <div className="mt-4 border border-[#d9e0e8] bg-[#f8fafc] p-3">
+                  <div className="flex items-start gap-3">
+                    <Share2 size={18} className="mt-0.5 shrink-0 text-[#173f70]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold text-[#102d50]">SNS用の物件紹介文</p>
+                      <p className="mt-1 text-[10px] leading-5 text-[#65748a]">画像なしで使える紹介文を、用途に合わせてコピーできます。</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShareTextMode("propflow");
+                      setShareTextCopied(false);
+                      setShareTextOpen(true);
+                    }}
+                    className="mt-3 flex h-10 w-full items-center justify-center gap-2 bg-[#173f70] px-3 text-[12px] font-bold text-white"
+                  >
+                    <Copy size={16} />
+                    物件紹介文を作る
+                  </button>
                 </div>
                 <div className="mt-4 border-y border-[#e2e7ec] py-3">
                   <div className="flex items-center">
@@ -1588,6 +1680,7 @@ export default function V2PropertyDetail({
                   <Trash2 size={18} className="mr-3" />
                   物件を削除
                 </button>
+                </div>
               </section>
             )}
           </aside>
@@ -1620,6 +1713,71 @@ export default function V2PropertyDetail({
           </button>}
         </div>
       </div>
+      {shareTextOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-4"
+          onClick={() => setShareTextOpen(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="property-share-title"
+            className="w-full bg-white p-5 shadow-xl sm:max-w-lg sm:border sm:border-[#d9e0e8] sm:p-6"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="grid size-10 shrink-0 place-items-center bg-[#edf3f8] text-[#173f70]">
+                <Share2 size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 id="property-share-title" className="text-[17px] font-bold text-[#102d50]">物件紹介文をコピー</h2>
+                <p className="mt-1 text-[11px] leading-5 text-[#65748a]">投稿先の方針に合わせて2種類から選べます。画像は含まれません。</p>
+              </div>
+              <button type="button" onClick={() => setShareTextOpen(false)} className="grid size-9 shrink-0 place-items-center text-[#65748a]" aria-label="閉じる">
+                <X size={19} />
+              </button>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShareTextMode("propflow");
+                  setShareTextCopied(false);
+                }}
+                className={`min-h-12 border px-3 text-[12px] font-bold ${shareTextMode === "propflow" ? "border-[#173f70] bg-[#edf3f8] text-[#173f70]" : "border-[#d9e0e8] text-[#65748a]"}`}
+              >
+                PropFlowへ案内
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShareTextMode("email");
+                  setShareTextCopied(false);
+                }}
+                className={`min-h-12 border px-3 text-[12px] font-bold ${shareTextMode === "email" ? "border-[#173f70] bg-[#edf3f8] text-[#173f70]" : "border-[#d9e0e8] text-[#65748a]"}`}
+              >
+                メールで問い合わせ
+              </button>
+            </div>
+            <p className="mt-3 text-[10px] leading-5 text-[#65748a]">
+              {shareTextMode === "propflow"
+                ? "PropFlowの紹介ページと登録申請へ案内します。"
+                : "外部サービスへのリンクを載せず、property@gspec.meへ案内します。"}
+            </p>
+            <div className="mt-3 max-h-[42vh] overflow-y-auto whitespace-pre-wrap border border-[#d9e0e8] bg-[#f8fafc] p-4 text-[12px] leading-6 text-[#334a66]">
+              {propertyShareText}
+            </div>
+            <button
+              type="button"
+              onClick={() => void copyPropertyShareText()}
+              className={`mt-4 flex h-12 w-full items-center justify-center gap-2 text-[14px] font-bold text-white ${shareTextCopied ? "bg-[#35724f]" : "bg-[#173f70]"}`}
+            >
+              <Copy size={18} />
+              {shareTextCopied ? "コピーしました" : "この紹介文をコピー"}
+            </button>
+          </section>
+        </div>
+      )}
       {introOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-4"
