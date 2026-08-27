@@ -160,7 +160,7 @@ export function MessageAttachments({
 }) {
   if (!attachments?.length) return null;
   return (
-    <div className="mt-1.5 grid gap-1.5">
+    <div className="mt-1.5 grid w-[min(16rem,calc(100vw-7rem))] max-w-full gap-1.5">
       {attachments.map(file => {
         const expired =
           !!file.deletedAt || new Date(file.expiresAt).getTime() <= Date.now();
@@ -168,7 +168,7 @@ export function MessageAttachments({
           return (
             <div
               key={file.id}
-              className={`border px-3 py-2 text-[11px] ${mine ? "border-white/30 text-white/75" : "border-[#d9e0e8] bg-[#f3f5f7] text-[#718096]"}`}
+              className={`min-w-0 overflow-hidden border px-3 py-2 text-[11px] ${mine ? "border-white/30 text-white/75" : "border-[#d9e0e8] bg-[#f3f5f7] text-[#718096]"}`}
             >
               📎 {file.fileName}
               <br />
@@ -179,16 +179,19 @@ export function MessageAttachments({
         return (
           <div
             key={file.id}
-            className={`border p-2 text-[11px] ${mine ? "border-white/40 text-white" : "border-[#cbd5df] bg-white text-[#173f70]"}`}
+            className={`min-w-0 overflow-hidden border p-2 text-[11px] ${mine ? "border-white/40 text-white" : "border-[#cbd5df] bg-white text-[#173f70]"}`}
           >
             {file.mimeType.startsWith("image/") && (
               <img
                 src={url}
                 alt=""
-                className="mb-2 max-h-36 max-w-full object-contain"
+                className="mb-2 block h-auto max-h-40 w-full rounded object-contain"
               />
             )}
-            <a href={`${url}?download=1`} className="flex items-center gap-2">
+            <a
+              href={`${url}?download=1`}
+              className="flex min-w-0 items-center gap-2"
+            >
               {file.mimeType === "application/pdf" ? (
                 <FileText size={16} />
               ) : (
