@@ -463,6 +463,7 @@ export default function V2PropertyDetail({
   const [introOpen, setIntroOpen] = useState(false);
   const [ownerToolsOpen, setOwnerToolsOpen] = useState(false);
   const [shareTextOpen, setShareTextOpen] = useState(false);
+  const [sharePromptFromPublish, setSharePromptFromPublish] = useState(false);
   const [shareTextMode, setShareTextMode] = useState<"propflow" | "email">("propflow");
   const [shareTextCopied, setShareTextCopied] = useState(false);
   const [introGenerating, setIntroGenerating] = useState(false);
@@ -534,6 +535,16 @@ export default function V2PropertyDetail({
     if (!preview && property && user && !isOwner)
       incrementView.mutate({ propertyId });
   }, [property?.id, user?.id]);
+
+  useEffect(() => {
+    if (preview || !property?.id) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("share") !== "1") return;
+    setSharePromptFromPublish(true);
+    setShareTextOpen(true);
+    url.searchParams.delete("share");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [preview, property?.id]);
   const facts = useMemo(
     () =>
       property
@@ -1529,6 +1540,7 @@ export default function V2PropertyDetail({
                     onClick={() => {
                       setShareTextMode("propflow");
                       setShareTextCopied(false);
+                      setSharePromptFromPublish(false);
                       setShareTextOpen(true);
                     }}
                     className="mt-3 flex h-10 w-full items-center justify-center gap-2 bg-[#173f70] px-3 text-[12px] font-bold text-white"
@@ -1580,6 +1592,7 @@ export default function V2PropertyDetail({
                       disabled={setPublished.isPending}
                       onClick={async () => {
                         const nextPublished = property.published === 0;
+                        const isFirstPublication = nextPublished && !property.publishedAt;
                         if (preview) {
                           setPreviewOverride({
                             ...property,
@@ -1590,6 +1603,12 @@ export default function V2PropertyDetail({
                             propertyId,
                             published: nextPublished,
                           });
+                          if (isFirstPublication) {
+                            setSharePromptFromPublish(true);
+                            setShareTextMode("propflow");
+                            setShareTextCopied(false);
+                            setShareTextOpen(true);
+                          }
                           if (
                             nextPublished &&
                             property.proposalRequestId &&
@@ -1730,7 +1749,12 @@ export default function V2PropertyDetail({
                 <Share2 size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 id="property-share-title" className="text-[17px] font-bold text-[#102d50]">物件紹介文をコピー</h2>
+                {sharePromptFromPublish && (
+                  <p className="text-[11px] font-bold text-[#35724f]">物件を公開しました</p>
+                )}
+                <h2 id="property-share-title" className="text-[17px] font-bold text-[#102d50]">
+                  {sharePromptFromPublish ? "物件紹介文を作りませんか？" : "物件紹介文をコピー"}
+                </h2>
                 <p className="mt-1 text-[11px] leading-5 text-[#65748a]">投稿先の方針に合わせて2種類から選べます。画像は含まれません。</p>
               </div>
               <button type="button" onClick={() => setShareTextOpen(false)} className="grid size-9 shrink-0 place-items-center text-[#65748a]" aria-label="閉じる">
@@ -1764,6 +1788,9 @@ export default function V2PropertyDetail({
                 ? "PropFlowの紹介ページと登録申請へ案内します。"
                 : "外部サービスへのリンクを載せず、property@gspec.meへ案内します。"}
             </p>
+            <div className="mt-2 border-l-4 border-[#35724f] bg-[#eef7f1] px-3 py-2 text-[11px] font-bold leading-5 text-[#27613c]">
+              PropFlowへの登録案内や手続きは、PropFlow運営担当が対応します。物件掲載者様にご対応いただく必要はありません。
+            </div>
             <div className="mt-3 max-h-[42vh] overflow-y-auto whitespace-pre-wrap border border-[#d9e0e8] bg-[#f8fafc] p-4 text-[12px] leading-6 text-[#334a66]">
               {propertyShareText}
             </div>
@@ -1775,6 +1802,15 @@ export default function V2PropertyDetail({
               <Copy size={18} />
               {shareTextCopied ? "コピーしました" : "この紹介文をコピー"}
             </button>
+            {sharePromptFromPublish && (
+              <button
+                type="button"
+                onClick={() => setShareTextOpen(false)}
+                className="mt-2 h-10 w-full text-[12px] font-semibold text-[#65748a]"
+              >
+                今はしない
+              </button>
+            )}
           </section>
         </div>
       )}

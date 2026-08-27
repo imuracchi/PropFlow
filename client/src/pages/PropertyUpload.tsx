@@ -507,7 +507,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
                       toast.success("物件を公開しました");
                       setLocation(
                         v2
-                          ? `/v2/property/${newPropertyId}`
+                          ? `/v2/property/${newPropertyId}?share=1`
                           : `/property/${newPropertyId}`
                       );
                     },
@@ -530,7 +530,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
                 toast.success("物件を公開しました");
                 setLocation(
                   v2
-                    ? `/v2/property/${newPropertyId}`
+                    ? `/v2/property/${newPropertyId}?share=1`
                     : `/property/${newPropertyId}`
                 );
               }}
