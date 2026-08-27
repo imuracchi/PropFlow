@@ -73,6 +73,9 @@ async function startServer() {
 
   app.post("/api/scheduled/publish-property", async (req, res) => {
     try {
+      if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED !== "true") {
+        return res.status(503).json({ error: "scheduled-property-publishing-disabled" });
+      }
       const { sdk } = await import("./sdk");
       const user = await sdk.authenticateRequest(req);
       if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });

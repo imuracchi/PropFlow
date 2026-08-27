@@ -1756,6 +1756,9 @@ ${propList}`,
     schedulePublication: protectedProcedure
       .input(z.object({ propertyId: z.number(), scheduledAt: z.string(), sendNotifications: z.boolean().default(true) }))
       .mutation(async ({ input, ctx }) => {
+        if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED !== "true") {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "公開予約機能は現在停止中です" });
+        }
         if (ctx.user.role !== "admin") {
           throw new TRPCError({ code: "FORBIDDEN", message: "公開予約は現在、管理者による検証中です" });
         }
@@ -1823,6 +1826,9 @@ ${propList}`,
     publishScheduledNow: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
       .mutation(async ({ input, ctx }) => {
+        if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED !== "true") {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "公開予約機能は現在停止中です" });
+        }
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
         if (prop.scheduleCronTaskUid) {
           const { deleteHeartbeatJob } = await import("./_core/heartbeat");

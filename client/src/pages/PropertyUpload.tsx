@@ -1972,7 +1972,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
             </div>
           </div>
         </button>
-        {user?.role === "admin" && (!proposalRequestId || !proposalOnly) && (
+        {false && user?.role === "admin" && (!proposalRequestId || !proposalOnly) && (
           <button
             type="button"
             onClick={() => setPublishMode("schedule")}
