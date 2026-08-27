@@ -60,7 +60,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
     cls: "bg-blue-50 text-blue-700 border border-blue-200",
   },
   negotiating: {
-    label: "商談中",
+    label: "問い合わせあり",
     cls: "bg-amber-50 text-amber-700 border border-amber-200",
   },
   sold: {
@@ -724,7 +724,7 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
                 onChange={event => setNotifyRestore(event.target.checked)}
                 className="mt-0.5 size-4 accent-[#173f70]"
               />
-              過去の商談相手へ再公開を知らせる
+              以前問い合わせのあった方へ再公開を知らせる
             </label>
             {notifyRestore && (
               <label className="mt-4 block text-[12px] font-bold text-[#526176]">
@@ -767,7 +767,7 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
                   setRestoreTarget(null);
                   if (notifyRestore && result.notifiedCount)
                     alert(
-                      `${result.notifiedCount}名の商談相手へ再公開を通知しました`
+                      `以前問い合わせのあった${result.notifiedCount}名へ再公開を通知しました`
                     );
                 }}
                 className="h-11 flex-[1.2] bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50"

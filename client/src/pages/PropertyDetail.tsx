@@ -1221,7 +1221,7 @@ export default function PropertyDetail() {
     );
   }
 
-  const STATUS_MAP: Record<string, string> = { available: "公開中", negotiating: "商談中", sold: "売却済" };
+  const STATUS_MAP: Record<string, string> = { available: "公開中", negotiating: "問い合わせあり", sold: "売却済" };
   const createdDate = fmtDate(property.createdAt);
 
   const details: [string, string][] = [
@@ -2262,10 +2262,10 @@ export default function PropertyDetail() {
                 <div className="px-5 py-4 space-y-4">
                   <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 space-y-1">
                     <p className="text-sm font-semibold text-red-700">⚠️ 物件一覧から取り下げます</p>
-                    <p className="text-xs text-red-600">削除後30日間は、写真・添付ファイルを含めてマイページから復元できます。30日後はユーザー画面から非表示となり、写真・添付ファイルだけが削除されます。物件概要と商談履歴はマーケティングデータとして保持されます。</p>
+                    <p className="text-xs text-red-600">削除後30日間は、写真・添付ファイルを含めてマイページから復元できます。30日後はユーザー画面から非表示となり、写真・添付ファイルだけが削除されます。物件概要と問い合わせ履歴はマーケティングデータとして保持されます。</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">やり取りした相手へのメッセージ（任意）</label>
+                    <label className="text-sm font-medium text-foreground">問い合わせのあった方へのメッセージ（任意）</label>
                     <p className="text-xs text-muted-foreground mt-0.5 mb-2">入力した場合、この物件でDMをしていた全員にメッセージが送信されます。</p>
                     <Textarea
                       value={deleteMessage}
@@ -2342,7 +2342,7 @@ export default function PropertyDetail() {
               <h3 className="font-semibold text-foreground">成約にする</h3>
             </div>
             <div className="px-5 py-4 space-y-3">
-              <p className="text-sm text-foreground">「{property.name}」を成約済みにします。やり取りしていた相手にはDMで自動的にお知らせします。</p>
+              <p className="text-sm text-foreground">「{property.name}」を成約済みにします。問い合わせのあった方にはDMで自動的にお知らせします。</p>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">成約金額（円・わからなければ空欄でOK）</label>
                 <Input

@@ -697,7 +697,7 @@ export default function V2PropertySearch() {
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[14px] font-bold text-[#173f70]">
               {accepted
-                ? "商談中です"
+                ? "メッセージを開始済みです"
                 : declined
                   ? "この提案は受付終了になりました"
                   : "提案を送信しました。募集者の確認をお待ちください。"}
@@ -736,7 +736,7 @@ export default function V2PropertySearch() {
               }}
               className="mt-4 h-11 w-full bg-[#173f70] px-5 text-[13px] font-bold text-white sm:w-auto"
             >
-              商談を見る
+              問い合わせを見る
             </button>
           )}
         </div>
@@ -1478,7 +1478,7 @@ export default function V2PropertySearch() {
                                 className="h-11 w-full shrink-0 bg-[#173f70] px-5 text-[13px] font-bold text-white disabled:opacity-50 sm:w-auto"
                               >
                                 {proposal.status === "accepted"
-                                  ? "商談を見る"
+                                  ? "問い合わせを見る"
                                   : "詳しく聞く"}
                               </button>
                             )}
@@ -2070,8 +2070,8 @@ export default function V2PropertySearch() {
               </button>
             </div>
             <div className="mt-4 bg-[#fff7ed] px-4 py-3 text-[13px] leading-6 text-[#8a4b20]">
-              未商談の提案 {pendingProposalCount}
-              件を「受付終了」に変更します。商談開始済みのDMと履歴は残ります。
+              未対応の提案 {pendingProposalCount}
+              件を「受付終了」に変更します。メッセージ開始済みのDMと履歴は残ります。
             </div>
             <label className="mt-5 block text-[13px] font-bold text-[#263b58]">
               提案者へのメッセージ（任意）
@@ -2085,7 +2085,7 @@ export default function V2PropertySearch() {
               />
             </label>
             <p className="mt-2 text-[11px] leading-5 text-[#65748a]">
-              未商談の提案者には募集終了のお知らせを通知します。入力したメッセージも通知に記載されます。
+              未対応の提案者には募集終了のお知らせを通知します。入力したメッセージも通知に記載されます。
             </p>
             {closeError && (
               <p className="mt-3 text-[12px] font-bold text-[#b42318]">
@@ -2313,11 +2313,11 @@ export default function V2PropertySearch() {
                     </p>
                     {p.status === "accepted" ? (
                       <p className="mt-3 text-[12px] font-bold text-[#27613c]">
-                        商談を開始しました
+                        メッセージを開始しました
                       </p>
                     ) : p.status === "declined" ? (
                       <p className="mt-3 text-[12px] text-[#758194]">
-                        他の提案で商談中です
+                        他の提案が選ばれました
                       </p>
                     ) : (
                       <button
@@ -2325,7 +2325,7 @@ export default function V2PropertySearch() {
                         disabled={acceptProposal.isPending}
                         className="mt-4 h-10 bg-[#173f70] px-5 text-[12px] font-bold text-white disabled:opacity-50"
                       >
-                        この提案で商談を開始
+                        この提案についてメッセージを開始
                       </button>
                     )}
                   </div>

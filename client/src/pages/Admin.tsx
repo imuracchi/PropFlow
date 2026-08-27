@@ -70,7 +70,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
     label: "公開中",
     cls: "border border-blue-600 text-blue-600 bg-white",
   },
-  negotiating: { label: "商談中", cls: "bg-amber-500 text-white" },
+  negotiating: { label: "問い合わせあり", cls: "bg-amber-500 text-white" },
   sold: { label: "売却済", cls: "bg-gray-400 text-white" },
 };
 
@@ -1106,8 +1106,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       "物件名",
                       "登録者",
                       "価格",
-                      "閲覧数",
-                      "商談数",
+                      "総閲覧回数",
+                      "閲覧ユーザー数",
+                      "問い合わせ数",
                       "表示",
                       "簡易掲載",
                       "登録日",
@@ -1168,6 +1169,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                         </td>
                         <td className="px-4 py-3 text-center text-xs font-bold text-foreground">
                           {prop.viewCount ?? 0}
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs font-bold text-foreground">
+                          {(prop as any).uniqueViewerCount ?? 0}
                         </td>
                         <td className="px-4 py-3 text-center text-xs font-bold text-foreground">
                           {prop.inquiryCount ?? 0}
@@ -1310,7 +1314,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                         : request.status === "active"
                           ? "募集中"
                           : request.status === "negotiating"
-                            ? "商談中"
+                            ? "問い合わせあり"
                             : "募集終了";
                     return (
                       <tr
@@ -1427,7 +1431,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="px-4 py-3 bg-muted/40 border-b border-border">
               <h3 className="text-sm font-semibold">
-                閲覧数ランキング（上位20件）
+                総閲覧回数ランキング（上位20件）
               </h3>
             </div>
             <div className="overflow-x-auto">
@@ -1439,7 +1443,8 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       "物件情報",
                       "種別",
                       "掲載者",
-                      "閲覧数",
+                      "総閲覧回数",
+                      "閲覧ユーザー数",
                       "公開",
                     ].map(h => (
                       <th
@@ -1493,6 +1498,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           <Eye className="w-3.5 h-3.5" />
                           {p.viewCount.toLocaleString()}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 font-bold text-foreground whitespace-nowrap">
+                        {(p as any).uniqueViewerCount?.toLocaleString() ?? 0}
                       </td>
                       <td className="px-4 py-3 text-xs whitespace-nowrap">
                         {p.published ? (

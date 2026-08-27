@@ -204,8 +204,8 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
       <main className="fixed inset-0 z-20 flex max-w-[1380px] flex-col overflow-hidden bg-white lg:static lg:ml-7 lg:my-6 lg:h-[calc(100dvh-116px)] lg:flex-row lg:border lg:border-[#d9e0e8]">
         <aside className="hidden w-[330px] shrink-0 border-r border-[#d9e0e8] bg-white lg:block">
           <div className="border-b border-[#d9e0e8] px-5 py-4">
-            <h2 className="text-[18px] font-bold text-[#102d50]">商談一覧</h2>
-            <p className="mt-1 text-[12px] text-[#758194]">進行中の商談 {sideThreads.length}件</p>
+            <h2 className="text-[18px] font-bold text-[#102d50]">問い合わせ一覧</h2>
+            <p className="mt-1 text-[12px] text-[#758194]">問い合わせのある物件 {sideThreads.length}件</p>
           </div>
           <div className="overflow-y-auto">
             {sideThreads.map(item => {
@@ -255,7 +255,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
               <p className="truncate text-[12px] font-bold text-[#173f70]">
                 {property?.name ?? thread?.propertyName}
               </p>
-              {isRestricted ? <p className="truncate text-[10px] font-bold text-[#a06018]">閲覧制限中・商談履歴のみ閲覧可能</p> : <p className="hidden truncate text-[10px] text-[#758194] lg:block">{property?.address}</p>}
+              {isRestricted ? <p className="truncate text-[10px] font-bold text-[#a06018]">閲覧制限中・問い合わせ履歴のみ閲覧可能</p> : <p className="hidden truncate text-[10px] text-[#758194] lg:block">{property?.address}</p>}
             </div>
           </button>
         )}
@@ -325,7 +325,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             </label>
           </div>}
           {isRestricted ? (
-            <div className="border border-[#e1c88f] bg-[#fff8e8] px-4 py-3 text-center text-[12px] font-bold text-[#8b5a08]">この物件は閲覧制限中です。過去の商談履歴のみ確認できます。</div>
+            <div className="border border-[#e1c88f] bg-[#fff8e8] px-4 py-3 text-center text-[12px] font-bold text-[#8b5a08]">この物件は閲覧制限中です。過去の問い合わせ履歴のみ確認できます。</div>
           ) : isClosed ? (
             <div className="border border-[#d4dde7] bg-[#f2f5f8] px-4 py-3 text-center text-[12px] font-bold text-[#65748a]">この物件は成約済みのため、メッセージや連絡先を送信できません。</div>
           ) : <div className="flex items-end gap-2">

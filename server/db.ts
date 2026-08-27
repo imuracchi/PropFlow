@@ -1942,7 +1942,7 @@ export async function purgeExpiredOwnerDeletedProperties() {
       and(eq(properties.deleted, 1), lt(properties.ownerDeletedAt, expiry))
     );
   // 削除操作から30日を過ぎた物件は写真・添付ファイルだけを削除する。
-  // 物件概要と商談履歴はマーケティングデータとして活用するため保持する。
+  // 物件概要と問い合わせ履歴はマーケティングデータとして活用するため保持する。
   for (const property of expired) {
     await db
       .delete(propertyFiles)
@@ -1958,6 +1958,17 @@ export async function purgeExpiredOwnerDeletedProperties() {
 export async function listAllPropertiesAdmin() {
   const db = await getDb();
   if (!db) return [];
+  const viewCountSub = db
+    .select({
+      propertyId: propertyViewEvents.propertyId,
+      totalViews: sql<number>`COUNT(*)`.as("totalViews"),
+      uniqueViewers: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as(
+        "uniqueViewers"
+      ),
+    })
+    .from(propertyViewEvents)
+    .groupBy(propertyViewEvents.propertyId)
+    .as("admin_view_count");
   const inquiryCountSub = db
     .select({
       propertyId: directMessages.propertyId,
@@ -1985,7 +1996,13 @@ export async function listAllPropertiesAdmin() {
       publishedAt: properties.publishedAt,
       externalListingConsent: properties.externalListingConsent,
       externalListingConsentedAt: properties.externalListingConsentedAt,
-      viewCount: properties.viewCount,
+      viewCount: sql<number>`COALESCE(${viewCountSub.totalViews}, 0)`.as(
+        "viewCount"
+      ),
+      uniqueViewerCount:
+        sql<number>`COALESCE(${viewCountSub.uniqueViewers}, 0)`.as(
+          "uniqueViewerCount"
+        ),
       inquiryCount: sql<number>`COALESCE(${inquiryCountSub.inquiryCnt}, 0)`.as(
         "inquiryCount"
       ),
@@ -1996,6 +2013,7 @@ export async function listAllPropertiesAdmin() {
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
+    .leftJoin(viewCountSub, eq(properties.id, viewCountSub.propertyId))
     .leftJoin(inquiryCountSub, eq(properties.id, inquiryCountSub.propertyId))
     .orderBy(desc(properties.createdAt));
 }
@@ -3499,7 +3517,7 @@ export async function getInterestedUsersForMyProperties(userId: number) {
       )}) AND ${propertyMemos.userId} != ${userId}`
     );
 
-  // DMのやり取りがある相手は「商談中」として表示する
+  // DMのやり取りがある相手は「問い合わせあり」として表示する
   const dmSenders = await db
     .select({
       propertyId: directMessages.propertyId,
@@ -4856,6 +4874,17 @@ export async function incrementViewCount(propertyId: number, userId: number) {
 export async function getTopViewedProperties(limit = 20) {
   const db = await getDb();
   if (!db) return [];
+  const viewCountSub = db
+    .select({
+      propertyId: propertyViewEvents.propertyId,
+      totalViews: sql<number>`COUNT(*)`.as("totalViews"),
+      uniqueViewers: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as(
+        "uniqueViewers"
+      ),
+    })
+    .from(propertyViewEvents)
+    .groupBy(propertyViewEvents.propertyId)
+    .as("ranking_view_count");
   return db
     .select({
       id: properties.id,
@@ -4864,7 +4893,13 @@ export async function getTopViewedProperties(limit = 20) {
       address: properties.address,
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,
-      viewCount: properties.viewCount,
+      viewCount: sql<number>`COALESCE(${viewCountSub.totalViews}, 0)`.as(
+        "viewCount"
+      ),
+      uniqueViewerCount:
+        sql<number>`COALESCE(${viewCountSub.uniqueViewers}, 0)`.as(
+          "uniqueViewerCount"
+        ),
       published: properties.published,
       createdAt: properties.createdAt,
       ownerName: users.name,
@@ -4872,8 +4907,9 @@ export async function getTopViewedProperties(limit = 20) {
     })
     .from(properties)
     .leftJoin(users, eq(properties.userId, users.id))
+    .leftJoin(viewCountSub, eq(properties.id, viewCountSub.propertyId))
     .where(eq(properties.deleted, 0))
-    .orderBy(desc(properties.viewCount))
+    .orderBy(desc(viewCountSub.totalViews))
     .limit(limit);
 }
 

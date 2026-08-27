@@ -24,7 +24,7 @@ import { trpc } from "@/lib/trpc";
 const nav = [
   { icon: List, label: "物件一覧", path: "/v2/properties" },
   { icon: Heart, label: "お気に入り", path: "/v2/favorites" },
-  { icon: MessageCircle, label: "商談一覧", path: "/v2/messages" },
+  { icon: MessageCircle, label: "問い合わせ一覧", path: "/v2/messages" },
   { icon: Building2, label: "自社物件", path: "/v2/my-properties" },
   { icon: Users, label: "興味者リスト", path: "/v2/interested" },
   { icon: Download, label: "ダウンロード資料", path: "/v2/documents" },
@@ -172,16 +172,6 @@ export default function V2Layout({
               {item.label}
             </button>
           ))}
-          <button
-            onClick={openAdminReport}
-            className="mb-1 flex h-10 w-full items-center gap-3 px-3 text-[13px] text-white/65 hover:bg-white/10"
-          >
-            <MessageSquareText size={17} />
-            ご意見箱
-          </button>
-          <p className="mt-5 px-3 pb-2 text-[10px] font-bold tracking-widest text-white/40">
-            ヘルプ・サポート
-          </p>
           <a
             href="/support.html"
             target="_blank"
@@ -189,8 +179,15 @@ export default function V2Layout({
             className="mb-1 flex h-10 w-full items-center gap-3 px-3 text-[13px] text-white/65 hover:bg-white/10"
           >
             <HelpCircle size={17} />
-            ヘルプ・お問い合わせ
+            ヘルプ
           </a>
+          <button
+            onClick={openAdminReport}
+            className="mb-1 flex h-10 w-full items-center gap-3 px-3 text-[13px] text-white/65 hover:bg-white/10"
+          >
+            <MessageSquareText size={17} />
+            ご意見箱
+          </button>
         </nav>
         <div className="border-t border-white/10 p-4">
           <div className="mb-4 flex items-center justify-center gap-3 text-[10px] text-white/50">

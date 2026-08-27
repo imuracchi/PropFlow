@@ -100,9 +100,9 @@ export default function V2Messages({ preview = false }: { preview?: boolean }) {
       <main className="w-full max-w-[1250px] p-4 lg:p-7">
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-[14px] text-[#758194]">物件に関する商談とやり取りを確認できます。</p>
+            <p className="text-[14px] text-[#758194]">物件に関する問い合わせやメッセージを確認できます。</p>
             <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
-              商談一覧
+              問い合わせ一覧
             </h1>
           </div>
           <p className="text-[12px] text-[#65748a]">{filtered.length}件</p>
@@ -114,7 +114,7 @@ export default function V2Messages({ preview = false }: { preview?: boolean }) {
               className={`border-b-2 px-4 py-3 text-[13px] font-bold ${tab === "active" ? "border-[#173f70] text-[#173f70]" : "border-transparent text-[#758194]"}`}
             >
               <MessageCircle size={15} className="mr-1.5 inline" />
-              商談中
+              問い合わせあり
             </button>
             <button
               onClick={() => setTab("flagged")}
@@ -174,7 +174,7 @@ export default function V2Messages({ preview = false }: { preview?: boolean }) {
                           </span>
                         )}
                         <span className={`shrink-0 px-2 py-0.5 text-[10px] font-bold ${thread.initiatedByMe ? "bg-[#e8eef5] text-[#173f70]" : "bg-[#e8f3ec] text-[#27613c]"}`}>
-                          {thread.initiatedByMe ? "こちらから商談" : "相手から商談"}
+                          {thread.initiatedByMe ? "こちらから問い合わせ" : "相手から問い合わせ"}
                         </span>
                         {thread.flagged && (
                           <span className="shrink-0 bg-[#fff0c9] px-2 py-0.5 text-[10px] font-bold text-[#8b5a08]">
@@ -220,7 +220,7 @@ export default function V2Messages({ preview = false }: { preview?: boolean }) {
             <div className="py-24 text-center">
               <MessageCircle size={35} className="mx-auto text-[#a5afba]" />
               <p className="mt-3 text-[14px] font-bold text-[#526176]">
-                商談はありません
+                問い合わせはありません
               </p>
             </div>
           )}

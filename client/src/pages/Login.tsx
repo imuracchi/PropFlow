@@ -191,7 +191,7 @@ export default function Login({
               もっと速く、シンプルに。
             </h1>
             <p className="mt-5 max-w-sm text-[14px] leading-7 text-[#d8e4f0]">
-              物件の確認から商談、資料共有まで。日々の不動産取引をひとつの場所で進められます。
+              物件の確認から問い合わせ、資料共有まで。日々の不動産取引をひとつの場所で進められます。
             </p>
             {showClosingReport && (
               <div className="mt-8 flex items-center gap-4 border border-[#e0c57e] border-t-4 border-t-[#d6a43e] bg-white px-5 py-4 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.24)]">

@@ -663,7 +663,7 @@ export default function V2PropertyList({
               onClick={() => setNegotiatingOnly(!negotiatingOnly)}
               className={`border px-3 py-2 text-[11px] font-bold ${negotiatingOnly ? "border-[#d5ad54] bg-[#fff1b8] text-[#765500]" : "border-[#cbd5df] text-[#65748a]"}`}
             >
-              商談中
+              問い合わせあり
             </button>
             {collection === "all" && (
               <button
@@ -803,7 +803,7 @@ export default function V2PropertyList({
                       )}
                     {p.published !== 0 && p.status === "negotiating" && (
                       <span className="bg-[#fff1b8] px-2 py-0.5 text-[#765500]">
-                        商談中
+                        問い合わせあり
                       </span>
                     )}
                     {p.published !== 0 && isPropertyAttentionWorthy(p) && (
@@ -1017,7 +1017,7 @@ export default function V2PropertyList({
                             )}
                           {p.published !== 0 && p.status === "negotiating" && (
                             <span className="bg-[#fff1b8] px-2 py-1 text-[12px] font-bold text-[#765500]">
-                              商談中
+                              問い合わせあり
                             </span>
                           )}
                           {p.published !== 0 &&

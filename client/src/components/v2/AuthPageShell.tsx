@@ -10,7 +10,7 @@ export default function AuthPageShell({ children, wide = false }: { children: Re
           <div className="my-auto">
             <p className="text-[12px] font-bold tracking-[0.22em] text-[#b8cce3]">PROPERTY NETWORK</p>
             <h1 className="mt-5 text-[29px] font-bold leading-[1.55]">業者間の物件情報を、<br/>もっと速く、シンプルに。</h1>
-            <p className="mt-5 max-w-sm text-[14px] leading-7 text-[#d8e4f0]">物件の確認から商談、資料共有まで。日々の不動産取引をひとつの場所で進められます。</p>
+            <p className="mt-5 max-w-sm text-[14px] leading-7 text-[#d8e4f0]">物件の確認から問い合わせ、資料共有まで。日々の不動産取引をひとつの場所で進められます。</p>
           </div>
           <p className="text-[11px] text-[#9fb7d1]">PropFlow — 不動産情報プラットフォーム</p>
         </aside>

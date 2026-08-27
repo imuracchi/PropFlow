@@ -140,7 +140,7 @@ export default function DirectMessage() {
       {isRestricted ? (
         <div className="flex items-center gap-1.5 px-1 py-2.5 bg-amber-50 border-y border-amber-200">
           <Home className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-          <p className="text-xs font-medium text-amber-800">閲覧制限中・過去の商談履歴のみ確認できます</p>
+          <p className="text-xs font-medium text-amber-800">閲覧制限中・過去の問い合わせ履歴のみ確認できます</p>
         </div>
       ) : propertyDeleted ? (
         <div className="flex items-center gap-1.5 px-1 py-2.5">
@@ -236,7 +236,7 @@ export default function DirectMessage() {
         </div>
         {isClosed ? (
           <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-3xl bg-muted/50 text-xs text-muted-foreground">
-            {isRestricted ? "この物件は閲覧制限中です。過去の商談履歴のみ確認できます" : propertyDeleted ? "この物件は削除されたため、これ以上メッセージを送信できません" : "この物件は成約済みのため、これ以上メッセージを送信できません"}
+            {isRestricted ? "この物件は閲覧制限中です。過去の問い合わせ履歴のみ確認できます" : propertyDeleted ? "この物件は削除されたため、これ以上メッセージを送信できません" : "この物件は成約済みのため、これ以上メッセージを送信できません"}
           </div>
         ) : (
           <div className="flex items-end gap-2">

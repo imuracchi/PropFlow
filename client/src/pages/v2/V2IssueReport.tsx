@@ -113,7 +113,7 @@ export default function V2IssueReport() {
                 <input
                   value={page}
                   onChange={event => setPage(event.target.value)}
-                  placeholder="例：物件詳細画面、商談画面"
+                  placeholder="例：物件詳細画面、問い合わせ画面"
                   className="mt-2 h-12 w-full border border-[#bfcbd8] px-3 text-[14px] outline-none focus:border-[#173f70]"
                 />
               </label>

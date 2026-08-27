@@ -919,12 +919,12 @@ export default function V2PropertyDetail({
                   <div className="mt-4 flex flex-wrap gap-2 border-t border-[#e1e6ec] pt-4">
                     {negotiationStatus.mine && (
                       <span className="bg-[#e8f0f8] px-3 py-2 text-[12px] font-bold text-[#173f70]">
-                        あなたが商談中です
+                        あなたは問い合わせ済みです
                       </span>
                     )}
                     {negotiationStatus.others && (
                       <span className="bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
-                        他の方が商談中です
+                        他の方から問い合わせがあります
                       </span>
                     )}
                   </div>
@@ -932,7 +932,7 @@ export default function V2PropertyDetail({
               {isRegistrant && negotiationStatus.others && (
                 <div className="mt-4 border-t border-[#e1e6ec] pt-4">
                   <span className="inline-block bg-[#fff1b8] px-3 py-2 text-[12px] font-bold text-[#765500]">
-                    他の方が商談中です
+                    他の方から問い合わせがあります
                   </span>
                 </div>
               )}
@@ -2144,7 +2144,7 @@ export default function V2PropertyDetail({
               <div className="mt-4 space-y-4">
                 <p className="text-[13px] leading-6 text-[#526176]">
                   「{property.name}
-                  」を成約済みにします。やり取りしていた相手には、商談画面で自動的にお知らせします。
+                  」を成約済みにします。問い合わせのあった方には、問い合わせ画面で自動的にお知らせします。
                 </p>
                 <label className="block text-[12px] font-bold text-[#526176]">
                   成約金額（円）
@@ -2186,12 +2186,12 @@ export default function V2PropertyDetail({
             {dialog === "delete" && (
               <div className="mt-4 space-y-4">
                 <p className="text-[13px] leading-6 text-[#a72e2e]">
-                  この物件を一覧から取り下げます。削除後30日間は、写真・添付ファイルを含めてマイページから復元できます。30日後はユーザー画面から非表示となり、写真・添付ファイルだけが削除されます。物件概要と商談履歴はマーケティングデータとして保持されます。
+                  この物件を一覧から取り下げます。削除後30日間は、写真・添付ファイルを含めてマイページから復元できます。30日後はユーザー画面から非表示となり、写真・添付ファイルだけが削除されます。物件概要と問い合わせ履歴はマーケティングデータとして保持されます。
                 </p>
                 <label className="block text-[12px] font-bold text-[#526176]">
-                  やり取りした相手へのメッセージ（任意）
+                  問い合わせのあった方へのメッセージ（任意）
                   <span className="mt-1 block text-[11px] font-normal leading-5 text-[#758194]">
-                    入力した場合、この物件で商談していた全員へ削除前に送信されます。
+                    入力した場合、この物件で問い合わせのあった方全員へ削除前に送信されます。
                   </span>
                   <textarea
                     value={deleteMessage}

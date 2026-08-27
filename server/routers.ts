@@ -1326,7 +1326,7 @@ JSONのみ返してください。`,
           dealPrice: input.dealPrice,
         });
 
-        // やり取りしていた相手に成約を通知
+        // 問い合わせのあった方に成約を通知
         const partnerIds = await db.getDmPartnersForProperty(
           input.id,
           ctx.user.id
@@ -2056,7 +2056,7 @@ ${propList}`,
           skipEmailAndLine: !notificationBatch.sendImmediately,
         });
 
-        // 物件オーナー以外からの問い合わせが入ったら自動で商談中に
+        // 物件オーナー以外からの問い合わせが入ったら自動で問い合わせありに
         if (
           propInfo &&
           ctx.user.id !== propInfo.userId &&
@@ -2695,7 +2695,7 @@ ${propList}`,
         db.logActivity(
           ctx.user.id,
           "property_search_close",
-          `物件募集「${closed.requestTitle}」を終了（未商談提案${closed.pendingProposals.length}件を受付終了）`,
+          `物件募集「${closed.requestTitle}」を終了（未対応提案${closed.pendingProposals.length}件を受付終了）`,
           ctx.req.headers["user-agent"]
         ).catch(() => {});
         return {
@@ -2845,7 +2845,7 @@ ${propList}`,
           content: acceptanceContent,
           title: "物件募集への提案が承認されました",
           emailSubject: "【PropFlow】物件募集への提案が承認されました",
-          emailHeading: "商談が開始されました",
+          emailHeading: "メッセージが開始されました",
           path: `/v2/chat/${ctx.user.id}/${accepted.propertyId ?? 0}`,
         });
         db.logActivity(
