@@ -2023,7 +2023,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
             <input type="checkbox" checked={scheduledPublishNotify} onChange={event => setScheduledPublishNotify(event.target.checked)} className="mt-0.5 size-4" />
             公開時に新着メール・LINE・Webプッシュを送信する
           </span>
-          {!scheduledPublishNotify && <span className="mt-1 block text-[11px] font-bold text-[#8b5a08]">検証用：通知なしで公開します</span>}
+          {!scheduledPublishNotify && <span className="mt-1 block text-[11px] text-[#65748a]">新着通知を送らずに公開します</span>}
         </label>
       )}
       {proposalRequestId > 0 && !proposalOnly && publishMode === "draft" && (
