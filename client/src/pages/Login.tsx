@@ -172,29 +172,29 @@ export default function Login({
   };
 
   return (
-    <div className="propflow-readable min-h-screen bg-[#f2f5f8] flex items-center justify-center px-4 py-8 relative overflow-hidden [&_.rounded-xl]:rounded-none [&_.rounded-lg]:rounded-none [&_.rounded-md]:rounded-none [&_.shadow-lg]:shadow-none [&_.shadow-md]:shadow-none [&_button]:rounded-none [&_select]:rounded-none [&_input]:text-[16px]">
-      <div className="relative z-10 w-full max-w-[1040px] overflow-hidden border border-[#d6dee8] bg-white shadow-[0_18px_55px_rgba(16,45,80,0.14)] lg:grid lg:min-h-[680px] lg:grid-cols-[0.92fr_1.08fr]">
-        <aside className="hidden bg-[#123b6d] p-12 text-white lg:flex lg:flex-col">
+    <div className="propflow-readable min-h-screen bg-[#f2f5f8] flex items-center justify-center px-4 py-8 lg:py-4 relative overflow-hidden [&_.rounded-xl]:rounded-none [&_.rounded-lg]:rounded-none [&_.rounded-md]:rounded-none [&_.shadow-lg]:shadow-none [&_.shadow-md]:shadow-none [&_button]:rounded-none [&_select]:rounded-none [&_input]:text-[16px]">
+      <div className="relative z-10 w-full max-w-[1040px] overflow-hidden border border-[#d6dee8] bg-white shadow-[0_18px_55px_rgba(16,45,80,0.14)] lg:grid lg:h-[calc(100vh-32px)] lg:min-h-0 lg:max-h-[760px] lg:grid-cols-[0.92fr_1.08fr]">
+        <aside className="hidden overflow-hidden bg-[#123b6d] p-8 text-white lg:flex lg:flex-col">
           <div className="flex items-center gap-3">
             <Building2 size={30} />
             <span className="text-[25px] font-bold tracking-wide">
               PropFlow
             </span>
           </div>
-          <div className="my-auto">
+          <div className="mt-3">
             <p className="text-[12px] font-bold tracking-[0.22em] text-[#b8cce3]">
               PROPERTY NETWORK
             </p>
-            <h1 className="mt-5 text-[30px] font-bold leading-[1.55]">
+            <h1 className="mt-3 text-[27px] font-bold leading-[1.45]">
               業者間の物件情報を、
               <br />
               もっと速く、シンプルに。
             </h1>
-            <p className="mt-5 max-w-sm text-[14px] leading-7 text-[#d8e4f0]">
+            <p className="mt-3 max-w-sm text-[13px] leading-6 text-[#d8e4f0]">
               物件の確認から問い合わせ、資料共有まで。日々の不動産取引をひとつの場所で進められます。
             </p>
             {showClosingReport && (
-              <div className="mt-8 flex items-center gap-4 border border-[#e0c57e] border-t-4 border-t-[#d6a43e] bg-white px-5 py-4 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+              <div className="mt-4 flex items-center gap-3 border border-[#e0c57e] border-t-4 border-t-[#d6a43e] bg-white px-4 py-3 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
                 <div className="grid size-10 shrink-0 place-items-center bg-[#d6a43e] text-white">
                   <CheckCircle className="size-6" strokeWidth={2.5} />
                 </div>
@@ -202,20 +202,20 @@ export default function Login({
                   <p className="text-[11px] font-bold tracking-[0.16em] text-[#8a671d]">
                     利用実績
                   </p>
-                  <p className="mt-1 text-[18px] font-bold leading-7">
+                  <p className="mt-1 text-[16px] font-bold leading-6">
                     掲載者から成約のご報告が届きました。
                   </p>
                 </div>
               </div>
             )}
             {previousWeekCount > 0 && (
-              <div className="mt-3 border border-[#d6a43e] bg-[#fffaf0] px-5 py-4 text-[#102d50]">
+              <div className="mt-2 border border-[#d6a43e] bg-[#fffaf0] px-4 py-3 text-[#102d50]">
                 <p className="text-[11px] font-bold tracking-[0.14em] text-[#8a671d]">先週の新着</p>
-                <p className="mt-1 text-[18px] font-bold">先週、新たに{previousWeekCount}件の物件が公開されました</p>
+                <p className="mt-1 text-[16px] font-bold">先週、新たに{previousWeekCount}件の物件が公開されました</p>
               </div>
             )}
             {highlights.length > 0 && (
-              <section className="mt-5 border-t-4 border-[#d6a43e] bg-white p-6 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
+              <section className="mt-3 border-t-4 border-[#d6a43e] bg-white p-4 text-[#102d50] shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[9px] font-bold tracking-[.16em] text-[#8a671d]">NEW & TRENDING</p>
@@ -223,15 +223,15 @@ export default function Login({
                   </div>
                   <span className="shrink-0 bg-[#173f70] px-3 py-2 text-[11px] font-bold tracking-wide text-white">会員限定</span>
                 </div>
-                <div className="mt-5 grid gap-3">
+                <div className="mt-3 grid gap-2">
                   {highlights.map((item, index) => (
-                    <div key={`${item.area}-${item.type}-${index}`} className="border border-[#d7e0e9] border-l-4 border-l-[#d6a43e] bg-[#f7f9fb] px-4 py-4">
+                    <div key={`${item.area}-${item.type}-${index}`} className="border border-[#d7e0e9] border-l-4 border-l-[#d6a43e] bg-[#f7f9fb] px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         <span className={`shrink-0 px-2 py-1 text-[9px] font-bold text-white ${item.attention ? "bg-[#c78e19]" : "bg-[#173f70]"}`}>{item.attention ? "注目" : "登録"}</span>
                         <p className="truncate text-[15px] font-bold">{item.area}｜{item.type}</p>
                       </div>
-                      <div className="mt-3">
-                        <p className="text-[16px] font-bold text-[#173f70]">{item.priceBand}{item.sizeLabel ? `｜${item.sizeLabel}` : ""}</p>
+                      <div className="mt-1.5">
+                        <p className="text-[14px] font-bold text-[#173f70]">{item.priceBand}{item.sizeLabel ? `｜${item.sizeLabel}` : ""}</p>
                       </div>
                     </div>
                   ))}
@@ -239,11 +239,11 @@ export default function Login({
               </section>
             )}
           </div>
-          <p className="text-[11px] text-[#9fb7d1]">
+          <p className="mt-auto pt-2 text-[11px] text-[#9fb7d1]">
             PropFlow — 不動産情報プラットフォーム
           </p>
         </aside>
-        <div className="w-full px-5 py-7 sm:px-10 lg:flex lg:flex-col lg:justify-center lg:px-16 lg:py-10">
+        <div className="w-full px-5 py-7 sm:px-10 lg:flex lg:flex-col lg:justify-start lg:px-16 lg:pt-7 lg:pb-5">
           <div className="flex flex-col items-center mb-7 lg:hidden">
             <div className="flex items-center gap-2 text-[#173f70]">
               <Building2 size={28} />
@@ -794,7 +794,10 @@ export default function Login({
               )}
             </TabsContent>
           </Tabs>
-          <div className="mt-5 grid grid-cols-2 gap-2 text-[12px] font-bold">
+          <div className="mt-4 border border-[#d6a43e] bg-[#fffaf0] px-4 py-2.5 text-center text-[#173f70]">
+            <p className="text-[13px] font-bold">現在β版のため、無料公開中です</p>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] font-bold">
             <a
               href="/propflow-guide.html"
               target="_blank"

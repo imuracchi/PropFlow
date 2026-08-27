@@ -446,6 +446,15 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
 .use-case-number{display:block;margin-bottom:14px;color:var(--blue);font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;letter-spacing:.1em}
 .use-case-card h3{margin:0 0 10px;color:var(--text);font-size:21px;font-weight:900}
 .use-case-card p{margin:0;color:var(--text-sub);font-size:16px;line-height:1.85}
+.pricing{padding:88px 0;background:var(--surface)}
+.pricing-card{max-width:760px;margin:0 auto;padding:42px;border:1px solid var(--border);border-top:5px solid var(--blue);border-radius:18px;background:var(--surface);box-shadow:var(--shadow);text-align:center}
+.pricing-plan{display:inline-block;margin-bottom:12px;padding:5px 13px;border-radius:999px;background:var(--blue-light);color:var(--blue);font-size:13px;font-weight:700}
+.pricing-price{margin:0;color:var(--text);font-size:52px;font-weight:900;line-height:1.15}
+.pricing-price small{margin-left:6px;font-size:18px;font-weight:700}
+.pricing-items{display:flex;justify-content:center;flex-wrap:wrap;gap:10px 28px;margin:24px 0;color:var(--text);font-weight:700}
+.pricing-items span:before{content:"✓";margin-right:8px;color:var(--blue)}
+.pricing-description{max-width:640px;margin:0 auto 26px;color:var(--text-sub);font-size:16px;line-height:1.85}
+.pricing-note{margin:18px 0 0;color:var(--text-sub);font-size:13px;line-height:1.7}
 .faq{padding:88px 0;background:var(--bg)}
 .faq-list{max-width:860px;margin:0 auto;display:grid;gap:12px}
 .faq-category{margin:18px 0 2px;padding-left:14px;border-left:4px solid var(--blue);font-size:21px;color:var(--text)}
@@ -458,7 +467,7 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
 .faq-answer{padding:0 22px 20px;color:var(--text-sub);font-size:16px}
 .faq-answer p{margin:0}
 @media(max-width:900px){.use-case-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:760px){.role-grid,.use-case-grid{grid-template-columns:1fr}.recruitment,.use-cases,.faq{padding:64px 0}.role-card,.use-case-card{padding:24px 20px}.screen-showcase{padding:7px}.faq summary{padding-left:18px}.faq-answer{padding-left:18px;padding-right:18px}}
+@media(max-width:760px){.role-grid,.use-case-grid{grid-template-columns:1fr}.recruitment,.use-cases,.pricing,.faq{padding:64px 0}.role-card,.use-case-card{padding:24px 20px}.pricing-card{padding:32px 20px}.pricing-price{font-size:44px}.pricing-items{display:grid;gap:10px;text-align:left}.screen-showcase{padding:7px}.faq summary{padding-left:18px}.faq-answer{padding-left:18px;padding-right:18px}}
 @media(max-width:600px){.feedback-invite{padding:52px 14px}.feedback-invite-inner{padding:36px 18px}.feedback-invite p{font-size:16px;line-height:1.85}.feedback-invite a{width:100%;padding:14px 12px;font-size:15px}.feedback-invite-note{font-size:16px}}
 </style>
 </head>
@@ -471,6 +480,7 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
       <a href="#features">PropFlowとは</a>
       <a href="#recruitment">物件募集</a>
       <a href="#use-cases">活用例</a>
+      <a href="#pricing">料金</a>
       <a href="#faq">よくある質問</a>
       <a href="/support.html">ヘルプ</a>
       <a class="topbar-feedback" href="/feedback">ご意見箱</a>
@@ -687,6 +697,27 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
   </div>
 </section>
 
+<section class="pricing" id="pricing">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">PRICING</span>
+      <h2>現在、β版は無料で<br><span class="nobreak">ご利用いただけます。</span></h2>
+      <p>登録から物件情報の掲載・検索・問い合わせまで、現在提供中の機能を無料でお試しいただけます。</p>
+    </div>
+    <div class="pricing-card">
+      <span class="pricing-plan">β版</span>
+      <p class="pricing-price">0円</p>
+      <div class="pricing-items">
+        <span>登録料 0円</span>
+        <span>月額利用料 0円</span>
+      </div>
+      <p class="pricing-description">物件の閲覧・掲載、資料添付、検索、お気に入り、1対1メッセージ、物件募集などをご利用いただけます。</p>
+      <a class="btn-primary" href="/registration-request">名刺画像を送って登録する →</a>
+      <p class="pricing-note">今後、一部機能に有料プランを導入する場合があります。その際は事前にお知らせします。</p>
+    </div>
+  </div>
+</section>
+
 <section class="faq" id="faq">
   <div class="wrap">
     <div class="section-head">
@@ -713,7 +744,7 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
 <section class="stats">
   <div class="wrap">
     <div class="stats-grid">
-      <div><b>0円</b><span>閲覧は無料</span></div>
+      <div><b>0円</b><span>β版の登録料・利用料</span></div>
       <div><b>1</b><span>リンク一つで共有</span></div>
       <div><b>自動</b><span>新着・成約を公式LINE/メールで通知</span></div>
       <div><b>非公開</b><span>連絡先はDMで初めて開示</span></div>
