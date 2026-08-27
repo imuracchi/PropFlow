@@ -83,6 +83,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `properties` ADD COLUMN `publishedAt` timestamp NULL",
     "ALTER TABLE `properties` ADD COLUMN `scheduledPublishAt` timestamp NULL AFTER `publishedAt`",
     "ALTER TABLE `properties` ADD COLUMN `scheduleCronTaskUid` varchar(65) NULL AFTER `scheduledPublishAt`",
+    "ALTER TABLE `properties` ADD COLUMN `scheduledPublishNotify` int NOT NULL DEFAULT 1 AFTER `scheduleCronTaskUid`",
     "ALTER TABLE `properties` ADD INDEX `idx_properties_schedule_cron_task_uid` (`scheduleCronTaskUid`)",
     "UPDATE `properties` SET `publishedAt` = `createdAt` WHERE `published` = 1 AND `publishedAt` IS NULL",
     "ALTER TABLE `properties` ADD COLUMN `lineNotifiedAt` timestamp NULL",
@@ -1402,6 +1403,7 @@ export async function listProperties(viewerUserId?: number) {
       publishedAt: properties.publishedAt,
       scheduledPublishAt: properties.scheduledPublishAt,
       scheduleCronTaskUid: properties.scheduleCronTaskUid,
+      scheduledPublishNotify: properties.scheduledPublishNotify,
       visibilityScope: properties.visibilityScope,
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
@@ -1758,6 +1760,7 @@ export async function getPropertyById(id: number) {
       publishedAt: properties.publishedAt,
       scheduledPublishAt: properties.scheduledPublishAt,
       scheduleCronTaskUid: properties.scheduleCronTaskUid,
+      scheduledPublishNotify: properties.scheduledPublishNotify,
       visibilityScope: properties.visibilityScope,
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
@@ -1860,7 +1863,8 @@ export async function setPropertyPublished(id: number, published: 0 | 1) {
 export async function setPropertyPublishSchedule(
   id: number,
   scheduledPublishAt: Date | null,
-  scheduleCronTaskUid: string | null
+  scheduleCronTaskUid: string | null,
+  scheduledPublishNotify = true
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1871,6 +1875,7 @@ export async function setPropertyPublishSchedule(
       publishedAt: null,
       scheduledPublishAt,
       scheduleCronTaskUid,
+      scheduledPublishNotify: scheduledPublishNotify ? 1 : 0,
     })
     .where(eq(properties.id, id));
 }
@@ -1896,6 +1901,7 @@ export async function completeScheduledPropertyPublish(id: number) {
       publishedAt: new Date(),
       scheduledPublishAt: null,
       scheduleCronTaskUid: null,
+      scheduledPublishNotify: 1,
     })
     .where(and(eq(properties.id, id), eq(properties.published, 0)));
 }

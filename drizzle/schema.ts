@@ -107,6 +107,7 @@ export const properties = mysqlTable("properties", {
   publishedAt: timestamp("publishedAt"),
   scheduledPublishAt: timestamp("scheduledPublishAt"),
   scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }),
+  scheduledPublishNotify: int("scheduledPublishNotify").default(1).notNull(),
   visibilityScope: varchar("visibilityScope", { length: 20 })
     .default("public")
     .notNull(),

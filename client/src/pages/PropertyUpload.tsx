@@ -32,6 +32,7 @@ import {
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 type FaqItem = { q: string; a: string };
 
@@ -49,6 +50,7 @@ const PROPERTY_TYPES = [
 type Step = "upload" | "form";
 
 export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const proposalRequestId = v2
     ? Number(
@@ -117,6 +119,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
     "publish"
   );
   const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduledPublishNotify, setScheduledPublishNotify] = useState(false);
   const [proposalOnly, setProposalOnly] = useState(proposalRequestId > 0);
   const [externalListingConsent, setExternalListingConsent] = useState(true);
   const [excludedUsers, setExcludedUsers] = useState<
@@ -409,6 +412,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
           await schedulePublicationMutation.mutateAsync({
             propertyId: result.id,
             scheduledAt: new Date(scheduledAt).toISOString(),
+            sendNotifications: scheduledPublishNotify,
           });
           toast.success(`公開予約を登録しました（${new Date(scheduledAt).toLocaleString("ja-JP")}）`);
           setLocation(v2 ? `/v2/property/${result.id}` : `/property/${result.id}`);
@@ -1968,7 +1972,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
             </div>
           </div>
         </button>
-        {(!proposalRequestId || !proposalOnly) && (
+        {user?.role === "admin" && (!proposalRequestId || !proposalOnly) && (
           <button
             type="button"
             onClick={() => setPublishMode("schedule")}
@@ -2003,6 +2007,11 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
           <span className="block text-[13px] font-bold text-[#173f70]">公開予定日時（日本時間）</span>
           <input type="datetime-local" value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} className="mt-2 h-11 w-full border border-[#cbd5df] bg-white px-3 text-[14px]" />
           <span className="mt-1 block text-[11px] text-[#65748a]">10分以上先を指定してください</span>
+          <span className="mt-3 flex items-start gap-2 text-[12px] text-[#526176]">
+            <input type="checkbox" checked={scheduledPublishNotify} onChange={event => setScheduledPublishNotify(event.target.checked)} className="mt-0.5 size-4" />
+            公開時に新着メール・LINE・Webプッシュを送信する
+          </span>
+          {!scheduledPublishNotify && <span className="mt-1 block text-[11px] font-bold text-[#8b5a08]">検証用：通知なしで公開します</span>}
         </label>
       )}
       {proposalRequestId > 0 && !proposalOnly && publishMode === "draft" && (

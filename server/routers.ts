@@ -1754,8 +1754,11 @@ ${propList}`,
       }),
 
     schedulePublication: protectedProcedure
-      .input(z.object({ propertyId: z.number(), scheduledAt: z.string() }))
+      .input(z.object({ propertyId: z.number(), scheduledAt: z.string(), sendNotifications: z.boolean().default(true) }))
       .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "公開予約は現在、管理者による検証中です" });
+        }
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
         if (prop.visibilityScope === "proposal")
           throw new TRPCError({
@@ -1792,7 +1795,7 @@ ${propList}`,
           taskUid = job.taskUid;
         }
         try {
-          await db.setPropertyPublishSchedule(prop.id, scheduledAt, taskUid);
+          await db.setPropertyPublishSchedule(prop.id, scheduledAt, taskUid, input.sendNotifications);
         } catch (error) {
           // A newly created scheduler job must not survive if the property row
           // could not be updated, otherwise it could publish an unscheduled item.
@@ -1813,7 +1816,7 @@ ${propList}`,
           const { deleteHeartbeatJob } = await import("./_core/heartbeat");
           await deleteHeartbeatJob(prop.scheduleCronTaskUid, "");
         }
-        await db.setPropertyPublishSchedule(prop.id, null, null);
+        await db.setPropertyPublishSchedule(prop.id, null, null, true);
         return { success: true };
       }),
 
@@ -1825,11 +1828,12 @@ ${propList}`,
           const { deleteHeartbeatJob } = await import("./_core/heartbeat");
           await deleteHeartbeatJob(prop.scheduleCronTaskUid, "");
         }
+        const sendNotifications = prop.scheduledPublishNotify !== 0;
         await db.completeScheduledPropertyPublish(prop.id);
-        const { sendScheduledPropertyNotifications } = await import(
-          "./_core/propertyPublish"
-        );
-        await sendScheduledPropertyNotifications(prop.id);
+        if (sendNotifications) {
+          const { sendScheduledPropertyNotifications } = await import("./_core/propertyPublish");
+          await sendScheduledPropertyNotifications(prop.id);
+        }
         return { success: true };
       }),
 

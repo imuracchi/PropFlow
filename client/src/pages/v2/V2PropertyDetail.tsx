@@ -1408,15 +1408,16 @@ export default function V2PropertyDetail({
                         )}
                         {property.scheduledPublishAt ? "予約公開" : property.published === 0 ? "非公開・下書き" : "公開中"}
                       </span>
-                      {property.scheduledPublishAt && (
-                        <p className="mt-1 text-[11px] font-semibold text-[#526176]">
-                          {new Date(property.scheduledPublishAt).toLocaleString("ja-JP")} 公開予定
-                        </p>
+                        {property.scheduledPublishAt && (
+                          <p className="mt-1 text-[11px] font-semibold text-[#526176]">
+                            {new Date(property.scheduledPublishAt).toLocaleString("ja-JP")} 公開予定
+                            {property.scheduledPublishNotify === 0 ? "（通知なし）" : "（通知あり）"}
+                          </p>
                       )}
                     </div>
                     {property.scheduledPublishAt ? (
                       <div className="ml-auto flex flex-wrap justify-end gap-1.5">
-                        <button onClick={async () => { const value = window.prompt("新しい公開日時を入力してください（例: 2026-09-02T10:00）"); if (value) await schedulePublication.mutateAsync({ propertyId, scheduledAt: new Date(value).toISOString() }); }} className="h-9 border border-[#173f70] px-2 text-[10px] font-bold text-[#173f70]">日時変更</button>
+                        <button onClick={async () => { const value = window.prompt("新しい公開日時を入力してください（例: 2026-09-02T10:00）"); if (value) await schedulePublication.mutateAsync({ propertyId, scheduledAt: new Date(value).toISOString(), sendNotifications: property.scheduledPublishNotify !== 0 }); }} className="h-9 border border-[#173f70] px-2 text-[10px] font-bold text-[#173f70]">日時変更</button>
                         <button onClick={() => cancelScheduledPublication.mutate({ propertyId })} className="h-9 border border-[#9aabc0] px-2 text-[10px] font-bold text-[#526176]">予約取消</button>
                         <button onClick={() => publishScheduledNow.mutate({ propertyId })} className="h-9 bg-[#173f70] px-2 text-[10px] font-bold text-white">今すぐ公開</button>
                       </div>

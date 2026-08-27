@@ -80,9 +80,12 @@ async function startServer() {
       const property = await db.getPropertyByScheduleTaskUid(user.taskUid);
       if (!property) return res.status(404).json({ error: "schedule-not-found" });
       if (property.published === 0) {
+        const sendNotifications = property.scheduledPublishNotify !== 0;
         await db.completeScheduledPropertyPublish(property.id);
-        const { sendScheduledPropertyNotifications } = await import("./propertyPublish");
-        await sendScheduledPropertyNotifications(property.id);
+        if (sendNotifications) {
+          const { sendScheduledPropertyNotifications } = await import("./propertyPublish");
+          await sendScheduledPropertyNotifications(property.id);
+        }
       }
       const { deleteHeartbeatJob } = await import("./heartbeat");
       await deleteHeartbeatJob(user.taskUid, "").catch(() => {});
