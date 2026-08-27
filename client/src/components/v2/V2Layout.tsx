@@ -1,8 +1,11 @@
 import {
   Bell,
   Building2,
+  Check,
+  Copy,
   Download,
   Heart,
+  Handshake,
   HelpCircle,
   LayoutGrid,
   List,
@@ -31,6 +34,18 @@ const nav = [
   { icon: UserRound, label: "マイページ", path: "/v2/mypage" },
 ];
 
+const REFERRAL_TEXT = `不動産業者向けの「PropFlow」というサービスをご紹介します。
+物件情報の掲載・検索や、業者間でのDM・資料共有ができます。
+現在無料で利用できますので、よろしければご覧ください。
+
+▼サービスの詳しいご案内
+https://propflow.jp/propflow-intro.html
+
+▼登録申請はこちら
+https://propflow.jp/registration-request
+
+登録申請は、名刺を撮影または選択して送るだけで完了します。`;
+
 export default function V2Layout({
   children,
   preview = false,
@@ -55,7 +70,15 @@ export default function V2Layout({
     refetchInterval: 30000,
   });
   const unreadAnnouncementCount = unreadAnnouncementCountQuery.data ?? 0;
+  const hasEverListedPropertyQuery =
+    trpc.mypage.hasEverListedProperty.useQuery(undefined, {
+      enabled: !preview && !!user,
+      staleTime: 5 * 60 * 1000,
+    });
+  const canShareReferral = hasEverListedPropertyQuery.data === true;
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [referralOpen, setReferralOpen] = useState(false);
+  const [referralCopied, setReferralCopied] = useState(false);
   const mobileNav = [
     nav[0],
     { icon: Target, label: "物件募集", path: "/v2/property-search" },
@@ -79,6 +102,22 @@ export default function V2Layout({
   const openAdminReport = () => {
     setMobileMoreOpen(false);
     setLocation("/v2/issue-report");
+  };
+  const copyReferralText = async () => {
+    try {
+      await navigator.clipboard.writeText(REFERRAL_TEXT);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = REFERRAL_TEXT;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+    setReferralCopied(true);
+    window.setTimeout(() => setReferralCopied(false), 2500);
   };
   return (
     <div className="propflow-readable min-h-screen bg-[#f3f5f7] text-[#17211d]">
@@ -256,13 +295,14 @@ export default function V2Layout({
             <span className="text-[12px] font-bold">お知らせ</span>
             {unreadAnnouncementCount > 0 && <span className="absolute -right-1 -top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-[#d95532] px-1 text-[9px] font-bold leading-none text-white">{unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}</span>}
           </button>
-          {(user?.role === "admin" || user?.role === "management") && (
+          {canShareReferral && (
             <button
-              onClick={() => setLocation("/v2/admin")}
-              className="ml-1 grid size-9 place-items-center lg:hidden"
-              aria-label="管理画面"
+              onClick={() => setReferralOpen(true)}
+              className="ml-1 flex h-9 items-center gap-1.5 border-l border-[#d9e0e8] pl-3 pr-1 text-[#173f70]"
+              aria-label="知人にPropFlowを紹介"
             >
-              <ShieldCheck size={18} />
+              <Handshake size={18} />
+              <span className="text-[12px] font-bold">知人に紹介</span>
             </button>
           )}
         </header>
@@ -384,6 +424,58 @@ export default function V2Layout({
               <LogOut size={18} />
               ログアウト
             </button>
+          </section>
+        </div>
+      )}
+      {referralOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end bg-black/45 p-0 sm:items-center sm:justify-center sm:p-5"
+          onClick={() => setReferralOpen(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="referral-title"
+            className="w-full bg-white p-5 shadow-xl sm:max-w-lg sm:border sm:border-[#d9e0e8] sm:p-6"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="grid size-10 shrink-0 place-items-center bg-[#edf3f8] text-[#173f70]">
+                <Handshake size={21} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 id="referral-title" className="text-[18px] font-bold text-[#102d50]">
+                  知人にPropFlowを紹介
+                </h2>
+                <p className="mt-1 text-[12px] leading-5 text-[#65748a]">
+                  紹介文をコピーして、LINEやメールなどで気軽にお送りいただけます。
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReferralOpen(false)}
+                className="grid size-9 shrink-0 place-items-center text-[#65748a]"
+                aria-label="閉じる"
+              >
+                <X size={19} />
+              </button>
+            </div>
+            <div className="mt-5 max-h-[44vh] overflow-y-auto whitespace-pre-wrap border border-[#d9e0e8] bg-[#f8fafc] p-4 text-[13px] leading-6 text-[#334a66]">
+              {REFERRAL_TEXT}
+            </div>
+            <button
+              type="button"
+              onClick={() => void copyReferralText()}
+              className={`mt-4 flex h-12 w-full items-center justify-center gap-2 text-[14px] font-bold text-white ${referralCopied ? "bg-[#35724f]" : "bg-[#173f70] hover:bg-[#102d50]"}`}
+            >
+              {referralCopied ? <Check size={18} /> : <Copy size={18} />}
+              {referralCopied ? "コピーしました" : "紹介文をコピー"}
+            </button>
+            {referralCopied && (
+              <p className="mt-2 text-center text-[11px] text-[#35724f]">
+                LINEやメールに貼り付けてお送りください。
+              </p>
+            )}
           </section>
         </div>
       )}

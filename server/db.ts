@@ -2257,6 +2257,17 @@ export async function getDeletedPropertiesByUserId(userId: number) {
     .orderBy(desc(properties.updatedAt));
 }
 
+export async function hasEverListedProperty(userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select({ id: properties.id })
+    .from(properties)
+    .where(eq(properties.userId, userId))
+    .limit(1);
+  return rows.length > 0;
+}
+
 export async function saveLineUserId(userId: number, lineUserId: string) {
   const db = await getDb();
   if (!db) return;
