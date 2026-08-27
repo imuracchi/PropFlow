@@ -320,6 +320,26 @@ export async function runStartupMigrations() {
       KEY \`idx_weekly_property_digest_status\` (\`weekStart\`, \`status\`)
     )`,
     "ALTER TABLE `activity_logs` ADD COLUMN `deviceType` varchar(10) NULL",
+    `INSERT INTO activity_logs (userId, action, detail, deviceType, createdAt)
+      SELECT
+        dm.senderId,
+        'property_mark_sold',
+        CONCAT(
+          '物件「', p.name, '」（PF-', p.id,
+          '）を成約済みに変更（過去ログ補完：DM #', dm.id, '）'
+        ),
+        NULL,
+        dm.createdAt
+      FROM direct_messages dm
+      INNER JOIN properties p ON p.id = dm.propertyId
+      WHERE dm.id IN (926, 1003)
+        AND dm.content LIKE '%成約となりました%'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM activity_logs existing
+          WHERE existing.action = 'property_mark_sold'
+            AND existing.detail LIKE CONCAT('%DM #', dm.id, '%')
+        )`,
     "ALTER TABLE `properties` ADD COLUMN `dealPrice` bigint NULL",
     "ALTER TABLE `properties` ADD COLUMN `ownerDeletedAt` timestamp NULL",
     "ALTER TABLE `users` MODIFY COLUMN `status` ENUM('pending','active','suspended') NOT NULL DEFAULT 'active'",
