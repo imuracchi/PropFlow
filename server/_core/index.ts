@@ -71,6 +71,22 @@ async function startServer() {
     }
   });
 
+  app.post("/api/scheduled/property-publish-probe", async (req, res) => {
+    try {
+      const { sdk } = await import("./sdk");
+      const user = await sdk.authenticateRequest(req);
+      if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
+      const db = await import("../db");
+      await db.markPropertyPublishSchedulerProbeExecuted(user.taskUid);
+      const { deleteHeartbeatJob } = await import("./heartbeat");
+      await deleteHeartbeatJob(user.taskUid, "").catch(() => {});
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("[property-publish-probe] error:", error);
+      return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   app.post("/api/scheduled/publish-property", async (req, res) => {
     try {
       if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED !== "true") {
@@ -79,20 +95,10 @@ async function startServer() {
       const { sdk } = await import("./sdk");
       const user = await sdk.authenticateRequest(req);
       if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
-      const db = await import("../db");
-      const property = await db.getPropertyByScheduleTaskUid(user.taskUid);
-      if (!property) return res.status(404).json({ error: "schedule-not-found" });
-      if (property.published === 0) {
-        const sendNotifications = property.scheduledPublishNotify !== 0;
-        await db.completeScheduledPropertyPublish(property.id);
-        if (sendNotifications) {
-          const { sendScheduledPropertyNotifications } = await import("./propertyPublish");
-          await sendScheduledPropertyNotifications(property.id);
-        }
-      }
-      const { deleteHeartbeatJob } = await import("./heartbeat");
-      await deleteHeartbeatJob(user.taskUid, "").catch(() => {});
-      return res.json({ success: true, propertyId: property.id });
+      const { executeScheduledPropertyPublish } = await import("./propertyPublish");
+      const propertyId = await executeScheduledPropertyPublish(user.taskUid);
+      if (!propertyId) return res.status(404).json({ error: "schedule-not-found" });
+      return res.json({ success: true, propertyId });
     } catch (error) {
       console.error("[publish-property] error:", error);
       return res.status(500).json({ error: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() });

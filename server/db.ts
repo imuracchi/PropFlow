@@ -199,6 +199,15 @@ export async function runStartupMigrations() {
       \`status\` varchar(20) NOT NULL DEFAULT 'pending',
       \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS \`property_publish_scheduler_probes\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`adminUserId\` int NOT NULL,
+      \`taskUid\` varchar(65) NOT NULL UNIQUE,
+      \`scheduledAt\` datetime NOT NULL,
+      \`status\` varchar(20) NOT NULL DEFAULT 'pending',
+      \`executedAt\` datetime NULL,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
     `CREATE TABLE IF NOT EXISTS \`dm_notification_batches\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
       \`senderId\` int NOT NULL,
@@ -5063,4 +5072,39 @@ export async function getSearchRanking(limit = 20) {
     console.error("[getSearchRanking] error:", e.message);
     return [];
   }
+}
+
+export async function createPropertyPublishSchedulerProbe(
+  adminUserId: number,
+  taskUid: string,
+  scheduledAt: Date
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.execute(sql`INSERT INTO property_publish_scheduler_probes
+    (adminUserId, taskUid, scheduledAt, status)
+    VALUES (${adminUserId}, ${taskUid}, ${scheduledAt}, 'pending')`);
+}
+
+export async function markPropertyPublishSchedulerProbeExecuted(taskUid: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.execute(sql`UPDATE property_publish_scheduler_probes
+    SET status = 'executed', executedAt = NOW()
+    WHERE taskUid = ${taskUid} AND status = 'pending'`);
+}
+
+export async function listPropertyPublishSchedulerProbes() {
+  const db = await getDb();
+  if (!db) return [];
+  const result = await db.execute(sql`SELECT id, taskUid, scheduledAt, status, executedAt, createdAt
+    FROM property_publish_scheduler_probes ORDER BY id DESC LIMIT 10`);
+  return result[0] as unknown as Array<{
+    id: number;
+    taskUid: string;
+    scheduledAt: Date;
+    status: string;
+    executedAt: Date | null;
+    createdAt: Date;
+  }>;
 }

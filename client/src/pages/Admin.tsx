@@ -113,6 +113,13 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
     { enabled: !isManagement }
   );
   const { data: adminProperties } = trpc.admin.allProperties.useQuery();
+  const schedulerProbesQuery = trpc.admin.propertyPublishSchedulerProbes.useQuery(undefined, {
+    enabled: !isManagement,
+    refetchInterval: 5000,
+  });
+  const runSchedulerProbeMutation = trpc.admin.runPropertyPublishSchedulerProbe.useMutation({
+    onSuccess: () => schedulerProbesQuery.refetch(),
+  });
   const { data: adminRequests } = trpc.propertySearch.list.useQuery();
   const { data: activityLogs } = trpc.admin.activityLogs.useQuery();
   const { data: adminDmMessages } = trpc.admin.allDmMessages.useQuery({
@@ -1134,6 +1141,25 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
 
         {/* 物件管理タブ */}
         <TabsContent value="properties" className="mt-4 space-y-4">
+          {!isManagement && (
+            <section className="border border-[#b9c9da] bg-white p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-bold text-[#173f70]">公開予約スケジューラー疎通テスト</h2>
+                  <p className="mt-1 text-xs text-[#65748a]">2分後にテスト用URLを呼びます。物件・メール・LINE・プッシュは一切変更しません。</p>
+                </div>
+                <Button disabled={runSchedulerProbeMutation.isPending || schedulerProbesQuery.data?.some(probe => probe.status === "pending")} onClick={() => runSchedulerProbeMutation.mutate()}>
+                  {runSchedulerProbeMutation.isPending ? "登録中…" : "2分後に安全テスト"}
+                </Button>
+              </div>
+              {(schedulerProbesQuery.data ?? []).slice(0, 3).map(probe => (
+                <div key={probe.id} className="mt-2 flex gap-3 border-t border-[#e2e7ec] pt-2 text-xs">
+                  <span>{fmtDateTime(probe.scheduledAt)}</span>
+                  <span className={probe.status === "executed" ? "font-bold text-green-700" : "font-bold text-amber-700"}>{probe.status === "executed" ? "正常実行" : "待機中"}</span>
+                </div>
+              ))}
+            </section>
+          )}
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input

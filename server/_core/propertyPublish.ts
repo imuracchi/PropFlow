@@ -2,6 +2,7 @@ import * as db from "../db";
 import { sendMail } from "./mail";
 import { buildPropertyFlexMessage, sendLineBroadcast } from "./line";
 import { sendPushToUsers } from "./webpush";
+import { deleteHeartbeatJob } from "./heartbeat";
 
 const escapeHtml = (value: unknown) => String(value ?? "")
   .replaceAll("&", "&amp;")
@@ -25,4 +26,16 @@ export async function sendScheduledPropertyNotifications(propertyId: number) {
   const excluded = new Set(excludedIds);
   const targetIds = (await db.listActiveUsers()).filter(user => user.id !== prop.userId && !excluded.has(user.id)).map(user => user.id);
   if (targetIds.length) sendPushToUsers(targetIds, `🏠 新着物件: ${prop.name}`, `${prop.address}｜${priceLine}`, `/v2/property/${prop.id}`).catch(() => {});
+}
+
+export async function executeScheduledPropertyPublish(taskUid: string) {
+  const property = await db.getPropertyByScheduleTaskUid(taskUid);
+  if (!property) return null;
+  if (property.published === 0) {
+    const sendNotifications = property.scheduledPublishNotify !== 0;
+    await db.completeScheduledPropertyPublish(property.id);
+    if (sendNotifications) await sendScheduledPropertyNotifications(property.id);
+  }
+  await deleteHeartbeatJob(taskUid, "").catch(() => {});
+  return property.id;
 }
