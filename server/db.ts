@@ -1961,7 +1961,6 @@ export async function listAllPropertiesAdmin() {
   const viewCountSub = db
     .select({
       propertyId: propertyViewEvents.propertyId,
-      totalViews: sql<number>`COUNT(*)`.as("totalViews"),
       uniqueViewers: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as(
         "uniqueViewers"
       ),
@@ -1996,9 +1995,7 @@ export async function listAllPropertiesAdmin() {
       publishedAt: properties.publishedAt,
       externalListingConsent: properties.externalListingConsent,
       externalListingConsentedAt: properties.externalListingConsentedAt,
-      viewCount: sql<number>`COALESCE(${viewCountSub.totalViews}, 0)`.as(
-        "viewCount"
-      ),
+      viewCount: properties.viewCount,
       uniqueViewerCount:
         sql<number>`COALESCE(${viewCountSub.uniqueViewers}, 0)`.as(
           "uniqueViewerCount"
@@ -4877,7 +4874,6 @@ export async function getTopViewedProperties(limit = 20) {
   const viewCountSub = db
     .select({
       propertyId: propertyViewEvents.propertyId,
-      totalViews: sql<number>`COUNT(*)`.as("totalViews"),
       uniqueViewers: sql<number>`COUNT(DISTINCT ${propertyViewEvents.userId})`.as(
         "uniqueViewers"
       ),
@@ -4893,9 +4889,7 @@ export async function getTopViewedProperties(limit = 20) {
       address: properties.address,
       price: properties.price,
       priceNegotiable: properties.priceNegotiable,
-      viewCount: sql<number>`COALESCE(${viewCountSub.totalViews}, 0)`.as(
-        "viewCount"
-      ),
+      viewCount: properties.viewCount,
       uniqueViewerCount:
         sql<number>`COALESCE(${viewCountSub.uniqueViewers}, 0)`.as(
           "uniqueViewerCount"
@@ -4909,7 +4903,7 @@ export async function getTopViewedProperties(limit = 20) {
     .leftJoin(users, eq(properties.userId, users.id))
     .leftJoin(viewCountSub, eq(properties.id, viewCountSub.propertyId))
     .where(eq(properties.deleted, 0))
-    .orderBy(desc(viewCountSub.totalViews))
+    .orderBy(desc(properties.viewCount))
     .limit(limit);
 }
 
