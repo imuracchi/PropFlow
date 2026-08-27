@@ -90,6 +90,13 @@ const REGIONS = [
   },
 ];
 
+const PREFECTURES = REGIONS.flatMap(region => region.prefs);
+
+function extractPrefecture(address: string): string | null {
+  const normalized = address.trim().replace(/^〒?\d{3}-?\d{4}\s*/, "");
+  return PREFECTURES.find(prefecture => normalized.startsWith(prefecture)) ?? null;
+}
+
 function priceLabel(price: number | null, negotiable?: boolean | null) {
   if (negotiable || !price) return "応相談";
   const oku = Math.floor(price / 100000000);
@@ -271,10 +278,11 @@ export default function V2PropertyList({
   const viewerId = preview ? 1 : user?.id;
   const prefCounts = useMemo(() => {
     const map = new Map<string, number>();
-    for (const p of properties ?? [])
-      for (const r of REGIONS)
-        for (const pref of r.prefs)
-          if (p.address.includes(pref)) map.set(pref, (map.get(pref) ?? 0) + 1);
+    for (const property of properties ?? []) {
+      const propertyPrefecture = extractPrefecture(property.address);
+      if (propertyPrefecture)
+        map.set(propertyPrefecture, (map.get(propertyPrefecture) ?? 0) + 1);
+    }
     return map;
   }, [properties]);
   const types = useMemo(
@@ -289,7 +297,11 @@ export default function V2PropertyList({
         if (collection === "favorites" && !favSet.has(p.id)) return false;
         if (collection === "mine" && p.userId !== viewerId) return false;
         if (favoriteOnly && !favSet.has(p.id)) return false;
-        if (mode === "area" && prefecture && !p.address.includes(prefecture))
+        if (
+          mode === "area" &&
+          prefecture &&
+          extractPrefecture(p.address) !== prefecture
+        )
           return false;
         if (mode === "keyword" && appliedKeyword.trim()) {
           const q = appliedKeyword.toLowerCase();

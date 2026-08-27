@@ -40,13 +40,14 @@ const CITY_TO_PREFECTURE: Record<string, string> = {
 };
 
 function extractPrefecture(address: string): string | null {
+  const normalized = address.trim().replace(/^〒?\d{3}-?\d{4}\s*/, "");
   for (const { prefectures } of PREFECTURE_REGIONS) {
     for (const pref of prefectures) {
-      if (address.includes(pref)) return pref;
+      if (normalized.startsWith(pref)) return pref;
     }
   }
   for (const [city, pref] of Object.entries(CITY_TO_PREFECTURE)) {
-    if (address.includes(city)) return pref;
+    if (normalized.startsWith(city)) return pref;
   }
   return null;
 }
