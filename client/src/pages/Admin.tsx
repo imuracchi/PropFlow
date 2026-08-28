@@ -2080,8 +2080,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   views: total.views + row.views,
                   uniqueViewers: total.uniqueViewers + row.uniqueViewers,
                   inquiries: total.inquiries + row.inquiries,
+                  conversions: total.conversions + row.conversions,
                 }),
-                { properties: 0, views: 0, uniqueViewers: 0, inquiries: 0 }
+                { properties: 0, views: 0, uniqueViewers: 0, inquiries: 0, conversions: 0 }
               );
               const inquiryRate = (inquiries: number, uniqueViewers: number) =>
                 uniqueViewers ? `${(inquiries / uniqueViewers * 100).toFixed(1)}%` : "0.0%";
@@ -2105,7 +2106,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                             ["物件", row.properties.toLocaleString()],
                             ["閲覧者", row.uniqueViewers.toLocaleString()],
                             ["問合せ", row.inquiries.toLocaleString()],
-                            ["問合せ率", inquiryRate(row.inquiries, row.uniqueViewers)],
+                            ["問合せ率", inquiryRate(row.conversions, row.uniqueViewers)],
                           ].map(([label, value]) => (
                             <div key={label} className="bg-muted/30 px-1 py-2">
                               <p className="text-[9px] text-muted-foreground">{label}</p>
@@ -2144,7 +2145,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       <MarketPanel title="都道府県別" rows={analytics.marketByArea} />
                       <MarketPanel title="価格帯別" rows={analytics.marketByPrice} />
                     </div>
-                    <p className="text-[10px] leading-5 text-[#65748a]">問い合わせ率 ＝ 問い合わせ者数 ÷ ユニーク閲覧者数。閲覧者数は物件ごとのユニーク閲覧者を合計しています。</p>
+                    <p className="text-[10px] leading-5 text-[#65748a]">問い合わせ率 ＝ 同じ物件を閲覧した後に問い合わせた利用者数 ÷ ユニーク閲覧者数。問い合わせ件数には、閲覧ログの記録開始前を含む過去の実績も表示します。</p>
                   </section>
                   <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     {[
