@@ -808,24 +808,16 @@ export async function getPlatformAnalytics() {
         COUNT(*) AS properties,
         SUM(COALESCE(v.totalViews, 0)) AS views,
         SUM(COALESCE(v.uniqueViewers, 0)) AS uniqueViewers,
-        SUM(COALESCE(i.inquiries, 0)) AS inquiries,
-        SUM(COALESCE(i.conversions, 0)) AS conversions
+        SUM(COALESCE(i.inquiries, 0)) AS inquiries
       FROM properties p
       LEFT JOIN (
         SELECT propertyId, COUNT(*) AS totalViews, COUNT(DISTINCT userId) AS uniqueViewers
         FROM property_view_events GROUP BY propertyId
       ) v ON v.propertyId = p.id
       LEFT JOIN (
-        SELECT dm.propertyId,
-          COUNT(DISTINCT dm.senderId) AS inquiries,
-          COUNT(DISTINCT CASE WHEN viewer.firstViewedAt IS NOT NULL
-            AND dm.createdAt >= viewer.firstViewedAt THEN dm.senderId END) AS conversions
+        SELECT dm.propertyId, COUNT(DISTINCT dm.senderId) AS inquiries
         FROM direct_messages dm
         INNER JOIN properties owner_property ON owner_property.id = dm.propertyId
-        LEFT JOIN (
-          SELECT propertyId, userId, MIN(viewedAt) AS firstViewedAt
-          FROM property_view_events GROUP BY propertyId, userId
-        ) viewer ON viewer.propertyId = dm.propertyId AND viewer.userId = dm.senderId
         WHERE dm.propertyId IS NOT NULL AND dm.senderId != owner_property.userId
         GROUP BY dm.propertyId
       ) i ON i.propertyId = p.id
@@ -839,24 +831,16 @@ export async function getPlatformAnalytics() {
         COUNT(*) AS properties,
         SUM(COALESCE(v.totalViews, 0)) AS views,
         SUM(COALESCE(v.uniqueViewers, 0)) AS uniqueViewers,
-        SUM(COALESCE(i.inquiries, 0)) AS inquiries,
-        SUM(COALESCE(i.conversions, 0)) AS conversions
+        SUM(COALESCE(i.inquiries, 0)) AS inquiries
       FROM properties p
       LEFT JOIN (
         SELECT propertyId, COUNT(*) AS totalViews, COUNT(DISTINCT userId) AS uniqueViewers
         FROM property_view_events GROUP BY propertyId
       ) v ON v.propertyId = p.id
       LEFT JOIN (
-        SELECT dm.propertyId,
-          COUNT(DISTINCT dm.senderId) AS inquiries,
-          COUNT(DISTINCT CASE WHEN viewer.firstViewedAt IS NOT NULL
-            AND dm.createdAt >= viewer.firstViewedAt THEN dm.senderId END) AS conversions
+        SELECT dm.propertyId, COUNT(DISTINCT dm.senderId) AS inquiries
         FROM direct_messages dm
         INNER JOIN properties owner_property ON owner_property.id = dm.propertyId
-        LEFT JOIN (
-          SELECT propertyId, userId, MIN(viewedAt) AS firstViewedAt
-          FROM property_view_events GROUP BY propertyId, userId
-        ) viewer ON viewer.propertyId = dm.propertyId AND viewer.userId = dm.senderId
         WHERE dm.propertyId IS NOT NULL AND dm.senderId != owner_property.userId
         GROUP BY dm.propertyId
       ) i ON i.propertyId = p.id
@@ -869,8 +853,7 @@ export async function getPlatformAnalytics() {
         COUNT(*) AS properties,
         SUM(priceBucket.totalViews) AS views,
         SUM(priceBucket.uniqueViewers) AS uniqueViewers,
-        SUM(priceBucket.inquiries) AS inquiries,
-        SUM(priceBucket.conversions) AS conversions
+        SUM(priceBucket.inquiries) AS inquiries
       FROM (
         SELECT p.id,
           CASE
@@ -893,24 +876,16 @@ export async function getPlatformAnalytics() {
             WHEN p.price < 2000000000 THEN 8 WHEN p.price < 5000000000 THEN 9 ELSE 10 END AS sortOrder,
           COALESCE(v.totalViews, 0) AS totalViews,
           COALESCE(v.uniqueViewers, 0) AS uniqueViewers,
-          COALESCE(i.inquiries, 0) AS inquiries,
-          COALESCE(i.conversions, 0) AS conversions
+          COALESCE(i.inquiries, 0) AS inquiries
         FROM properties p
         LEFT JOIN (
           SELECT propertyId, COUNT(*) AS totalViews, COUNT(DISTINCT userId) AS uniqueViewers
           FROM property_view_events GROUP BY propertyId
         ) v ON v.propertyId = p.id
         LEFT JOIN (
-          SELECT dm.propertyId,
-            COUNT(DISTINCT dm.senderId) AS inquiries,
-            COUNT(DISTINCT CASE WHEN viewer.firstViewedAt IS NOT NULL
-              AND dm.createdAt >= viewer.firstViewedAt THEN dm.senderId END) AS conversions
+          SELECT dm.propertyId, COUNT(DISTINCT dm.senderId) AS inquiries
           FROM direct_messages dm
           INNER JOIN properties owner_property ON owner_property.id = dm.propertyId
-          LEFT JOIN (
-            SELECT propertyId, userId, MIN(viewedAt) AS firstViewedAt
-            FROM property_view_events GROUP BY propertyId, userId
-          ) viewer ON viewer.propertyId = dm.propertyId AND viewer.userId = dm.senderId
           WHERE dm.propertyId IS NOT NULL AND dm.senderId != owner_property.userId
           GROUP BY dm.propertyId
         ) i ON i.propertyId = p.id
@@ -948,7 +923,6 @@ export async function getPlatformAnalytics() {
     views: Number(row.views ?? 0),
     uniqueViewers: Number(row.uniqueViewers ?? 0),
     inquiries: Number(row.inquiries ?? 0),
-    conversions: Number(row.conversions ?? 0),
   }));
 
   return {
