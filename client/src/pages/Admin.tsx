@@ -2088,23 +2088,17 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   <div className="border-b border-border bg-muted/30 px-4 py-3">
                     <h4 className="text-sm font-semibold">{title}</h4>
                   </div>
-                  <div className="divide-y divide-border">
-                    {rows.slice(0, 10).map(row => (
-                      <div key={row.label} className="p-3">
-                        <p className="mb-2 break-words text-[12px] font-bold text-foreground">{row.label}</p>
-                        <div className="grid grid-cols-2 gap-1 text-center">
-                          {[
-                            ["物件", row.properties.toLocaleString()],
-                            ["閲覧人数", row.uniqueViewers.toLocaleString()],
-                            ["問合せ人数", row.inquiries.toLocaleString()],
-                            ["1物件あたり問合せ", row.properties ? `${(row.inquiryPropertyPairs / row.properties).toFixed(1)}人` : "0.0人"],
-                          ].map(([label, value]) => (
-                            <div key={label} className="bg-muted/30 px-1 py-2">
-                              <p className="text-[9px] text-muted-foreground">{label}</p>
-                              <p className="mt-0.5 text-[12px] font-bold tabular-nums">{value}</p>
-                            </div>
-                          ))}
-                        </div>
+                  <div className="max-h-[520px] overflow-y-auto">
+                    <div className="sticky top-0 z-10 grid grid-cols-[minmax(74px,1.4fr)_repeat(4,minmax(44px,.7fr))] gap-1 border-b border-border bg-[#f3f6f9] px-2 py-2 text-center text-[8px] font-bold leading-3 text-muted-foreground">
+                      <span className="text-left">項目</span><span>物件</span><span>閲覧</span><span>問合せ</span><span>1件平均</span>
+                    </div>
+                    {rows.map(row => (
+                      <div key={row.label} className="grid grid-cols-[minmax(74px,1.4fr)_repeat(4,minmax(44px,.7fr))] items-center gap-1 border-b border-border px-2 py-2.5 text-center last:border-b-0">
+                        <span className="break-words text-left text-[11px] font-bold leading-4 text-foreground">{row.label}</span>
+                        <span className="text-[11px] tabular-nums">{row.properties.toLocaleString()}</span>
+                        <span className="text-[11px] tabular-nums">{row.uniqueViewers.toLocaleString()}</span>
+                        <span className="text-[11px] font-bold tabular-nums text-[#173f70]">{row.inquiries.toLocaleString()}</span>
+                        <span className="text-[11px] font-bold tabular-nums text-[#173f70]">{row.properties ? (row.inquiryPropertyPairs / row.properties).toFixed(1) : "0.0"}</span>
                       </div>
                     ))}
                     {rows.length === 0 && <p className="p-4 text-xs text-muted-foreground">集計対象のデータはありません</p>}
