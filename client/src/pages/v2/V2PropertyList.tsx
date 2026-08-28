@@ -1173,15 +1173,26 @@ export default function V2PropertyList({
               <nav aria-label="物件一覧のページ" className="mt-4 border border-[#d9e0e8] bg-white px-3 py-4 sm:px-4">
                 <p className="text-center text-[12px] text-[#65748a]">
                   全{sortedProperties.length}件中 {(currentPage - 1) * PAGE_SIZE + 1}〜{Math.min(currentPage * PAGE_SIZE, sortedProperties.length)}件
+                  <span className="ml-2 font-bold text-[#526176]">（{currentPage}/{totalPages}ページ）</span>
                 </p>
-                <div className="mt-3 flex items-center justify-center gap-2">
+                <div className="mt-3 grid grid-cols-4 items-center gap-2 sm:flex sm:justify-center">
+                  <button
+                    type="button"
+                    onClick={() => goToPage(1)}
+                    disabled={currentPage === 1}
+                    className="h-11 min-w-0 border border-[#173f70] px-2 text-[12px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6] sm:min-w-[82px]"
+                  >
+                    <span className="sm:hidden">最初</span>
+                    <span className="hidden sm:inline">1ページ目</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="h-11 min-w-[92px] border border-[#173f70] px-3 text-[12px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6]"
+                    className="h-11 min-w-0 border border-[#173f70] px-2 text-[12px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6] sm:min-w-[92px] sm:px-3"
                   >
-                    前のページ
+                    <span className="sm:hidden">前へ</span>
+                    <span className="hidden sm:inline">前のページ</span>
                   </button>
                   <div className="hidden items-center gap-1 sm:flex">
                     {pageNumbers.map(page => (
@@ -1196,16 +1207,23 @@ export default function V2PropertyList({
                       </button>
                     ))}
                   </div>
-                  <span className="min-w-12 text-center text-[12px] font-bold text-[#526176] sm:hidden">
-                    {currentPage}/{totalPages}
-                  </span>
                   <button
                     type="button"
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="h-11 min-w-[92px] border border-[#173f70] px-3 text-[12px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6]"
+                    className="h-11 min-w-0 border border-[#173f70] px-2 text-[12px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6] sm:min-w-[92px] sm:px-3"
                   >
-                    次のページ
+                    <span className="sm:hidden">次へ</span>
+                    <span className="hidden sm:inline">次のページ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="h-11 min-w-0 border border-[#173f70] px-2 text-[12px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6] sm:min-w-[92px]"
+                  >
+                    <span className="sm:hidden">最後</span>
+                    <span className="hidden sm:inline">最終ページ</span>
                   </button>
                 </div>
               </nav>
