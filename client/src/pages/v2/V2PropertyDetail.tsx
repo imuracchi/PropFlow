@@ -19,7 +19,6 @@ import {
   Plus,
   Search,
   Share2,
-  ShieldCheck,
   Sparkles,
   StickyNote,
   Trash2,
@@ -1520,21 +1519,17 @@ export default function V2PropertyDetail({
               </button>
             </section>}
             {isOwner && (
-              <section className="bg-white p-4 lg:border lg:border-[#d9e0e8]">
+              <section className="border-2 border-[#9bb4cf] bg-[#eef5fb] p-4 shadow-[inset_4px_0_0_#173f70]">
                 <button
                   type="button"
                   onClick={() => setOwnerToolsOpen(current => !current)}
                   className="flex w-full items-center gap-2 text-left lg:cursor-default"
                   aria-expanded={ownerToolsOpen}
                 >
-                  <ShieldCheck size={20} className="shrink-0 text-[#173f70]" />
                   <div>
                     <h2 className="text-[16px] font-bold text-[#102d50] lg:text-[17px]">
-                      物件管理
+                      🔒 物件管理［登録者専用］
                     </h2>
-                    <p className="text-[10px] text-[#758194] lg:text-[11px]">
-                      物件登録者だけに表示
-                    </p>
                   </div>
                   <ChevronDown
                     size={20}
