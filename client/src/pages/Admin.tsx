@@ -494,7 +494,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   logs: "操作ログ",
                   broadcast: "一斉配信",
                   maintenance: "保守",
-                  ai: "AI分析",
+                  ai: "市場分析",
                 }[activeSection]
               }
             </span>
@@ -539,8 +539,8 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
             DM管理
           </TabsTrigger>
           <TabsTrigger value="ai" className="gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
-            AI分析
+            <TrendingUp className="w-3.5 h-3.5" />
+            市場分析
           </TabsTrigger>
           {!isManagement && (
             <>
@@ -2028,17 +2028,17 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
           )}
         </TabsContent>
 
-        {/* AI分析タブ */}
+        {/* 市場分析タブ */}
         <TabsContent value="ai" className="mt-4 space-y-4">
           <div className="bg-card border border-border rounded-xl p-5 space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-primary" />
-                  プラットフォーム全体分析
+                  PropFlow市場分析
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  登録・物件・関心・機能利用を、蓄積済みデータから集計します
+                  登録物件・閲覧・問い合わせを、物件種別・地域・価格帯ごとに集計します
                 </p>
               </div>
               <Button
@@ -2074,8 +2074,78 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               const formatPrice = (price: number) => price
                 ? `${Math.round(price / 10000).toLocaleString()}万円`
                 : "—";
+              const marketTotals = analytics.marketByType.reduce(
+                (total, row) => ({
+                  properties: total.properties + row.properties,
+                  views: total.views + row.views,
+                  uniqueViewers: total.uniqueViewers + row.uniqueViewers,
+                  inquiries: total.inquiries + row.inquiries,
+                }),
+                { properties: 0, views: 0, uniqueViewers: 0, inquiries: 0 }
+              );
+              const inquiryRate = (inquiries: number, uniqueViewers: number) =>
+                uniqueViewers ? `${(inquiries / uniqueViewers * 100).toFixed(1)}%` : "0.0%";
+              const MarketPanel = ({
+                title,
+                rows,
+              }: {
+                title: string;
+                rows: typeof analytics.marketByType;
+              }) => (
+                <section className="border border-border bg-white">
+                  <div className="border-b border-border bg-muted/30 px-4 py-3">
+                    <h4 className="text-sm font-semibold">{title}</h4>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {rows.slice(0, 10).map(row => (
+                      <div key={row.label} className="p-3">
+                        <p className="mb-2 break-words text-[12px] font-bold text-foreground">{row.label}</p>
+                        <div className="grid grid-cols-4 gap-1 text-center">
+                          {[
+                            ["物件", row.properties.toLocaleString()],
+                            ["閲覧者", row.uniqueViewers.toLocaleString()],
+                            ["問合せ", row.inquiries.toLocaleString()],
+                            ["問合せ率", inquiryRate(row.inquiries, row.uniqueViewers)],
+                          ].map(([label, value]) => (
+                            <div key={label} className="bg-muted/30 px-1 py-2">
+                              <p className="text-[9px] text-muted-foreground">{label}</p>
+                              <p className="mt-0.5 text-[12px] font-bold tabular-nums">{value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {rows.length === 0 && <p className="p-4 text-xs text-muted-foreground">集計対象のデータはありません</p>}
+                  </div>
+                </section>
+              );
               return (
                 <div className="space-y-5">
+                  <section className="space-y-3 border-2 border-[#9bb4cf] bg-[#f4f8fc] p-4">
+                    <div>
+                      <h4 className="text-[15px] font-bold text-[#102d50]">問い合わせをCVとした市場動向</h4>
+                      <p className="mt-1 text-[10px] leading-5 text-[#65748a]">全期間・削除されていない登録物件が対象。同じ利用者から同じ物件への複数DMは、問い合わせ1件として集計します。</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                      {[
+                        ["登録物件", `${marketTotals.properties.toLocaleString()}件`],
+                        ["総閲覧", `${marketTotals.views.toLocaleString()}回`],
+                        ["ユニーク閲覧", `${marketTotals.uniqueViewers.toLocaleString()}人`],
+                        ["問い合わせ", `${marketTotals.inquiries.toLocaleString()}件`],
+                      ].map(([label, value]) => (
+                        <div key={label} className="border border-[#d4dde7] bg-white p-3">
+                          <p className="text-[10px] text-[#65748a]">{label}</p>
+                          <p className="mt-1 text-xl font-bold tabular-nums text-[#102d50]">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid gap-3 xl:grid-cols-3">
+                      <MarketPanel title="物件種別別" rows={analytics.marketByType} />
+                      <MarketPanel title="都道府県別" rows={analytics.marketByArea} />
+                      <MarketPanel title="価格帯別" rows={analytics.marketByPrice} />
+                    </div>
+                    <p className="text-[10px] leading-5 text-[#65748a]">問い合わせ率 ＝ 問い合わせ者数 ÷ ユニーク閲覧者数。閲覧者数は物件ごとのユニーク閲覧者を合計しています。</p>
+                  </section>
                   <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     {[
                       ["登録ユーザー", `${analytics.engagement.total}社`],

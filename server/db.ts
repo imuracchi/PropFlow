@@ -667,6 +667,9 @@ export async function getPlatformAnalytics() {
       growth: [],
       propertyTypes: [],
       priceInterest: [],
+      marketByType: [],
+      marketByArea: [],
+      marketByPrice: [],
       engagement: {
         total: 0,
         active: 0,
@@ -689,6 +692,9 @@ export async function getPlatformAnalytics() {
     featureResult,
     funnelResult,
     totalResult,
+    marketByTypeResult,
+    marketByAreaResult,
+    marketByPriceResult,
   ] = await Promise.all([
     db.execute(sql`
         SELECT month,
@@ -726,13 +732,19 @@ export async function getPlatformAnalytics() {
               WHEN p.price < 30000000 THEN '3,000万円未満'
               WHEN p.price < 50000000 THEN '3,000〜5,000万円'
               WHEN p.price < 100000000 THEN '5,000万〜1億円'
-              WHEN p.price < 500000000 THEN '1億〜5億円'
-              WHEN p.price < 1000000000 THEN '5億〜10億円'
-              ELSE '10億円以上'
+              WHEN p.price < 300000000 THEN '1億〜3億円'
+              WHEN p.price < 500000000 THEN '3億〜5億円'
+              WHEN p.price < 700000000 THEN '5億〜7億円'
+              WHEN p.price < 1000000000 THEN '7億〜10億円'
+              WHEN p.price < 2000000000 THEN '10億〜20億円'
+              WHEN p.price < 5000000000 THEN '20億〜50億円'
+              ELSE '50億円以上'
             END AS bucket,
-            CASE WHEN p.price IS NULL THEN 7 WHEN p.price < 30000000 THEN 1
+            CASE WHEN p.price IS NULL THEN 11 WHEN p.price < 30000000 THEN 1
               WHEN p.price < 50000000 THEN 2 WHEN p.price < 100000000 THEN 3
-              WHEN p.price < 500000000 THEN 4 WHEN p.price < 1000000000 THEN 5 ELSE 6 END AS sortOrder,
+              WHEN p.price < 300000000 THEN 4 WHEN p.price < 500000000 THEN 5
+              WHEN p.price < 700000000 THEN 6 WHEN p.price < 1000000000 THEN 7
+              WHEN p.price < 2000000000 THEN 8 WHEN p.price < 5000000000 THEN 9 ELSE 10 END AS sortOrder,
             COALESCE(v.viewCount, 0) AS viewCount,
             COALESCE(f.favoriteCount, 0) AS favoriteCount
           FROM properties p
@@ -791,6 +803,97 @@ export async function getPlatformAnalytics() {
     db.execute(
       sql`SELECT COUNT(*) AS total FROM users WHERE role = 'user' AND status = 'active'`
     ),
+    db.execute(sql`
+      SELECT p.type AS label,
+        COUNT(*) AS properties,
+        SUM(COALESCE(v.totalViews, 0)) AS views,
+        SUM(COALESCE(v.uniqueViewers, 0)) AS uniqueViewers,
+        SUM(COALESCE(i.inquiries, 0)) AS inquiries
+      FROM properties p
+      LEFT JOIN (
+        SELECT propertyId, COUNT(*) AS totalViews, COUNT(DISTINCT userId) AS uniqueViewers
+        FROM property_view_events GROUP BY propertyId
+      ) v ON v.propertyId = p.id
+      LEFT JOIN (
+        SELECT dm.propertyId, COUNT(DISTINCT dm.senderId) AS inquiries
+        FROM direct_messages dm
+        INNER JOIN properties owner_property ON owner_property.id = dm.propertyId
+        WHERE dm.propertyId IS NOT NULL AND dm.senderId != owner_property.userId
+        GROUP BY dm.propertyId
+      ) i ON i.propertyId = p.id
+      WHERE p.deleted = 0
+      GROUP BY p.type
+      ORDER BY inquiries DESC, uniqueViewers DESC, properties DESC
+    `),
+    db.execute(sql`
+      SELECT
+        COALESCE(NULLIF(REGEXP_SUBSTR(p.address, '^.{2,3}[都道府県]'), ''), '地域不明') AS label,
+        COUNT(*) AS properties,
+        SUM(COALESCE(v.totalViews, 0)) AS views,
+        SUM(COALESCE(v.uniqueViewers, 0)) AS uniqueViewers,
+        SUM(COALESCE(i.inquiries, 0)) AS inquiries
+      FROM properties p
+      LEFT JOIN (
+        SELECT propertyId, COUNT(*) AS totalViews, COUNT(DISTINCT userId) AS uniqueViewers
+        FROM property_view_events GROUP BY propertyId
+      ) v ON v.propertyId = p.id
+      LEFT JOIN (
+        SELECT dm.propertyId, COUNT(DISTINCT dm.senderId) AS inquiries
+        FROM direct_messages dm
+        INNER JOIN properties owner_property ON owner_property.id = dm.propertyId
+        WHERE dm.propertyId IS NOT NULL AND dm.senderId != owner_property.userId
+        GROUP BY dm.propertyId
+      ) i ON i.propertyId = p.id
+      WHERE p.deleted = 0
+      GROUP BY label
+      ORDER BY inquiries DESC, uniqueViewers DESC, properties DESC
+    `),
+    db.execute(sql`
+      SELECT priceBucket.label,
+        COUNT(*) AS properties,
+        SUM(priceBucket.totalViews) AS views,
+        SUM(priceBucket.uniqueViewers) AS uniqueViewers,
+        SUM(priceBucket.inquiries) AS inquiries
+      FROM (
+        SELECT p.id,
+          CASE
+            WHEN p.price IS NULL THEN '価格未設定'
+            WHEN p.price < 30000000 THEN '3,000万円未満'
+            WHEN p.price < 50000000 THEN '3,000〜5,000万円'
+            WHEN p.price < 100000000 THEN '5,000万〜1億円'
+            WHEN p.price < 300000000 THEN '1億〜3億円'
+            WHEN p.price < 500000000 THEN '3億〜5億円'
+            WHEN p.price < 700000000 THEN '5億〜7億円'
+            WHEN p.price < 1000000000 THEN '7億〜10億円'
+            WHEN p.price < 2000000000 THEN '10億〜20億円'
+            WHEN p.price < 5000000000 THEN '20億〜50億円'
+            ELSE '50億円以上'
+          END AS label,
+          CASE WHEN p.price IS NULL THEN 11 WHEN p.price < 30000000 THEN 1
+            WHEN p.price < 50000000 THEN 2 WHEN p.price < 100000000 THEN 3
+            WHEN p.price < 300000000 THEN 4 WHEN p.price < 500000000 THEN 5
+            WHEN p.price < 700000000 THEN 6 WHEN p.price < 1000000000 THEN 7
+            WHEN p.price < 2000000000 THEN 8 WHEN p.price < 5000000000 THEN 9 ELSE 10 END AS sortOrder,
+          COALESCE(v.totalViews, 0) AS totalViews,
+          COALESCE(v.uniqueViewers, 0) AS uniqueViewers,
+          COALESCE(i.inquiries, 0) AS inquiries
+        FROM properties p
+        LEFT JOIN (
+          SELECT propertyId, COUNT(*) AS totalViews, COUNT(DISTINCT userId) AS uniqueViewers
+          FROM property_view_events GROUP BY propertyId
+        ) v ON v.propertyId = p.id
+        LEFT JOIN (
+          SELECT dm.propertyId, COUNT(DISTINCT dm.senderId) AS inquiries
+          FROM direct_messages dm
+          INNER JOIN properties owner_property ON owner_property.id = dm.propertyId
+          WHERE dm.propertyId IS NOT NULL AND dm.senderId != owner_property.userId
+          GROUP BY dm.propertyId
+        ) i ON i.propertyId = p.id
+        WHERE p.deleted = 0
+      ) priceBucket
+      GROUP BY priceBucket.label, priceBucket.sortOrder
+      ORDER BY priceBucket.sortOrder
+    `),
   ]);
 
   const rows = (result: any) => (result?.[0] ?? []) as any[];
@@ -814,6 +917,13 @@ export async function getPlatformAnalytics() {
     terms_agree: "利用規約同意",
     support_report: "ご意見箱",
   };
+  const mapMarketRows = (queryResult: any) => rows(queryResult).map(row => ({
+    label: String(row.label ?? "未設定"),
+    properties: Number(row.properties ?? 0),
+    views: Number(row.views ?? 0),
+    uniqueViewers: Number(row.uniqueViewers ?? 0),
+    inquiries: Number(row.inquiries ?? 0),
+  }));
 
   return {
     growth: rows(growthResult).map(row => ({
@@ -832,6 +942,9 @@ export async function getPlatformAnalytics() {
       views: Number(row.views),
       favorites: Number(row.favorites),
     })),
+    marketByType: mapMarketRows(marketByTypeResult),
+    marketByArea: mapMarketRows(marketByAreaResult),
+    marketByPrice: mapMarketRows(marketByPriceResult),
     engagement: {
       total,
       active,
