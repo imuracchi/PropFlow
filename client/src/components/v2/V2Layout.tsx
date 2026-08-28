@@ -98,6 +98,12 @@ export default function V2Layout({
     setMobileMoreOpen(false);
     setLocation("/v2/issue-report");
   };
+  const openAnnouncements = () => {
+    if (!location.includes("/announcements")) {
+      window.sessionStorage.setItem("propflow-announcements-return", location);
+    }
+    setLocation(destination("/v2/announcements"));
+  };
   const copyReferralText = async () => {
     try {
       await navigator.clipboard.writeText(REFERRAL_TEXT);
@@ -293,7 +299,7 @@ export default function V2Layout({
             不動産情報プラットフォーム
           </p>
           <button
-            onClick={() => setLocation(destination("/v2/announcements"))}
+            onClick={openAnnouncements}
             className="relative ml-auto flex h-9 items-center gap-1.5 px-2 text-[#173f70]"
             aria-label={`お知らせ${unreadAnnouncementCount > 0 ? ` 未読${unreadAnnouncementCount}件` : ""}`}
           >
@@ -355,6 +361,10 @@ export default function V2Layout({
                   key={item.path}
                   onClick={() => {
                     setMobileMoreOpen(false);
+                    if (item.path === "/v2/announcements") {
+                      openAnnouncements();
+                      return;
+                    }
                     setLocation(destination(item.path));
                   }}
                   className="relative flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"

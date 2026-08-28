@@ -1,8 +1,10 @@
 import { trpc } from "@/lib/trpc";
 import { fmtDate } from "@/lib/utils";
-import { ChevronDown, Megaphone } from "lucide-react";
+import { ArrowLeft, ChevronDown, Megaphone } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function AnnounceArchive() {
+  const [, setLocation] = useLocation();
   const { data: logs, isLoading } = trpc.announce.archive.useQuery();
   const markRead = trpc.announce.markRead.useMutation();
   const utils = trpc.useUtils();
@@ -16,9 +18,22 @@ export default function AnnounceArchive() {
     ]);
   };
 
+  const handleBack = () => {
+    const returnPath = window.sessionStorage.getItem("propflow-announcements-return");
+    setLocation(returnPath?.startsWith("/v2/") && !returnPath.includes("/announcements") ? returnPath : "/v2/properties");
+  };
+
   return (
     <div className="space-y-5 max-w-2xl">
       <div>
+        <button
+          type="button"
+          onClick={handleBack}
+          className="mb-3 inline-flex h-10 items-center gap-2 border border-[#b8c5d3] bg-white px-3 text-[12px] font-bold text-[#173f70]"
+        >
+          <ArrowLeft size={16} />
+          前の画面に戻る
+        </button>
         <h1 className="text-lg font-semibold text-foreground">お知らせアーカイブ</h1>
         <p className="text-xs text-muted-foreground mt-0.5">これまでに配信されたお知らせを確認できます</p>
       </div>
@@ -65,6 +80,14 @@ export default function AnnounceArchive() {
           ))}
         </div>
       )}
+      <button
+        type="button"
+        onClick={handleBack}
+        className="fixed bottom-24 right-4 z-20 flex h-11 items-center gap-2 bg-[#173f70] px-4 text-[12px] font-bold text-white shadow-lg lg:hidden"
+      >
+        <ArrowLeft size={16} />
+        戻る
+      </button>
     </div>
   );
 }
