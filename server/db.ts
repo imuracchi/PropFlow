@@ -4065,9 +4065,10 @@ export async function getInterestedUsersForMyProperties(userId: number) {
       id: properties.id,
       name: properties.name,
       status: properties.status,
+      deleted: properties.deleted,
     })
     .from(properties)
-    .where(and(eq(properties.userId, userId), eq(properties.deleted, 0)));
+    .where(eq(properties.userId, userId));
 
   if (myProps.length === 0) return [];
 
@@ -4208,6 +4209,7 @@ export async function getInterestedUsersForMyProperties(userId: number) {
     propertyId: number;
     propertyName: string;
     propertyStatus: "available" | "negotiating" | "sold";
+    propertyDeleted: number;
     userId: number;
     userName: string | null;
     userCompany: string | null;
@@ -4245,6 +4247,7 @@ export async function getInterestedUsersForMyProperties(userId: number) {
         propertyId: entry.propertyId,
         propertyName: prop.name,
         propertyStatus: prop.status,
+        propertyDeleted: prop.deleted,
         userId: u.id,
         userName: u.name,
         userCompany: u.company,

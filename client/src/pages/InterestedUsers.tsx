@@ -41,7 +41,7 @@ export default function InterestedUsers({ v2 = false }: { v2?: boolean }) {
             <div key={propId} className={v2 ? "overflow-hidden border border-[#d4dde7] bg-white" : "bg-card border border-border rounded-lg overflow-hidden"}>
               <button onClick={() => setOpenProperties(current => { const next = new Set(current); next.has(propId) ? next.delete(propId) : next.add(propId); return next; })} className={v2 ? "flex w-full items-center gap-3 bg-[#edf1f5] px-5 py-4 text-left" : "w-full px-5 py-4 border-b border-border bg-muted/40 flex items-center gap-2 text-left"}>
                 <span className={v2 ? "grid size-9 shrink-0 place-items-center bg-[#173f70] text-white" : "contents"}><Building2 className="w-4 h-4 shrink-0" /></span>
-                <div><p className={v2 ? "text-[11px] font-bold text-[#65748a]" : "hidden"}>対象物件</p><h3 className={v2 ? "text-[16px] font-bold text-[#102d50]" : "text-sm font-semibold text-foreground"}>{group.propertyName}</h3></div>
+                <div><p className={v2 ? "text-[11px] font-bold text-[#65748a]" : "hidden"}>対象物件</p><div className="flex flex-wrap items-center gap-2"><h3 className={v2 ? "text-[16px] font-bold text-[#102d50]" : "text-sm font-semibold text-foreground"}>{group.propertyName}</h3>{group.users?.[0]?.propertyDeleted === 1 && <span className="bg-[#eceff2] px-2 py-0.5 text-[10px] font-bold text-[#526176]">非表示</span>}</div></div>
                 <div className="flex items-center gap-2 ml-auto">
                   <span className={v2 ? "text-[13px] font-bold text-[#526176]" : "text-xs text-muted-foreground"}>{group.users!.length}名</span>
                   <ChevronDown className={`size-4 transition-transform ${openProperties.has(propId) ? "rotate-180" : ""}`} />
