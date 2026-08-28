@@ -7,6 +7,34 @@ a[x-apple-data-detectors] {
   pointer-events: none !important;
 }
 
+/* Keep the desktop navigation draggable without showing a bright native track. */
+.v2-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.v2-sidebar-scroll:hover {
+  scrollbar-color: rgb(255 255 255 / 0.38) transparent;
+}
+
+.v2-sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.v2-sidebar-scroll::-webkit-scrollbar-track,
+.v2-sidebar-scroll::-webkit-scrollbar-button {
+  display: none;
+}
+
+.v2-sidebar-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: transparent;
+}
+
+.v2-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.38);
+}
+
 .propflow-readable .text-\[8px\],
 .propflow-readable .text-\[9px\] {
   font-size: 10px !important;

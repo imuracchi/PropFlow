@@ -148,7 +148,7 @@ export default function V2Layout({
             </p>
           </div>
         </button>
-        <nav className="flex-1 overflow-y-auto px-3 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav className="v2-sidebar-scroll flex-1 overflow-y-auto px-3 py-5">
           <p className="px-3 pb-2 text-[10px] font-bold tracking-widest text-white/40">
             物件を探す
           </p>
@@ -241,25 +241,6 @@ export default function V2Layout({
           </button>
         </nav>
         <div className="border-t border-white/10 p-4">
-          <div className="mb-4 flex items-center justify-center gap-3 text-[10px] text-white/50">
-            <a
-              href="/terms.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-white hover:underline"
-            >
-              利用規約
-            </a>
-            <span className="text-white/20">|</span>
-            <a
-              href="/privacy.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-white hover:underline"
-            >
-              個人情報保護方針
-            </a>
-          </div>
           {(user?.role === "admin" || user?.role === "management") && (
             <button
               onClick={() => setLocation("/v2/admin")}
@@ -411,25 +392,6 @@ export default function V2Layout({
                   </span>
                 </button>
               )}
-            </div>
-            <div className="mt-4 flex items-center justify-center gap-4 border-t border-[#dfe4ea] pt-4 text-[11px] text-[#65748a]">
-              <a
-                href="/terms.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline-offset-2 hover:text-[#173f70] hover:underline"
-              >
-                利用規約
-              </a>
-              <span className="text-[#c5ced8]">|</span>
-              <a
-                href="/privacy.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline-offset-2 hover:text-[#173f70] hover:underline"
-              >
-                個人情報保護方針
-              </a>
             </div>
             <button
               onClick={() => {
