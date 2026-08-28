@@ -1856,17 +1856,17 @@ export default function V2PropertyDetail({
       </div>
       {shareTextOpen && (
         <div
-          className="fixed inset-0 z-[70] flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-4"
+          className="fixed inset-0 z-[70] flex items-end overflow-hidden bg-black/45 sm:items-center sm:justify-center sm:p-4"
           onClick={() => setShareTextOpen(false)}
         >
           <section
             role="dialog"
             aria-modal="true"
             aria-labelledby="property-share-title"
-            className="w-full bg-white p-5 shadow-xl sm:max-w-lg sm:border sm:border-[#d9e0e8] sm:p-6"
+            className="max-h-[100dvh] w-full overflow-y-auto overscroll-contain bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:border sm:border-[#d9e0e8] sm:p-6"
             onClick={event => event.stopPropagation()}
           >
-            <div className="flex items-start gap-3">
+            <div className="sticky top-0 z-10 -mx-5 -mt-5 flex items-start gap-3 border-b border-[#eef1f4] bg-white px-5 pb-3 pt-[max(1.25rem,env(safe-area-inset-top))] sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
               <div className="grid size-10 shrink-0 place-items-center bg-[#edf3f8] text-[#173f70]">
                 <Share2 size={20} />
               </div>
@@ -1879,7 +1879,7 @@ export default function V2PropertyDetail({
                 </h2>
                 <p className="mt-1 text-[11px] leading-5 text-[#65748a]">投稿先の方針に合わせて2種類から選べます。画像は含まれません。</p>
               </div>
-              <button type="button" onClick={() => setShareTextOpen(false)} className="grid size-9 shrink-0 place-items-center text-[#65748a]" aria-label="閉じる">
+              <button type="button" onClick={() => setShareTextOpen(false)} className="grid size-11 shrink-0 touch-manipulation place-items-center text-[#65748a]" aria-label="閉じる">
                 <X size={19} />
               </button>
             </div>
@@ -1905,13 +1905,10 @@ export default function V2PropertyDetail({
                 メールで問い合わせ
               </button>
             </div>
-            <p className="mt-3 text-[10px] leading-5 text-[#65748a]">
+            <div className="mt-3 border-l-4 border-[#35724f] bg-[#eef7f1] px-3 py-2 text-[11px] font-bold leading-5 text-[#27613c]">
               {shareTextMode === "propflow"
-                ? "PropFlowの紹介ページと登録申請へ案内します。"
-                : "外部サービスへのリンクを載せず、property@gspec.meへ案内します。"}
-            </p>
-            <div className="mt-2 border-l-4 border-[#35724f] bg-[#eef7f1] px-3 py-2 text-[11px] font-bold leading-5 text-[#27613c]">
-              PropFlowへの登録案内や手続きは、PropFlow運営担当が対応します。物件掲載者様にご対応いただく必要はありません。
+                ? "PropFlowの紹介ページと登録申請へ案内します。登録案内や手続きはPropFlow運営担当が対応するため、物件掲載者様にご対応いただく必要はありません。"
+                : "外部サービスへのリンクは載せず、property@gspec.meへ案内します。登録案内や手続きはPropFlow運営担当が対応するため、物件掲載者様にご対応いただく必要はありません。"}
             </div>
             <div className="mt-3 max-h-[42vh] overflow-y-auto whitespace-pre-wrap border border-[#d9e0e8] bg-[#f8fafc] p-4 text-[12px] leading-6 text-[#334a66]">
               {propertyShareText}
