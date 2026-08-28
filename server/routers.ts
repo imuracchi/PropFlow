@@ -1293,6 +1293,30 @@ JSONのみ返してください。`,
         return { success: true };
       }),
 
+    logShareCopy: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          mode: z.enum(["propflow", "email"]),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const property = await requirePropertyOwner(input.id, ctx.user);
+        const modeLabel =
+          input.mode === "propflow"
+            ? "PropFlowへ案内"
+            : "メールで問い合わせ";
+        await db.logActivity(
+          ctx.user.id,
+          input.mode === "propflow"
+            ? "property_share_copy_propflow"
+            : "property_share_copy_email",
+          `物件「${property.name}」（PF-${property.id}）の紹介文をコピー。種類：${modeLabel}`,
+          ctx.req.headers["user-agent"]
+        );
+        return { success: true };
+      }),
+
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
@@ -1998,6 +2022,16 @@ ${propList}`,
   mypage: router({
     myProperties: protectedProcedure.query(async ({ ctx }) => {
       return db.getMyProperties(ctx.user.id);
+    }),
+
+    logReferralCopy: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.logActivity(
+        ctx.user.id,
+        "referral_copy",
+        "「知人に紹介」のPropFlow紹介文をコピー",
+        ctx.req.headers["user-agent"]
+      );
+      return { success: true };
     }),
 
     interestedUsers: protectedProcedure.query(async ({ ctx }) => {

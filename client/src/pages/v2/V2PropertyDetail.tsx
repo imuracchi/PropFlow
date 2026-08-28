@@ -424,6 +424,7 @@ export default function V2PropertyDetail({
         await utils.property.list.invalidate();
       },
     });
+  const logShareCopy = trpc.property.logShareCopy.useMutation();
   const saveMemo = trpc.memo.save.useMutation();
   const deleteMemo = trpc.memo.delete.useMutation();
   const addExclusion = trpc.property.addExclusion.useMutation({
@@ -526,6 +527,20 @@ export default function V2PropertyDetail({
       textarea.select();
       document.execCommand("copy");
       textarea.remove();
+    }
+    if (!preview) {
+      try {
+        await logShareCopy.mutateAsync({
+          id: propertyId,
+          mode: shareTextMode,
+        });
+      } catch (error) {
+        console.error("Failed to log property share copy:", error);
+        window.alert(
+          "紹介文はコピーされましたが、操作ログの記録に失敗しました。時間をおいてもう一度お試しください。"
+        );
+        return;
+      }
     }
     setShareTextCopied(true);
     window.setTimeout(() => setShareTextCopied(false), 2500);

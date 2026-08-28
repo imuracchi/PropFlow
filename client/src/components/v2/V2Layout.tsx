@@ -70,6 +70,7 @@ export default function V2Layout({
     refetchInterval: 30000,
   });
   const unreadAnnouncementCount = unreadAnnouncementCountQuery.data ?? 0;
+  const logReferralCopy = trpc.mypage.logReferralCopy.useMutation();
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
   const [referralCopied, setReferralCopied] = useState(false);
@@ -109,6 +110,17 @@ export default function V2Layout({
       textarea.select();
       document.execCommand("copy");
       textarea.remove();
+    }
+    if (!preview) {
+      try {
+        await logReferralCopy.mutateAsync();
+      } catch (error) {
+        console.error("Failed to log referral copy:", error);
+        window.alert(
+          "紹介文はコピーされましたが、操作ログの記録に失敗しました。時間をおいてもう一度お試しください。"
+        );
+        return;
+      }
     }
     setReferralCopied(true);
     window.setTimeout(() => setReferralCopied(false), 2500);
