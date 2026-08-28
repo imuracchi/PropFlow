@@ -599,6 +599,11 @@ export default function V2PropertyList({
               <strong className="text-[18px] text-[#102d50]">
                 {sortedProperties.length}件
               </strong>
+              {totalPages > 1 && (
+                <span className="ml-2 whitespace-nowrap text-[12px] font-bold text-[#526176]">
+                  {currentPage} / {totalPages}ページ
+                </span>
+              )}
             </p>
             <label className="flex items-center gap-2 text-[11px] font-bold text-[#65748a]">
               表示順
