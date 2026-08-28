@@ -386,10 +386,9 @@ async function startServer() {
       if (!batches.length) return;
       const { sendMail } = await import("./mail");
       const { sendLinePush } = await import("./line");
-      const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(
-        /\/$/,
-        ""
-      );
+      // Keep DM notification links on the same origin as the signed-in app.
+      // The Railway service domain has separate cookies from propflow.jp.
+      const siteUrl = "https://propflow.jp";
       const escapeHtml = (value: unknown) =>
         String(value ?? "")
           .replace(/&/g, "&amp;")

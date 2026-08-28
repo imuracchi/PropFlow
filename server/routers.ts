@@ -118,7 +118,10 @@ async function sendDmNotifications(opts: {
     (opts.propertyId
       ? `/v2/chat/${opts.senderId}/${opts.propertyId}`
       : "/v2/messages");
-  const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+  // DM notification links must always use the public domain. Railway's
+  // service URL is a different origin, so recipients can appear logged out
+  // or see an empty conversation when opening a notification on desktop.
+  const siteUrl = "https://propflow.jp";
   const dmUrl = `${siteUrl}${dmPath}`;
 
   const { sendPushToUsers } = await import("./_core/webpush");
