@@ -4194,13 +4194,14 @@ export async function getInterestedUsersForMyProperties(userId: number) {
       showCompany: users.showCompany,
       verified: users.verified,
       businessCardBase64: users.businessCardBase64,
+      role: users.role,
     })
     .from(users)
     .where(
       sql`${users.id} IN (${sql.join(
         userIds.map(id => sql`${id}`),
         sql`, `
-      )})`
+      )}) AND ${users.role} = 'user'`
     );
 
   // 物件ごと・ユーザーごとにグループ化
