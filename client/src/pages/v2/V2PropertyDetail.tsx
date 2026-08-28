@@ -1888,10 +1888,10 @@ export default function V2PropertyDetail({
             role="dialog"
             aria-modal="true"
             aria-labelledby="property-share-title"
-            className="max-h-[100dvh] w-full overflow-y-auto overscroll-contain bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:border sm:border-[#d9e0e8] sm:p-6"
+            className="flex max-h-[100dvh] w-full flex-col overflow-hidden bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:border sm:border-[#d9e0e8] sm:p-6"
             onClick={event => event.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 -mx-5 -mt-5 flex items-start gap-3 border-b border-[#eef1f4] bg-white px-5 pb-3 pt-[max(1.25rem,env(safe-area-inset-top))] sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
+            <div className="-mx-5 -mt-5 flex shrink-0 items-start gap-3 border-b border-[#eef1f4] bg-white px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
               <div className="grid size-10 shrink-0 place-items-center bg-[#edf3f8] text-[#173f70]">
                 <Share2 size={20} />
               </div>
@@ -1908,7 +1908,7 @@ export default function V2PropertyDetail({
                 <X size={19} />
               </button>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid shrink-0 grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -1930,18 +1930,18 @@ export default function V2PropertyDetail({
                 メールで問い合わせ
               </button>
             </div>
-            <div className="mt-3 border-l-4 border-[#35724f] bg-[#eef7f1] px-3 py-2 text-[11px] font-bold leading-5 text-[#27613c]">
+            <div className="mt-3 shrink-0 border-l-4 border-[#35724f] bg-[#eef7f1] px-3 py-2 text-[11px] font-bold leading-5 text-[#27613c]">
               {shareTextMode === "propflow"
                 ? "PropFlowの紹介ページと登録申請へ案内します。登録案内や手続きはPropFlow運営担当が対応するため、物件掲載者様にご対応いただく必要はありません。"
                 : "外部サービスへのリンクは載せず、property@gspec.meへ案内します。登録案内や手続きはPropFlow運営担当が対応するため、物件掲載者様にご対応いただく必要はありません。"}
             </div>
-            <div className="mt-3 max-h-[42vh] overflow-y-auto whitespace-pre-wrap border border-[#d9e0e8] bg-[#f8fafc] p-4 text-[12px] leading-6 text-[#334a66]">
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain whitespace-pre-wrap border border-[#d9e0e8] bg-[#f8fafc] p-4 text-[12px] leading-6 text-[#334a66]">
               {propertyShareText}
             </div>
             <button
               type="button"
               onClick={() => void copyPropertyShareText()}
-              className={`mt-4 flex h-12 w-full items-center justify-center gap-2 text-[14px] font-bold text-white ${shareTextCopied ? "bg-[#35724f]" : "bg-[#173f70]"}`}
+              className={`mt-4 flex h-12 w-full shrink-0 items-center justify-center gap-2 text-[14px] font-bold text-white ${shareTextCopied ? "bg-[#35724f]" : "bg-[#173f70]"}`}
             >
               <Copy size={18} />
               {shareTextCopied ? "コピーしました" : "この紹介文をコピー"}
@@ -1950,7 +1950,7 @@ export default function V2PropertyDetail({
               <button
                 type="button"
                 onClick={() => setShareTextOpen(false)}
-                className="mt-2 h-10 w-full text-[12px] font-semibold text-[#65748a]"
+                className="mt-2 h-10 w-full shrink-0 text-[12px] font-semibold text-[#65748a]"
               >
                 今はしない
               </button>
