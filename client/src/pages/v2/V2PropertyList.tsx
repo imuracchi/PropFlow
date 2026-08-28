@@ -468,7 +468,7 @@ export default function V2PropertyList({
     setLocation(url, { replace: true });
   }, [currentPage, isLoading, listPath, setLocation, totalPages]);
 
-  const goToPage = (page: number) => {
+  const goToPage = (page: number, scrollToResults = true) => {
     const nextPage = Math.min(Math.max(page, 1), totalPages);
     if (nextPage === currentPage) return;
     const direction = nextPage > currentPage ? 1 : -1;
@@ -478,8 +478,10 @@ export default function V2PropertyList({
       window.requestAnimationFrame(() => {
         const results = resultsRef.current;
         if (!results) return;
-        const top = results.getBoundingClientRect().top + window.scrollY - 12;
-        window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+        if (scrollToResults) {
+          const top = results.getBoundingClientRect().top + window.scrollY - 12;
+          window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+        }
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
           return;
         results.animate(
@@ -612,7 +614,7 @@ export default function V2PropertyList({
                 <div className="ml-1 hidden items-center gap-1.5 sm:flex">
                   <button
                     type="button"
-                    onClick={() => goToPage(currentPage - 1)}
+                    onClick={() => goToPage(currentPage - 1, false)}
                     disabled={currentPage === 1}
                     className="h-8 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6]"
                   >
@@ -620,7 +622,7 @@ export default function V2PropertyList({
                   </button>
                   <button
                     type="button"
-                    onClick={() => goToPage(currentPage + 1)}
+                    onClick={() => goToPage(currentPage + 1, false)}
                     disabled={currentPage === totalPages}
                     className="h-8 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6]"
                   >
