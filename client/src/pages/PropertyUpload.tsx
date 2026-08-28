@@ -134,6 +134,11 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
 
   const [showNotifyDialog, setShowNotifyDialog] = useState(false);
   const [newPropertyId, setNewPropertyId] = useState<number | null>(null);
+  const [notifyChannels, setNotifyChannels] = useState({
+    line: false,
+    email: false,
+    push: false,
+  });
 
   const createMutation = trpc.property.create.useMutation();
   const uploadFileMutation = trpc.property.uploadFile.useMutation();
@@ -464,44 +469,32 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
               </h3>
             </div>
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
-              <span className="text-green-600 mt-0.5">✓</span>
-              <span>
-                新着メール：
-                {hasExclusions ? "閲覧制限者を除く全員へ送信" : "全員へ送信"}
-              </span>
-            </div>
-            <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
-              <span className="text-green-600 mt-0.5">✓</span>
-              <span>
-                プッシュ通知：
-                {hasExclusions ? "閲覧制限者を除く全員へ送信" : "全員へ送信"}
-              </span>
-            </div>
-            <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
-              {hasExclusions ? (
-                <>
-                  <span className="text-muted-foreground mt-0.5">—</span>
-                  <span className="text-muted-foreground">
-                    LINE通知：閲覧制限があるため送信しません
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="text-green-600 mt-0.5">✓</span>
-                  <span>LINE通知：全員へ送信</span>
-                </>
-              )}
-            </div>
+          <div className="space-y-2 bg-muted/50 rounded-lg px-3 py-3 text-sm">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="size-4" checked={notifyChannels.email} onChange={event => setNotifyChannels(current => ({ ...current, email: event.target.checked }))} />
+              新着メール
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="size-4" checked={notifyChannels.push} onChange={event => setNotifyChannels(current => ({ ...current, push: event.target.checked }))} />
+              Webプッシュ
+            </label>
+            <label className={`flex items-center gap-2 ${hasExclusions ? "text-muted-foreground" : ""}`}>
+              <input type="checkbox" className="size-4" disabled={hasExclusions} checked={notifyChannels.line} onChange={event => setNotifyChannels(current => ({ ...current, line: event.target.checked }))} />
+              {hasExclusions ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE"}
+            </label>
           </div>
           <div className="flex flex-col gap-2">
             <Button
               className="w-full bg-green-600 hover:bg-green-700 text-white gap-2"
-              disabled={notifyLineMutation.isPending}
+              disabled={notifyLineMutation.isPending || !Object.values(notifyChannels).some(Boolean)}
               onClick={() => {
                 notifyLineMutation.mutate(
-                  { propertyId: newPropertyId },
+                  {
+                    propertyId: newPropertyId,
+                    sendLine: notifyChannels.line,
+                    sendEmail: notifyChannels.email,
+                    sendPush: notifyChannels.push,
+                  },
                   {
                     onSuccess: () => {
                       toast.success("物件を公開しました");
@@ -521,7 +514,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
                   送信中...
                 </>
               ) : (
-                <>OK・通知する</>
+                <>選択した通知を送る</>
               )}
             </Button>
             <button

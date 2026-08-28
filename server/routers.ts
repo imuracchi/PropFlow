@@ -1705,12 +1705,18 @@ ${propList}`,
     }),
 
     notifyLine: protectedProcedure
-      .input(z.object({ propertyId: z.number() }))
+      .input(z.object({
+        propertyId: z.number(),
+        sendLine: z.boolean().default(true),
+        sendEmail: z.boolean().default(true),
+        sendPush: z.boolean().default(true),
+      }))
       .mutation(async ({ input, ctx }) => {
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
         if (prop.visibilityScope === "proposal")
           return { success: true, limited: true, hasExclusions: false };
-        if (prop.lineNotifiedAt) return { success: false, alreadySent: true };
+        if (input.sendLine && prop.lineNotifiedAt)
+          return { success: false, alreadySent: true };
 
         const siteUrl = PUBLIC_SITE_URL;
         const priceLine = prop.priceNegotiable
@@ -1724,7 +1730,7 @@ ${propList}`,
         const hasExclusions = excludedIds.length > 0;
 
         // LINE（閲覧制限なしの場合のみ）
-        if (!hasExclusions) {
+        if (input.sendLine && !hasExclusions) {
           const { sendLineBroadcast, buildPropertyFlexMessage } = await import(
             "./_core/line"
           );
@@ -1732,14 +1738,10 @@ ${propList}`,
             () => {}
           );
         }
-        await db.markPropertyLineNotified(input.propertyId);
+        if (input.sendLine) await db.markPropertyLineNotified(input.propertyId);
 
         // メール（閲覧制限者を除外）
         const { sendMail } = await import("./_core/mail");
-        const emails = await db.getActiveUserEmailsForNotify(
-          "newProperty",
-          excludedIds
-        );
         const mailHtml = `
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
             <h2 style="color:#1e3a5f;">🏠 新着物件のお知らせ</h2>
@@ -1754,10 +1756,16 @@ ${propList}`,
             <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
             <p style="margin-top:4px;font-size:12px;color:#9ca3af;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
           </div>`;
-        for (const email of emails) {
-          sendMail(email, `【PropFlow】新着物件: ${prop.name}`, mailHtml).catch(
-            () => {}
+        if (input.sendEmail) {
+          const emails = await db.getActiveUserEmailsForNotify(
+            "newProperty",
+            excludedIds
           );
+          for (const email of emails) {
+            sendMail(email, `【PropFlow】新着物件: ${prop.name}`, mailHtml).catch(
+              () => {}
+            );
+          }
         }
 
         // プッシュ通知（閲覧制限者・物件オーナーを除外）
@@ -1767,7 +1775,7 @@ ${propList}`,
         const pushTargetIds = activeUsers
           .filter(u => u.id !== prop.userId && !excludedSet.has(u.id))
           .map(u => u.id);
-        if (pushTargetIds.length > 0) {
+        if (input.sendPush && pushTargetIds.length > 0) {
           sendPushToUsers(
             pushTargetIds,
             `🏠 新着物件: ${prop.name}`,

@@ -467,6 +467,11 @@ export default function V2PropertyDetail({
   const [shareTextOpen, setShareTextOpen] = useState(false);
   const [sharePromptFromPublish, setSharePromptFromPublish] = useState(false);
   const [publishNotifyOpen, setPublishNotifyOpen] = useState(false);
+  const [publishNotifyChannels, setPublishNotifyChannels] = useState({
+    line: false,
+    email: false,
+    push: false,
+  });
   const [shareTextMode, setShareTextMode] = useState<"propflow" | "email">("propflow");
   const [shareTextCopied, setShareTextCopied] = useState(false);
   const [introGenerating, setIntroGenerating] = useState(false);
@@ -991,10 +996,19 @@ export default function V2PropertyDetail({
                 <h3 className="text-[18px] font-bold text-[#102d50] sm:text-[21px]">新着として通知しますか？</h3>
               </div>
             </div>
-            <div className="mt-5 grid gap-2 bg-[#f4f6f8] p-4 text-[13px] text-[#44546a] sm:grid-cols-3">
-              <p>✓ 新着メール</p>
-              <p>✓ Webプッシュ</p>
-              <p>{exclusionCount > 0 ? "— LINE（閲覧制限のため送信なし）" : "✓ 公式LINE"}</p>
+            <div className="mt-5 grid gap-2 bg-[#f4f6f8] p-4 text-[13px] text-[#44546a]">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={publishNotifyChannels.email} onChange={event => setPublishNotifyChannels(current => ({ ...current, email: event.target.checked }))} className="size-4" />
+                新着メール
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={publishNotifyChannels.push} onChange={event => setPublishNotifyChannels(current => ({ ...current, push: event.target.checked }))} className="size-4" />
+                Webプッシュ
+              </label>
+              <label className={`flex items-center gap-2 ${exclusionCount > 0 ? "text-[#8b95a3]" : ""}`}>
+                <input type="checkbox" disabled={exclusionCount > 0} checked={publishNotifyChannels.line} onChange={event => setPublishNotifyChannels(current => ({ ...current, line: event.target.checked }))} className="size-4" />
+                {exclusionCount > 0 ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE"}
+              </label>
             </div>
             <p className="mt-3 text-[11px] leading-5 text-[#65748a]">
               {exclusionCount > 0
@@ -1016,10 +1030,15 @@ export default function V2PropertyDetail({
                 通知しない
               </button>
               <button
-                disabled={notifyPublishedProperty.isPending}
+                disabled={notifyPublishedProperty.isPending || !Object.values(publishNotifyChannels).some(Boolean)}
                 onClick={async () => {
                   try {
-                    await notifyPublishedProperty.mutateAsync({ propertyId });
+                    await notifyPublishedProperty.mutateAsync({
+                      propertyId,
+                      sendLine: publishNotifyChannels.line,
+                      sendEmail: publishNotifyChannels.email,
+                      sendPush: publishNotifyChannels.push,
+                    });
                     await propertyQuery.refetch();
                     setPublishNotifyOpen(false);
                     setSharePromptFromPublish(true);
@@ -1032,7 +1051,7 @@ export default function V2PropertyDetail({
                 }}
                 className="h-11 flex-[1.4] bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50"
               >
-                {notifyPublishedProperty.isPending ? "送信中…" : "通知して次へ"}
+                {notifyPublishedProperty.isPending ? "送信中…" : "選択した通知を送る"}
               </button>
             </div>
           </div>
