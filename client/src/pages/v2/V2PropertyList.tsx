@@ -1,4 +1,4 @@
-import { useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   Building2,
   CheckCircle2,
@@ -188,6 +188,7 @@ const PREVIEW_PROPERTIES = [
   },
 ];
 const PREVIEW_FAVORITES_KEY = "propflow-v2-preview-favorites";
+const PAGE_SIZE = 30;
 
 type SortKey =
   | "regional"
@@ -222,7 +223,7 @@ export default function V2PropertyList({
   preview?: boolean;
   collection?: "all" | "favorites" | "mine";
 }) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const [mode, setMode] = useState<"area" | "keyword" | "ai">("area");
   const [region, setRegion] = useState<string | null>(null);
@@ -244,6 +245,11 @@ export default function V2PropertyList({
   const [sortKey, setSortKey] = useState<SortKey>("regional");
   const [sortDirection, setSortDirection] =
     useState<SortDirection>("desc");
+  const [currentPage, setCurrentPage] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    const page = Number(new URLSearchParams(window.location.search).get("page"));
+    return Number.isInteger(page) && page > 0 ? page : 1;
+  });
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
@@ -400,6 +406,79 @@ export default function V2PropertyList({
     });
     return result;
   }, [filtered, sortDirection, sortKey]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedProperties.length / PAGE_SIZE));
+  const paginatedProperties = useMemo(
+    () =>
+      sortedProperties.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE
+      ),
+    [currentPage, sortedProperties]
+  );
+  const listPath = preview
+    ? collection === "favorites"
+      ? "/v2/preview/favorites"
+      : collection === "mine"
+        ? "/v2/preview/my-properties"
+        : "/v2/preview"
+    : collection === "favorites"
+      ? "/v2/favorites"
+      : collection === "mine"
+        ? "/v2/my-properties"
+        : "/v2/properties";
+  const paginationFilterKey = JSON.stringify([
+    collection,
+    mode,
+    prefecture,
+    appliedKeyword,
+    aiIds,
+    type,
+    minPrice,
+    maxPrice,
+    minArea,
+    maxArea,
+    newOnly,
+    hotOnly,
+    negotiatingOnly,
+    favoriteOnly,
+    sortKey,
+    sortDirection,
+  ]);
+  const previousPaginationFilterKey = useRef(paginationFilterKey);
+
+  useEffect(() => {
+    const page = Number(new URLSearchParams(window.location.search).get("page"));
+    const requestedPage = Number.isInteger(page) && page > 0 ? page : 1;
+    setCurrentPage(requestedPage);
+  }, [location]);
+
+  useEffect(() => {
+    if (previousPaginationFilterKey.current === paginationFilterKey) return;
+    previousPaginationFilterKey.current = paginationFilterKey;
+    setCurrentPage(1);
+    setLocation(listPath, { replace: true });
+  }, [listPath, paginationFilterKey, setLocation]);
+
+  useEffect(() => {
+    if (isLoading || currentPage <= totalPages) return;
+    setCurrentPage(totalPages);
+    const url = totalPages > 1 ? `${listPath}?page=${totalPages}` : listPath;
+    setLocation(url, { replace: true });
+  }, [currentPage, isLoading, listPath, setLocation, totalPages]);
+
+  const goToPage = (page: number) => {
+    const nextPage = Math.min(Math.max(page, 1), totalPages);
+    if (nextPage === currentPage) return;
+    setCurrentPage(nextPage);
+    setLocation(nextPage > 1 ? `${listPath}?page=${nextPage}` : listPath);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const pageNumbers = useMemo(() => {
+    const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+    const end = Math.min(totalPages, start + 4);
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [currentPage, totalPages]);
 
   const changeSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -795,11 +874,11 @@ export default function V2PropertyList({
         ) : (
           <>
             <section className="mt-4 lg:hidden">
-              {sortedProperties.map((p: any, i) => (
+              {paginatedProperties.map((p: any, i) => (
                 <article
                   key={p.id}
                   onClick={() => openProperty(p.id)}
-                  className={`relative px-4 py-3 ${p.status === "sold" ? "border-l-[3px] border-[#3f7d5a] bg-[#f5faf7]" : "bg-white"} ${i < sortedProperties.length - 1 ? "mb-1.5" : ""}`}
+                  className={`relative px-4 py-3 ${p.status === "sold" ? "border-l-[3px] border-[#3f7d5a] bg-[#f5faf7]" : "bg-white"} ${i < paginatedProperties.length - 1 ? "mb-1.5" : ""}`}
                 >
                   <span
                     className={`absolute inset-y-0 left-0 w-[3px] ${p.userId !== user?.id && !readSet.has(p.id) ? "bg-[#173f70]" : "bg-transparent"}`}
@@ -967,7 +1046,7 @@ export default function V2PropertyList({
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedProperties.map((p: any) => (
+                  {paginatedProperties.map((p: any) => (
                     <tr
                       key={p.id}
                       onClick={() => openProperty(p.id)}
@@ -1085,6 +1164,47 @@ export default function V2PropertyList({
                 </tbody>
               </table>
             </section>
+            {totalPages > 1 && (
+              <nav aria-label="物件一覧のページ" className="mt-4 border border-[#d9e0e8] bg-white px-3 py-4 sm:px-4">
+                <p className="text-center text-[12px] text-[#65748a]">
+                  全{sortedProperties.length}件中 {(currentPage - 1) * PAGE_SIZE + 1}〜{Math.min(currentPage * PAGE_SIZE, sortedProperties.length)}件
+                </p>
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="h-11 min-w-[92px] border border-[#173f70] px-3 text-[12px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6]"
+                  >
+                    前のページ
+                  </button>
+                  <div className="hidden items-center gap-1 sm:flex">
+                    {pageNumbers.map(page => (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => goToPage(page)}
+                        aria-current={page === currentPage ? "page" : undefined}
+                        className={`grid size-10 place-items-center border text-[12px] font-bold ${page === currentPage ? "border-[#173f70] bg-[#173f70] text-white" : "border-[#cbd5df] text-[#526176]"}`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="min-w-12 text-center text-[12px] font-bold text-[#526176] sm:hidden">
+                    {currentPage}/{totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="h-11 min-w-[92px] border border-[#173f70] px-3 text-[12px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6]"
+                  >
+                    次のページ
+                  </button>
+                </div>
+              </nav>
+            )}
           </>
         )}
       </main>

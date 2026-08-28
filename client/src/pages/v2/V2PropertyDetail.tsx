@@ -1730,6 +1730,14 @@ export default function V2PropertyDetail({
                       disabled={setPublished.isPending}
                       onClick={async () => {
                         const nextPublished = property.published === 0;
+                        if (
+                          !nextPublished &&
+                          !window.confirm(
+                            "この物件を非公開にしますか？\n物件一覧には表示されなくなります。"
+                          )
+                        ) {
+                          return;
+                        }
                         const isFirstPublication = nextPublished && !property.publishedAt;
                         if (preview) {
                           setPreviewOverride({
