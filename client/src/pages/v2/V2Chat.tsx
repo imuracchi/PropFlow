@@ -4,6 +4,8 @@ import {
   Check,
   CheckCircle2,
   Copy,
+  EyeOff,
+  FileText,
   Globe,
   IdCard,
   Loader2,
@@ -69,6 +71,15 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
     { id: propertyId! },
     { enabled: !preview && !!propertyId }
   );
+  const propertyFilesQuery = trpc.property.listFiles.useQuery(
+    { propertyId: propertyId! },
+    {
+      enabled:
+        !preview &&
+        !!propertyId &&
+        propertyQuery.data?.userId === user?.id,
+    }
+  );
   const contactQuery = trpc.dm.contactStatus.useQuery(
     { partnerId, propertyId },
     { enabled: !preview && !!partnerId }
@@ -85,6 +96,8 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const [modal, setModal] = useState<"share" | "contact" | null>(null);
   const [includeCard, setIncludeCard] = useState(false);
   const [includePropertyLink, setIncludePropertyLink] = useState(true);
+  const [selectedPropertyFileIds, setSelectedPropertyFileIds] = useState<number[]>([]);
+  const [shareError, setShareError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [previewFlagged, setPreviewFlagged] = useState(false);
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
@@ -113,12 +126,23 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const property: any = preview
     ? {
         id: 901,
+        userId: 1,
         name: "代沢レジデンス",
         address: "東京都世田谷区代沢5丁目18番12号",
         status: "available",
       }
     : propertyQuery.data;
+  const shareablePropertyFiles: any[] = preview
+    ? [
+        { id: 11, name: "物件概要書.pdf", size: 1_240_000, category: "document", visible: 1 },
+        { id: 12, name: "レントロール.pdf", size: 860_000, category: "document", visible: 0 },
+        { id: 13, name: "修繕履歴.pdf", size: 620_000, category: "document", visible: 0 },
+      ]
+    : (propertyFilesQuery.data ?? []).filter(file => file.category === "document");
   const myId = preview ? 1 : user?.id;
+  const selectedPropertyFilesSize = shareablePropertyFiles
+    .filter(file => selectedPropertyFileIds.includes(file.id))
+    .reduce((sum, file) => sum + Number(file.size ?? 0), 0);
   const partnerContact = preview
     ? {
         phone: "03-1234-5678",
@@ -232,6 +256,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
     setAttachmentFiles([]);
   };
   const share = async () => {
+    setShareError(null);
     if (preview)
       setPreviewItems(items => [
         ...items,
@@ -243,16 +268,47 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
         },
       ]);
     else {
-      await shareContact.mutateAsync({ partnerId, propertyId });
-      if (includeCard) {
-        const result = await sendBusinessCard.mutateAsync({ partnerId, propertyId, includePropertyLink });
-        if (!result.success) {
-          alert(result.error ?? "名刺の送信に失敗しました");
+      try {
+        await shareContact.mutateAsync({ partnerId, propertyId });
+        if (includeCard) {
+          const result = await sendBusinessCard.mutateAsync({
+            partnerId,
+            propertyId,
+            includePropertyLink,
+            propertyFileIds: selectedPropertyFileIds,
+          });
+          if (!result.success) {
+            setShareError(result.error ?? "名刺と資料の送信に失敗しました");
+            return;
+          }
         }
+        await Promise.all([messagesQuery.refetch(), contactQuery.refetch()]);
+      } catch (error) {
+        setShareError(error instanceof Error ? error.message : "送信に失敗しました");
+        return;
       }
-      await Promise.all([messagesQuery.refetch(), contactQuery.refetch()]);
     }
+    setSelectedPropertyFileIds([]);
     setModal(null);
+  };
+  const togglePropertyFile = (fileId: number) => {
+    setShareError(null);
+    setSelectedPropertyFileIds(current => {
+      if (current.includes(fileId)) return current.filter(id => id !== fileId);
+      const next = [...current, fileId];
+      if (next.length > 10) {
+        setShareError("資料は最大10ファイルまで選択できます");
+        return current;
+      }
+      const total = shareablePropertyFiles
+        .filter(file => next.includes(file.id))
+        .reduce((sum, file) => sum + Number(file.size ?? 0), 0);
+      if (total > 15 * 1024 * 1024) {
+        setShareError("メール添付資料の合計は15MB以下にしてください");
+        return current;
+      }
+      return next;
+    });
   };
   const copyContact = async (value: string, key: string) => {
     await navigator.clipboard.writeText(value);
@@ -382,8 +438,10 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
           {!isClosed && !isRestricted && <div className="mb-2 flex flex-wrap gap-2">
             <button
               onClick={() => {
-                setIncludeCard(false);
+                setIncludeCard(!!user?.businessCardBase64 || preview);
                 setIncludePropertyLink(true);
+                setSelectedPropertyFileIds([]);
+                setShareError(null);
                 setModal("share");
               }}
               className="flex h-9 items-center gap-1.5 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70]"
@@ -458,18 +516,52 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                   <p className="mt-3 text-[13px] leading-6 text-[#65748a]">
                     電話番号・FAX・URL・メールアドレスを、このチャットの相手に共有します。
                   </p>
-                  {!!user?.businessCardBase64 && (
-                    <label className="mt-4 flex cursor-pointer items-center gap-3 border-t border-[#e1e6ec] pt-4 text-[13px] font-bold text-[#263b58]"><input type="checkbox" checked={includeCard} onChange={event => setIncludeCard(event.target.checked)} className="size-4 accent-[#173f70]"/>名刺も合わせて送る</label>
+                  {(!!user?.businessCardBase64 || preview) && (
+                    <label className="mt-4 flex cursor-pointer items-center gap-3 border-t border-[#e1e6ec] pt-4 text-[13px] font-bold text-[#263b58]"><input type="checkbox" checked={includeCard} onChange={event => { setIncludeCard(event.target.checked); if (!event.target.checked) setSelectedPropertyFileIds([]); }} className="size-4 accent-[#173f70]"/>名刺も合わせてメールで送る</label>
                   )}
                   {includeCard && propertyId && (
-                    <label className="mt-3 flex cursor-pointer items-center gap-3 text-[13px] text-[#526176]"><input type="checkbox" checked={includePropertyLink} onChange={event => setIncludePropertyLink(event.target.checked)} className="size-4 accent-[#173f70]"/>物件資料リンクも送る</label>
+                    <label className="mt-3 flex cursor-pointer items-center gap-3 text-[13px] text-[#526176]"><input type="checkbox" checked={includePropertyLink} onChange={event => setIncludePropertyLink(event.target.checked)} className="size-4 accent-[#173f70]"/>物件ページのリンクもメールに記載</label>
                   )}
+                  {includeCard && property?.userId === myId && (
+                    <div className="mt-4 border-t border-[#e1e6ec] pt-4">
+                      <div className="flex items-end justify-between gap-3">
+                        <div>
+                          <p className="text-[13px] font-bold text-[#263b58]">メールに添付する物件資料</p>
+                          <p className="mt-1 text-[11px] text-[#65748a]">公開・非表示資料から最大10件、合計15MBまで選択できます</p>
+                        </div>
+                        <span className="shrink-0 text-right text-[11px] font-bold text-[#526176]">{selectedPropertyFileIds.length}/10件<br />{(selectedPropertyFilesSize / 1024 / 1024).toFixed(1)}/15MB</span>
+                      </div>
+                      {propertyFilesQuery.isLoading && !preview ? (
+                        <div className="mt-3 flex items-center justify-center py-4 text-[#65748a]"><Loader2 className="size-4 animate-spin" /></div>
+                      ) : shareablePropertyFiles.length ? (
+                        <div className="mt-3 max-h-52 overflow-y-auto border-y border-[#e1e6ec]">
+                          {shareablePropertyFiles.map(file => {
+                            const selected = selectedPropertyFileIds.includes(file.id);
+                            const tooLarge = Number(file.size ?? 0) > 15 * 1024 * 1024;
+                            return <label key={file.id} className={`flex items-center gap-3 border-b border-[#edf0f3] px-2 py-3 last:border-b-0 ${tooLarge ? "cursor-not-allowed opacity-45" : "cursor-pointer hover:bg-[#f7f9fb]"}`}>
+                              <input type="checkbox" checked={selected} disabled={tooLarge} onChange={() => togglePropertyFile(file.id)} className="size-4 shrink-0 accent-[#173f70]" />
+                              <FileText className="size-4 shrink-0 text-[#526176]" />
+                              <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#263b58]">{file.name}</span>
+                              {file.visible === 0 && <span className="inline-flex shrink-0 items-center gap-1 bg-[#fff0c9] px-1.5 py-0.5 text-[10px] font-bold text-[#8b5a08]"><EyeOff className="size-3" />非表示</span>}
+                              <span className="shrink-0 text-[10px] text-[#758194]">{Number(file.size ?? 0) >= 1024 * 1024 ? `${(Number(file.size) / 1024 / 1024).toFixed(1)}MB` : `${Math.ceil(Number(file.size ?? 0) / 1024)}KB`}</span>
+                            </label>;
+                          })}
+                        </div>
+                      ) : (
+                        <p className="mt-3 bg-[#f7f9fb] px-3 py-3 text-[11px] text-[#65748a]">この物件に登録された資料はありません</p>
+                      )}
+                      {selectedPropertyFileIds.some(id => shareablePropertyFiles.find(file => file.id === id)?.visible === 0) && (
+                        <p className="mt-2 bg-[#fff8e8] px-3 py-2 text-[11px] leading-5 text-[#8b5a08]">非表示資料は物件ページでは公開されず、このメールの相手にのみ送付されます。</p>
+                      )}
+                    </div>
+                  )}
+                  {shareError && <p className="mt-3 text-[11px] text-red-600">{shareError}</p>}
                   <button
                     onClick={share}
                     disabled={shareContact.isPending || sendBusinessCard.isPending}
                     className="mt-5 h-11 w-full bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50"
                   >
-                    {shareContact.isPending || sendBusinessCard.isPending ? "送信中…" : "連絡先を共有"}
+                    {shareContact.isPending || sendBusinessCard.isPending ? "送信中…" : includeCard && selectedPropertyFileIds.length ? `連絡先・名刺・資料${selectedPropertyFileIds.length}件を送る` : includeCard ? "連絡先と名刺を送る" : "連絡先を共有"}
                   </button>
                 </>
               )}

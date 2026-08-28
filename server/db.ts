@@ -1102,6 +1102,7 @@ export async function getPlatformAnalytics() {
     dm_attachment_send: "添付付きDM",
     contact_share: "連絡先共有",
     business_card_send: "名刺送付",
+    business_card_documents_send: "名刺・物件資料送付",
     buyer_preference_save: "希望条件登録",
     property_match_results_open: "物件マッチング",
     property_search_create: "物件募集",

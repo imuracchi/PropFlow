@@ -2366,12 +2366,14 @@ ${propList}`,
           partnerId: z.number(),
           propertyId: z.number().nullable(),
           includePropertyLink: z.boolean().optional(),
+          propertyFileIds: z.array(z.number().int().positive()).max(10).optional().default([]),
         })
       )
       .mutation(async ({ input, ctx }) => {
+        let property: Awaited<ReturnType<typeof db.getPropertyById>> = null;
         if (input.propertyId) {
           await requirePropertyAccess(input.propertyId, ctx.user);
-          const property = await db.getPropertyById(input.propertyId);
+          property = await db.getPropertyById(input.propertyId);
           if (property?.status === "sold")
             throw new TRPCError({
               code: "BAD_REQUEST",
@@ -2387,36 +2389,66 @@ ${propList}`,
         const partner = await db.getUserById(input.partnerId);
         if (!partner) throw new TRPCError({ code: "NOT_FOUND" });
 
+        const uniqueFileIds = [...new Set(input.propertyFileIds)];
+        if (uniqueFileIds.length !== input.propertyFileIds.length)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "同じ資料が重複して選択されています" });
+        if (uniqueFileIds.length && (!property || property.userId !== ctx.user.id))
+          throw new TRPCError({ code: "FORBIDDEN", message: "物件登録者だけが物件資料を送信できます" });
+        const selectedFiles = (
+          await Promise.all(uniqueFileIds.map(fileId => db.getPropertyFileContent(fileId)))
+        ).filter((file): file is NonNullable<typeof file> => !!file);
+        if (
+          selectedFiles.length !== uniqueFileIds.length ||
+          selectedFiles.some(file => file.propertyId !== input.propertyId)
+        )
+          throw new TRPCError({ code: "BAD_REQUEST", message: "送信できない資料が含まれています" });
+        const selectedBytes = selectedFiles.reduce(
+          (total, file) => total + Buffer.from(file.contentBase64, "base64").length,
+          0
+        );
+        if (selectedBytes > 15 * 1024 * 1024)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "メール添付資料の合計は15MB以下にしてください" });
+
         const senderName = ctx.user.name ?? "ユーザー";
         const senderCompany = ctx.user.company ? `（${ctx.user.company}）` : "";
         const siteUrl = PUBLIC_SITE_URL;
+        const escapeHtml = (value: unknown) =>
+          String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
 
         const includePropertyLink = input.includePropertyLink !== false;
-        const prop =
-          input.propertyId && includePropertyLink
-            ? await db.getPropertyById(input.propertyId)
-            : null;
+        const prop = input.propertyId && includePropertyLink ? property : null;
         const senderIsOwner = !!prop && prop.userId === ctx.user.id;
         const propertyBlock = prop
-          ? `<p style="margin-top:16px;">対象物件: 「${prop.name}」<br/><a href="${siteUrl}/property/${prop.id}" style="color:#2563eb;">${siteUrl}/property/${prop.id}</a></p>
+          ? `<p style="margin-top:16px;">対象物件: 「${escapeHtml(prop.name)}」<br/><a href="${siteUrl}/property/${prop.id}" style="color:#2563eb;">${siteUrl}/property/${prop.id}</a></p>
              ${senderIsOwner ? `<p style="margin-top:8px;font-size:13px;color:#6b7280;">※物件ページの「資料」タブからご確認ください。</p>` : ""}`
           : "";
 
         const { sendMail } = await import("./_core/mail");
+        const documentNames = selectedFiles.map(file => file.name);
+        const documentBlock = documentNames.length
+          ? `<p style="margin-top:16px;">添付資料（${documentNames.length}件）:<br/>${documentNames.map(name => `・${escapeHtml(name)}`).join("<br/>")}</p>`
+          : "";
         const ok = await sendMail(
           partner.email,
-          `【PropFlow】${senderName}様${senderCompany}より名刺が届きました`,
+          `【PropFlow】${senderName}様${senderCompany}より${documentNames.length ? "名刺と物件資料" : "名刺"}が届きました`,
           `
             <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px;">
-              <h2 style="color:#2563eb;">📇 名刺が届きました</h2>
-              <p>${senderName}様${senderCompany}より、PropFlow経由で名刺が送られました。添付ファイルをご確認ください。</p>
+              <h2 style="color:#2563eb;">📇 ${documentNames.length ? "名刺と物件資料" : "名刺"}が届きました</h2>
+              <p>${escapeHtml(senderName)}様${escapeHtml(senderCompany)}より、PropFlow経由で${documentNames.length ? "名刺と物件資料" : "名刺"}が送られました。添付ファイルをご確認ください。</p>
               ${propertyBlock}
+              ${documentBlock}
               <p style="margin-top:16px;font-size:12px;color:#9ca3af;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
             </div>
           `,
           {
             attachments: [
               { filename: "名刺.jpg", content: ctx.user.businessCardBase64 },
+              ...selectedFiles.map(file => ({ filename: file.name, content: file.contentBase64 })),
             ],
           }
         );
@@ -2424,13 +2456,17 @@ ${propList}`,
           await db.sendDirectMessage(
             ctx.user.id,
             input.partnerId,
-            "📇 名刺付き情報メールを送りました",
+            documentNames.length
+              ? `📇 名刺と物件資料${documentNames.length}件をメールで送りました\n${documentNames.map(name => `・${name}`).join("\n")}`
+              : "📇 名刺付き情報メールを送りました",
             input.propertyId
           );
           db.logActivity(
             ctx.user.id,
-            "business_card_send",
-            `相手ID:${input.partnerId} に名刺を送付`,
+            documentNames.length ? "business_card_documents_send" : "business_card_send",
+            documentNames.length
+              ? `相手ID:${input.partnerId} に名刺と物件資料を送付 (物件ID:${input.propertyId}, 資料ID:${uniqueFileIds.join(",")}, 非表示資料:${selectedFiles.filter(file => file.visible === 0).length}件, 合計:${selectedBytes}bytes)`
+              : `相手ID:${input.partnerId} に名刺を送付`,
             ctx.req.headers["user-agent"]
           ).catch(() => {});
         }
