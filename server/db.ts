@@ -35,6 +35,7 @@ import {
   propertySearchProposals,
   activityLogs,
   generatedDocuments,
+  propertyDocumentEvents,
   dmReadStatus,
   propertyExclusions,
   broadcastLogs,
@@ -134,6 +135,21 @@ export async function runStartupMigrations() {
       KEY \`idx_property_view_events_property_viewed\` (\`propertyId\`, \`viewedAt\`),
       KEY \`idx_property_view_events_user_viewed\` (\`userId\`, \`viewedAt\`)
     )`,
+    `CREATE TABLE IF NOT EXISTS \`property_document_events\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`userId\` int NOT NULL,
+      \`propertyId\` int NOT NULL,
+      \`generationCount\` int NOT NULL DEFAULT 1,
+      \`firstGeneratedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`lastGeneratedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY \`uq_property_document_events_property_user\` (\`propertyId\`, \`userId\`),
+      KEY \`idx_property_document_events_property\` (\`propertyId\`)
+    )`,
+    `INSERT IGNORE INTO \`property_document_events\`
+      (\`userId\`, \`propertyId\`, \`generationCount\`, \`firstGeneratedAt\`, \`lastGeneratedAt\`)
+      SELECT \`userId\`, \`propertyId\`, COUNT(*), MIN(\`createdAt\`), MAX(\`createdAt\`)
+      FROM \`generated_documents\`
+      GROUP BY \`userId\`, \`propertyId\``,
     "ALTER TABLE `property_view_events` ADD INDEX `idx_property_view_events_attention` (`viewedAt`, `propertyId`, `userId`)",
     "ALTER TABLE `favorites` ADD INDEX `idx_favorites_attention` (`createdAt`, `propertyId`, `userId`)",
     "ALTER TABLE `direct_messages` ADD INDEX `idx_direct_messages_attention` (`createdAt`, `propertyId`, `senderId`)",
@@ -3515,6 +3531,7 @@ export async function queueDmNotificationBatch(
        WHERE senderId = ? AND receiverId = ? AND propertyKey = ? FOR UPDATE`,
       [senderId, receiverId, propertyKey]
     );
+
     if (rows.length === 0) {
       await connection.query(
         `INSERT INTO dm_notification_batches
@@ -4114,12 +4131,51 @@ export async function getInterestedUsersForMyProperties(userId: number) {
       )}) AND ${directMessages.receiverId} != ${userId}`
     );
 
+  // PDF資料を作成したユーザー（PDF本体の保存期限とは分離した永続ログ）
+  const documentUsers = await db
+    .select({
+      propertyId: propertyDocumentEvents.propertyId,
+      userId: propertyDocumentEvents.userId,
+      type: sql<string>`'document'`,
+      documentCount: propertyDocumentEvents.generationCount,
+      lastDocumentAt: propertyDocumentEvents.lastGeneratedAt,
+    })
+    .from(propertyDocumentEvents)
+    .where(
+      sql`${propertyDocumentEvents.propertyId} IN (${sql.join(
+        propIds.map(id => sql`${id}`),
+        sql`, `
+      )}) AND ${propertyDocumentEvents.userId} != ${userId}`
+    );
+
+  // 閲覧だけでは興味者に追加せず、既存の興味者に回数を補足する
+  const viewUsers = await db
+    .select({
+      propertyId: propertyViewEvents.propertyId,
+      userId: propertyViewEvents.userId,
+      viewCount: count(propertyViewEvents.id),
+      lastViewedAt: sql<Date>`MAX(${propertyViewEvents.viewedAt})`,
+    })
+    .from(propertyViewEvents)
+    .where(
+      sql`${propertyViewEvents.propertyId} IN (${sql.join(
+        propIds.map(id => sql`${id}`),
+        sql`, `
+      )}) AND ${propertyViewEvents.userId} != ${userId}`
+    )
+    .groupBy(propertyViewEvents.propertyId, propertyViewEvents.userId);
+
   // ユニークなユーザーID
   const allEntries = [
     ...favUsers,
     ...memoUsers,
     ...dmSenders.map(entry => ({ ...entry, propertyId: entry.propertyId! })),
     ...dmReceivers.map(entry => ({ ...entry, propertyId: entry.propertyId! })),
+    ...documentUsers.map(entry => ({
+      propertyId: entry.propertyId,
+      userId: entry.userId,
+      type: entry.type,
+    })),
   ];
   const userIdSet = new Set(allEntries.map(e => e.userId));
   if (userIdSet.size === 0) return [];
@@ -4137,13 +4193,14 @@ export async function getInterestedUsersForMyProperties(userId: number) {
       showCompany: users.showCompany,
       verified: users.verified,
       businessCardBase64: users.businessCardBase64,
+      role: users.role,
     })
     .from(users)
     .where(
       sql`${users.id} IN (${sql.join(
         userIds.map(id => sql`${id}`),
         sql`, `
-      )})`
+      )}) AND ${users.role} = 'user'`
     );
 
   // 物件ごと・ユーザーごとにグループ化
@@ -4161,6 +4218,10 @@ export async function getInterestedUsersForMyProperties(userId: number) {
     showCompany: number;
     verified: number;
     types: string[];
+    documentCount: number;
+    lastDocumentAt: Date | null;
+    viewCount: number;
+    lastViewedAt: Date | null;
   }[] = [];
 
   for (const entry of allEntries) {
@@ -4168,6 +4229,12 @@ export async function getInterestedUsersForMyProperties(userId: number) {
     if (!u) continue;
     const prop = myProps.find(p => p.id === entry.propertyId);
     if (!prop) continue;
+    const document = documentUsers.find(
+      item => item.propertyId === entry.propertyId && item.userId === entry.userId
+    );
+    const view = viewUsers.find(
+      item => item.propertyId === entry.propertyId && item.userId === entry.userId
+    );
     const existing = result.find(
       r => r.propertyId === entry.propertyId && r.userId === entry.userId
     );
@@ -4188,6 +4255,10 @@ export async function getInterestedUsersForMyProperties(userId: number) {
         showCompany: u.showCompany,
         verified: u.verified === 1 && !!u.businessCardBase64 ? 1 : 0,
         types: [entry.type],
+        documentCount: document?.documentCount ?? 0,
+        lastDocumentAt: document?.lastDocumentAt ?? null,
+        viewCount: view?.viewCount ?? 0,
+        lastViewedAt: view?.lastViewedAt ?? null,
       });
     }
   }
@@ -5089,6 +5160,14 @@ export async function saveGeneratedDocument(data: {
   const db = await getDb();
   if (!db) return;
   await db.insert(generatedDocuments).values(data);
+  await db.execute(sql`
+    INSERT INTO property_document_events
+      (userId, propertyId, generationCount, firstGeneratedAt, lastGeneratedAt)
+    VALUES (${data.userId}, ${data.propertyId}, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON DUPLICATE KEY UPDATE
+      generationCount = generationCount + 1,
+      lastGeneratedAt = CURRENT_TIMESTAMP
+  `);
 }
 
 export async function listGeneratedDocuments(userId: number) {

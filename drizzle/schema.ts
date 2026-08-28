@@ -372,6 +372,28 @@ export const generatedDocuments = mysqlTable("generated_documents", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+// PDF本体は期限後に削除されるため、作成行動だけを興味データとして永続化する
+export const propertyDocumentEvents = mysqlTable(
+  "property_document_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    propertyId: int("propertyId").notNull(),
+    generationCount: int("generationCount").notNull().default(1),
+    firstGeneratedAt: timestamp("firstGeneratedAt").defaultNow().notNull(),
+    lastGeneratedAt: timestamp("lastGeneratedAt").defaultNow().notNull(),
+  },
+  table => ({
+    propertyUserIdx: uniqueIndex("uq_property_document_events_property_user").on(
+      table.propertyId,
+      table.userId
+    ),
+    propertyIdx: index("idx_property_document_events_property").on(
+      table.propertyId
+    ),
+  })
+);
+
 export const favorites = mysqlTable(
   "favorites",
   {

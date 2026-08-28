@@ -1,5 +1,5 @@
 import {
-  Building2, Heart, StickyNote, Users, Loader2, ChevronDown, MessageCircle, CheckCircle2
+  Building2, Heart, StickyNote, Users, Loader2, ChevronDown, MessageCircle, CheckCircle2, FileText, Eye
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -33,7 +33,7 @@ export default function InterestedUsers({ v2 = false }: { v2?: boolean }) {
         <div className="bg-card border border-border rounded-lg py-16 text-center">
           <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-muted-foreground">興味を持っているユーザーはまだいません</p>
-          <p className="text-sm text-muted-foreground mt-1">物件を登録すると、お気に入りやメモしたユーザーがここに表示されます</p>
+          <p className="text-sm text-muted-foreground mt-1">お気に入り・メモ・問い合わせ・PDF資料作成をしたユーザーがここに表示されます</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -52,7 +52,7 @@ export default function InterestedUsers({ v2 = false }: { v2?: boolean }) {
                 {group.users!.map(entry => <div key={entry.userId} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:px-5">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <span className="grid size-10 shrink-0 place-items-center bg-[#edf1f5] text-[14px] font-bold text-[#173f70]">{(entry.userName || "?").charAt(0)}</span>
-                    <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className="text-[15px] font-bold text-[#102d50]">{entry.userName || "—"}</p>{entry.showCompany !== 0 && entry.userCompany && <span className="text-[13px] text-[#65748a]">{entry.userCompany}</span>}{entry.verified === 1 && <span className="flex items-center gap-1 bg-[#e9f1f8] px-2 py-0.5 text-[10px] font-bold text-[#173f70]"><CheckCircle2 className="size-3"/>認証済み</span>}</div><div className="mt-1 flex items-center gap-2">{entry.types.includes("favorite") && <span className="flex items-center gap-1 text-[11px] text-[#a13b50]"><Heart className="size-3 fill-current"/>お気に入り</span>}{entry.types.includes("memo") && <span className="flex items-center gap-1 text-[11px] text-[#8b5a08]"><StickyNote className="size-3"/>メモあり</span>}</div></div>
+                    <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className="text-[15px] font-bold text-[#102d50]">{entry.userName || "—"}</p>{entry.showCompany !== 0 && entry.userCompany && <span className="text-[13px] text-[#65748a]">{entry.userCompany}</span>}{entry.verified === 1 && <span className="flex items-center gap-1 bg-[#e9f1f8] px-2 py-0.5 text-[10px] font-bold text-[#173f70]"><CheckCircle2 className="size-3"/>認証済み</span>}</div><div className="mt-1 flex flex-wrap items-center gap-2">{entry.types.includes("favorite") && <span className="flex items-center gap-1 text-[11px] text-[#a13b50]"><Heart className="size-3 fill-current"/>お気に入り</span>}{entry.types.includes("memo") && <span className="flex items-center gap-1 text-[11px] text-[#8b5a08]"><StickyNote className="size-3"/>メモあり</span>}{entry.types.includes("document") && <span className="flex items-center gap-1 text-[11px] text-[#17685a]"><FileText className="size-3"/>PDF資料作成{entry.documentCount > 1 ? ` ${entry.documentCount}回` : ""}</span>}{entry.viewCount > 0 && <span className="flex items-center gap-1 text-[11px] text-[#65748a]"><Eye className="size-3"/>閲覧{entry.viewCount}回</span>}</div></div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-auto">{entry.types.includes("dm") && (entry.propertyStatus === "sold" ? <span className="bg-[#eceff2] px-2 py-1 text-[11px] font-bold text-[#526176]">成約済み</span> : <span className="bg-[#fff1b8] px-2 py-1 text-[11px] font-bold text-[#765500]">問い合わせあり</span>)}{entry.types.includes("dm") && <button onClick={() => setLocation(`/v2/chat/${entry.userId}/${entry.propertyId}`)} className="flex h-10 items-center gap-1.5 border border-[#173f70] px-3 text-[12px] font-bold text-[#173f70]"><MessageCircle className="size-3.5"/>問い合わせを見る</button>}</div>
                 </div>)}
@@ -82,6 +82,8 @@ export default function InterestedUsers({ v2 = false }: { v2?: boolean }) {
                         <div className="flex items-center justify-center gap-1">
                           {entry.types.includes("favorite") && <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />}
                           {entry.types.includes("memo") && <StickyNote className="w-3.5 h-3.5 text-amber-500" />}
+                          {entry.types.includes("document") && <span className="flex items-center gap-1 whitespace-nowrap text-xs text-emerald-700"><FileText className="size-3.5" />PDF資料作成{entry.documentCount > 1 ? ` ${entry.documentCount}回` : ""}</span>}
+                          {entry.viewCount > 0 && <span className="flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground"><Eye className="size-3.5" />閲覧{entry.viewCount}回</span>}
                           {entry.types.includes("dm") && <span className={`whitespace-nowrap px-2 py-1 text-xs font-semibold ${entry.propertyStatus === "sold" ? "bg-gray-100 text-gray-600" : "bg-amber-100 text-amber-800"}`}>{entry.propertyStatus === "sold" ? "成約済み" : "問い合わせあり"}</span>}
                           {entry.types.includes("dm") && <button onClick={() => setLocation(`/v2/chat/${entry.userId}/${entry.propertyId}`)} className="flex shrink-0 items-center gap-1 whitespace-nowrap border border-primary px-2 py-1 text-xs font-semibold text-primary"><MessageCircle className="size-3" />問い合わせを見る</button>}
                         </div>
