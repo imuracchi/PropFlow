@@ -2141,6 +2141,44 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       <MarketPanel title="都道府県別" rows={analytics.marketByArea} />
                       <MarketPanel title="価格帯別" rows={analytics.marketByPrice} />
                     </div>
+                    <section className="border border-border bg-white">
+                      <div className="border-b border-border bg-muted/30 px-4 py-3">
+                        <h4 className="text-sm font-semibold">都道府県 × 物件種別 × 価格帯</h4>
+                        <p className="mt-1 text-[10px] text-muted-foreground">問い合わせ人数が多い組み合わせから表示</p>
+                      </div>
+                      <div className="max-h-[640px] overflow-y-auto md:hidden">
+                        {analytics.marketSegments.map((row, index) => (
+                          <article key={`${row.area}-${row.type}-${row.priceLabel}`} className="border-b border-border p-3 last:border-b-0">
+                            <div className="flex items-start gap-2">
+                              <span className="grid size-6 shrink-0 place-items-center bg-[#e8eef5] text-[10px] font-bold text-[#173f70]">{index + 1}</span>
+                              <div className="min-w-0">
+                                <p className="text-[12px] font-bold text-foreground">{row.area}・{row.type}</p>
+                                <p className="mt-0.5 text-[11px] text-muted-foreground">{row.priceLabel}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 grid grid-cols-2 gap-1 text-center">
+                              <div className="bg-muted/30 p-2"><p className="text-[9px] text-muted-foreground">物件数</p><p className="font-bold tabular-nums">{row.properties}件</p></div>
+                              <div className="bg-[#eef5fb] p-2"><p className="text-[9px] text-[#65748a]">問い合わせ人数</p><p className="font-bold tabular-nums text-[#173f70]">{row.inquiries}人</p></div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                      <div className="hidden max-h-[640px] overflow-auto md:block">
+                        <table className="w-full min-w-[680px] text-sm">
+                          <thead className="sticky top-0 bg-[#f3f6f9] text-[11px] text-muted-foreground">
+                            <tr><th className="px-4 py-2 text-left">順位</th><th className="px-4 py-2 text-left">都道府県</th><th className="px-4 py-2 text-left">物件種別</th><th className="px-4 py-2 text-left">価格帯</th><th className="px-4 py-2 text-right">物件数</th><th className="px-4 py-2 text-right">問い合わせ人数</th></tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {analytics.marketSegments.map((row, index) => (
+                              <tr key={`${row.area}-${row.type}-${row.priceLabel}`}>
+                                <td className="px-4 py-2 text-muted-foreground">{index + 1}</td><td className="px-4 py-2 font-medium">{row.area}</td><td className="px-4 py-2">{row.type}</td><td className="px-4 py-2">{row.priceLabel}</td><td className="px-4 py-2 text-right tabular-nums">{row.properties}</td><td className="px-4 py-2 text-right font-bold tabular-nums text-[#173f70]">{row.inquiries}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {analytics.marketSegments.length === 0 && <p className="p-4 text-xs text-muted-foreground">集計対象のデータはありません</p>}
+                    </section>
                     <p className="text-[10px] leading-5 text-[#65748a]">閲覧者と問い合わせは、物件ごとの重複を除いた利用者数です。同じ利用者が同じ物件を複数回閲覧・問い合わせしても1人として集計します。</p>
                   </section>
                   <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

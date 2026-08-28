@@ -670,6 +670,7 @@ export async function getPlatformAnalytics() {
       marketByType: [],
       marketByArea: [],
       marketByPrice: [],
+      marketSegments: [],
       engagement: {
         total: 0,
         active: 0,
@@ -695,6 +696,7 @@ export async function getPlatformAnalytics() {
     marketByTypeResult,
     marketByAreaResult,
     marketByPriceResult,
+    marketSegmentsResult,
   ] = await Promise.all([
     db.execute(sql`
         SELECT month,
@@ -894,6 +896,47 @@ export async function getPlatformAnalytics() {
       GROUP BY priceBucket.label, priceBucket.sortOrder
       ORDER BY priceBucket.sortOrder
     `),
+    db.execute(sql`
+      SELECT segment.area, segment.type, segment.priceLabel,
+        COUNT(*) AS properties,
+        SUM(segment.inquiries) AS inquiries
+      FROM (
+        SELECT p.id,
+          COALESCE(NULLIF(REGEXP_SUBSTR(p.address, '^(北海道|東京都|京都府|大阪府|.{2,3}県)'), ''), '地域不明') AS area,
+          p.type,
+          CASE
+            WHEN p.price IS NULL THEN '価格未設定'
+            WHEN p.price < 30000000 THEN '3,000万円未満'
+            WHEN p.price < 50000000 THEN '3,000〜5,000万円'
+            WHEN p.price < 100000000 THEN '5,000万〜1億円'
+            WHEN p.price < 300000000 THEN '1億〜3億円'
+            WHEN p.price < 500000000 THEN '3億〜5億円'
+            WHEN p.price < 700000000 THEN '5億〜7億円'
+            WHEN p.price < 1000000000 THEN '7億〜10億円'
+            WHEN p.price < 2000000000 THEN '10億〜20億円'
+            WHEN p.price < 5000000000 THEN '20億〜50億円'
+            ELSE '50億円以上'
+          END AS priceLabel,
+          CASE WHEN p.price IS NULL THEN 11 WHEN p.price < 30000000 THEN 1
+            WHEN p.price < 50000000 THEN 2 WHEN p.price < 100000000 THEN 3
+            WHEN p.price < 300000000 THEN 4 WHEN p.price < 500000000 THEN 5
+            WHEN p.price < 700000000 THEN 6 WHEN p.price < 1000000000 THEN 7
+            WHEN p.price < 2000000000 THEN 8 WHEN p.price < 5000000000 THEN 9 ELSE 10 END AS priceSort,
+          COALESCE(i.inquiries, 0) AS inquiries
+        FROM properties p
+        LEFT JOIN (
+          SELECT dm.propertyId, COUNT(DISTINCT dm.senderId) AS inquiries
+          FROM direct_messages dm
+          INNER JOIN properties owner_property ON owner_property.id = dm.propertyId
+          WHERE dm.propertyId IS NOT NULL AND dm.senderId != owner_property.userId
+          GROUP BY dm.propertyId
+        ) i ON i.propertyId = p.id
+        WHERE p.deleted = 0
+      ) segment
+      GROUP BY segment.area, segment.type, segment.priceLabel, segment.priceSort
+      ORDER BY inquiries DESC, properties DESC, segment.area, segment.type, segment.priceSort
+      LIMIT 100
+    `),
   ]);
 
   const rows = (result: any) => (result?.[0] ?? []) as any[];
@@ -945,6 +988,13 @@ export async function getPlatformAnalytics() {
     marketByType: mapMarketRows(marketByTypeResult),
     marketByArea: mapMarketRows(marketByAreaResult),
     marketByPrice: mapMarketRows(marketByPriceResult),
+    marketSegments: rows(marketSegmentsResult).map(row => ({
+      area: String(row.area ?? "地域不明"),
+      type: String(row.type ?? "種別不明"),
+      priceLabel: String(row.priceLabel ?? "価格未設定"),
+      properties: Number(row.properties ?? 0),
+      inquiries: Number(row.inquiries ?? 0),
+    })),
     engagement: {
       total,
       active,
