@@ -87,15 +87,15 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const send = trpc.dm.send.useMutation();
   const deleteMessage = trpc.dm.deleteOwnMessage.useMutation();
   const markRead = trpc.dm.markRead.useMutation();
-  const shareContact = trpc.dm.shareContact.useMutation();
   const sendBusinessCard = trpc.dm.sendBusinessCard.useMutation();
   const setFlag = trpc.dm.setFlag.useMutation();
   const utils = trpc.useUtils();
   const [previewItems, setPreviewItems] = useState(previewMessages);
   const [input, setInput] = useState("");
   const [modal, setModal] = useState<"share" | "contact" | null>(null);
+  const [includeContact, setIncludeContact] = useState(false);
   const [includeCard, setIncludeCard] = useState(false);
-  const [includePropertyLink, setIncludePropertyLink] = useState(true);
+  const [includePropertyDocuments, setIncludePropertyDocuments] = useState(false);
   const [selectedPropertyFileIds, setSelectedPropertyFileIds] = useState<number[]>([]);
   const [shareError, setShareError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -257,30 +257,37 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   };
   const share = async () => {
     setShareError(null);
+    if (!includeContact && !includeCard && selectedPropertyFileIds.length === 0) {
+      setShareError("メールで送るものを選択してください");
+      return;
+    }
+    if (includePropertyDocuments && selectedPropertyFileIds.length === 0) {
+      setShareError("送信する物件資料を1件以上選択してください");
+      return;
+    }
     if (preview)
       setPreviewItems(items => [
         ...items,
         {
           id: Date.now(),
           senderId: 1,
-          content: "📇 連絡先を共有しました",
+          content: "✉️ 選択した内容をメールで送りました",
           createdAt: new Date(),
         },
       ]);
     else {
       try {
-        await shareContact.mutateAsync({ partnerId, propertyId });
-        if (includeCard) {
-          const result = await sendBusinessCard.mutateAsync({
-            partnerId,
-            propertyId,
-            includePropertyLink,
-            propertyFileIds: selectedPropertyFileIds,
-          });
-          if (!result.success) {
-            setShareError(result.error ?? "名刺と資料の送信に失敗しました");
-            return;
-          }
+        const result = await sendBusinessCard.mutateAsync({
+          partnerId,
+          propertyId,
+          includeContact,
+          includeBusinessCard: includeCard,
+          includePropertyLink: selectedPropertyFileIds.length > 0,
+          propertyFileIds: selectedPropertyFileIds,
+        });
+        if (!result.success) {
+          setShareError(result.error ?? "メールの送信に失敗しました");
+          return;
         }
         await Promise.all([messagesQuery.refetch(), contactQuery.refetch()]);
       } catch (error) {
@@ -288,6 +295,9 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
         return;
       }
     }
+    setIncludeContact(false);
+    setIncludeCard(false);
+    setIncludePropertyDocuments(false);
     setSelectedPropertyFileIds([]);
     setModal(null);
   };
@@ -438,16 +448,17 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
           {!isClosed && !isRestricted && <div className="mb-2 flex flex-wrap gap-2">
             <button
               onClick={() => {
-                setIncludeCard(!!user?.businessCardBase64 || preview);
-                setIncludePropertyLink(true);
+                setIncludeContact(false);
+                setIncludeCard(false);
+                setIncludePropertyDocuments(false);
                 setSelectedPropertyFileIds([]);
                 setShareError(null);
                 setModal("share");
               }}
               className="flex h-9 items-center gap-1.5 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70]"
             >
-              <IdCard size={14} />
-              連絡先を送る
+              <Mail size={14} />
+              メールで送る
             </button>
             <button
               onClick={() => setModal("contact")}
@@ -500,12 +511,12 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             onClick={() => setModal(null)}
           >
             <div
-              className="w-full bg-white p-5 sm:max-w-md"
+              className="max-h-[92dvh] w-full overflow-y-auto bg-white p-5 sm:max-w-md"
               onClick={event => event.stopPropagation()}
             >
               <div className="flex items-center">
                 <h2 className="text-[18px] font-bold text-[#102d50]">
-                  {modal === "share" ? "連絡先を送る" : "相手の連絡先"}
+                  {modal === "share" ? "メールで送る" : "相手の連絡先"}
                 </h2>
                 <button onClick={() => setModal(null)} className="ml-auto">
                   <X size={19} />
@@ -513,16 +524,17 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
               </div>
               {modal === "share" && (
                 <>
-                  <p className="mt-3 text-[13px] leading-6 text-[#65748a]">
-                    電話番号・FAX・URL・メールアドレスを、このチャットの相手に共有します。
-                  </p>
+                  <p className="mt-3 text-[13px] font-bold leading-6 text-[#263b58]">メールで送るものを選択してください</p>
+                  <div className="mt-3 grid gap-3 border-y border-[#e1e6ec] py-4 text-[13px] font-bold text-[#263b58]">
+                    {property?.userId === myId && (
+                      <label className="flex cursor-pointer items-center gap-3"><input type="checkbox" checked={includePropertyDocuments} onChange={event => { setIncludePropertyDocuments(event.target.checked); if (!event.target.checked) setSelectedPropertyFileIds([]); }} className="size-4 accent-[#173f70]"/>物件資料</label>
+                    )}
+                    <label className="flex cursor-pointer items-center gap-3"><input type="checkbox" checked={includeContact} onChange={event => setIncludeContact(event.target.checked)} className="size-4 accent-[#173f70]"/>連絡先</label>
                   {(!!user?.businessCardBase64 || preview) && (
-                    <label className="mt-4 flex cursor-pointer items-center gap-3 border-t border-[#e1e6ec] pt-4 text-[13px] font-bold text-[#263b58]"><input type="checkbox" checked={includeCard} onChange={event => { setIncludeCard(event.target.checked); if (!event.target.checked) setSelectedPropertyFileIds([]); }} className="size-4 accent-[#173f70]"/>名刺も合わせてメールで送る</label>
+                      <label className="flex cursor-pointer items-center gap-3"><input type="checkbox" checked={includeCard} onChange={event => setIncludeCard(event.target.checked)} className="size-4 accent-[#173f70]"/>名刺</label>
                   )}
-                  {includeCard && propertyId && (
-                    <label className="mt-3 flex cursor-pointer items-center gap-3 text-[13px] text-[#526176]"><input type="checkbox" checked={includePropertyLink} onChange={event => setIncludePropertyLink(event.target.checked)} className="size-4 accent-[#173f70]"/>物件ページのリンクもメールに記載</label>
-                  )}
-                  {includeCard && property?.userId === myId && (
+                  </div>
+                  {includePropertyDocuments && property?.userId === myId && (
                     <div className="mt-4 border-t border-[#e1e6ec] pt-4">
                       <div className="flex items-end justify-between gap-3">
                         <div>
@@ -558,10 +570,10 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                   {shareError && <p className="mt-3 text-[11px] text-red-600">{shareError}</p>}
                   <button
                     onClick={share}
-                    disabled={shareContact.isPending || sendBusinessCard.isPending}
+                    disabled={sendBusinessCard.isPending || (!includeContact && !includeCard && selectedPropertyFileIds.length === 0)}
                     className="mt-5 h-11 w-full bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50"
                   >
-                    {shareContact.isPending || sendBusinessCard.isPending ? "送信中…" : includeCard && selectedPropertyFileIds.length ? `連絡先・名刺・資料${selectedPropertyFileIds.length}件を送る` : includeCard ? "連絡先と名刺を送る" : "連絡先を共有"}
+                    {sendBusinessCard.isPending ? "送信中…" : "選択した内容をメールで送る"}
                   </button>
                 </>
               )}

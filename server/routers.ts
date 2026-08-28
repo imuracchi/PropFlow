@@ -2365,6 +2365,8 @@ ${propList}`,
         z.object({
           partnerId: z.number(),
           propertyId: z.number().nullable(),
+          includeContact: z.boolean().optional().default(false),
+          includeBusinessCard: z.boolean().optional().default(true),
           includePropertyLink: z.boolean().optional(),
           propertyFileIds: z.array(z.number().int().positive()).max(10).optional().default([]),
         })
@@ -2377,10 +2379,10 @@ ${propList}`,
           if (property?.status === "sold")
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "成約済み物件では名刺を送信できません",
+              message: "成約済み物件ではメール送信できません",
             });
         }
-        if (!ctx.user.businessCardBase64) {
+        if (input.includeBusinessCard && !ctx.user.businessCardBase64) {
           return {
             success: false,
             error: "名刺画像が登録されていません",
@@ -2408,6 +2410,8 @@ ${propList}`,
         );
         if (selectedBytes > 15 * 1024 * 1024)
           throw new TRPCError({ code: "BAD_REQUEST", message: "メール添付資料の合計は15MB以下にしてください" });
+        if (!input.includeContact && !input.includeBusinessCard && selectedFiles.length === 0)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "メールで送るものを選択してください" });
 
         const senderName = ctx.user.name ?? "ユーザー";
         const senderCompany = ctx.user.company ? `（${ctx.user.company}）` : "";
@@ -2433,40 +2437,57 @@ ${propList}`,
         const documentBlock = documentNames.length
           ? `<p style="margin-top:16px;">添付資料（${documentNames.length}件）:<br/>${documentNames.map(name => `・${escapeHtml(name)}`).join("<br/>")}</p>`
           : "";
+        const contactBlock = input.includeContact
+          ? `<div style="margin-top:16px;background:#f8fafc;border:1px solid #e2e8f0;padding:14px;">
+              <strong>連絡先</strong><br/>
+              ${ctx.user.phone ? `電話: ${escapeHtml(ctx.user.phone)}<br/>` : ""}
+              ${ctx.user.fax ? `FAX: ${escapeHtml(ctx.user.fax)}<br/>` : ""}
+              メール: ${escapeHtml(ctx.user.email)}<br/>
+              ${ctx.user.url ? `URL: ${escapeHtml(ctx.user.url)}` : ""}
+            </div>`
+          : "";
+        const itemLabels = [
+          documentNames.length ? `物件資料${documentNames.length}件` : null,
+          input.includeContact ? "連絡先" : null,
+          input.includeBusinessCard ? "名刺" : null,
+        ].filter((value): value is string => !!value);
+        const sentItemsLabel = itemLabels.join("・");
+        const attachments = [
+          ...(input.includeBusinessCard && ctx.user.businessCardBase64
+            ? [{ filename: "名刺.jpg", content: ctx.user.businessCardBase64 }]
+            : []),
+          ...selectedFiles.map(file => ({ filename: file.name, content: file.contentBase64 })),
+        ];
         const ok = await sendMail(
           partner.email,
-          `【PropFlow】${senderName}様${senderCompany}より${documentNames.length ? "名刺と物件資料" : "名刺"}が届きました`,
+          `【PropFlow】${senderName}様${senderCompany}より${sentItemsLabel}が届きました`,
           `
             <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px;">
-              <h2 style="color:#2563eb;">📇 ${documentNames.length ? "名刺と物件資料" : "名刺"}が届きました</h2>
-              <p>${escapeHtml(senderName)}様${escapeHtml(senderCompany)}より、PropFlow経由で${documentNames.length ? "名刺と物件資料" : "名刺"}が送られました。添付ファイルをご確認ください。</p>
+              <h2 style="color:#2563eb;">✉️ ${escapeHtml(sentItemsLabel)}が届きました</h2>
+              <p>${escapeHtml(senderName)}様${escapeHtml(senderCompany)}より、PropFlow経由で${escapeHtml(sentItemsLabel)}が送られました。</p>
+              ${contactBlock}
               ${propertyBlock}
               ${documentBlock}
               <p style="margin-top:16px;font-size:12px;color:#9ca3af;">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
             </div>
           `,
           {
-            attachments: [
-              { filename: "名刺.jpg", content: ctx.user.businessCardBase64 },
-              ...selectedFiles.map(file => ({ filename: file.name, content: file.contentBase64 })),
-            ],
+            attachments,
           }
         );
         if (ok) {
+          if (input.includeContact)
+            await db.shareContact(ctx.user.id, input.partnerId, input.propertyId);
           await db.sendDirectMessage(
             ctx.user.id,
             input.partnerId,
-            documentNames.length
-              ? `📇 名刺と物件資料${documentNames.length}件をメールで送りました\n${documentNames.map(name => `・${name}`).join("\n")}`
-              : "📇 名刺付き情報メールを送りました",
+            `✉️ ${sentItemsLabel}をメールで送りました${documentNames.length ? `\n${documentNames.map(name => `・${name}`).join("\n")}` : ""}`,
             input.propertyId
           );
           db.logActivity(
             ctx.user.id,
-            documentNames.length ? "business_card_documents_send" : "business_card_send",
-            documentNames.length
-              ? `相手ID:${input.partnerId} に名刺と物件資料を送付 (物件ID:${input.propertyId}, 資料ID:${uniqueFileIds.join(",")}, 非表示資料:${selectedFiles.filter(file => file.visible === 0).length}件, 合計:${selectedBytes}bytes)`
-              : `相手ID:${input.partnerId} に名刺を送付`,
+            documentNames.length ? "business_card_documents_send" : input.includeBusinessCard ? "business_card_send" : "contact_share",
+            `相手ID:${input.partnerId} に${sentItemsLabel}をメール送付 (物件ID:${input.propertyId}, 資料ID:${uniqueFileIds.join(",")}, 非表示資料:${selectedFiles.filter(file => file.visible === 0).length}件, 合計:${selectedBytes}bytes)`,
             ctx.req.headers["user-agent"]
           ).catch(() => {});
         }
