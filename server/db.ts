@@ -4201,7 +4201,7 @@ export async function getInterestedUsersForMyProperties(userId: number) {
       sql`${users.id} IN (${sql.join(
         userIds.map(id => sql`${id}`),
         sql`, `
-      )}) AND ${users.role} = 'user'`
+      )}) AND ${users.role} IN ('user', 'management')`
     );
 
   // 物件ごと・ユーザーごとにグループ化
