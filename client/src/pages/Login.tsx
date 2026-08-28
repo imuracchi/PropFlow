@@ -794,24 +794,24 @@ export default function Login({
               )}
             </TabsContent>
           </Tabs>
-          <div className="mt-4 border border-[#d6a43e] bg-[#fffaf0] px-4 py-2.5 text-center text-[#173f70]">
-            <p className="text-[13px] font-bold">現在β版のため、無料公開中です</p>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] font-bold">
+          <p className="mt-4 text-center text-[11px] text-[#65748a]">
+            ※ 現在β版のため、無料でご利用いただけます
+          </p>
+          <div className="mt-3 space-y-2 text-[12px] font-bold">
             <a
               href="/propflow-guide.html"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-11 items-center justify-center gap-1.5 border border-[#9fb1c5] bg-[#f7f9fb] text-[#173f70] hover:bg-[#edf3fa]"
+              className="flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-white shadow-sm transition-colors hover:bg-[#102d50]"
             >
-              <FileText size={14} />
+              <FileText size={16} />
               初めての方へ
             </a>
             <a
               href="https://lin.ee/Ueg4j5Q"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-11 items-center justify-center gap-1.5 border border-[#75c992] bg-[#f1faf4] text-[#16713a] hover:bg-[#e4f6ea]"
+              className="flex h-10 w-full items-center justify-center gap-1.5 border border-[#75c992] bg-[#f1faf4] text-[#16713a] hover:bg-[#e4f6ea]"
             >
               <MessageCircle size={14} />
               公式LINE
