@@ -18,6 +18,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
 import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
+import { diversifySameDayByPrefecture } from "@shared/regionDiversification";
 
 const REGIONS = [
   {
@@ -189,6 +190,7 @@ const PREVIEW_PROPERTIES = [
 const PREVIEW_FAVORITES_KEY = "propflow-v2-preview-favorites";
 
 type SortKey =
+  | "regional"
   | "name"
   | "type"
   | "landArea"
@@ -201,6 +203,7 @@ type SortKey =
 type SortDirection = "asc" | "desc";
 
 const SORT_FIELDS: { key: SortKey; label: string }[] = [
+  { key: "regional", label: "新着・地域分散" },
   { key: "name", label: "物件名・住所" },
   { key: "type", label: "種別" },
   { key: "landArea", label: "土地面積" },
@@ -238,7 +241,7 @@ export default function V2PropertyList({
   const [hotOnly, setHotOnly] = useState(false);
   const [negotiatingOnly, setNegotiatingOnly] = useState(false);
   const [favoriteOnly, setFavoriteOnly] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("publishedAt");
+  const [sortKey, setSortKey] = useState<SortKey>("regional");
   const [sortDirection, setSortDirection] =
     useState<SortDirection>("desc");
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
@@ -352,6 +355,14 @@ export default function V2PropertyList({
   );
 
   const sortedProperties = useMemo(() => {
+    if (sortKey === "regional") {
+      return diversifySameDayByPrefecture(filtered, {
+        getAddress: property => property.address,
+        getDate: property =>
+          ("publishedAt" in property ? property.publishedAt : null) ??
+          property.createdAt,
+      });
+    }
     const result = [...filtered];
     const sortValue = (property: any): string | number | null => {
       switch (sortKey) {
@@ -396,7 +407,7 @@ export default function V2PropertyList({
       return;
     }
     setSortKey(key);
-    setSortDirection(key === "publishedAt" ? "desc" : "asc");
+    setSortDirection(key === "publishedAt" || key === "regional" ? "desc" : "asc");
   };
 
   const openProperty = (id: number) => {

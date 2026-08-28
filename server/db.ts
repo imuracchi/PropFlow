@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql, { type RowDataPacket } from "mysql2/promise";
+import { diversifySameDayByPrefecture } from "@shared/regionDiversification";
 import {
   InsertUser,
   users,
@@ -1777,6 +1778,7 @@ export async function getPublicPropertyHighlights() {
         price: properties.price,
         landArea: properties.landArea,
         buildingArea: properties.buildingArea,
+        publishedAt: properties.publishedAt,
         createdAt: properties.createdAt,
       })
       .from(properties)
@@ -1789,44 +1791,31 @@ export async function getPublicPropertyHighlights() {
           eq(properties.externalListingConsent, 1)
         )
       )
-      .orderBy(desc(properties.createdAt))
+      .orderBy(desc(properties.publishedAt), desc(properties.createdAt))
       .limit(20);
     const counts = await getRecentPropertyAttentionCountsForPublicPage();
     const candidates = rows.map(row => {
       const recent = counts.get(row.id);
       return {
         id: row.id,
+        address: row.address,
         area: publicArea(row.address),
         type: row.type,
         priceBand: publicPriceBand(row.price),
         sizeLabel: publicSizeLabel(row.type, row.landArea, row.buildingArea),
-        registeredAt: row.createdAt,
+        registeredAt: row.publishedAt ?? row.createdAt,
         attention: isPropertyAttentionWorthy(recent ?? {}),
       };
     });
-    const attentionCandidates = candidates.filter(item => item.attention);
-    const chosenAttention =
-      attentionCandidates.length > 0
-        ? attentionCandidates[
-            Math.floor(Math.random() * attentionCandidates.length)
-          ]
-        : undefined;
-    const newest = candidates
-      .filter(item => item.id !== chosenAttention?.id)
-      .sort((a, b) => b.registeredAt.getTime() - a.registeredAt.getTime())
-      .slice(0, chosenAttention ? 2 : 3)
-      .map(({ id: _id, registeredAt: _registeredAt, ...item }) => ({
-        ...item,
-        attention: false,
-      }));
-    const data: PublicPropertyHighlight[] = chosenAttention
-      ? [
-          (({ id: _id, registeredAt: _registeredAt, ...item }) => item)(
-            chosenAttention
-          ),
-          ...newest,
-        ]
-      : newest;
+    const data: PublicPropertyHighlight[] = diversifySameDayByPrefecture(
+      candidates,
+      {
+        getAddress: item => item.address,
+        getDate: item => item.registeredAt,
+      }
+    )
+      .slice(0, 3)
+      .map(({ id: _id, address: _address, registeredAt: _registeredAt, ...item }) => item);
     publicHighlightsCache = {
       expiresAt: Date.now() + (data.length > 0 ? 5 * 60 * 1000 : 15 * 1000),
       data,
@@ -1854,6 +1843,7 @@ export async function getPublicPropertyShowcase() {
         price: properties.price,
         landArea: properties.landArea,
         buildingArea: properties.buildingArea,
+        publishedAt: properties.publishedAt,
         createdAt: properties.createdAt,
       })
       .from(properties)
@@ -1866,29 +1856,39 @@ export async function getPublicPropertyShowcase() {
           eq(properties.externalListingConsent, 1)
         )
       )
-      .orderBy(desc(properties.createdAt))
+      .orderBy(desc(properties.publishedAt), desc(properties.createdAt))
       .limit(50);
     const counts = await getRecentPropertyAttentionCountsForPublicPage();
     const candidates = rows.map(row => ({
       id: row.id,
+      address: row.address,
       area: publicArea(row.address),
       type: row.type,
       priceBand: publicPriceBand(row.price),
       sizeLabel: publicSizeLabel(row.type, row.landArea, row.buildingArea),
-      registeredAt: row.createdAt,
+      registeredAt: row.publishedAt ?? row.createdAt,
       attention: isPropertyAttentionWorthy(counts.get(row.id) ?? {}),
     }));
-    const attentionCandidates = candidates
-      .filter(item => item.attention)
-      .sort(() => Math.random() - 0.5)
+    const attentionCandidates = diversifySameDayByPrefecture(
+      candidates.filter(item => item.attention),
+      {
+        getAddress: item => item.address,
+        getDate: item => item.registeredAt,
+      }
+    )
       .slice(0, 3);
     const attentionIds = new Set(attentionCandidates.map(item => item.id));
-    const newestCandidates = candidates
-      .filter(item => !attentionIds.has(item.id))
-      .sort((a, b) => b.registeredAt.getTime() - a.registeredAt.getTime())
+    const newestCandidates = diversifySameDayByPrefecture(
+      candidates.filter(item => !attentionIds.has(item.id)),
+      {
+        getAddress: item => item.address,
+        getDate: item => item.registeredAt,
+      }
+    )
       .slice(0, 6);
     const toPublicHighlight = ({
       id: _id,
+      address: _address,
       registeredAt: _registeredAt,
       ...item
     }: (typeof candidates)[number]): PublicPropertyHighlight => item;
