@@ -943,7 +943,6 @@ export async function getPlatformAnalytics() {
       ) segment
       GROUP BY segment.area, segment.type, segment.priceLabel, segment.priceSort
       ORDER BY inquiries DESC, properties DESC, segment.area, segment.type, segment.priceSort
-      LIMIT 100
     `),
     db.execute(sql`
       SELECT p.type AS label, COUNT(DISTINCT dm.senderId) AS inquiries

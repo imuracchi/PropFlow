@@ -98,6 +98,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [activeSection, setActiveSection] = useState("users");
   const [mobileAdminMenuOpen, setMobileAdminMenuOpen] = useState(false);
+  const [marketAreaFilter, setMarketAreaFilter] = useState("all");
+  const [marketTypeFilter, setMarketTypeFilter] = useState("all");
+  const [marketPriceFilter, setMarketPriceFilter] = useState("all");
   useEffect(() => {
     if (!v2) return;
     const selectSection = (event: Event) =>
@@ -2108,6 +2111,23 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   </div>
                 </section>
               );
+              const marketAreaOptions = Array.from(new Set(analytics.marketSegments.map(row => row.area))).sort((a, b) => a.localeCompare(b, "ja"));
+              const marketTypeOptions = analytics.marketByType.map(row => row.label);
+              const marketPriceOptions = analytics.marketByPrice.map(row => row.label);
+              const filteredMarketSegments = analytics.marketSegments.filter(row =>
+                (marketAreaFilter === "all" || row.area === marketAreaFilter) &&
+                (marketTypeFilter === "all" || row.type === marketTypeFilter) &&
+                (marketPriceFilter === "all" || row.priceLabel === marketPriceFilter)
+              );
+              const MarketFilterSelect = ({ label, value, onChange, options }: { label: string; value: string; onChange: (next: string) => void; options: string[] }) => (
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-bold text-[#526176]">{label}</span>
+                  <select value={value} onChange={event => onChange(event.target.value)} className="h-10 w-full border border-[#b8c5d3] bg-white px-3 text-[12px] font-medium text-[#102d50]">
+                    <option value="all">すべて</option>
+                    {options.map(option => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </label>
+              );
               return (
                 <div className="space-y-5">
                   <section className="space-y-3 border-2 border-[#9bb4cf] bg-[#f4f8fc] p-4">
@@ -2130,9 +2150,14 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       <div className="border-b border-border bg-muted/30 px-4 py-3">
                         <h4 className="text-sm font-semibold">都道府県 × 物件種別 × 価格帯</h4>
                         <p className="mt-1 text-[10px] text-muted-foreground">問い合わせ人数が多い組み合わせから表示</p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                          <MarketFilterSelect label="都道府県" value={marketAreaFilter} onChange={setMarketAreaFilter} options={marketAreaOptions} />
+                          <MarketFilterSelect label="物件種別" value={marketTypeFilter} onChange={setMarketTypeFilter} options={marketTypeOptions} />
+                          <MarketFilterSelect label="価格帯" value={marketPriceFilter} onChange={setMarketPriceFilter} options={marketPriceOptions} />
+                        </div>
                       </div>
                       <div className="max-h-[640px] overflow-y-auto md:hidden">
-                        {analytics.marketSegments.map((row, index) => (
+                        {filteredMarketSegments.map((row, index) => (
                           <article key={`${row.area}-${row.type}-${row.priceLabel}`} className="border-b border-border p-3 last:border-b-0">
                             <div className="flex items-start gap-2">
                               <span className="grid size-6 shrink-0 place-items-center bg-[#e8eef5] text-[10px] font-bold text-[#173f70]">{index + 1}</span>
@@ -2156,7 +2181,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                             <tr><th className="px-4 py-2 text-left">順位</th><th className="px-4 py-2 text-left">都道府県</th><th className="px-4 py-2 text-left">物件種別</th><th className="px-4 py-2 text-left">価格帯</th><th className="px-4 py-2 text-right">物件数</th><th className="px-4 py-2 text-right">閲覧人数</th><th className="px-4 py-2 text-right">問い合わせ人数</th><th className="px-4 py-2 text-right">1物件あたり問合せ</th></tr>
                           </thead>
                           <tbody className="divide-y divide-border">
-                            {analytics.marketSegments.map((row, index) => (
+                            {filteredMarketSegments.map((row, index) => (
                               <tr key={`${row.area}-${row.type}-${row.priceLabel}`}>
                                 <td className="px-4 py-2 text-muted-foreground">{index + 1}</td><td className="px-4 py-2 font-medium">{row.area}</td><td className="px-4 py-2">{row.type}</td><td className="px-4 py-2">{row.priceLabel}</td><td className="px-4 py-2 text-right tabular-nums">{row.properties}</td><td className="px-4 py-2 text-right tabular-nums">{row.uniqueViewers}</td><td className="px-4 py-2 text-right font-bold tabular-nums text-[#173f70]">{row.inquiries}</td><td className="px-4 py-2 text-right font-bold tabular-nums text-[#173f70]">{row.properties ? (row.inquiryPropertyPairs / row.properties).toFixed(1) : "0.0"}</td>
                               </tr>
@@ -2164,7 +2189,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                           </tbody>
                         </table>
                       </div>
-                      {analytics.marketSegments.length === 0 && <p className="p-4 text-xs text-muted-foreground">集計対象のデータはありません</p>}
+                      {filteredMarketSegments.length === 0 && <p className="p-4 text-xs text-muted-foreground">選択した条件に該当するデータはありません</p>}
                     </section>
                   </section>
                   <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
