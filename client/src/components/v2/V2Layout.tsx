@@ -270,36 +270,38 @@ export default function V2Layout({
           <p className="hidden text-[12px] text-[#758194] lg:block">
             不動産情報プラットフォーム
           </p>
-          <button
-            onClick={openAnnouncements}
-            className="relative ml-auto flex h-9 items-center gap-1.5 px-2 text-[#173f70]"
-            aria-label={`お知らせ${unreadAnnouncementCount > 0 ? ` 未読${unreadAnnouncementCount}件` : ""}`}
-          >
-            <Bell size={18} />
-            <span className="text-[12px] font-bold">お知らせ</span>
-            {unreadAnnouncementCount > 0 && <span className="absolute -right-1 -top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-[#d95532] px-1 text-[9px] font-bold leading-none text-white">{unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}</span>}
-          </button>
-          {!preview &&
-            (user?.role === "admin" || user?.role === "management") && (
+          <div className="ml-auto flex items-center">
+            {!preview &&
+              (user?.role === "admin" || user?.role === "management") && (
+                <button
+                  type="button"
+                  onClick={() => setLocation("/v2/admin")}
+                  className="hidden h-9 items-center gap-1.5 border border-[#173f70] px-3 text-[#173f70] lg:flex"
+                >
+                  <ShieldCheck size={17} />
+                  <span className="text-[12px] font-bold">管理画面</span>
+                </button>
+              )}
+            <button
+              onClick={openAnnouncements}
+              className="relative ml-1 flex h-9 items-center gap-1.5 px-2 text-[#173f70]"
+              aria-label={`お知らせ${unreadAnnouncementCount > 0 ? ` 未読${unreadAnnouncementCount}件` : ""}`}
+            >
+              <Bell size={18} />
+              <span className="text-[12px] font-bold">お知らせ</span>
+              {unreadAnnouncementCount > 0 && <span className="absolute -right-1 -top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-[#d95532] px-1 text-[9px] font-bold leading-none text-white">{unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}</span>}
+            </button>
+            {!preview && user && (
               <button
-                type="button"
-                onClick={() => setLocation("/v2/admin")}
-                className="ml-1 hidden h-9 items-center gap-1.5 border-l border-[#d9e0e8] pl-3 pr-1 text-[#173f70] lg:flex"
+                onClick={() => setReferralOpen(true)}
+                className="ml-1 flex h-9 items-center gap-1.5 border-l border-[#d9e0e8] pl-3 pr-1 text-[#173f70]"
+                aria-label="知人にPropFlowを紹介"
               >
-                <ShieldCheck size={17} />
-                <span className="text-[12px] font-bold">管理画面</span>
+                <Handshake size={18} />
+                <span className="text-[12px] font-bold">知人に紹介</span>
               </button>
             )}
-          {!preview && user && (
-            <button
-              onClick={() => setReferralOpen(true)}
-              className="ml-1 flex h-9 items-center gap-1.5 border-l border-[#d9e0e8] pl-3 pr-1 text-[#173f70]"
-              aria-label="知人にPropFlowを紹介"
-            >
-              <Handshake size={18} />
-              <span className="text-[12px] font-bold">知人に紹介</span>
-            </button>
-          )}
+          </div>
         </header>
         <div className={hideMobileNav ? "" : "pb-20 lg:pb-0"}>{children}</div>
       </div>
