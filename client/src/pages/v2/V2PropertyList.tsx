@@ -250,6 +250,7 @@ export default function V2PropertyList({
     const page = Number(new URLSearchParams(window.location.search).get("page"));
     return Number.isInteger(page) && page > 0 ? page : 1;
   });
+  const resultsRef = useRef<HTMLDivElement>(null);
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
@@ -470,9 +471,26 @@ export default function V2PropertyList({
   const goToPage = (page: number) => {
     const nextPage = Math.min(Math.max(page, 1), totalPages);
     if (nextPage === currentPage) return;
+    const direction = nextPage > currentPage ? 1 : -1;
     setCurrentPage(nextPage);
     setLocation(nextPage > 1 ? `${listPath}?page=${nextPage}` : listPath);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const results = resultsRef.current;
+        if (!results) return;
+        const top = results.getBoundingClientRect().top + window.scrollY - 12;
+        window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+          return;
+        results.animate(
+          [
+            { transform: `translateX(${direction * 28}px)`, opacity: 0.45 },
+            { transform: "translateX(0)", opacity: 1 },
+          ],
+          { duration: 220, easing: "ease-out" }
+        );
+      });
+    });
   };
   const pageNumbers = useMemo(() => {
     const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
@@ -554,21 +572,13 @@ export default function V2PropertyList({
     setMaxPrice("");
     setMinArea("");
     setMaxArea("");
-    setNewOnly(false);
-    setHotOnly(false);
-    setNegotiatingOnly(false);
-    setFavoriteOnly(false);
   };
-  const activeFilters = [
+  const detailFilterCount = [
     type !== "all",
     minPrice,
     maxPrice,
     minArea,
     maxArea,
-    newOnly,
-    hotOnly,
-    negotiatingOnly,
-    favoriteOnly,
   ].filter(Boolean).length;
 
   const pageTitle =
@@ -589,14 +599,34 @@ export default function V2PropertyList({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[14px] text-[#758194]">{pageDescription}</p>
-            <div className="mt-1 flex items-baseline gap-2">
+            <div className="mt-1 flex flex-wrap items-center gap-2">
               <h1 className="text-[24px] font-bold text-[#102d50]">
                 {pageTitle}
               </h1>
               {totalPages > 1 && (
-                <span className="whitespace-nowrap text-[12px] font-bold text-[#526176]">
+                <span className="whitespace-nowrap bg-[#173f70] px-2.5 py-1.5 text-[13px] font-bold text-white shadow-sm">
                   {currentPage} / {totalPages}ページ
                 </span>
+              )}
+              {totalPages > 1 && (
+                <div className="ml-1 hidden items-center gap-1.5 sm:flex">
+                  <button
+                    type="button"
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="h-8 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6]"
+                  >
+                    前へ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="h-8 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:border-[#cbd5df] disabled:text-[#9aa7b6]"
+                  >
+                    次へ
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -673,7 +703,7 @@ export default function V2PropertyList({
           </div>
           {mode === "area" ? (
             <div className="mt-3">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {REGIONS.map(r => (
                   <button
                     key={r.name}
@@ -681,14 +711,14 @@ export default function V2PropertyList({
                       setRegion(region === r.name ? null : r.name);
                       setPrefecture(null);
                     }}
-                    className={`border px-3 py-2 text-[11px] font-bold ${region === r.name ? "border-[#173f70] bg-[#edf3f9] text-[#173f70]" : "border-[#cbd5df] text-[#65748a]"}`}
+                    className={`border px-2 py-1.5 text-[10px] font-bold sm:px-3 sm:py-2 sm:text-[11px] ${region === r.name ? "border-[#173f70] bg-[#edf3f9] text-[#173f70]" : "border-[#cbd5df] text-[#65748a]"}`}
                   >
                     {r.name}
                   </button>
                 ))}
               </div>
               {region && (
-                <div className="mt-3 flex flex-wrap gap-2 border-t border-[#e1e6ec] pt-3">
+                <div className="mt-3 flex flex-wrap gap-1.5 border-t border-[#e1e6ec] pt-3 sm:gap-2">
                   {REGIONS.find(r => r.name === region)
                     ?.prefs.filter(p => prefCounts.has(p))
                     .map(p => (
@@ -697,7 +727,7 @@ export default function V2PropertyList({
                         onClick={() =>
                           setPrefecture(prefecture === p ? null : p)
                         }
-                        className={`border px-3 py-2 text-[11px] font-bold ${prefecture === p ? "border-[#173f70] bg-[#173f70] text-white" : "border-[#9aabc0] text-[#173f70]"}`}
+                        className={`border px-2 py-1.5 text-[10px] font-bold sm:px-3 sm:py-2 sm:text-[11px] ${prefecture === p ? "border-[#173f70] bg-[#173f70] text-white" : "border-[#9aabc0] text-[#173f70]"}`}
                       >
                         {p}（{prefCounts.get(p)}）
                       </button>
@@ -748,29 +778,29 @@ export default function V2PropertyList({
               )}
             </div>
           )}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setFiltersOpen(!filtersOpen)}
-              className={`flex items-center gap-1.5 border px-3 py-2 text-[11px] font-bold ${activeFilters ? "border-[#173f70] bg-[#173f70] text-white" : "border-[#9aabc0] text-[#173f70]"}`}
+              className={`flex items-center gap-1 border px-2 py-1.5 text-[10px] font-bold sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[11px] ${detailFilterCount ? "border-[#173f70] bg-[#173f70] text-white" : "border-[#9aabc0] text-[#173f70]"}`}
             >
               <ListFilter size={14} />
-              詳細条件{activeFilters > 0 && ` ${activeFilters}`}
+              詳細条件{detailFilterCount > 0 && ` ${detailFilterCount}`}
             </button>
             <button
               onClick={() => setNewOnly(!newOnly)}
-              className={`border px-3 py-2 text-[11px] font-bold ${newOnly ? "border-[#173f70] bg-[#edf3f9] text-[#173f70]" : "border-[#cbd5df] text-[#65748a]"}`}
+              className={`border px-2 py-1.5 text-[10px] font-bold sm:px-3 sm:py-2 sm:text-[11px] ${newOnly ? "border-[#173f70] bg-[#edf3f9] text-[#173f70]" : "border-[#cbd5df] text-[#65748a]"}`}
             >
               未読
             </button>
             <button
               onClick={() => setHotOnly(!hotOnly)}
-              className={`border px-3 py-2 text-[11px] font-bold ${hotOnly ? "border-[#b67b12] bg-[#fff0c9] text-[#8b5a08]" : "border-[#cbd5df] text-[#65748a]"}`}
+              className={`border px-2 py-1.5 text-[10px] font-bold sm:px-3 sm:py-2 sm:text-[11px] ${hotOnly ? "border-[#b67b12] bg-[#fff0c9] text-[#8b5a08]" : "border-[#cbd5df] text-[#65748a]"}`}
             >
               注目
             </button>
             <button
               onClick={() => setNegotiatingOnly(!negotiatingOnly)}
-              className={`border px-3 py-2 text-[11px] font-bold ${negotiatingOnly ? "border-[#d5ad54] bg-[#fff1b8] text-[#765500]" : "border-[#cbd5df] text-[#65748a]"}`}
+              className={`border px-2 py-1.5 text-[10px] font-bold sm:px-3 sm:py-2 sm:text-[11px] ${negotiatingOnly ? "border-[#d5ad54] bg-[#fff1b8] text-[#765500]" : "border-[#cbd5df] text-[#65748a]"}`}
             >
               問い合わせあり
             </button>
@@ -845,7 +875,7 @@ export default function V2PropertyList({
                   />
                 </div>
               </label>
-              {activeFilters > 0 && (
+              {detailFilterCount > 0 && (
                 <button
                   onClick={clear}
                   className="flex items-center gap-1 text-[11px] font-bold text-[#65748a]"
@@ -857,6 +887,7 @@ export default function V2PropertyList({
             </div>
           )}
         </section>
+        <div ref={resultsRef} className="overflow-x-hidden">
         {isLoading ? (
           <div className="grid py-24 place-items-center">
             <Loader2 className="animate-spin text-[#173f70]" />
@@ -1232,6 +1263,7 @@ export default function V2PropertyList({
             )}
           </>
         )}
+        </div>
       </main>
     </V2Layout>
   );
