@@ -389,6 +389,7 @@ export default function V2PropertyDetail({
     ? previewPhotoList
     : (filesQuery.data ?? []).filter((f: any) => f.category === "photo");
   const visibleFiles = files.filter(f => f.visible !== 0);
+  const hiddenFiles = files.filter(f => f.visible === 0);
   const utils = trpc.useUtils();
   const toggleFavorite = trpc.favorite.toggle.useMutation();
   const incrementView = trpc.property.incrementView.useMutation();
@@ -1246,9 +1247,20 @@ export default function V2PropertyDetail({
                 <h2 className="text-[18px] font-bold text-[#102d50]">
                   関連資料
                 </h2>
-                <span className="ml-auto mr-3 text-[12px] text-[#65748a]">
-                  {visibleFiles.length}件
-                </span>
+                {isOwner ? (
+                  <div className="ml-auto mr-3 flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-bold">
+                    <span className="bg-[#e8f3ec] px-2 py-1 text-[#27613c]">
+                      表示 {visibleFiles.length}件
+                    </span>
+                    <span className={`px-2 py-1 ${hiddenFiles.length > 0 ? "bg-[#fff0c9] text-[#8b5a08]" : "bg-[#eef1f4] text-[#65748a]"}`}>
+                      非表示 {hiddenFiles.length}件
+                    </span>
+                  </div>
+                ) : (
+                  <span className="ml-auto mr-3 text-[12px] text-[#65748a]">
+                    {visibleFiles.length}件
+                  </span>
+                )}
                 {isOwner && (
                   <>
                     <input
@@ -1277,6 +1289,11 @@ export default function V2PropertyDetail({
                   </>
                 )}
               </div>
+              {isOwner && hiddenFiles.length > 0 && (
+                <p className="mt-3 border-l-4 border-[#d89a24] bg-[#fff8e6] px-3 py-2 text-[11px] font-semibold leading-5 text-[#75500c]">
+                  非表示の資料が{hiddenFiles.length}件あります。閲覧者には表示されません。
+                </p>
+              )}
               {uploadStatus && (
                 <p className="mt-3 bg-[#edf3f9] px-3 py-2 text-[11px] font-semibold text-[#173f70]">
                   {uploadStatus}
