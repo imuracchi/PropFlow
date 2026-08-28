@@ -116,8 +116,8 @@ async function sendDmNotifications(opts: {
   const dmPath =
     opts.path ??
     (opts.propertyId
-      ? `/dm/${opts.senderId}/${opts.propertyId}`
-      : `/dm/${opts.senderId}`);
+      ? `/v2/chat/${opts.senderId}/${opts.propertyId}`
+      : "/v2/messages");
   const siteUrl = process.env.SITE_URL || "https://propflow.jp";
   const dmUrl = `${siteUrl}${dmPath}`;
 

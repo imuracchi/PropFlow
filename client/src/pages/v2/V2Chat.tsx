@@ -54,7 +54,13 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const propertyId = rawPropertyId || null;
   const messagesQuery = trpc.dm.messages.useQuery(
     { partnerId, propertyId },
-    { enabled: !preview && !!partnerId, refetchInterval: 5000 }
+    {
+      enabled: !preview && !!partnerId,
+      refetchInterval: 5000,
+      refetchOnMount: "always",
+      refetchOnWindowFocus: true,
+      retry: 2,
+    }
   );
   const threadsQuery = trpc.dm.threads.useQuery(undefined, {
     enabled: !preview,
@@ -85,6 +91,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [historyRecoveryAttempted, setHistoryRecoveryAttempted] = useState(false);
   const messages: any[] = preview ? previewItems : (messagesQuery.data ?? []);
   const thread: any = preview
     ? {
@@ -124,6 +131,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
       ? contactQuery.data.partnerContact
       : null;
   const flagged = preview ? previewFlagged : !!thread?.flagged;
+  const expectedMessageCount = Number(thread?.messageCount ?? 0);
   const isRestricted = !preview && !!thread?.propertyRestricted;
   const isClosed = property?.status === "sold";
   const toggleFlag = async (checked: boolean) => {
@@ -160,6 +168,33 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   useEffect(() => {
     if (!preview && partnerId) markRead.mutate({ partnerId, propertyId });
   }, [partnerId, propertyId, messages.length]);
+  useEffect(() => {
+    setHistoryRecoveryAttempted(false);
+  }, [partnerId, propertyId]);
+  useEffect(() => {
+    if (
+      preview ||
+      messagesQuery.isLoading ||
+      messagesQuery.isFetching ||
+      messagesQuery.error ||
+      messages.length > 0 ||
+      expectedMessageCount < 1 ||
+      historyRecoveryAttempted
+    )
+      return;
+    setHistoryRecoveryAttempted(true);
+    messagesQuery.refetch();
+  }, [
+    preview,
+    messagesQuery.isLoading,
+    messagesQuery.isFetching,
+    messagesQuery.error,
+    messages.length,
+    expectedMessageCount,
+    historyRecoveryAttempted,
+    partnerId,
+    propertyId,
+  ]);
   const sendMessage = async () => {
     const content = input.trim();
     if (!content && !attachmentFiles.length) return;
@@ -243,7 +278,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             })}
           </div>
         </aside>
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex h-12 shrink-0 items-center border-b border-[#d9e0e8] px-2 lg:h-16 lg:px-5">
           <button
             onClick={() =>
@@ -284,10 +319,29 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             </div>
           </button>
         )}
-        <section className="flex-1 overflow-y-auto overscroll-contain bg-[#f5f7f9] px-3 py-2 lg:px-8 lg:py-4">
+        <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#f5f7f9] px-3 py-2 lg:px-8 lg:py-4">
           {messagesQuery.isLoading && !preview ? (
             <div className="grid h-full place-items-center">
               <Loader2 className="animate-spin text-[#173f70]" />
+            </div>
+          ) : messagesQuery.error && !preview ? (
+            <div className="grid h-full place-items-center text-center">
+              <div>
+                <MessageCircle size={36} className="mx-auto text-[#a5afba]" />
+                <p className="mt-3 text-[13px] font-bold text-[#526176]">メッセージを読み込めませんでした</p>
+                <button onClick={() => messagesQuery.refetch()} className="mt-3 border border-[#173f70] px-4 py-2 text-[12px] font-bold text-[#173f70]">再読み込み</button>
+              </div>
+            </div>
+          ) : !preview && !messages.length && expectedMessageCount > 0 ? (
+            <div className="grid h-full place-items-center text-center">
+              {messagesQuery.isFetching || !historyRecoveryAttempted ? <div>
+                  <Loader2 className="mx-auto animate-spin text-[#173f70]" />
+                  <p className="mt-3 text-[12px] text-[#65748a]">メッセージ履歴を再読み込みしています</p>
+                </div> : <div>
+                  <MessageCircle size={36} className="mx-auto text-[#a5afba]" />
+                  <p className="mt-3 text-[13px] font-bold text-[#526176]">メッセージ履歴を表示できませんでした</p>
+                  <button onClick={() => messagesQuery.refetch()} className="mt-3 border border-[#173f70] px-4 py-2 text-[12px] font-bold text-[#173f70]">再読み込み</button>
+                </div>}
             </div>
           ) : messages.length ? (
             messages.map(message => {
