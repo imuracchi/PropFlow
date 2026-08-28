@@ -18,6 +18,7 @@ import {
   CURRENT_LEGAL_VERSION,
   EXTERNAL_LISTING_CONSENT_VERSION,
 } from "../shared/legal";
+import { PUBLIC_SITE_URL } from "./_core/publicUrl";
 
 const publicFeedbackAttempts = new Map<string, number[]>();
 
@@ -121,7 +122,7 @@ async function sendDmNotifications(opts: {
   // DM notification links must always use the public domain. Railway's
   // service URL is a different origin, so recipients can appear logged out
   // or see an empty conversation when opening a notification on desktop.
-  const siteUrl = "https://propflow.jp";
+  const siteUrl = PUBLIC_SITE_URL;
   const dmUrl = `${siteUrl}${dmPath}`;
 
   const { sendPushToUsers } = await import("./_core/webpush");
@@ -184,7 +185,7 @@ async function sendBroadcastToAll(opts: {
 }) {
   const { sendMail } = await import("./_core/mail");
   const { sendLineBroadcast } = await import("./_core/line");
-  const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+  const siteUrl = PUBLIC_SITE_URL;
   const cleanSubject = opts.subject.replace(/^【PropFlow】\s*/, "");
   const emailBody = opts.message ?? "";
   const lineBody = opts.lineMessage ?? emailBody;
@@ -371,10 +372,7 @@ export const appRouter = router({
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
-        const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(
-          /\/$/,
-          ""
-        );
+        const siteUrl = PUBLIC_SITE_URL;
         const { sendMail } = await import("./_core/mail");
         sendMail(
           "propflow@gspec.me",
@@ -484,11 +482,7 @@ export const appRouter = router({
         const token = nanoid(32);
         const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
         await db.createRegistrationToken(input.email, token, expiresAt);
-        const siteUrl =
-          process.env.SITE_URL ||
-          (process.env.NODE_ENV === "production"
-            ? "https://propflow-production-2ce9.up.railway.app"
-            : "http://localhost:3000");
+        const siteUrl = PUBLIC_SITE_URL;
         const registerUrl = `${siteUrl}/register/${token}`;
         const { sendMail } = await import("./_core/mail");
         await sendMail(
@@ -749,10 +743,7 @@ JSONのみ返してください。`,
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
-        const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(
-          /\/$/,
-          ""
-        );
+        const siteUrl = PUBLIC_SITE_URL;
         const { sendMail } = await import("./_core/mail");
         const emailSent = await sendMail(
           "propflow@gspec.me",
@@ -828,7 +819,7 @@ JSONのみ返してください。`,
           .set({ resetToken: token, resetTokenExpiresAt: expiresAt })
           .where(eq(users.id, user.id));
         const { sendMail } = await import("./_core/mail");
-        const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+        const siteUrl = PUBLIC_SITE_URL;
         await sendMail(
           input.email,
           "【PropFlow】パスワードリセットのご案内",
@@ -1721,7 +1712,7 @@ ${propList}`,
           return { success: true, limited: true, hasExclusions: false };
         if (prop.lineNotifiedAt) return { success: false, alreadySent: true };
 
-        const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+        const siteUrl = PUBLIC_SITE_URL;
         const priceLine = prop.priceNegotiable
           ? "応相談"
           : prop.price
@@ -2366,7 +2357,7 @@ ${propList}`,
 
         const senderName = ctx.user.name ?? "ユーザー";
         const senderCompany = ctx.user.company ? `（${ctx.user.company}）` : "";
-        const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+        const siteUrl = PUBLIC_SITE_URL;
 
         const includePropertyLink = input.includePropertyLink !== false;
         const prop =

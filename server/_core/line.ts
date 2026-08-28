@@ -1,3 +1,5 @@
+import { PUBLIC_SITE_URL } from "./publicUrl";
+
 export async function sendLinePush(lineUserId: string, message: string | object): Promise<boolean> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) return false;
@@ -73,7 +75,7 @@ export function buildPropertyFlexMessage(prop: {
   comment: string | null;
   id: number;
 }) {
-  const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+  const siteUrl = PUBLIC_SITE_URL;
   const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
   const landAreaLine = prop.landArea ? `${prop.landArea.toFixed(2)}㎡（${(prop.landArea * 0.3025).toFixed(1)}坪）` : "—";
 

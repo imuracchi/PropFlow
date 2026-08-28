@@ -1,5 +1,6 @@
 import mysql, { type RowDataPacket } from "mysql2/promise";
 import { sendMail } from "./mail";
+import { PUBLIC_SITE_URL } from "./publicUrl";
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -97,7 +98,7 @@ export async function sendWeeklyPropertyDigest(now = new Date()) {
          AND lastSignedIn >= DATE_SUB(?, INTERVAL 90 DAY)`,
       [now, now]
     );
-    const siteUrl = (process.env.SITE_URL || "https://propflow.jp").replace(/\/$/, "");
+    const siteUrl = PUBLIC_SITE_URL;
     const cards = digest.properties.slice(0, 3).map(p => `<div style="border-top:1px solid #dbe3ec;padding:16px 0"><p style="margin:0 0 6px;font-size:17px;font-weight:700;color:#102d50">${escapeHtml(p.name)}</p><p style="margin:3px 0;color:#526176">${escapeHtml(p.type)}｜${escapeHtml(p.address.replace(/(.+[都道府県]).*/, "$1"))}</p><p style="margin:3px 0;color:#173f70;font-weight:700">${price(p.price)}${p.landArea ? `｜土地 ${p.landArea.toLocaleString("ja-JP")}㎡` : p.buildingArea ? `｜建物 ${p.buildingArea.toLocaleString("ja-JP")}㎡` : ""}</p></div>`).join("");
     const more = Math.max(0, digest.count - 3);
     const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:640px;margin:0 auto;color:#263b58"><h2 style="color:#102d50">先週、新たに${digest.count}件の物件が公開されました</h2><p>PropFlowの先週の新着物件をお知らせします。</p>${cards}<a href="${siteUrl}/v2/properties" style="display:inline-block;margin-top:8px;background:#173f70;color:#fff;padding:13px 24px;text-decoration:none;font-weight:700">${more ? `ほか${more}件を含む新着物件を見る` : "新着物件を見る"}</a><p style="margin-top:24px;font-size:12px;color:#7a8797">詳細住所・資料・お問い合わせ先はログイン後に確認できます。</p><div style="margin-top:22px;background:#f5f7fa;border:1px solid #dbe3ec;padding:16px"><p style="margin:0 0 8px;font-size:14px;font-weight:700;color:#102d50">ログイン情報をお忘れですか？</p><p style="margin:0 0 8px;font-size:13px;line-height:1.7;color:#526176">PropFlowでは、登録したメールアドレスがログインIDです。パスワードをお忘れの場合は、再設定ページから新しいパスワードを設定できます。</p><p style="margin:0;font-size:13px"><a href="${siteUrl}/forgot-password" style="color:#173f70;font-weight:700">パスワードを再設定する</a><span style="color:#9aa5b1"> ｜ </span><a href="${siteUrl}/support.html" style="color:#173f70;font-weight:700">ヘルプ・お問い合わせを見る</a></p></div><p style="font-size:12px;color:#7a8797">メール通知はPropFlowのマイページから変更できます。</p></div>`;

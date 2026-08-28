@@ -8,6 +8,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { PUBLIC_SITE_URL } from "./publicUrl";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -388,7 +389,7 @@ async function startServer() {
       const { sendLinePush } = await import("./line");
       // Keep DM notification links on the same origin as the signed-in app.
       // The Railway service domain has separate cookies from propflow.jp.
-      const siteUrl = "https://propflow.jp";
+      const siteUrl = PUBLIC_SITE_URL;
       const escapeHtml = (value: unknown) =>
         String(value ?? "")
           .replace(/&/g, "&amp;")
@@ -470,7 +471,7 @@ async function startServer() {
     try {
       const db = await import("../db");
       const { sendMail } = await import("./mail");
-      const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+      const siteUrl = PUBLIC_SITE_URL;
       const unreadList = await db.getUnreadDmCounts();
       for (const { email, unreadCount } of unreadList) {
         await sendMail(
@@ -588,7 +589,7 @@ async function startServer() {
 
       const { sendMail } = await import("./mail");
       const { sendLineBroadcast } = await import("./line");
-      const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+      const siteUrl = PUBLIC_SITE_URL;
 
       for (const schedule of pending) {
         console.log(

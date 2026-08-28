@@ -4,6 +4,7 @@ import {
   getPropertySearchDigestData,
 } from "../db";
 import { sendMail } from "./mail";
+import { PUBLIC_SITE_URL } from "./publicUrl";
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -56,7 +57,7 @@ export async function sendPreviousDayPropertySearchDigest(now = new Date()) {
   );
   if (!claimed) return { skipped: true, duplicate: true, digestDate };
 
-  const siteUrl = process.env.SITE_URL || "https://propflow.jp";
+  const siteUrl = PUBLIC_SITE_URL;
   const requestBlocks = requests
     .map(
       request => `<div style="border-top:1px solid #dbe3ec;padding:16px 0;">
