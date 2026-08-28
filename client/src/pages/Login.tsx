@@ -376,18 +376,6 @@ export default function Login({
                       パスワードをお忘れの方
                     </a>
                   </div>
-                  <div className="border-t border-[#dce3eb] pt-4 text-center">
-                    <p className="text-[12px] text-[#65748a]">
-                      ログインできないとき・登録前のご意見（ログイン不要）
-                    </p>
-                    <a
-                      href="/feedback"
-                      className="mt-2 inline-flex items-center justify-center gap-1.5 font-bold text-[#173f70] hover:underline"
-                    >
-                      <MessageCircle size={15} />
-                      不動産の情報収集へのご意見箱
-                    </a>
-                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -794,29 +782,43 @@ export default function Login({
               )}
             </TabsContent>
           </Tabs>
+          <div className="mt-4 space-y-3 text-[12px] font-bold">
+            <div className="grid grid-cols-2 gap-2">
+              <a
+                href="/propflow-guide.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-11 items-center justify-center gap-1.5 border border-[#173f70] bg-[#173f70] px-2 text-white transition-colors hover:bg-[#102d50]"
+              >
+                <FileText size={14} />
+                初めての方へ
+              </a>
+              <a
+                href="https://lin.ee/Ueg4j5Q"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-11 items-center justify-center gap-1.5 border border-[#75c992] bg-[#f1faf4] px-2 text-[#16713a] hover:bg-[#e4f6ea]"
+              >
+                <MessageCircle size={14} />
+                公式LINE
+              </a>
+            </div>
+            <div className="border-t border-[#dce3eb] pt-3 text-center">
+              <p className="text-[12px] font-normal text-[#65748a]">
+                ログインできないとき・登録前のご意見（ログイン不要）
+              </p>
+              <a
+                href="/feedback"
+                className="mt-2 inline-flex h-9 items-center justify-center gap-1.5 border border-[#9fb1c5] bg-white px-3 text-[12px] font-bold text-[#173f70] transition-colors hover:border-[#173f70] hover:bg-[#f7f9fb]"
+              >
+                <MessageCircle size={14} />
+                不動産の情報収集へのご意見箱
+              </a>
+            </div>
+          </div>
           <p className="mt-4 text-center text-[13px] text-[#65748a]">
             ※ 現在β版のため、無料でご利用いただけます
           </p>
-          <div className="mt-3 space-y-2 text-[12px] font-bold">
-            <a
-              href="/propflow-guide.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-white shadow-sm transition-colors hover:bg-[#102d50]"
-            >
-              <FileText size={16} />
-              初めての方へ
-            </a>
-            <a
-              href="https://lin.ee/Ueg4j5Q"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-10 w-full items-center justify-center gap-1.5 border border-[#75c992] bg-[#f1faf4] text-[#16713a] hover:bg-[#e4f6ea]"
-            >
-              <MessageCircle size={14} />
-              公式LINE
-            </a>
-          </div>
           <div className="flex items-center justify-center gap-4 mt-3">
             <a
               href="/terms.html"
