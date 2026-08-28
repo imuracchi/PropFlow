@@ -696,6 +696,16 @@ export async function getPlatformAnalytics() {
         dormant: 0,
       },
       funnel: { viewed: 0, documented: 0, messaged: 0 },
+      today: {
+        activeCompanies: 0,
+        viewingCompanies: 0,
+        inquiryCompanies: 0,
+        listingCompanies: 0,
+        firstUsers: 0,
+        returningUsers: 0,
+        topThreeShare: 0,
+      },
+      dailyTrend: [],
       features: [],
       generatedAt: new Date(),
     };
@@ -721,6 +731,8 @@ export async function getPlatformAnalytics() {
     uniqueViewerByAreaResult,
     uniqueViewerByPriceResult,
     uniqueViewerBySegmentResult,
+    todayResult,
+    dailyTrendResult,
   ] = await Promise.all([
     db.execute(sql`
         SELECT month,
@@ -1088,6 +1100,148 @@ export async function getPlatformAnalytics() {
       ) segmentView
       GROUP BY segmentView.area, segmentView.type, segmentView.priceLabel
     `),
+    db.execute(sql`
+      WITH eligible_activity AS (
+        SELECT
+          COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id)) AS companyKey,
+          u.id AS userId, a.createdAt
+        FROM activity_logs a
+        INNER JOIN users u ON u.id = a.userId
+        WHERE u.role = 'user' AND u.status = 'active'
+          AND a.action NOT LIKE 'admin_%'
+          AND a.action NOT IN ('login_error')
+      ),
+      today_activity AS (
+        SELECT companyKey, COUNT(*) AS operations
+        FROM eligible_activity
+        WHERE createdAt >= CURRENT_DATE AND createdAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)
+        GROUP BY companyKey
+      ),
+      first_activity AS (
+        SELECT userId, MIN(createdAt) AS firstAt
+        FROM eligible_activity
+        GROUP BY userId
+      ),
+      today_users AS (
+        SELECT DISTINCT userId FROM eligible_activity
+        WHERE createdAt >= CURRENT_DATE AND createdAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)
+      ),
+      top_three AS (
+        SELECT operations FROM today_activity ORDER BY operations DESC LIMIT 3
+      )
+      SELECT
+        (SELECT COUNT(*) FROM today_activity) AS activeCompanies,
+        (SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id)))
+          FROM property_view_events v INNER JOIN users u ON u.id = v.userId
+          WHERE u.role = 'user' AND u.status = 'active'
+            AND v.viewedAt >= CURRENT_DATE AND v.viewedAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)) AS viewingCompanies,
+        (SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(sender.company), ''), CONCAT('user:', sender.id)))
+          FROM direct_messages dm
+          INNER JOIN users sender ON sender.id = dm.senderId
+          INNER JOIN properties p ON p.id = dm.propertyId
+          WHERE sender.role = 'user' AND sender.status = 'active' AND dm.senderId != p.userId
+            AND dm.createdAt >= CURRENT_DATE AND dm.createdAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)) AS inquiryCompanies,
+        (SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(owner.company), ''), CONCAT('user:', owner.id)))
+          FROM properties p INNER JOIN users owner ON owner.id = p.userId
+          WHERE owner.role = 'user' AND owner.status = 'active'
+            AND p.createdAt >= CURRENT_DATE AND p.createdAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)) AS listingCompanies,
+        (SELECT COUNT(*) FROM today_users t INNER JOIN first_activity f ON f.userId = t.userId
+          WHERE f.firstAt >= CURRENT_DATE) AS firstUsers,
+        (SELECT COUNT(*) FROM today_users t INNER JOIN first_activity f ON f.userId = t.userId
+          WHERE f.firstAt < CURRENT_DATE) AS returningUsers,
+        COALESCE(ROUND(
+          (SELECT SUM(operations) FROM top_three) * 100 /
+          NULLIF((SELECT SUM(operations) FROM today_activity), 0), 1
+        ), 0) AS topThreeShare
+    `),
+    db.execute(sql`
+      WITH RECURSIVE days AS (
+        SELECT CURRENT_DATE AS day
+        UNION ALL
+        SELECT DATE_SUB(day, INTERVAL 1 DAY) FROM days
+        WHERE day > DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+      ),
+      eligible_activity AS (
+        SELECT COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id)) AS companyKey,
+          u.id AS userId, a.createdAt
+        FROM activity_logs a
+        INNER JOIN users u ON u.id = a.userId
+        WHERE u.role = 'user' AND u.status = 'active'
+          AND a.action NOT LIKE 'admin_%' AND a.action NOT IN ('login_error')
+      ),
+      user_first AS (
+        SELECT userId, DATE(MIN(createdAt)) AS firstDay
+        FROM eligible_activity GROUP BY userId
+      ),
+      daily_company_activity AS (
+        SELECT DATE(createdAt) AS day, companyKey, COUNT(*) AS operations
+        FROM eligible_activity
+        WHERE createdAt >= DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+        GROUP BY DATE(createdAt), companyKey
+      ),
+      ranked_activity AS (
+        SELECT day, companyKey, operations,
+          ROW_NUMBER() OVER (PARTITION BY day ORDER BY operations DESC, companyKey) AS activityRank
+        FROM daily_company_activity
+      ),
+      activity_daily AS (
+        SELECT a.day, COUNT(*) AS activeCompanies, SUM(a.operations) AS totalOperations,
+          SUM(CASE WHEN a.activityRank <= 3 THEN a.operations ELSE 0 END) AS topThreeOperations
+        FROM ranked_activity a
+        GROUP BY a.day
+      ),
+      daily_user_activity AS (
+        SELECT DISTINCT DATE(createdAt) AS day, userId FROM eligible_activity
+        WHERE createdAt >= DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+      ),
+      user_daily AS (
+        SELECT a.day, SUM(f.firstDay = a.day) AS firstUsers,
+          SUM(f.firstDay < a.day) AS returningUsers
+        FROM daily_user_activity a INNER JOIN user_first f ON f.userId = a.userId
+        GROUP BY a.day
+      ),
+      viewing_daily AS (
+        SELECT DATE(v.viewedAt) AS day,
+          COUNT(DISTINCT COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id))) AS viewingCompanies
+        FROM property_view_events v INNER JOIN users u ON u.id = v.userId
+        WHERE u.role = 'user' AND u.status = 'active'
+          AND v.viewedAt >= DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+        GROUP BY DATE(v.viewedAt)
+      ),
+      inquiry_daily AS (
+        SELECT DATE(dm.createdAt) AS day,
+          COUNT(DISTINCT COALESCE(NULLIF(TRIM(sender.company), ''), CONCAT('user:', sender.id))) AS inquiryCompanies
+        FROM direct_messages dm
+        INNER JOIN users sender ON sender.id = dm.senderId
+        INNER JOIN properties p ON p.id = dm.propertyId
+        WHERE sender.role = 'user' AND sender.status = 'active' AND dm.senderId != p.userId
+          AND dm.createdAt >= DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+        GROUP BY DATE(dm.createdAt)
+      ),
+      listing_daily AS (
+        SELECT DATE(p.createdAt) AS day,
+          COUNT(DISTINCT COALESCE(NULLIF(TRIM(owner.company), ''), CONCAT('user:', owner.id))) AS listingCompanies
+        FROM properties p INNER JOIN users owner ON owner.id = p.userId
+        WHERE owner.role = 'user' AND owner.status = 'active'
+          AND p.createdAt >= DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+        GROUP BY DATE(p.createdAt)
+      )
+      SELECT DATE_FORMAT(d.day, '%Y-%m-%d') AS day,
+        COALESCE(a.activeCompanies, 0) AS activeCompanies,
+        COALESCE(v.viewingCompanies, 0) AS viewingCompanies,
+        COALESCE(i.inquiryCompanies, 0) AS inquiryCompanies,
+        COALESCE(l.listingCompanies, 0) AS listingCompanies,
+        COALESCE(u.firstUsers, 0) AS firstUsers,
+        COALESCE(u.returningUsers, 0) AS returningUsers,
+        COALESCE(ROUND(a.topThreeOperations * 100 / NULLIF(a.totalOperations, 0), 1), 0) AS topThreeShare
+      FROM days d
+      LEFT JOIN activity_daily a ON a.day = d.day
+      LEFT JOIN user_daily u ON u.day = d.day
+      LEFT JOIN viewing_daily v ON v.day = d.day
+      LEFT JOIN inquiry_daily i ON i.day = d.day
+      LEFT JOIN listing_daily l ON l.day = d.day
+      ORDER BY d.day DESC
+    `),
   ]);
 
   const rows = (result: any) => (result?.[0] ?? []) as any[];
@@ -1190,6 +1344,25 @@ export async function getPlatformAnalytics() {
       documented: Number(rows(funnelResult)[0]?.documented ?? 0),
       messaged: Number(rows(funnelResult)[0]?.messaged ?? 0),
     },
+    today: {
+      activeCompanies: Number(rows(todayResult)[0]?.activeCompanies ?? 0),
+      viewingCompanies: Number(rows(todayResult)[0]?.viewingCompanies ?? 0),
+      inquiryCompanies: Number(rows(todayResult)[0]?.inquiryCompanies ?? 0),
+      listingCompanies: Number(rows(todayResult)[0]?.listingCompanies ?? 0),
+      firstUsers: Number(rows(todayResult)[0]?.firstUsers ?? 0),
+      returningUsers: Number(rows(todayResult)[0]?.returningUsers ?? 0),
+      topThreeShare: Number(rows(todayResult)[0]?.topThreeShare ?? 0),
+    },
+    dailyTrend: rows(dailyTrendResult).map(row => ({
+      day: String(row.day),
+      activeCompanies: Number(row.activeCompanies ?? 0),
+      viewingCompanies: Number(row.viewingCompanies ?? 0),
+      inquiryCompanies: Number(row.inquiryCompanies ?? 0),
+      listingCompanies: Number(row.listingCompanies ?? 0),
+      firstUsers: Number(row.firstUsers ?? 0),
+      returningUsers: Number(row.returningUsers ?? 0),
+      topThreeShare: Number(row.topThreeShare ?? 0),
+    })),
     features: rows(featureResult).map(row => ({
       action: String(row.action),
       label: actionLabels[String(row.action)] ?? String(row.action),

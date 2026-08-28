@@ -2124,6 +2124,56 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               );
               return (
                 <div className="space-y-5">
+                  <section className="border-2 border-[#173f70] bg-white p-4">
+                    <div className="mb-3">
+                      <h4 className="text-[15px] font-bold text-[#102d50]">本日の利用状況</h4>
+                      <p className="mt-1 text-[10px] leading-5 text-[#65748a]">本日0時から現在まで。管理者操作を除き、同じ会社の複数ユーザーは1社として集計します。</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+                      {[
+                        ["利用会社", `${analytics.today.activeCompanies}社`, "操作ログがある会社"],
+                        ["閲覧会社", `${analytics.today.viewingCompanies}社`, "物件を閲覧した会社"],
+                        ["問い合わせ会社", `${analytics.today.inquiryCompanies}社`, "他社物件へDMした会社"],
+                        ["物件登録会社", `${analytics.today.listingCompanies}社`, "物件を登録した会社"],
+                        ["初回／継続利用者", `${analytics.today.firstUsers}／${analytics.today.returningUsers}人`, "本日初回／過去利用あり"],
+                        ["上位3社の操作割合", `${analytics.today.topThreeShare.toFixed(1)}%`, "本日の全操作に占める割合"],
+                      ].map(([label, value, note]) => (
+                        <div key={label} className="border border-[#c9d7e5] bg-[#f4f8fc] p-3">
+                          <p className="text-[10px] font-bold leading-4 text-[#526176]">{label}</p>
+                          <p className="mt-1 text-xl font-bold tabular-nums text-[#102d50]">{value}</p>
+                          <p className="mt-1 text-[9px] leading-4 text-[#758194]">{note}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 max-h-[520px] overflow-auto border border-[#c9d7e5]">
+                      <table className="w-full min-w-[760px] text-[11px]">
+                        <thead className="sticky top-0 z-10 bg-[#e8eef5] text-[#526176]">
+                          <tr>
+                            <th className="px-3 py-2 text-left">日付</th>
+                            <th className="px-3 py-2 text-right">利用会社</th>
+                            <th className="px-3 py-2 text-right">閲覧会社</th>
+                            <th className="px-3 py-2 text-right">問い合わせ会社</th>
+                            <th className="px-3 py-2 text-right">物件登録会社</th>
+                            <th className="px-3 py-2 text-right">初回／継続利用者</th>
+                            <th className="px-3 py-2 text-right">上位3社割合</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#d9e2ec] bg-white">
+                          {analytics.dailyTrend.map((row, index) => (
+                            <tr key={row.day} className={index === 0 ? "bg-[#fff8e8] font-bold" : ""}>
+                              <td className="whitespace-nowrap px-3 py-2">{index === 0 ? "本日 " : ""}{row.day.slice(5).replace("-", "/")}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{row.activeCompanies}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{row.viewingCompanies}</td>
+                              <td className="px-3 py-2 text-right font-bold tabular-nums text-[#173f70]">{row.inquiryCompanies}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{row.listingCompanies}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{row.firstUsers}／{row.returningUsers}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{row.topThreeShare.toFixed(1)}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
                   <section className="space-y-3 border-2 border-[#9bb4cf] bg-[#f4f8fc] p-4">
                     <div>
                       <h4 className="text-[15px] font-bold text-[#102d50]">問い合わせをCVとした市場動向</h4>
