@@ -210,6 +210,17 @@ function publicAreaLabel(address: string) {
   return municipality ? `${prefecture}${municipality[1]}` : prefecture;
 }
 
+function scheduledNotificationChannels(value: number | null | undefined) {
+  if (value === 1) return { line: true, email: true, push: true };
+  if (!value || value < 8) return { line: false, email: false, push: false };
+  const mask = value - 8;
+  return {
+    line: (mask & 1) !== 0,
+    email: (mask & 2) !== 0,
+    push: (mask & 4) !== 0,
+  };
+}
+
 function buildPropertyShareText(property: any, mode: "propflow" | "email") {
   const details = [
     ["物件種別", property.type],
@@ -349,7 +360,11 @@ export default function V2PropertyDetail({
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleHour, setScheduleHour] = useState("10");
   const [scheduleMinute, setScheduleMinute] = useState("00");
-  const [scheduleNotify, setScheduleNotify] = useState(false);
+  const [scheduleNotifyChannels, setScheduleNotifyChannels] = useState({
+    line: false,
+    email: false,
+    push: false,
+  });
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
@@ -395,14 +410,17 @@ export default function V2PropertyDetail({
   const schedulePublication = trpc.property.schedulePublication.useMutation({ onSuccess: () => propertyQuery.refetch() });
   const cancelScheduledPublication = trpc.property.cancelScheduledPublication.useMutation({ onSuccess: () => propertyQuery.refetch() });
   const publishScheduledNow = trpc.property.publishScheduledNow.useMutation({ onSuccess: () => propertyQuery.refetch() });
-  const openScheduleEditor = (date?: Date, notify = false) => {
+  const openScheduleEditor = (
+    date?: Date,
+    channels = { line: false, email: false, push: false }
+  ) => {
     const value = date ?? new Date(Date.now() + 20 * 60_000);
     if (!date) value.setMinutes(Math.ceil(value.getMinutes() / 10) * 10, 0, 0);
     const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000).toISOString();
     setScheduleDate(local.slice(0, 10));
     setScheduleHour(local.slice(11, 13));
     setScheduleMinute(String(Math.floor(Number(local.slice(14, 16)) / 10) * 10).padStart(2, "0"));
-    setScheduleNotify(notify);
+    setScheduleNotifyChannels(channels);
     setScheduleEditorOpen(true);
   };
   const submitScheduleEditor = async () => {
@@ -412,7 +430,13 @@ export default function V2PropertyDetail({
       return;
     }
     try {
-      await schedulePublication.mutateAsync({ propertyId, scheduledAt: scheduledAt.toISOString(), sendNotifications: scheduleNotify });
+      await schedulePublication.mutateAsync({
+        propertyId,
+        scheduledAt: scheduledAt.toISOString(),
+        sendLine: scheduleNotifyChannels.line,
+        sendEmail: scheduleNotifyChannels.email,
+        sendPush: scheduleNotifyChannels.push,
+      });
       setScheduleEditorOpen(false);
     } catch (error) {
       alert(error instanceof Error ? error.message : "公開予約に失敗しました");
@@ -973,10 +997,12 @@ export default function V2PropertyDetail({
                 {["00", "10", "20", "30", "40", "50"].map(minute => <option key={minute} value={minute}>{minute}分</option>)}
               </select>
             </div>
-            <label className="mt-4 flex items-start gap-2 text-[12px] leading-5 text-[#526176]">
-              <input type="checkbox" checked={scheduleNotify} onChange={event => setScheduleNotify(event.target.checked)} className="mt-0.5 size-4" />
-              公開時に新着メール・LINE・Webプッシュを送信する
-            </label>
+            <div className="mt-4 grid gap-2 bg-[#f4f6f8] p-3 text-[12px] text-[#526176]">
+              <span className="font-bold text-[#173f70]">公開時に送る通知を選択</span>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={scheduleNotifyChannels.email} onChange={event => setScheduleNotifyChannels(current => ({ ...current, email: event.target.checked }))} className="size-4" />新着メール</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={scheduleNotifyChannels.push} onChange={event => setScheduleNotifyChannels(current => ({ ...current, push: event.target.checked }))} className="size-4" />Webプッシュ</label>
+              <label className={`flex items-center gap-2 ${exclusionCount > 0 ? "text-[#8b95a3]" : ""}`}><input type="checkbox" disabled={exclusionCount > 0} checked={scheduleNotifyChannels.line} onChange={event => setScheduleNotifyChannels(current => ({ ...current, line: event.target.checked }))} className="size-4" />{exclusionCount > 0 ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE"}</label>
+            </div>
             <div className="mt-5 flex gap-3">
               <button onClick={() => setScheduleEditorOpen(false)} className="h-11 flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]">キャンセル</button>
               <button disabled={schedulePublication.isPending} onClick={submitScheduleEditor} className="h-11 flex-1 bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50">{schedulePublication.isPending ? "予約中…" : "予約する"}</button>
@@ -1659,13 +1685,17 @@ export default function V2PropertyDetail({
                         {property.scheduledPublishAt && (
                           <p className="mt-1 text-[11px] font-semibold text-[#526176]">
                             {new Date(property.scheduledPublishAt).toLocaleString("ja-JP")} 公開予定
-                            {property.scheduledPublishNotify === 0 ? "（通知なし）" : "（通知あり）"}
+                            {(() => {
+                              const channels = scheduledNotificationChannels(property.scheduledPublishNotify);
+                              const labels = [channels.email && "メール", channels.push && "Webプッシュ", channels.line && "LINE"].filter(Boolean);
+                              return labels.length ? `（${labels.join("・")}）` : "（通知なし）";
+                            })()}
                           </p>
                       )}
                     </div>
                     {property.scheduledPublishAt ? (
                       <div className="ml-auto flex flex-wrap justify-end gap-1.5">
-                        <button onClick={() => openScheduleEditor(new Date(property.scheduledPublishAt), property.scheduledPublishNotify !== 0)} className="h-9 border border-[#173f70] px-2 text-[10px] font-bold text-[#173f70]">日時変更</button>
+                        <button onClick={() => openScheduleEditor(new Date(property.scheduledPublishAt), scheduledNotificationChannels(property.scheduledPublishNotify))} className="h-9 border border-[#173f70] px-2 text-[10px] font-bold text-[#173f70]">日時変更</button>
                         <button onClick={() => cancelScheduledPublication.mutate({ propertyId })} className="h-9 border border-[#9aabc0] px-2 text-[10px] font-bold text-[#526176]">予約取消</button>
                         <button onClick={() => publishScheduledNow.mutate({ propertyId })} className="h-9 bg-[#173f70] px-2 text-[10px] font-bold text-white">今すぐ公開</button>
                       </div>

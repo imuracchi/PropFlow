@@ -117,7 +117,11 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
     "publish"
   );
   const [scheduledAt, setScheduledAt] = useState("");
-  const [scheduledPublishNotify, setScheduledPublishNotify] = useState(false);
+  const [scheduledNotifyChannels, setScheduledNotifyChannels] = useState({
+    line: false,
+    email: false,
+    push: false,
+  });
   const setSchedulePart = (part: "date" | "hour" | "minute", value: string) => {
     const currentDate = scheduledAt.slice(0, 10) || new Date().toISOString().slice(0, 10);
     const currentHour = scheduledAt.slice(11, 13) || "10";
@@ -421,7 +425,9 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
           await schedulePublicationMutation.mutateAsync({
             propertyId: result.id,
             scheduledAt: new Date(scheduledAt).toISOString(),
-            sendNotifications: scheduledPublishNotify,
+            sendLine: scheduledNotifyChannels.line,
+            sendEmail: scheduledNotifyChannels.email,
+            sendPush: scheduledNotifyChannels.push,
           });
           toast.success(`公開予約を登録しました（${new Date(scheduledAt).toLocaleString("ja-JP")}）`);
           setLocation(v2 ? `/v2/property/${result.id}` : `/property/${result.id}`);
@@ -2012,11 +2018,13 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
             </select>
           </div>
           <span className="mt-1 block text-[11px] text-[#65748a]">10分以上先を、10分刻みで指定してください</span>
-          <span className="mt-3 flex items-start gap-2 text-[12px] text-[#526176]">
-            <input type="checkbox" checked={scheduledPublishNotify} onChange={event => setScheduledPublishNotify(event.target.checked)} className="mt-0.5 size-4" />
-            公開時に新着メール・LINE・Webプッシュを送信する
-          </span>
-          {!scheduledPublishNotify && <span className="mt-1 block text-[11px] text-[#65748a]">新着通知を送らずに公開します</span>}
+          <div className="mt-3 grid gap-2 text-[12px] text-[#526176]">
+            <span className="font-bold text-[#173f70]">公開時に送る通知を選択</span>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={scheduledNotifyChannels.email} onChange={event => setScheduledNotifyChannels(current => ({ ...current, email: event.target.checked }))} className="size-4" />新着メール</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={scheduledNotifyChannels.push} onChange={event => setScheduledNotifyChannels(current => ({ ...current, push: event.target.checked }))} className="size-4" />Webプッシュ</label>
+            <label className={`flex items-center gap-2 ${excludedUsers.length > 0 ? "text-[#8b95a3]" : ""}`}><input type="checkbox" disabled={excludedUsers.length > 0} checked={scheduledNotifyChannels.line} onChange={event => setScheduledNotifyChannels(current => ({ ...current, line: event.target.checked }))} className="size-4" />{excludedUsers.length > 0 ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE"}</label>
+          </div>
+          {!Object.values(scheduledNotifyChannels).some(Boolean) && <span className="mt-1 block text-[11px] text-[#65748a]">新着通知を送らずに公開します</span>}
         </label>
       )}
       {proposalRequestId > 0 && !proposalOnly && publishMode === "draft" && (

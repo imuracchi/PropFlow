@@ -2264,7 +2264,7 @@ export async function setPropertyPublishSchedule(
   id: number,
   scheduledPublishAt: Date | null,
   scheduleCronTaskUid: string | null,
-  scheduledPublishNotify = true
+  scheduledPublishNotify: boolean | number = true
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -2275,7 +2275,12 @@ export async function setPropertyPublishSchedule(
       publishedAt: null,
       scheduledPublishAt,
       scheduleCronTaskUid,
-      scheduledPublishNotify: scheduledPublishNotify ? 1 : 0,
+      scheduledPublishNotify:
+        typeof scheduledPublishNotify === "number"
+          ? scheduledPublishNotify
+          : scheduledPublishNotify
+            ? 1
+            : 0,
       scheduledPublishCreatedAt: scheduledPublishAt ? new Date() : null,
     })
     .where(eq(properties.id, id));

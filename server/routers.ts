@@ -19,6 +19,10 @@ import {
   EXTERNAL_LISTING_CONSENT_VERSION,
 } from "../shared/legal";
 import { PUBLIC_SITE_URL } from "./_core/publicUrl";
+import {
+  decodePropertyNotificationChannels,
+  encodePropertyNotificationChannels,
+} from "./_core/propertyNotificationChannels";
 
 const publicFeedbackAttempts = new Map<string, number[]>();
 
@@ -1788,7 +1792,14 @@ ${propList}`,
       }),
 
     schedulePublication: protectedProcedure
-      .input(z.object({ propertyId: z.number(), scheduledAt: z.string(), sendNotifications: z.boolean().default(false) }))
+      .input(z.object({
+        propertyId: z.number(),
+        scheduledAt: z.string(),
+        sendNotifications: z.boolean().optional(),
+        sendLine: z.boolean().optional(),
+        sendEmail: z.boolean().optional(),
+        sendPush: z.boolean().optional(),
+      }))
       .mutation(async ({ input, ctx }) => {
         if (process.env.PROPERTY_PUBLISH_SCHEDULING_ENABLED === "false") {
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "公開予約機能は現在停止中です" });
@@ -1815,11 +1826,24 @@ ${propList}`,
           });
         }
         const taskUid = `internal-property-${prop.id}-${scheduledAt.getTime()}`;
+        const hasIndividualSelection =
+          input.sendLine !== undefined ||
+          input.sendEmail !== undefined ||
+          input.sendPush !== undefined;
+        const notificationSetting = hasIndividualSelection
+          ? encodePropertyNotificationChannels({
+              line: input.sendLine === true,
+              email: input.sendEmail === true,
+              push: input.sendPush === true,
+            })
+          : input.sendNotifications === true
+            ? 1
+            : 0;
         await db.setPropertyPublishSchedule(
           prop.id,
           scheduledAt,
           taskUid,
-          input.sendNotifications
+          notificationSetting
         );
         return { success: true, scheduledAt };
       }),
@@ -1839,11 +1863,11 @@ ${propList}`,
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "公開予約機能は現在停止中です" });
         }
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
-        const sendNotifications = prop.scheduledPublishNotify !== 0;
+        const channels = decodePropertyNotificationChannels(prop.scheduledPublishNotify);
         const claimed = await db.claimScheduledPropertyPublishNow(prop.id);
-        if (claimed && sendNotifications) {
+        if (claimed && Object.values(channels).some(Boolean)) {
           const { sendScheduledPropertyNotifications } = await import("./_core/propertyPublish");
-          await sendScheduledPropertyNotifications(prop.id);
+          await sendScheduledPropertyNotifications(prop.id, channels);
         }
         return { success: true, published: claimed };
       }),
