@@ -1600,7 +1600,7 @@ export default function V2PropertyDetail({
                         onClick={() => openScheduleEditor()}
                         className="h-10 border border-[#8b6508] px-3 text-[11px] font-bold text-[#8b6508] disabled:opacity-50"
                       >
-                        {schedulePublication.isPending ? "予約中…" : "公開を予約する"}
+                        {schedulePublication.isPending ? "予約中…" : "公開を予約"}
                       </button>
                     )}
                     <button
