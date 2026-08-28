@@ -1680,7 +1680,7 @@ export default function V2PropertyDetail({
                   <button
                     onClick={() => {
                       setDealPrice("");
-                      setAnnouncePublic(false);
+                      setAnnouncePublic(true);
                       setDialog("sold");
                     }}
                     className="my-3 flex min-h-14 w-full items-center justify-center bg-[#27613c] px-4 text-[14px] font-bold text-white shadow-sm hover:bg-[#1f5131] lg:text-[15px]"
@@ -2440,30 +2440,47 @@ export default function V2PropertyDetail({
             </h3>
             {dialog === "sold" && (
               <div className="mt-4 space-y-4">
+                <div className="border-l-4 border-[#35724f] bg-[#eef7f1] px-3 py-3">
+                  <p className="text-[14px] font-bold text-[#27613c]">
+                    成約おめでとうございます！
+                  </p>
+                  <p className="mt-1 text-[11px] leading-5 text-[#526176]">
+                    成約実績は、物件を探している方や掲載者の参考になります。
+                  </p>
+                </div>
                 <p className="text-[13px] leading-6 text-[#526176]">
                   「{property.name}
                   」を成約済みにします。問い合わせのあった方には、問い合わせ画面で自動的にお知らせします。
                 </p>
-                <label className="block text-[12px] font-bold text-[#526176]">
-                  成約金額（円）
-                  <input
-                    value={dealPrice}
-                    onChange={e => setDealPrice(e.target.value)}
-                    type="number"
-                    placeholder="わからなければ空欄でOK"
-                    className="mt-2 h-11 w-full border border-[#cbd5df] px-3 text-[15px]"
-                  />
-                </label>
-                <label className="flex cursor-pointer items-start gap-3 border-t border-[#e1e6ec] pt-4 text-[13px] leading-5 text-[#263b58]">
+                <label className="flex cursor-pointer items-start gap-3 border border-[#b8d4c1] bg-[#f7fbf8] p-3 text-[13px] leading-5 text-[#263b58]">
                   <input
                     type="checkbox"
                     checked={announcePublic}
                     onChange={event => setAnnouncePublic(event.target.checked)}
                     className="mt-0.5 size-4 accent-[#173f70]"
                   />
-                  <span>
-                    この成約を公式LINE・メールでPropFlow全体にお知らせする
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2 font-bold">
+                      PropFlow全体へ成約実績を知らせる
+                      <span className="bg-[#35724f] px-2 py-0.5 text-[10px] text-white">おすすめ</span>
+                    </span>
+                    <span className="mt-1 block text-[11px] text-[#65748a]">
+                      公式LINE・メールでお知らせします。会社名・担当者名は含まれません。
+                    </span>
                   </span>
+                </label>
+                <label className="block text-[12px] font-bold text-[#526176]">
+                  成約金額（任意）
+                  <span className="mt-1 block text-[11px] font-normal text-[#758194]">
+                    空欄のままでも成約報告・全体告知ができます。
+                  </span>
+                  <input
+                    value={dealPrice}
+                    onChange={e => setDealPrice(e.target.value)}
+                    type="number"
+                    placeholder="例：80000000（不明な場合は空欄）"
+                    className="mt-2 h-11 w-full border border-[#cbd5df] px-3 text-[15px]"
+                  />
                 </label>
                 {announcePublic && (
                   <div className="border-l-4 border-[#173f70] bg-[#f2f5f8] px-3 py-3">
@@ -2632,10 +2649,10 @@ export default function V2PropertyDetail({
                 )}
               </div>
             )}
-            <div className="mt-5 flex gap-3">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
               <button
                 onClick={() => setDialog(null)}
-                className="h-11 flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]"
+                className="h-11 w-full flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]"
               >
                 {dialog === "restrict" ? "閉じる" : "キャンセル"}
               </button>
@@ -2661,9 +2678,13 @@ export default function V2PropertyDetail({
                       setLocation("/v2/properties");
                     }
                   }}
-                  className={`h-11 flex-1 text-[13px] font-bold text-white disabled:opacity-50 ${dialog === "delete" ? "bg-[#a72e2e]" : "bg-[#173f70]"}`}
+                  className={`min-h-11 w-full flex-1 px-3 text-[13px] font-bold text-white disabled:opacity-50 ${dialog === "delete" ? "bg-[#a72e2e]" : "bg-[#173f70]"}`}
                 >
-                  {dialog === "delete" ? "削除する" : "成約にする"}
+                  {dialog === "delete"
+                    ? "削除する"
+                    : announcePublic
+                      ? "成約を報告してお知らせする"
+                      : "全体には知らせず成約にする"}
                 </button>
               )}
             </div>
