@@ -148,7 +148,7 @@ export default function V2Layout({
             </p>
           </div>
         </button>
-        <nav className="flex-1 overflow-y-auto px-3 py-5">
+        <nav className="flex-1 overflow-y-auto px-3 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <p className="px-3 pb-2 text-[10px] font-bold tracking-widest text-white/40">
             物件を探す
           </p>
