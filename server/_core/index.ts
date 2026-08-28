@@ -32,6 +32,21 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // Keep previously distributed Railway links usable. Redirect browser
+  // navigation to the canonical domain while preserving the path and query.
+  app.use((req, res, next) => {
+    const hostname = req.hostname.toLowerCase();
+    const isLegacyPublicHost = hostname === "propflow-production-2ce9.up.railway.app";
+    const isBrowserNavigation = req.method === "GET" || req.method === "HEAD";
+
+    if (isLegacyPublicHost && isBrowserNavigation) {
+      return res.redirect(308, `${PUBLIC_SITE_URL}${req.originalUrl}`);
+    }
+
+    next();
+  });
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
