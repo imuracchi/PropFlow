@@ -589,23 +589,25 @@ export default function V2PropertyList({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[14px] text-[#758194]">{pageDescription}</p>
-            <h1 className="mt-1 text-[24px] font-bold text-[#102d50]">
-              {pageTitle}
-            </h1>
+            <div className="mt-1 flex items-baseline gap-2">
+              <h1 className="text-[24px] font-bold text-[#102d50]">
+                {pageTitle}
+              </h1>
+              {totalPages > 1 && (
+                <span className="whitespace-nowrap text-[12px] font-bold text-[#526176]">
+                  {currentPage} / {totalPages}ページ
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5 sm:justify-end sm:gap-2">
             <p className="text-[14px] text-[#65748a]">
               検索結果{" "}
               <strong className="text-[18px] text-[#102d50]">
                 {sortedProperties.length}件
               </strong>
-              {totalPages > 1 && (
-                <span className="ml-2 whitespace-nowrap text-[12px] font-bold text-[#526176]">
-                  {currentPage} / {totalPages}ページ
-                </span>
-              )}
             </p>
-            <label className="flex items-center gap-2 text-[11px] font-bold text-[#65748a]">
+            <label className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[10px] font-bold text-[#65748a] sm:gap-2 sm:text-[11px]">
               表示順
               <select
                 value={`${sortKey}:${sortDirection}`}
@@ -617,7 +619,7 @@ export default function V2PropertyList({
                   setSortKey(key);
                   setSortDirection(direction);
                 }}
-                className="h-9 border border-[#cbd5df] bg-white px-2 text-[12px] text-[#263b58]"
+                className="h-8 w-[138px] border border-[#cbd5df] bg-white px-1 text-[10px] text-[#263b58] sm:h-9 sm:w-auto sm:px-2 sm:text-[12px]"
               >
                 {SORT_FIELDS.flatMap(field => [
                   <option key={`${field.key}:asc`} value={`${field.key}:asc`}>
