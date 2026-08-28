@@ -794,7 +794,7 @@ export default function Login({
               )}
             </TabsContent>
           </Tabs>
-          <p className="mt-4 text-center text-[11px] text-[#65748a]">
+          <p className="mt-4 text-center text-[13px] text-[#65748a]">
             ※ 現在β版のため、無料でご利用いただけます
           </p>
           <div className="mt-3 space-y-2 text-[12px] font-bold">
