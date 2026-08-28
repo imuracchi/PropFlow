@@ -697,6 +697,14 @@ export async function getPlatformAnalytics() {
     marketByAreaResult,
     marketByPriceResult,
     marketSegmentsResult,
+    uniqueInquiryByTypeResult,
+    uniqueInquiryByAreaResult,
+    uniqueInquiryByPriceResult,
+    uniqueInquiryBySegmentResult,
+    uniqueViewerByTypeResult,
+    uniqueViewerByAreaResult,
+    uniqueViewerByPriceResult,
+    uniqueViewerBySegmentResult,
   ] = await Promise.all([
     db.execute(sql`
         SELECT month,
@@ -937,6 +945,134 @@ export async function getPlatformAnalytics() {
       ORDER BY inquiries DESC, properties DESC, segment.area, segment.type, segment.priceSort
       LIMIT 100
     `),
+    db.execute(sql`
+      SELECT p.type AS label, COUNT(DISTINCT dm.senderId) AS inquiries
+      FROM direct_messages dm
+      INNER JOIN properties p ON p.id = dm.propertyId
+      WHERE dm.propertyId IS NOT NULL AND dm.senderId != p.userId AND p.deleted = 0
+      GROUP BY p.type
+    `),
+    db.execute(sql`
+      SELECT COALESCE(NULLIF(REGEXP_SUBSTR(p.address, '^(北海道|東京都|京都府|大阪府|.{2,3}県)'), ''), '地域不明') AS label,
+        COUNT(DISTINCT dm.senderId) AS inquiries
+      FROM direct_messages dm
+      INNER JOIN properties p ON p.id = dm.propertyId
+      WHERE dm.propertyId IS NOT NULL AND dm.senderId != p.userId AND p.deleted = 0
+      GROUP BY label
+    `),
+    db.execute(sql`
+      SELECT priceInquiry.label, COUNT(DISTINCT priceInquiry.senderId) AS inquiries
+      FROM (
+        SELECT dm.senderId,
+          CASE
+            WHEN p.price IS NULL THEN '価格未設定'
+            WHEN p.price < 30000000 THEN '3,000万円未満'
+            WHEN p.price < 50000000 THEN '3,000〜5,000万円'
+            WHEN p.price < 100000000 THEN '5,000万〜1億円'
+            WHEN p.price < 300000000 THEN '1億〜3億円'
+            WHEN p.price < 500000000 THEN '3億〜5億円'
+            WHEN p.price < 700000000 THEN '5億〜7億円'
+            WHEN p.price < 1000000000 THEN '7億〜10億円'
+            WHEN p.price < 2000000000 THEN '10億〜20億円'
+            WHEN p.price < 5000000000 THEN '20億〜50億円'
+            ELSE '50億円以上'
+          END AS label
+        FROM direct_messages dm
+        INNER JOIN properties p ON p.id = dm.propertyId
+        WHERE dm.propertyId IS NOT NULL AND dm.senderId != p.userId AND p.deleted = 0
+      ) priceInquiry
+      GROUP BY priceInquiry.label
+    `),
+    db.execute(sql`
+      SELECT segmentInquiry.area, segmentInquiry.type, segmentInquiry.priceLabel,
+        COUNT(DISTINCT segmentInquiry.senderId) AS inquiries
+      FROM (
+        SELECT dm.senderId,
+          COALESCE(NULLIF(REGEXP_SUBSTR(p.address, '^(北海道|東京都|京都府|大阪府|.{2,3}県)'), ''), '地域不明') AS area,
+          p.type,
+          CASE
+            WHEN p.price IS NULL THEN '価格未設定'
+            WHEN p.price < 30000000 THEN '3,000万円未満'
+            WHEN p.price < 50000000 THEN '3,000〜5,000万円'
+            WHEN p.price < 100000000 THEN '5,000万〜1億円'
+            WHEN p.price < 300000000 THEN '1億〜3億円'
+            WHEN p.price < 500000000 THEN '3億〜5億円'
+            WHEN p.price < 700000000 THEN '5億〜7億円'
+            WHEN p.price < 1000000000 THEN '7億〜10億円'
+            WHEN p.price < 2000000000 THEN '10億〜20億円'
+            WHEN p.price < 5000000000 THEN '20億〜50億円'
+            ELSE '50億円以上'
+          END AS priceLabel
+        FROM direct_messages dm
+        INNER JOIN properties p ON p.id = dm.propertyId
+        WHERE dm.propertyId IS NOT NULL AND dm.senderId != p.userId AND p.deleted = 0
+      ) segmentInquiry
+      GROUP BY segmentInquiry.area, segmentInquiry.type, segmentInquiry.priceLabel
+    `),
+    db.execute(sql`
+      SELECT p.type AS label, COUNT(DISTINCT v.userId) AS viewers
+      FROM property_view_events v
+      INNER JOIN properties p ON p.id = v.propertyId
+      WHERE p.deleted = 0
+      GROUP BY p.type
+    `),
+    db.execute(sql`
+      SELECT COALESCE(NULLIF(REGEXP_SUBSTR(p.address, '^(北海道|東京都|京都府|大阪府|.{2,3}県)'), ''), '地域不明') AS label,
+        COUNT(DISTINCT v.userId) AS viewers
+      FROM property_view_events v
+      INNER JOIN properties p ON p.id = v.propertyId
+      WHERE p.deleted = 0
+      GROUP BY label
+    `),
+    db.execute(sql`
+      SELECT priceView.label, COUNT(DISTINCT priceView.userId) AS viewers
+      FROM (
+        SELECT v.userId,
+          CASE
+            WHEN p.price IS NULL THEN '価格未設定'
+            WHEN p.price < 30000000 THEN '3,000万円未満'
+            WHEN p.price < 50000000 THEN '3,000〜5,000万円'
+            WHEN p.price < 100000000 THEN '5,000万〜1億円'
+            WHEN p.price < 300000000 THEN '1億〜3億円'
+            WHEN p.price < 500000000 THEN '3億〜5億円'
+            WHEN p.price < 700000000 THEN '5億〜7億円'
+            WHEN p.price < 1000000000 THEN '7億〜10億円'
+            WHEN p.price < 2000000000 THEN '10億〜20億円'
+            WHEN p.price < 5000000000 THEN '20億〜50億円'
+            ELSE '50億円以上'
+          END AS label
+        FROM property_view_events v
+        INNER JOIN properties p ON p.id = v.propertyId
+        WHERE p.deleted = 0
+      ) priceView
+      GROUP BY priceView.label
+    `),
+    db.execute(sql`
+      SELECT segmentView.area, segmentView.type, segmentView.priceLabel,
+        COUNT(DISTINCT segmentView.userId) AS viewers
+      FROM (
+        SELECT v.userId,
+          COALESCE(NULLIF(REGEXP_SUBSTR(p.address, '^(北海道|東京都|京都府|大阪府|.{2,3}県)'), ''), '地域不明') AS area,
+          p.type,
+          CASE
+            WHEN p.price IS NULL THEN '価格未設定'
+            WHEN p.price < 30000000 THEN '3,000万円未満'
+            WHEN p.price < 50000000 THEN '3,000〜5,000万円'
+            WHEN p.price < 100000000 THEN '5,000万〜1億円'
+            WHEN p.price < 300000000 THEN '1億〜3億円'
+            WHEN p.price < 500000000 THEN '3億〜5億円'
+            WHEN p.price < 700000000 THEN '5億〜7億円'
+            WHEN p.price < 1000000000 THEN '7億〜10億円'
+            WHEN p.price < 2000000000 THEN '10億〜20億円'
+            WHEN p.price < 5000000000 THEN '20億〜50億円'
+            ELSE '50億円以上'
+          END AS priceLabel
+        FROM property_view_events v
+        INNER JOIN properties p ON p.id = v.propertyId
+        WHERE p.deleted = 0
+      ) segmentView
+      GROUP BY segmentView.area, segmentView.type, segmentView.priceLabel
+    `),
   ]);
 
   const rows = (result: any) => (result?.[0] ?? []) as any[];
@@ -967,6 +1103,30 @@ export async function getPlatformAnalytics() {
     uniqueViewers: Number(row.uniqueViewers ?? 0),
     inquiries: Number(row.inquiries ?? 0),
   }));
+  const inquiryMap = (queryResult: any) => new Map<string, number>(
+    rows(queryResult).map(row => [String(row.label), Number(row.inquiries ?? 0)] as [string, number])
+  );
+  const typeInquiries = inquiryMap(uniqueInquiryByTypeResult);
+  const areaInquiries = inquiryMap(uniqueInquiryByAreaResult);
+  const priceInquiries = inquiryMap(uniqueInquiryByPriceResult);
+  const segmentInquiries = new Map<string, number>(
+    rows(uniqueInquiryBySegmentResult).map(row => [
+      `${String(row.area)}\u0000${String(row.type)}\u0000${String(row.priceLabel)}`,
+      Number(row.inquiries ?? 0),
+    ] as [string, number])
+  );
+  const viewerMap = (queryResult: any) => new Map<string, number>(
+    rows(queryResult).map(row => [String(row.label), Number(row.viewers ?? 0)] as [string, number])
+  );
+  const typeViewers = viewerMap(uniqueViewerByTypeResult);
+  const areaViewers = viewerMap(uniqueViewerByAreaResult);
+  const priceViewers = viewerMap(uniqueViewerByPriceResult);
+  const segmentViewers = new Map<string, number>(
+    rows(uniqueViewerBySegmentResult).map(row => [
+      `${String(row.area)}\u0000${String(row.type)}\u0000${String(row.priceLabel)}`,
+      Number(row.viewers ?? 0),
+    ] as [string, number])
+  );
 
   return {
     growth: rows(growthResult).map(row => ({
@@ -985,16 +1145,22 @@ export async function getPlatformAnalytics() {
       views: Number(row.views),
       favorites: Number(row.favorites),
     })),
-    marketByType: mapMarketRows(marketByTypeResult),
-    marketByArea: mapMarketRows(marketByAreaResult),
-    marketByPrice: mapMarketRows(marketByPriceResult),
+    marketByType: mapMarketRows(marketByTypeResult)
+      .map(row => ({ ...row, viewPropertyPairs: row.uniqueViewers, inquiryPropertyPairs: row.inquiries, uniqueViewers: typeViewers.get(row.label) ?? 0, inquiries: typeInquiries.get(row.label) ?? 0 }))
+      .sort((a, b) => b.inquiries - a.inquiries || b.uniqueViewers - a.uniqueViewers || b.properties - a.properties),
+    marketByArea: mapMarketRows(marketByAreaResult)
+      .map(row => ({ ...row, viewPropertyPairs: row.uniqueViewers, inquiryPropertyPairs: row.inquiries, uniqueViewers: areaViewers.get(row.label) ?? 0, inquiries: areaInquiries.get(row.label) ?? 0 })),
+    marketByPrice: mapMarketRows(marketByPriceResult)
+      .map(row => ({ ...row, viewPropertyPairs: row.uniqueViewers, inquiryPropertyPairs: row.inquiries, uniqueViewers: priceViewers.get(row.label) ?? 0, inquiries: priceInquiries.get(row.label) ?? 0 })),
     marketSegments: rows(marketSegmentsResult).map(row => ({
       area: String(row.area ?? "地域不明"),
       type: String(row.type ?? "種別不明"),
       priceLabel: String(row.priceLabel ?? "価格未設定"),
       properties: Number(row.properties ?? 0),
-      inquiries: Number(row.inquiries ?? 0),
-    })),
+      uniqueViewers: segmentViewers.get(`${String(row.area)}\u0000${String(row.type)}\u0000${String(row.priceLabel)}`) ?? 0,
+      inquiryPropertyPairs: Number(row.inquiries ?? 0),
+      inquiries: segmentInquiries.get(`${String(row.area)}\u0000${String(row.type)}\u0000${String(row.priceLabel)}`) ?? 0,
+    })).sort((a, b) => b.inquiries - a.inquiries || b.properties - a.properties),
     engagement: {
       total,
       active,

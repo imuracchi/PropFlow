@@ -430,7 +430,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
       </div>
 
       {/* サマリーカード */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {(activeSection === "users" || activeSection === "properties") && <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {statCards.map(stat => (
           <div
             key={stat.label}
@@ -461,7 +461,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
             </div>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* タブ */}
       <Tabs
@@ -2074,15 +2074,6 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               const formatPrice = (price: number) => price
                 ? `${Math.round(price / 10000).toLocaleString()}万円`
                 : "—";
-              const marketTotals = analytics.marketByType.reduce(
-                (total, row) => ({
-                  properties: total.properties + row.properties,
-                  views: total.views + row.views,
-                  uniqueViewers: total.uniqueViewers + row.uniqueViewers,
-                  inquiries: total.inquiries + row.inquiries,
-                }),
-                { properties: 0, views: 0, uniqueViewers: 0, inquiries: 0 }
-              );
               const MarketPanel = ({
                 title,
                 rows,
@@ -2098,11 +2089,12 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                     {rows.slice(0, 10).map(row => (
                       <div key={row.label} className="p-3">
                         <p className="mb-2 break-words text-[12px] font-bold text-foreground">{row.label}</p>
-                        <div className="grid grid-cols-3 gap-1 text-center">
+                        <div className="grid grid-cols-2 gap-1 text-center">
                           {[
                             ["物件", row.properties.toLocaleString()],
-                            ["閲覧者", row.uniqueViewers.toLocaleString()],
-                            ["問合せ", row.inquiries.toLocaleString()],
+                            ["閲覧人数", row.uniqueViewers.toLocaleString()],
+                            ["問合せ人数", row.inquiries.toLocaleString()],
+                            ["1物件あたり問合せ", row.properties ? `${(row.inquiryPropertyPairs / row.properties).toFixed(1)}人` : "0.0人"],
                           ].map(([label, value]) => (
                             <div key={label} className="bg-muted/30 px-1 py-2">
                               <p className="text-[9px] text-muted-foreground">{label}</p>
@@ -2121,20 +2113,13 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   <section className="space-y-3 border-2 border-[#9bb4cf] bg-[#f4f8fc] p-4">
                     <div>
                       <h4 className="text-[15px] font-bold text-[#102d50]">問い合わせをCVとした市場動向</h4>
-                      <p className="mt-1 text-[10px] leading-5 text-[#65748a]">全期間・削除されていない登録物件が対象。同じ利用者から同じ物件への複数DMは、問い合わせ1件として集計します。</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-                      {[
-                        ["登録物件", `${marketTotals.properties.toLocaleString()}件`],
-                        ["総閲覧", `${marketTotals.views.toLocaleString()}回`],
-                        ["ユニーク閲覧", `${marketTotals.uniqueViewers.toLocaleString()}人`],
-                        ["問い合わせ", `${marketTotals.inquiries.toLocaleString()}件`],
-                      ].map(([label, value]) => (
-                        <div key={label} className="border border-[#d4dde7] bg-white p-3">
-                          <p className="text-[10px] text-[#65748a]">{label}</p>
-                          <p className="mt-1 text-xl font-bold tabular-nums text-[#102d50]">{value}</p>
-                        </div>
-                      ))}
+                      <p className="mt-1 text-[10px] leading-5 text-[#65748a]">全期間・削除されていない登録物件が対象です。</p>
+                      <div className="mt-2 border border-[#c9d7e5] bg-white px-3 py-2 text-[10px] leading-5 text-[#526176]">
+                        <p><b>閲覧人数：</b>各集計区分内で同じ利用者を1人として集計</p>
+                        <p><b>問い合わせ人数：</b>各集計区分内で同じ利用者を1人として集計</p>
+                        <p><b>1物件あたり問い合わせ：</b>物件別の問い合わせ人数合計 ÷ 物件数</p>
+                        <p className="text-[#758194]">同じ人が複数物件を見たり問い合わせたりした場合、閲覧人数・問い合わせ人数では1人、1物件あたりの計算では各物件で1人として扱います。</p>
+                      </div>
                     </div>
                     <div className="grid gap-3 xl:grid-cols-3">
                       <MarketPanel title="物件種別別" rows={analytics.marketByType} />
@@ -2158,7 +2143,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                             </div>
                             <div className="mt-2 grid grid-cols-2 gap-1 text-center">
                               <div className="bg-muted/30 p-2"><p className="text-[9px] text-muted-foreground">物件数</p><p className="font-bold tabular-nums">{row.properties}件</p></div>
+                              <div className="bg-muted/30 p-2"><p className="text-[9px] text-muted-foreground">閲覧人数</p><p className="font-bold tabular-nums">{row.uniqueViewers}人</p></div>
                               <div className="bg-[#eef5fb] p-2"><p className="text-[9px] text-[#65748a]">問い合わせ人数</p><p className="font-bold tabular-nums text-[#173f70]">{row.inquiries}人</p></div>
+                              <div className="bg-[#eef5fb] p-2"><p className="text-[9px] text-[#65748a]">1物件あたり問合せ</p><p className="font-bold tabular-nums text-[#173f70]">{row.properties ? (row.inquiryPropertyPairs / row.properties).toFixed(1) : "0.0"}人</p></div>
                             </div>
                           </article>
                         ))}
@@ -2166,12 +2153,12 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       <div className="hidden max-h-[640px] overflow-auto md:block">
                         <table className="w-full min-w-[680px] text-sm">
                           <thead className="sticky top-0 bg-[#f3f6f9] text-[11px] text-muted-foreground">
-                            <tr><th className="px-4 py-2 text-left">順位</th><th className="px-4 py-2 text-left">都道府県</th><th className="px-4 py-2 text-left">物件種別</th><th className="px-4 py-2 text-left">価格帯</th><th className="px-4 py-2 text-right">物件数</th><th className="px-4 py-2 text-right">問い合わせ人数</th></tr>
+                            <tr><th className="px-4 py-2 text-left">順位</th><th className="px-4 py-2 text-left">都道府県</th><th className="px-4 py-2 text-left">物件種別</th><th className="px-4 py-2 text-left">価格帯</th><th className="px-4 py-2 text-right">物件数</th><th className="px-4 py-2 text-right">閲覧人数</th><th className="px-4 py-2 text-right">問い合わせ人数</th><th className="px-4 py-2 text-right">1物件あたり問合せ</th></tr>
                           </thead>
                           <tbody className="divide-y divide-border">
                             {analytics.marketSegments.map((row, index) => (
                               <tr key={`${row.area}-${row.type}-${row.priceLabel}`}>
-                                <td className="px-4 py-2 text-muted-foreground">{index + 1}</td><td className="px-4 py-2 font-medium">{row.area}</td><td className="px-4 py-2">{row.type}</td><td className="px-4 py-2">{row.priceLabel}</td><td className="px-4 py-2 text-right tabular-nums">{row.properties}</td><td className="px-4 py-2 text-right font-bold tabular-nums text-[#173f70]">{row.inquiries}</td>
+                                <td className="px-4 py-2 text-muted-foreground">{index + 1}</td><td className="px-4 py-2 font-medium">{row.area}</td><td className="px-4 py-2">{row.type}</td><td className="px-4 py-2">{row.priceLabel}</td><td className="px-4 py-2 text-right tabular-nums">{row.properties}</td><td className="px-4 py-2 text-right tabular-nums">{row.uniqueViewers}</td><td className="px-4 py-2 text-right font-bold tabular-nums text-[#173f70]">{row.inquiries}</td><td className="px-4 py-2 text-right font-bold tabular-nums text-[#173f70]">{row.properties ? (row.inquiryPropertyPairs / row.properties).toFixed(1) : "0.0"}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -2179,7 +2166,6 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       </div>
                       {analytics.marketSegments.length === 0 && <p className="p-4 text-xs text-muted-foreground">集計対象のデータはありません</p>}
                     </section>
-                    <p className="text-[10px] leading-5 text-[#65748a]">閲覧者と問い合わせは、物件ごとの重複を除いた利用者数です。同じ利用者が同じ物件を複数回閲覧・問い合わせしても1人として集計します。</p>
                   </section>
                   <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     {[
