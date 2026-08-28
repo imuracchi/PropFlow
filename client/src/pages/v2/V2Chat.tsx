@@ -14,6 +14,7 @@ import {
   Phone,
   Printer,
   Send,
+  Share2,
   Trash2,
   X,
 } from "lucide-react";
@@ -258,7 +259,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const share = async () => {
     setShareError(null);
     if (!includeContact && !includeCard && selectedPropertyFileIds.length === 0) {
-      setShareError("メールで送るものを選択してください");
+      setShareError("共有するものを選択してください");
       return;
     }
     if (includePropertyDocuments && selectedPropertyFileIds.length === 0) {
@@ -271,7 +272,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
         {
           id: Date.now(),
           senderId: 1,
-          content: "✉️ 選択した内容をメールで送りました",
+          content: "選択した内容を共有しました",
           createdAt: new Date(),
         },
       ]);
@@ -457,8 +458,8 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
               }}
               className="flex h-9 items-center gap-1.5 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70]"
             >
-              <Mail size={14} />
-              メールで送る
+              <Share2 size={14} />
+              共有する
             </button>
             <button
               onClick={() => setModal("contact")}
@@ -516,7 +517,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             >
               <div className="flex items-center">
                 <h2 className="text-[18px] font-bold text-[#102d50]">
-                  {modal === "share" ? "メールで送る" : "相手の連絡先"}
+                  {modal === "share" ? "共有する" : "相手の連絡先"}
                 </h2>
                 <button onClick={() => setModal(null)} className="ml-auto">
                   <X size={19} />
@@ -524,15 +525,15 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
               </div>
               {modal === "share" && (
                 <>
-                  <p className="mt-3 text-[13px] font-bold leading-6 text-[#263b58]">メールで送るものを選択してください</p>
+                  <p className="mt-3 text-[13px] font-bold leading-6 text-[#263b58]">共有するものを選択してください</p>
                   <div className="mt-3 grid gap-3 border-y border-[#e1e6ec] py-4 text-[13px] font-bold text-[#263b58]">
-                    {property?.userId === myId && (
-                      <label className="flex cursor-pointer items-center gap-3"><input type="checkbox" checked={includePropertyDocuments} onChange={event => { setIncludePropertyDocuments(event.target.checked); if (!event.target.checked) setSelectedPropertyFileIds([]); }} className="size-4 accent-[#173f70]"/>物件資料</label>
-                    )}
-                    <label className="flex cursor-pointer items-center gap-3"><input type="checkbox" checked={includeContact} onChange={event => setIncludeContact(event.target.checked)} className="size-4 accent-[#173f70]"/>連絡先</label>
+                    <label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={includeContact} onChange={event => setIncludeContact(event.target.checked)} className="mt-0.5 size-4 accent-[#173f70]"/><span>連絡先（メール・DM共有）<small className="mt-0.5 block font-normal text-[#65748a]">このDM内と、相手の登録メールアドレスへ共有</small></span></label>
                   {(!!user?.businessCardBase64 || preview) && (
-                      <label className="flex cursor-pointer items-center gap-3"><input type="checkbox" checked={includeCard} onChange={event => setIncludeCard(event.target.checked)} className="size-4 accent-[#173f70]"/>名刺</label>
+                      <label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={includeCard} onChange={event => setIncludeCard(event.target.checked)} className="mt-0.5 size-4 accent-[#173f70]"/><span>名刺（メール）<small className="mt-0.5 block font-normal text-[#65748a]">相手の登録メールアドレスへ送付</small></span></label>
                   )}
+                    {property?.userId === myId && (
+                      <label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={includePropertyDocuments} onChange={event => { setIncludePropertyDocuments(event.target.checked); if (!event.target.checked) setSelectedPropertyFileIds([]); }} className="mt-0.5 size-4 accent-[#173f70]"/><span>物件資料（メール）<small className="mt-0.5 block font-normal text-[#65748a]">相手の登録メールアドレスへ送付</small></span></label>
+                    )}
                   </div>
                   {includePropertyDocuments && property?.userId === myId && (
                     <div className="mt-4 border-t border-[#e1e6ec] pt-4">
@@ -554,7 +555,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                               <input type="checkbox" checked={selected} disabled={tooLarge} onChange={() => togglePropertyFile(file.id)} className="size-4 shrink-0 accent-[#173f70]" />
                               <FileText className="size-4 shrink-0 text-[#526176]" />
                               <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#263b58]">{file.name}</span>
-                              {file.visible === 0 && <span className="inline-flex shrink-0 items-center gap-1 bg-[#fff0c9] px-1.5 py-0.5 text-[10px] font-bold text-[#8b5a08]"><EyeOff className="size-3" />非表示</span>}
+                              {file.visible === 0 && <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap bg-[#fff0c9] px-1.5 py-0.5 text-[10px] font-bold text-[#8b5a08]"><EyeOff className="size-3 shrink-0" />非表示</span>}
                               <span className="shrink-0 text-[10px] text-[#758194]">{Number(file.size ?? 0) >= 1024 * 1024 ? `${(Number(file.size) / 1024 / 1024).toFixed(1)}MB` : `${Math.ceil(Number(file.size ?? 0) / 1024)}KB`}</span>
                             </label>;
                           })}
@@ -573,7 +574,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                     disabled={sendBusinessCard.isPending || (!includeContact && !includeCard && selectedPropertyFileIds.length === 0)}
                     className="mt-5 h-11 w-full bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50"
                   >
-                    {sendBusinessCard.isPending ? "送信中…" : "選択した内容をメールで送る"}
+                    {sendBusinessCard.isPending ? "共有中…" : "選択した内容を共有する"}
                   </button>
                 </>
               )}
