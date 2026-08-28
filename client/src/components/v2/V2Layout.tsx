@@ -241,15 +241,6 @@ export default function V2Layout({
           </button>
         </nav>
         <div className="border-t border-white/10 p-4">
-          {(user?.role === "admin" || user?.role === "management") && (
-            <button
-              onClick={() => setLocation("/v2/admin")}
-              className="mb-4 flex h-10 w-full items-center gap-2 border border-white/25 px-3 text-[11px] font-bold text-white"
-            >
-              <ShieldCheck size={16} />
-              管理画面を開く
-            </button>
-          )}
           <div className="flex items-center">
             <div className="grid size-9 place-items-center rounded-full bg-white/15 text-[12px] font-bold">
               {(user?.name ?? "?").charAt(0)}
@@ -288,6 +279,17 @@ export default function V2Layout({
             <span className="text-[12px] font-bold">お知らせ</span>
             {unreadAnnouncementCount > 0 && <span className="absolute -right-1 -top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-[#d95532] px-1 text-[9px] font-bold leading-none text-white">{unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}</span>}
           </button>
+          {!preview &&
+            (user?.role === "admin" || user?.role === "management") && (
+              <button
+                type="button"
+                onClick={() => setLocation("/v2/admin")}
+                className="ml-1 hidden h-9 items-center gap-1.5 border-l border-[#d9e0e8] pl-3 pr-1 text-[#173f70] lg:flex"
+              >
+                <ShieldCheck size={17} />
+                <span className="text-[12px] font-bold">管理画面</span>
+              </button>
+            )}
           {!preview && user && (
             <button
               onClick={() => setReferralOpen(true)}
