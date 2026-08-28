@@ -1,5 +1,4 @@
 import { trpc } from "@/lib/trpc";
-import { fmtDate } from "@/lib/utils";
 import { ArrowLeft, ChevronDown, Megaphone } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -57,12 +56,9 @@ export default function AnnounceArchive() {
               <summary className={`flex cursor-pointer list-none items-center gap-3 px-4 py-4 lg:px-5 [&::-webkit-details-marker]:hidden ${log.isRead ? "bg-white" : "bg-[#f2f7fc]"}`}>
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <Megaphone className="w-4 h-4 text-primary shrink-0" />
-                  <span className="truncate text-sm font-semibold text-foreground">{log.subject}</span>
+                  <span className="min-w-0 break-words text-sm font-semibold leading-5 text-foreground sm:truncate">{log.subject}</span>
                   {!log.isRead && <span className="shrink-0 bg-[#d95532] px-2 py-0.5 text-[10px] font-bold text-white">新着</span>}
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {fmtDate(log.sentAt)}
-                </span>
                 <ChevronDown className="size-4 shrink-0 text-[#65748a] transition-transform group-open:rotate-180" />
               </summary>
               <div className="space-y-3 border-t border-[#e2e7ec] px-4 py-4 lg:px-5">
