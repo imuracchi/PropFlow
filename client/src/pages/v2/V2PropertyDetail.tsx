@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Calculator,
+  Bell,
   Camera,
   CheckCircle2,
   ChevronDown,
@@ -390,6 +391,7 @@ export default function V2PropertyDetail({
       await utils.property.list.invalidate();
     },
   });
+  const notifyPublishedProperty = trpc.property.notifyLine.useMutation();
   const schedulePublication = trpc.property.schedulePublication.useMutation({ onSuccess: () => propertyQuery.refetch() });
   const cancelScheduledPublication = trpc.property.cancelScheduledPublication.useMutation({ onSuccess: () => propertyQuery.refetch() });
   const publishScheduledNow = trpc.property.publishScheduledNow.useMutation({ onSuccess: () => propertyQuery.refetch() });
@@ -464,6 +466,7 @@ export default function V2PropertyDetail({
   const [ownerToolsOpen, setOwnerToolsOpen] = useState(false);
   const [shareTextOpen, setShareTextOpen] = useState(false);
   const [sharePromptFromPublish, setSharePromptFromPublish] = useState(false);
+  const [publishNotifyOpen, setPublishNotifyOpen] = useState(false);
   const [shareTextMode, setShareTextMode] = useState<"propflow" | "email">("propflow");
   const [shareTextCopied, setShareTextCopied] = useState(false);
   const [introGenerating, setIntroGenerating] = useState(false);
@@ -972,6 +975,65 @@ export default function V2PropertyDetail({
             <div className="mt-5 flex gap-3">
               <button onClick={() => setScheduleEditorOpen(false)} className="h-11 flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]">キャンセル</button>
               <button disabled={schedulePublication.isPending} onClick={submitScheduleEditor} className="h-11 flex-1 bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50">{schedulePublication.isPending ? "予約中…" : "予約する"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {publishNotifyOpen && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-6">
+          <div className="w-full bg-white p-5 sm:max-w-[480px] sm:border-t-4 sm:border-t-[#173f70] sm:p-7">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 shrink-0 place-items-center rounded-full bg-[#e8eef6]">
+                <Bell size={19} className="text-[#173f70]" />
+              </div>
+              <div>
+                <p className="text-[12px] font-bold text-[#35724f]">物件を公開しました</p>
+                <h3 className="text-[18px] font-bold text-[#102d50] sm:text-[21px]">新着として通知しますか？</h3>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-2 bg-[#f4f6f8] p-4 text-[13px] text-[#44546a] sm:grid-cols-3">
+              <p>✓ 新着メール</p>
+              <p>✓ Webプッシュ</p>
+              <p>{exclusionCount > 0 ? "— LINE（閲覧制限のため送信なし）" : "✓ 公式LINE"}</p>
+            </div>
+            <p className="mt-3 text-[11px] leading-5 text-[#65748a]">
+              {exclusionCount > 0
+                ? "閲覧制限者を除いて通知します。"
+                : "PropFlowの利用者へ新着物件として通知します。"}
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row">
+              <button
+                disabled={notifyPublishedProperty.isPending}
+                onClick={() => {
+                  setPublishNotifyOpen(false);
+                  setSharePromptFromPublish(true);
+                  setShareTextMode("propflow");
+                  setShareTextCopied(false);
+                  setShareTextOpen(true);
+                }}
+                className="h-11 flex-1 border border-[#9aabc0] text-[12px] font-semibold text-[#65748a] disabled:opacity-50"
+              >
+                通知しない
+              </button>
+              <button
+                disabled={notifyPublishedProperty.isPending}
+                onClick={async () => {
+                  try {
+                    await notifyPublishedProperty.mutateAsync({ propertyId });
+                    await propertyQuery.refetch();
+                    setPublishNotifyOpen(false);
+                    setSharePromptFromPublish(true);
+                    setShareTextMode("propflow");
+                    setShareTextCopied(false);
+                    setShareTextOpen(true);
+                  } catch (error) {
+                    alert(error instanceof Error ? error.message : "通知の送信に失敗しました");
+                  }
+                }}
+                className="h-11 flex-[1.4] bg-[#173f70] text-[13px] font-bold text-white disabled:opacity-50"
+              >
+                {notifyPublishedProperty.isPending ? "送信中…" : "通知して次へ"}
+              </button>
             </div>
           </div>
         </div>
@@ -1614,10 +1676,14 @@ export default function V2PropertyDetail({
                             published: nextPublished,
                           });
                           if (isFirstPublication) {
-                            setSharePromptFromPublish(true);
-                            setShareTextMode("propflow");
-                            setShareTextCopied(false);
-                            setShareTextOpen(true);
+                            if (!property.lineNotifiedAt) {
+                              setPublishNotifyOpen(true);
+                            } else {
+                              setSharePromptFromPublish(true);
+                              setShareTextMode("propflow");
+                              setShareTextCopied(false);
+                              setShareTextOpen(true);
+                            }
                           }
                           if (
                             nextPublished &&
