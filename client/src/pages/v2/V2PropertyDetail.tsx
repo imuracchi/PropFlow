@@ -1650,9 +1650,6 @@ export default function V2PropertyDetail({
                       <div className="min-w-0 flex-1">
                         <p className="text-[12px] font-bold text-[#526176]">ログインページへの簡易掲載</p>
                         <p className="mt-1 text-[10px] leading-5 text-[#758194]">市区・物件種別・価格帯・面積のみ表示します。詳細住所、会社名、担当者名、資料は表示されません。</p>
-                        {user?.role === "admin" && !isRegistrant && (
-                          <p className="mt-1 text-[10px] font-bold text-[#8a671d]">管理者として変更できます。</p>
-                        )}
                         <span className={`mt-2 inline-flex px-2 py-1 text-[10px] font-bold ${property.externalListingConsent === 1 ? "bg-[#e8f3ec] text-[#27613c]" : "bg-[#edf1f5] text-[#65748a]"}`}>
                           {property.externalListingConsent === 1 ? "簡易掲載に同意済み" : "簡易掲載しない"}
                         </span>
