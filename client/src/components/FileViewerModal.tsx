@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Loader2, AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Download, Loader2, X } from "lucide-react";
 
 interface Props {
   fileId: number;
@@ -9,36 +9,31 @@ interface Props {
 
 export function FileViewerModal({ fileId, name, onClose }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const pdfRef = useRef<any>(null);
+  const renderTaskRef = useRef<any>(null);
   const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageCount, setPageCount] = useState(0);
+  const isPdf = name.split(".").pop()?.toLowerCase() === "pdf";
 
   useEffect(() => {
     let objectUrl: string | null = null;
+    let cancelled = false;
 
     async function load() {
       try {
         const res = await fetch(`/api/files/raw/${fileId}`, { credentials: "same-origin" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const ext = name.split(".").pop()?.toLowerCase() ?? "";
-
-        if (ext === "pdf") {
+        if (isPdf) {
           const pdfjs = await loadPdfJs();
           const pdf = await pdfjs.getDocument({ data: await res.arrayBuffer() }).promise;
-          const container = containerRef.current;
-          if (!container) return;
-          container.innerHTML = "";
-          const dpr = window.devicePixelRatio || 1;
-          for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-            const page = await pdf.getPage(pageNumber);
-            const base = page.getViewport({ scale: 1 });
-            const cssScale = Math.max(0.25, (container.clientWidth - 16) / base.width);
-            const viewport = page.getViewport({ scale: cssScale * dpr });
-            const canvas = document.createElement("canvas");
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            canvas.style.cssText = `display:block;width:${viewport.width / dpr}px;height:${viewport.height / dpr}px;margin:8px auto;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3)`;
-            container.appendChild(canvas);
-            await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+          if (cancelled) {
+            await pdf.destroy();
+            return;
           }
+          pdfRef.current = pdf;
+          setPageNumber(1);
+          setPageCount(pdf.numPages);
         } else {
           const blob = await res.blob();
           objectUrl = URL.createObjectURL(blob);
@@ -49,15 +44,56 @@ export function FileViewerModal({ fileId, name, onClose }: Props) {
         }
         setStatus("done");
       } catch {
-        setStatus("error");
+        if (!cancelled) setStatus("error");
       }
     }
 
     load();
     return () => {
+      cancelled = true;
+      renderTaskRef.current?.cancel?.();
+      pdfRef.current?.destroy?.();
+      pdfRef.current = null;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [fileId, name]);
+  }, [fileId, isPdf, name]);
+
+  useEffect(() => {
+    if (!isPdf || !pageCount || !pdfRef.current) return;
+    let cancelled = false;
+
+    async function renderPage() {
+      try {
+        setStatus("loading");
+        renderTaskRef.current?.cancel?.();
+        const page = await pdfRef.current.getPage(pageNumber);
+        const container = containerRef.current;
+        if (!container || cancelled) return;
+        container.innerHTML = "";
+        const base = page.getViewport({ scale: 1 });
+        const cssScale = Math.max(0.25, (container.clientWidth - 16) / base.width);
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        const viewport = page.getViewport({ scale: cssScale * dpr });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        canvas.style.cssText = `display:block;width:${viewport.width / dpr}px;height:${viewport.height / dpr}px;margin:8px auto;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3)`;
+        container.appendChild(canvas);
+        const task = page.render({ canvasContext: canvas.getContext("2d"), viewport });
+        renderTaskRef.current = task;
+        await task.promise;
+        if (!cancelled) setStatus("done");
+      } catch (error: any) {
+        if (!cancelled && error?.name !== "RenderingCancelledException") setStatus("error");
+      }
+    }
+
+    renderPage();
+    return () => {
+      cancelled = true;
+      renderTaskRef.current?.cancel?.();
+    };
+  }, [isPdf, pageCount, pageNumber]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "#525659" }}>
@@ -76,6 +112,39 @@ export function FileViewerModal({ fileId, name, onClose }: Props) {
           {name}
         </span>
       </div>
+
+      {isPdf && pageCount > 0 && (
+        <div className="flex h-11 shrink-0 items-center justify-center gap-2 border-b border-white/20 bg-[#37434d] px-3 text-white">
+          <button
+            type="button"
+            onClick={() => setPageNumber(current => Math.max(1, current - 1))}
+            disabled={pageNumber === 1}
+            className="grid size-8 place-items-center rounded border border-white/40 disabled:opacity-30"
+            aria-label="前のページ"
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <span className="min-w-20 text-center text-xs font-semibold">
+            {pageNumber} / {pageCount}ページ
+          </span>
+          <button
+            type="button"
+            onClick={() => setPageNumber(current => Math.min(pageCount, current + 1))}
+            disabled={pageNumber === pageCount}
+            className="grid size-8 place-items-center rounded border border-white/40 disabled:opacity-30"
+            aria-label="次のページ"
+          >
+            <ChevronRight size={17} />
+          </button>
+          <a
+            href={`/api/files/raw/${fileId}?download=1`}
+            download={name}
+            className="ml-2 flex h-8 items-center gap-1 rounded border border-white/50 px-2 text-[11px] font-semibold"
+          >
+            <Download size={14} /> DL
+          </a>
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto relative">
         {status === "loading" && (

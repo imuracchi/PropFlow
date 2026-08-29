@@ -1299,6 +1299,9 @@ export default function V2PropertyDetail({
                   {uploadStatus}
                 </p>
               )}
+              <p className="mt-3 text-[11px] leading-5 text-[#65748a]">
+                プレビューできない場合は、ダウンロードして確認してください。
+              </p>
               {property.status !== "sold" && <button
                 onClick={downloadAll}
                 disabled={!visibleFiles.length || downloading === "all"}

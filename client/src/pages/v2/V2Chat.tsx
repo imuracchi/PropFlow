@@ -551,6 +551,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                         <div>
                           <p className="text-[13px] font-bold text-[#263b58]">メールに添付する物件資料</p>
                           <p className="mt-1 text-[11px] text-[#65748a]">公開・非表示資料から最大10件、合計15MBまで選択できます</p>
+                          <p className="mt-1 text-[10px] leading-4 text-[#8b5a08]">15MBを超える資料はメールに添付できません。資料をダウンロードして別途共有してください。</p>
                         </div>
                         <span className="shrink-0 text-right text-[11px] font-bold text-[#526176]">{selectedPropertyFileIds.length}/10件<br />{(selectedPropertyFilesSize / 1024 / 1024).toFixed(1)}/15MB</span>
                       </div>
@@ -566,7 +567,10 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                               <FileText className="size-4 shrink-0 text-[#526176]" />
                               <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#263b58]">{file.name}</span>
                               {file.visible === 0 && <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap bg-[#fff0c9] px-1.5 py-0.5 text-[10px] font-bold text-[#8b5a08]"><EyeOff className="size-3 shrink-0" />非表示</span>}
-                              <span className="shrink-0 text-[10px] text-[#758194]">{Number(file.size ?? 0) >= 1024 * 1024 ? `${(Number(file.size) / 1024 / 1024).toFixed(1)}MB` : `${Math.ceil(Number(file.size ?? 0) / 1024)}KB`}</span>
+                              <span className="shrink-0 text-right text-[10px] text-[#758194]">
+                                <span className="block">{Number(file.size ?? 0) >= 1024 * 1024 ? `${(Number(file.size) / 1024 / 1024).toFixed(1)}MB` : `${Math.ceil(Number(file.size ?? 0) / 1024)}KB`}</span>
+                                {tooLarge && <span className="mt-0.5 block font-bold text-[#a72e2e]">15MB超・添付不可</span>}
+                              </span>
                             </label>;
                           })}
                         </div>
