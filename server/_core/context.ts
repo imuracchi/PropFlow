@@ -22,7 +22,8 @@ export async function createContext(
       if (found && found.status === "active") {
         user = found;
         const lastActiveAt = found.lastActiveAt?.getTime() ?? 0;
-        if (Date.now() - lastActiveAt >= 24 * 60 * 60 * 1000) {
+        // Keep "last active" useful without writing on every API request.
+        if (Date.now() - lastActiveAt >= 5 * 60 * 1000) {
           await db.updateLastActiveAt(found.id);
         }
       }

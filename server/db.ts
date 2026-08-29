@@ -570,7 +570,7 @@ export async function listPendingUsers() {
 export async function listActiveUsers() {
   const db = await getDb();
   if (!db) return [];
-  return db
+  const result = await db
     .select({
       id: users.id,
       name: users.name,
@@ -595,6 +595,31 @@ export async function listActiveUsers() {
     .from(users)
     .where(sql`${users.status} != 'pending'`)
     .orderBy(desc(users.createdAt));
+
+  // Historical activity logs may be newer than users.lastActiveAt because the
+  // latter used to be updated at most once per day. Reflect the latest known
+  // activity immediately without requiring a one-off data migration.
+  const latestLoggedActivities = await db
+    .select({
+      userId: activityLogs.userId,
+      lastLoggedAt: sql<Date | null>`MAX(${activityLogs.createdAt})`,
+    })
+    .from(activityLogs)
+    .groupBy(activityLogs.userId);
+  const latestLoggedAtByUser = new Map(
+    latestLoggedActivities.map(entry => [
+      entry.userId,
+      entry.lastLoggedAt ? new Date(entry.lastLoggedAt) : null,
+    ])
+  );
+
+  return result.map(user => {
+    const lastLoggedAt = latestLoggedAtByUser.get(user.id);
+    if (!lastLoggedAt || (user.lastActiveAt && user.lastActiveAt >= lastLoggedAt)) {
+      return user;
+    }
+    return { ...user, lastActiveAt: lastLoggedAt };
+  });
 }
 
 export async function listMissedBroadcastUsers() {
@@ -5092,12 +5117,20 @@ export async function logActivity(
 ) {
   const db = await getDb();
   if (!db) return;
+  const activityAt = new Date();
   await db.insert(activityLogs).values({
     userId,
     action,
     detail: detail ?? null,
     deviceType: detectDeviceType(userAgent),
+    createdAt: activityAt,
   });
+  // A recorded operation is also an unambiguous use of the service, so keep
+  // the user summary consistent with the operation log.
+  await db
+    .update(users)
+    .set({ lastActiveAt: activityAt })
+    .where(eq(users.id, userId));
 }
 
 export async function getActivityLogs(limit = 200) {
