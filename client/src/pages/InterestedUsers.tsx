@@ -36,10 +36,10 @@ export default function InterestedUsers({ v2 = false }: { v2?: boolean }) {
           <p className="text-sm text-muted-foreground mt-1">お気に入り・メモ・問い合わせ・PDF資料作成をしたユーザーがここに表示されます</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className={v2 ? "space-y-2" : "space-y-4"}>
           {Array.from(byProperty.entries()).map(([propId, group]) => (
             <div key={propId} className={v2 ? "overflow-hidden border border-[#d4dde7] bg-white" : "bg-card border border-border rounded-lg overflow-hidden"}>
-              <button onClick={() => setOpenProperties(current => { const next = new Set(current); next.has(propId) ? next.delete(propId) : next.add(propId); return next; })} className={v2 ? "flex w-full items-center gap-3 bg-[#edf1f5] px-5 py-4 text-left" : "w-full px-5 py-4 border-b border-border bg-muted/40 flex items-center gap-2 text-left"}>
+              <button onClick={() => setOpenProperties(current => { const next = new Set(current); next.has(propId) ? next.delete(propId) : next.add(propId); return next; })} className={v2 ? "flex w-full items-center gap-3 bg-[#edf1f5] px-4 py-2.5 text-left sm:px-5" : "w-full px-5 py-4 border-b border-border bg-muted/40 flex items-center gap-2 text-left"}>
                 <span className={v2 ? "grid size-9 shrink-0 place-items-center bg-[#173f70] text-white" : "contents"}><Building2 className="w-4 h-4 shrink-0" /></span>
                 <div><p className={v2 ? "text-[11px] font-bold text-[#65748a]" : "hidden"}>対象物件</p><div className="flex flex-wrap items-center gap-2"><h3 className={v2 ? "text-[16px] font-bold text-[#102d50]" : "text-sm font-semibold text-foreground"}>{group.propertyName}</h3>{group.users?.[0]?.propertyDeleted === 1 && <span className="bg-[#eceff2] px-2 py-0.5 text-[10px] font-bold text-[#526176]">非表示</span>}</div></div>
                 <div className="flex items-center gap-2 ml-auto">
@@ -49,7 +49,7 @@ export default function InterestedUsers({ v2 = false }: { v2?: boolean }) {
               </button>
               {openProperties.has(propId) && <>
               {v2 ? <div className="divide-y divide-[#e1e6ec]">
-                {group.users!.map(entry => <div key={entry.userId} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+                {group.users!.map(entry => <div key={entry.userId} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:px-5">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <span className="grid size-10 shrink-0 place-items-center bg-[#edf1f5] text-[14px] font-bold text-[#173f70]">{(entry.userName || "?").charAt(0)}</span>
                     <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className="text-[15px] font-bold text-[#102d50]">{entry.userName || "—"}</p>{entry.showCompany !== 0 && entry.userCompany && <span className="text-[13px] text-[#65748a]">{entry.userCompany}</span>}{entry.verified === 1 && <span className="flex items-center gap-1 bg-[#e9f1f8] px-2 py-0.5 text-[10px] font-bold text-[#173f70]"><CheckCircle2 className="size-3"/>認証済み</span>}</div><div className="mt-1 flex flex-wrap items-center gap-2">{entry.types.includes("favorite") && <span className="flex items-center gap-1 text-[11px] text-[#a13b50]"><Heart className="size-3 fill-current"/>お気に入り</span>}{entry.types.includes("memo") && <span className="flex items-center gap-1 text-[11px] text-[#8b5a08]"><StickyNote className="size-3"/>メモあり</span>}{entry.types.includes("document") && <span className="flex items-center gap-1 text-[11px] text-[#17685a]"><FileText className="size-3"/>PDF資料作成{entry.documentCount > 1 ? ` ${entry.documentCount}回` : ""}</span>}{entry.viewCount > 0 && <span className="flex items-center gap-1 text-[11px] text-[#65748a]"><Eye className="size-3"/>閲覧{entry.viewCount}回</span>}</div></div>
