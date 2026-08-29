@@ -1,5 +1,6 @@
 import {
   Bell,
+  BookOpen,
   Building2,
   Check,
   Copy,
@@ -272,17 +273,15 @@ export default function V2Layout({
               不動産情報プラットフォーム
             </p>
             <div className="ml-auto flex items-center">
-              {!preview &&
-                (user?.role === "admin" || user?.role === "management") && (
-                  <button
-                    type="button"
-                    onClick={() => setLocation("/v2/admin")}
-                    className="hidden h-9 items-center gap-1.5 border border-[#173f70] px-3 text-[#173f70] lg:flex"
-                  >
-                    <ShieldCheck size={17} />
-                    <span className="text-[12px] font-bold">管理画面</span>
-                  </button>
-                )}
+              <a
+                href="/propflow-guide.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden h-9 items-center gap-1.5 px-2 text-[#173f70] lg:flex"
+              >
+                <BookOpen size={17} />
+                <span className="text-[12px] font-bold">使い方</span>
+              </a>
               <button
                 onClick={openAnnouncements}
                 className="relative ml-1 flex h-9 items-center gap-1.5 px-2 text-[#173f70]"
@@ -302,6 +301,17 @@ export default function V2Layout({
                   <span className="text-[12px] font-bold">知人に紹介</span>
                 </button>
               )}
+              {!preview &&
+                (user?.role === "admin" || user?.role === "management") && (
+                  <button
+                    type="button"
+                    onClick={() => setLocation("/v2/admin")}
+                    className="ml-2 hidden h-9 items-center gap-1.5 border border-[#173f70] px-3 text-[#173f70] lg:flex"
+                  >
+                    <ShieldCheck size={17} />
+                    <span className="text-[12px] font-bold">管理画面</span>
+                  </button>
+                )}
             </div>
           </div>
         </header>
@@ -363,6 +373,18 @@ export default function V2Layout({
                   </span>
                 </button>
               ))}
+              <a
+                href="/propflow-guide.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMoreOpen(false)}
+                className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
+              >
+                <BookOpen size={23} />
+                <span className="mt-2 text-[11px] font-bold leading-4">
+                  かんたん使い方
+                </span>
+              </a>
               <a
                 href="/support.html"
                 target="_blank"
