@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   Building2,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Eye,
   Heart,
@@ -251,6 +252,8 @@ export default function V2PropertyList({
     return Number.isInteger(page) && page > 0 ? page : 1;
   });
   const resultsRef = useRef<HTMLDivElement>(null);
+  const bottomPaginationRef = useRef<HTMLElement>(null);
+  const [bottomPaginationVisible, setBottomPaginationVisible] = useState(false);
   const [previewFavoriteIds, setPreviewFavoriteIds] = useState<number[]>(() => {
     try {
       const saved = sessionStorage.getItem(PREVIEW_FAVORITES_KEY);
@@ -499,6 +502,20 @@ export default function V2PropertyList({
     const end = Math.min(totalPages, start + 4);
     return Array.from({ length: end - start + 1 }, (_, index) => start + index);
   }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    const pagination = bottomPaginationRef.current;
+    if (!pagination || totalPages <= 1) {
+      setBottomPaginationVisible(false);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      entries => setBottomPaginationVisible(entries[0]?.isIntersecting ?? false),
+      { threshold: 0.1, rootMargin: "0px 0px -72px 0px" }
+    );
+    observer.observe(pagination);
+    return () => observer.disconnect();
+  }, [totalPages]);
 
   const changeSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -1205,7 +1222,7 @@ export default function V2PropertyList({
               </table>
             </section>
             {totalPages > 1 && (
-              <nav aria-label="物件一覧のページ" className="mt-4 border border-[#d9e0e8] bg-white px-3 py-4 sm:px-4">
+              <nav ref={bottomPaginationRef} aria-label="物件一覧のページ" className="mt-4 border border-[#d9e0e8] bg-white px-3 py-4 sm:px-4">
                 <p className="text-center text-[12px] text-[#65748a]">
                   全{sortedProperties.length}件中 {(currentPage - 1) * PAGE_SIZE + 1}〜{Math.min(currentPage * PAGE_SIZE, sortedProperties.length)}件
                   <span className="ml-2 font-bold text-[#526176]">（{currentPage}/{totalPages}ページ）</span>
@@ -1266,6 +1283,34 @@ export default function V2PropertyList({
           </>
         )}
         </div>
+        {totalPages > 1 && !bottomPaginationVisible && (
+          <nav
+            aria-label="物件一覧の固定ページ操作"
+            className="fixed bottom-[calc(70px+env(safe-area-inset-bottom))] left-1/2 z-30 flex -translate-x-1/2 items-center border border-[#c7d2df] bg-white shadow-[0_3px_14px_rgba(16,45,80,0.18)] lg:hidden"
+          >
+            <button
+              type="button"
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="flex h-10 items-center gap-0.5 border-r border-[#d9e0e8] px-3 text-[12px] font-bold text-[#173f70] disabled:text-[#a6b0bc]"
+            >
+              <ChevronLeft size={15} />
+              前
+            </button>
+            <span className="min-w-[72px] px-3 text-center text-[11px] font-bold text-[#526176]">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="flex h-10 items-center gap-0.5 border-l border-[#d9e0e8] px-3 text-[12px] font-bold text-[#173f70] disabled:text-[#a6b0bc]"
+            >
+              次
+              <ChevronRight size={15} />
+            </button>
+          </nav>
+        )}
       </main>
     </V2Layout>
   );
