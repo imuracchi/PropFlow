@@ -263,9 +263,9 @@ export default function V2Layout({
       <div className="lg:ml-60">
         <header className={`${hideMobileHeader ? "hidden lg:flex" : "flex"} sticky top-0 z-30 h-14 items-center border-b border-[#d9e0e8] bg-white px-4 lg:h-[68px] lg:px-7`}>
           <div className="flex w-full max-w-[1500px] items-center">
-            <div className="flex items-center gap-2 lg:hidden">
-              <Building2 size={20} className="text-[#173f70]" />
-              <span className="text-[17px] font-bold text-[#102d50]">
+            <div className="flex shrink-0 items-center gap-1 lg:hidden">
+              <Building2 size={18} className="text-[#173f70]" />
+              <span className="text-[15px] font-bold text-[#102d50]">
                 PropFlow
               </span>
             </div>
@@ -277,28 +277,28 @@ export default function V2Layout({
                 href="/propflow-guide.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden h-9 items-center gap-1.5 px-2 text-[#173f70] lg:flex"
+                className="flex h-9 items-center gap-0.5 px-1 text-[#173f70] lg:gap-1.5 lg:px-2"
               >
-                <BookOpen size={17} />
-                <span className="text-[12px] font-bold">使い方</span>
+                <BookOpen className="size-4 lg:size-[17px]" />
+                <span className="text-[10px] font-bold lg:text-[12px]">使い方</span>
               </a>
               <button
                 onClick={openAnnouncements}
-                className="relative ml-1 flex h-9 items-center gap-1.5 px-2 text-[#173f70]"
+                className="relative flex h-9 items-center gap-0.5 px-1 text-[#173f70] lg:ml-1 lg:gap-1.5 lg:px-2"
                 aria-label={`お知らせ${unreadAnnouncementCount > 0 ? ` 未読${unreadAnnouncementCount}件` : ""}`}
               >
-                <Bell size={18} />
-                <span className="text-[12px] font-bold">お知らせ</span>
+                <Bell className="size-4 lg:size-[18px]" />
+                <span className="text-[10px] font-bold lg:text-[12px]">お知らせ</span>
                 {unreadAnnouncementCount > 0 && <span className="absolute -right-1 -top-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-[#d95532] px-1 text-[9px] font-bold leading-none text-white">{unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}</span>}
               </button>
               {!preview && user && (
                 <button
                   onClick={() => setReferralOpen(true)}
-                  className="ml-1 flex h-9 items-center gap-1.5 border-l border-[#d9e0e8] pl-3 pr-1 text-[#173f70]"
+                  className="flex h-9 items-center gap-0.5 border-l border-[#d9e0e8] pl-1.5 pr-0 text-[#173f70] lg:ml-1 lg:gap-1.5 lg:pl-3 lg:pr-1"
                   aria-label="知人にPropFlowを紹介"
                 >
-                  <Handshake size={18} />
-                  <span className="text-[12px] font-bold">知人に紹介</span>
+                  <Handshake className="size-4 lg:size-[18px]" />
+                  <span className="text-[10px] font-bold lg:text-[12px]">知人に紹介</span>
                 </button>
               )}
               {!preview &&
@@ -373,18 +373,6 @@ export default function V2Layout({
                   </span>
                 </button>
               ))}
-              <a
-                href="/propflow-guide.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setMobileMoreOpen(false)}
-                className="flex min-h-24 flex-col items-center justify-center border border-[#d9e0e8] bg-[#f8fafc] px-2 text-center text-[#173f70]"
-              >
-                <BookOpen size={23} />
-                <span className="mt-2 text-[11px] font-bold leading-4">
-                  かんたん使い方
-                </span>
-              </a>
               <a
                 href="/support.html"
                 target="_blank"
