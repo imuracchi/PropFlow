@@ -84,6 +84,26 @@ async function requirePropertyAccess(
   }
 }
 
+async function requirePropertyOrExistingDmAccess(
+  propertyId: number,
+  user: { id: number; role: string },
+  partnerId: number
+) {
+  const property = await db.getPropertyById(propertyId);
+  if (!property)
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "物件が見つかりません",
+    });
+  const canContinuePrivateThread =
+    property.deleted !== 1 &&
+    property.published === 0 &&
+    property.userId !== user.id &&
+    (await db.hasDirectMessageThread(user.id, partnerId, propertyId));
+  if (!canContinuePrivateThread) await requirePropertyAccess(propertyId, user);
+  return property;
+}
+
 async function requirePropertyOwner(
   propertyId: number,
   user: { id: number; role: string },
@@ -2159,8 +2179,11 @@ ${propList}`,
       )
       .mutation(async ({ input, ctx }) => {
         if (input.propertyId) {
-          await requirePropertyAccess(input.propertyId, ctx.user);
-          const property = await db.getPropertyById(input.propertyId);
+          const property = await requirePropertyOrExistingDmAccess(
+            input.propertyId,
+            ctx.user,
+            input.receiverId
+          );
           if (property?.status === "sold")
             throw new TRPCError({
               code: "BAD_REQUEST",
@@ -2243,7 +2266,11 @@ ${propList}`,
           });
         }
         if (message.propertyId)
-          await requirePropertyAccess(message.propertyId, ctx.user);
+          await requirePropertyOrExistingDmAccess(
+            message.propertyId,
+            ctx.user,
+            message.receiverId
+          );
         const attachments = await db.getDmAttachmentsForMessage(input.messageId);
         const success = await db.deleteOwnDirectMessage(
           input.messageId,
@@ -2317,8 +2344,11 @@ ${propList}`,
       )
       .mutation(async ({ input, ctx }) => {
         if (input.propertyId) {
-          await requirePropertyAccess(input.propertyId, ctx.user);
-          const property = await db.getPropertyById(input.propertyId);
+          const property = await requirePropertyOrExistingDmAccess(
+            input.propertyId,
+            ctx.user,
+            input.partnerId
+          );
           if (property?.status === "sold")
             throw new TRPCError({
               code: "BAD_REQUEST",
@@ -2374,8 +2404,11 @@ ${propList}`,
       .mutation(async ({ input, ctx }) => {
         let property: Awaited<ReturnType<typeof db.getPropertyById>> = null;
         if (input.propertyId) {
-          await requirePropertyAccess(input.propertyId, ctx.user);
-          property = await db.getPropertyById(input.propertyId);
+          property = await requirePropertyOrExistingDmAccess(
+            input.propertyId,
+            ctx.user,
+            input.partnerId
+          );
           if (property?.status === "sold")
             throw new TRPCError({
               code: "BAD_REQUEST",
@@ -2425,7 +2458,10 @@ ${propList}`,
             .replace(/'/g, "&#039;");
 
         const includePropertyLink = input.includePropertyLink !== false;
-        const prop = input.propertyId && includePropertyLink ? property : null;
+        const prop =
+          input.propertyId && includePropertyLink && property?.published !== 0
+            ? property
+            : null;
         const senderIsOwner = !!prop && prop.userId === ctx.user.id;
         const propertyBlock = prop
           ? `<p style="margin-top:16px;">対象物件: 「${escapeHtml(prop.name)}」<br/><a href="${siteUrl}/property/${prop.id}" style="color:#2563eb;">${siteUrl}/property/${prop.id}</a></p>

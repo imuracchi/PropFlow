@@ -49,6 +49,8 @@ const previewMessages: any[] = [
 ];
 
 export default function V2Chat({ preview = false }: { preview?: boolean }) {
+  const previewUnpublished =
+    preview && new URLSearchParams(window.location.search).get("unpublished") === "1";
   const [, params] = useRoute("/v2/chat/:partnerId/:propertyId");
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -108,11 +110,13 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const [historyRecoveryAttempted, setHistoryRecoveryAttempted] = useState(false);
   const messages: any[] = preview ? previewItems : (messagesQuery.data ?? []);
   const thread: any = preview
-    ? {
+      ? {
         partnerName: "佐藤 健一",
         partnerCompany: "株式会社西都開発",
         partnerVerified: 1,
         partnerHasCard: true,
+        propertyName: "代沢レジデンス",
+        propertyPublished: previewUnpublished ? 0 : 1,
       }
     : threadsQuery.data?.find(
         item => item.partnerId === partnerId && item.propertyId === propertyId
@@ -158,6 +162,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const flagged = preview ? previewFlagged : !!thread?.flagged;
   const expectedMessageCount = Number(thread?.messageCount ?? 0);
   const isRestricted = !preview && !!thread?.propertyRestricted;
+  const isUnpublished = thread?.propertyPublished === 0;
   const isClosed = property?.status === "sold";
   const toggleFlag = async (checked: boolean) => {
     if (preview) setPreviewFlagged(checked);
@@ -369,12 +374,12 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             )}
           </div>
         </header>
-        {(property || (isRestricted && thread?.propertyName)) && (
+        {(property || ((isRestricted || isUnpublished) && thread?.propertyName)) && (
           <button
             onClick={() =>
-              !preview && !isRestricted && property && setLocation(`/v2/property/${property.id}`)
+              !preview && !isRestricted && !isUnpublished && property && setLocation(`/v2/property/${property.id}`)
             }
-            disabled={isRestricted}
+            disabled={isRestricted || isUnpublished}
             className="flex shrink-0 items-center border-b border-[#e2e7ec] bg-[#f3f7fb] px-3 py-2 text-left disabled:cursor-default lg:px-4 lg:py-3"
           >
             <Building2 size={17} className="text-[#173f70]" />
@@ -382,9 +387,14 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
               <p className="truncate text-[12px] font-bold text-[#173f70]">
                 {property?.name ?? thread?.propertyName}
               </p>
-              {isRestricted ? <p className="truncate text-[10px] font-bold text-[#a06018]">閲覧制限中・問い合わせ履歴のみ閲覧可能</p> : <p className="hidden truncate text-[10px] text-[#758194] lg:block">{property?.address}</p>}
+              {isRestricted ? <p className="truncate text-[10px] font-bold text-[#a06018]">閲覧制限中・問い合わせ履歴のみ閲覧可能</p> : isUnpublished ? <p className="truncate text-[10px] font-bold text-[#8b5a08]">非公開</p> : <p className="hidden truncate text-[10px] text-[#758194] lg:block">{property?.address}</p>}
             </div>
           </button>
+        )}
+        {isUnpublished && (
+          <div className="shrink-0 border-b border-[#e1c88f] bg-[#fff8e8] px-3 py-2 text-center text-[11px] font-bold text-[#8b5a08] lg:px-4 lg:py-2.5 lg:text-[12px]">
+            この物件は非公開に変更されました。
+          </div>
         )}
         <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#f5f7f9] px-3 py-2 lg:px-8 lg:py-4">
           {messagesQuery.isLoading && !preview ? (

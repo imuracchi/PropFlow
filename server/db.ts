@@ -3479,6 +3479,35 @@ export async function getDirectMessages(
   return rows.map(row => ({ ...row, attachments: byMessage.get(row.id) ?? [] }));
 }
 
+export async function hasDirectMessageThread(
+  userId1: number,
+  userId2: number,
+  propertyId: number
+) {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select({ id: directMessages.id })
+    .from(directMessages)
+    .where(
+      and(
+        eq(directMessages.propertyId, propertyId),
+        or(
+          and(
+            eq(directMessages.senderId, userId1),
+            eq(directMessages.receiverId, userId2)
+          ),
+          and(
+            eq(directMessages.senderId, userId2),
+            eq(directMessages.receiverId, userId1)
+          )
+        )
+      )
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
 export async function getPropertyNegotiationStatus(
   propertyId: number,
   viewerId: number,
@@ -3942,7 +3971,11 @@ export async function getDirectMessageThreads(userId: number) {
   const props =
     propertyIds.length > 0
       ? await db
-          .select({ id: properties.id, name: properties.name })
+          .select({
+            id: properties.id,
+            name: properties.name,
+            published: properties.published,
+          })
           .from(properties)
           .where(
             sql`${properties.id} IN (${sql.join(
@@ -3966,7 +3999,11 @@ export async function getDirectMessageThreads(userId: number) {
       propertyId: number;
       name: string;
     }>) {
-      props.push({ id: row.propertyId, name: `${row.name}（削除済み）` });
+      props.push({
+        id: row.propertyId,
+        name: `${row.name}（削除済み）`,
+        published: 0,
+      });
     }
   }
 
@@ -4002,6 +4039,7 @@ export async function getDirectMessageThreads(userId: number) {
         partnerHasCard: !!partner?.businessCardBase64,
         propertyId: thread.propertyId,
         propertyName: prop?.name ?? null,
+        propertyPublished: prop?.published ?? null,
         messageCount: thread.count,
         initiatedByMe: thread.initiatedByMe,
         lastMessageAt: thread.lastAt,
