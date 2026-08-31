@@ -2527,7 +2527,13 @@ ${propList}`,
             ctx.req.headers["user-agent"]
           ).catch(() => {});
         }
-        return { success: ok } as const;
+        return ok
+          ? ({ success: true } as const)
+          : ({
+              success: false,
+              error:
+                "メール送信サービスで拒否されました。名刺・資料は送信されていません。時間を置いて再送してください",
+            } as const);
       }),
 
     markRead: protectedProcedure

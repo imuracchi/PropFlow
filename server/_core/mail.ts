@@ -11,7 +11,7 @@ export async function sendMail(to: string, subject: string, html: string, option
 
   try {
     const resend = new Resend(apiKey);
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: "PropFlow <noreply@propflow.jp>",
       to,
       subject,
@@ -21,7 +21,22 @@ export async function sendMail(to: string, subject: string, html: string, option
       ...(options?.bcc ? { bcc: options.bcc } : {}),
       ...(options?.attachments ? { attachments: options.attachments } : {}),
     });
-    console.log("[Mail] Sent to:", to);
+
+    if (result.error) {
+      console.error("[Mail] Rejected:", {
+        to,
+        name: result.error.name,
+        message: result.error.message,
+        statusCode: "statusCode" in result.error ? result.error.statusCode : undefined,
+      });
+      return false;
+    }
+    if (!result.data?.id) {
+      console.error("[Mail] Rejected: provider returned no delivery id", { to });
+      return false;
+    }
+
+    console.log("[Mail] Accepted:", { to, id: result.data.id });
     return true;
   } catch (err: any) {
     console.error("[Mail] Error:", err.message);
