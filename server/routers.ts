@@ -2517,7 +2517,7 @@ ${propList}`,
           await db.sendDirectMessage(
             ctx.user.id,
             input.partnerId,
-            `✉️ ${sentItemsLabel}のメール送信を受け付けました${documentNames.length ? `\n${documentNames.map(name => `・${name}`).join("\n")}` : ""}\n※受信まで数分かかる場合があります。`,
+            `✉️ ${sentItemsLabel}のメール送信を受け付けました${documentNames.length ? `\n${documentNames.map(name => `・${name}`).join("\n")}` : ""}\n※現在メールを配送中です。受信まで5分程度かかる場合があります。届かない場合は、時間を置いて受信トレイを更新し、迷惑メールフォルダーもご確認ください。`,
             input.propertyId
           );
           db.logActivity(
