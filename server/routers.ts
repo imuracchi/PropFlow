@@ -2517,7 +2517,7 @@ ${propList}`,
           await db.sendDirectMessage(
             ctx.user.id,
             input.partnerId,
-            `✉️ ${sentItemsLabel}をメールで送りました${documentNames.length ? `\n${documentNames.map(name => `・${name}`).join("\n")}` : ""}`,
+            `✉️ ${sentItemsLabel}のメール送信を受け付けました${documentNames.length ? `\n${documentNames.map(name => `・${name}`).join("\n")}` : ""}\n※受信まで数分かかる場合があります。`,
             input.propertyId
           );
           db.logActivity(

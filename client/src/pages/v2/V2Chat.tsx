@@ -582,6 +582,9 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                       )}
                     </div>
                   )}
+                  <p className="mt-3 bg-[#f7f9fb] px-3 py-2 text-[11px] leading-5 text-[#65748a]">
+                    メール送信はすぐに開始されますが、相手の受信まで数分かかる場合があります。
+                  </p>
                   {shareError && <p className="mt-3 text-[11px] text-red-600">{shareError}</p>}
                   <button
                     onClick={share}
