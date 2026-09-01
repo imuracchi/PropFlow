@@ -474,7 +474,7 @@ export default function V2Layout({
         </div>
       )}
       {!hideMobileNav && (
-        <nav className="fixed inset-x-0 top-[100dvh] z-40 -translate-y-full border-t border-[#dfe3e8] bg-white pb-[max(7px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dfe3e8] bg-white pb-[max(7px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
           <div className="mx-auto flex max-w-md justify-around">
             {mobileNav.map(item => (
               <button
