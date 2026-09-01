@@ -3475,7 +3475,13 @@ export async function getDirectMessages(
   );
   const condition = propertyId
     ? and(partnerCondition, eq(directMessages.propertyId, propertyId))
-    : and(partnerCondition, sql`${directMessages.propertyId} IS NULL`);
+    : and(
+        partnerCondition,
+        or(
+          sql`${directMessages.propertyId} IS NULL`,
+          eq(directMessages.propertyId, 0)
+        )
+      );
   const rows = await db
     .select({
       id: directMessages.id,
@@ -3698,7 +3704,12 @@ export async function sendDirectMessage(
   if (!db) throw new Error("Database not available");
   const result = await db
     .insert(directMessages)
-    .values({ senderId, receiverId, content, propertyId });
+    .values({
+      senderId,
+      receiverId,
+      content,
+      propertyId: propertyId && propertyId > 0 ? propertyId : null,
+    });
   return Number(result[0].insertId);
 }
 
@@ -3931,7 +3942,8 @@ export async function getDirectMessageThreads(userId: number) {
   >();
   for (const dm of allDms) {
     const partnerId = dm.senderId === userId ? dm.receiverId : dm.senderId;
-    const key = `${partnerId}-${dm.propertyId ?? 0}`;
+    const propertyId = dm.propertyId && dm.propertyId > 0 ? dm.propertyId : null;
+    const key = `${partnerId}-${propertyId ?? 0}`;
     // 旧仕様では、募集への提案承認時の最初のDMを募集者から送信していた。
     // この自動生成文に限り、商談を始めた側は実際の提案者（受信者）として扱う。
     const initiatedByCurrentUser = dm.content.includes(
@@ -3943,7 +3955,7 @@ export async function getDirectMessageThreads(userId: number) {
     if (!existing) {
       threadMap.set(key, {
         partnerId,
-        propertyId: dm.propertyId,
+        propertyId,
         lastAt: dm.createdAt,
         count: 1,
         firstMessageId: dm.id,

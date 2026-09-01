@@ -425,9 +425,7 @@ async function startServer() {
             ? await db.getPropertyById(batch.propertyId)
             : null;
           const senderName = sender.name ?? "ユーザー";
-          const path = batch.propertyId
-            ? `/v2/chat/${batch.senderId}/${batch.propertyId}`
-            : "/v2/messages";
+          const path = `/v2/chat/${batch.senderId}/${batch.propertyId ?? 0}`;
           const url = `${siteUrl}${path}`;
           const lines = batch.messages.map(message => `・${message}`);
           const receiverEmail = await db.getUserEmailIfNotify(
@@ -464,7 +462,10 @@ async function startServer() {
                   .join("\n")
               )
             : true;
-          completed = emailOk && lineOk;
+          // Do not retry the whole batch after either channel has already
+          // delivered it: that would resend the successful channel every
+          // three minutes while the other channel remains unavailable.
+          completed = emailOk || lineOk;
         } catch (error) {
           console.error("[CRON] DMまとめ通知エラー:", error);
         }
