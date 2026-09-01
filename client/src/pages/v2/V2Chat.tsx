@@ -106,7 +106,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLElement>(null);
   const [historyRecoveryAttempted, setHistoryRecoveryAttempted] = useState(false);
   const messages: any[] = preview ? previewItems : (messagesQuery.data ?? []);
   const thread: any = preview
@@ -173,7 +173,8 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   };
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView();
+    const container = messagesContainerRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
   }, [messages.length]);
   useEffect(() => {
     const root = document.documentElement;
@@ -396,7 +397,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             この物件は非公開に変更されました。
           </div>
         )}
-        <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#f5f7f9] px-3 py-2 lg:px-8 lg:py-4">
+        <section ref={messagesContainerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#f5f7f9] px-3 py-2 lg:px-8 lg:py-4">
           {messagesQuery.isLoading && !preview ? (
             <div className="grid h-full place-items-center">
               <Loader2 className="animate-spin text-[#173f70]" />
@@ -453,7 +454,6 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
         </section>
         <footer className="shrink-0 border-t border-[#d9e0e8] bg-white px-2 pt-2 pb-0 lg:p-4">
           {!isClosed && !isRestricted && <div className="mb-2 flex flex-wrap gap-2">
