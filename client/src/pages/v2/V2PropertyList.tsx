@@ -1067,7 +1067,7 @@ export default function V2PropertyList({
                 </colgroup>
                 <thead className="bg-[#edf1f5] text-[13px] font-bold text-[#65748a]">
                   <tr>
-                    {SORT_FIELDS.map(field => (
+                    {SORT_FIELDS.filter(field => field.key !== "regional").map(field => (
                       <th
                         key={field.key}
                         className="whitespace-nowrap border-b border-[#d9e0e8] px-3 py-3 text-left"
