@@ -240,8 +240,7 @@ a[x-apple-data-detectors] {
     @apply border-border outline-ring/50;
   }
   html, body {
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: clip;
   }
   body {
     @apply bg-background text-foreground;
