@@ -785,7 +785,7 @@ export default function Login({
           <div className="mt-4 space-y-3 text-[12px] font-bold">
             <div className="grid grid-cols-2 gap-2">
               <a
-                href="/propflow-guide.html"
+                href="/propflow-intro.html"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex h-11 items-center justify-center gap-1.5 border border-[#173f70] bg-[#173f70] px-2 text-white transition-colors hover:bg-[#102d50]"
