@@ -221,7 +221,11 @@ function scheduledNotificationChannels(value: number | null | undefined) {
   };
 }
 
-function buildPropertyShareText(property: any, mode: "propflow" | "email") {
+function buildPropertyShareText(
+  property: any,
+  mode: "propflow" | "email",
+  strength = ""
+) {
   const details = [
     ["物件種別", property.type],
     ["所在地", publicAreaLabel(property.address ?? "")],
@@ -237,7 +241,7 @@ function buildPropertyShareText(property: any, mode: "propflow" | "email") {
     .filter(([, value]) => value)
     .map(([label, value]) => `${label}：${value}`)
     .join("\n");
-  const header = `【物件情報】\n\n■ ${property.name}\n${details}`;
+  const header = `【物件情報】${strength ? `\n${strength}` : ""}\n\n■ ${property.name}\n${details}`;
   if (mode === "propflow") {
     return `${header}\n\n物件の詳細や資料は、PropFlowでご確認いただけます。\n\n▼PropFlowのご案内\nhttps://propflow.jp/propflow-intro.html\n\n▼登録申請\nhttps://propflow.jp/registration-request\n\n物件番号：PF-${property.id}`;
   }
@@ -398,6 +402,7 @@ export default function V2PropertyDetail({
   const updateProperty = trpc.property.update.useMutation();
   const analyzeTransport = trpc.property.analyzeTransport.useMutation();
   const generateComment = trpc.property.generateComment.useMutation();
+  const generateShareStrength = trpc.property.generateShareStrength.useMutation();
   const uploadFile = trpc.property.uploadFile.useMutation();
   const deleteFile = trpc.property.deleteFile.useMutation();
   const setFileVisibility = trpc.property.setFileVisibility.useMutation();
@@ -499,6 +504,8 @@ export default function V2PropertyDetail({
   });
   const [shareTextMode, setShareTextMode] = useState<"propflow" | "email">("propflow");
   const [shareTextCopied, setShareTextCopied] = useState(false);
+  const [shareStrength, setShareStrength] = useState("");
+  const [shareStrengthError, setShareStrengthError] = useState("");
   const [introGenerating, setIntroGenerating] = useState(false);
   const [introAttachments, setIntroAttachments] = useState<Set<number>>(
     new Set()
@@ -545,8 +552,49 @@ export default function V2PropertyDetail({
     : (negotiationQuery.data ?? { mine: false, others: false });
 
   const propertyShareText = property
-    ? buildPropertyShareText(property, shareTextMode)
+    ? buildPropertyShareText(property, shareTextMode, shareStrength)
     : "";
+  const openGeneratedShareText = async () => {
+    if (!property || generateShareStrength.isPending) return;
+    setShareTextMode("propflow");
+    setShareTextCopied(false);
+    setSharePromptFromPublish(false);
+    setShareStrength("");
+    setShareStrengthError("");
+    setShareTextOpen(true);
+    try {
+      const result = await generateShareStrength.mutateAsync({
+        name: property.name ?? "",
+        address: property.address ?? "",
+        type: property.type ?? "",
+        price: Number(property.price ?? 0),
+        estimatedYield: property.estimatedYield ?? null,
+        landArea: property.landArea ?? null,
+        buildingArea: property.buildingArea ?? null,
+        structure: property.structure ?? null,
+        buildingAge: property.buildingAge ?? null,
+        transport: property.transport ?? null,
+        zoning: property.zoning ?? null,
+        access: property.access ?? null,
+        comment: property.comment ?? null,
+      });
+      if (result.strength) {
+        setShareStrength(result.strength);
+        return;
+      }
+      throw new Error(result.error ?? "物件の長所を生成できませんでした");
+    } catch (error) {
+      const fallback = String(property.comment ?? "").trim();
+      setShareStrength(fallback.length > 100 ? `${fallback.slice(0, 99)}…` : fallback);
+      setShareStrengthError(
+        fallback
+          ? "AI生成に失敗したため、登録済みの紹介コメントを短く表示しています。"
+          : error instanceof Error
+            ? error.message
+            : "物件の長所を生成できませんでした"
+      );
+    }
+  };
   const copyPropertyShareText = async () => {
     try {
       await navigator.clipboard.writeText(propertyShareText);
@@ -592,6 +640,11 @@ export default function V2PropertyDetail({
     url.searchParams.delete("share");
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }, [preview, property?.id]);
+  useEffect(() => {
+    if (shareTextOpen) return;
+    setShareStrength("");
+    setShareStrengthError("");
+  }, [shareTextOpen]);
   const facts = useMemo(
     () =>
       property
@@ -1674,16 +1727,16 @@ export default function V2PropertyDetail({
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      setShareTextMode("propflow");
-                      setShareTextCopied(false);
-                      setSharePromptFromPublish(false);
-                      setShareTextOpen(true);
-                    }}
-                    className="mt-3 flex h-10 w-full items-center justify-center gap-2 bg-[#173f70] px-3 text-[12px] font-bold text-white"
+                    onClick={() => void openGeneratedShareText()}
+                    disabled={generateShareStrength.isPending}
+                    className="mt-3 flex h-10 w-full items-center justify-center gap-2 bg-[#173f70] px-3 text-[12px] font-bold text-white disabled:opacity-60"
                   >
-                    <Copy size={16} />
-                    物件紹介文を作る
+                    {generateShareStrength.isPending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Copy size={16} />
+                    )}
+                    {generateShareStrength.isPending ? "作成中..." : "物件紹介文を作る"}
                   </button>
                 </div>
                 <div className="mt-4 border-y border-[#e2e7ec] py-3">
@@ -1939,12 +1992,18 @@ export default function V2PropertyDetail({
                 : "外部サービスへのリンクは載せず、property@gspec.meへ案内します。登録案内や手続きはPropFlow運営担当が対応するため、物件掲載者様にご対応いただく必要はありません。"}
             </div>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain whitespace-pre-wrap border border-[#d9e0e8] bg-[#f8fafc] p-4 text-[12px] leading-6 text-[#334a66]">
-              {propertyShareText}
+              {generateShareStrength.isPending ? "物件の長所を作成しています..." : propertyShareText}
             </div>
+            {shareStrengthError && (
+              <p className="mt-2 shrink-0 text-[10px] leading-5 text-[#a65a21]">
+                {shareStrengthError}
+              </p>
+            )}
             <button
               type="button"
               onClick={() => void copyPropertyShareText()}
-              className={`mt-4 flex h-12 w-full shrink-0 items-center justify-center gap-2 text-[14px] font-bold text-white ${shareTextCopied ? "bg-[#35724f]" : "bg-[#173f70]"}`}
+              disabled={generateShareStrength.isPending}
+              className={`mt-4 flex h-12 w-full shrink-0 items-center justify-center gap-2 text-[14px] font-bold text-white disabled:opacity-60 ${shareTextCopied ? "bg-[#35724f]" : "bg-[#173f70]"}`}
             >
               <Copy size={18} />
               {shareTextCopied ? "コピーしました" : "この紹介文をコピー"}

@@ -219,3 +219,71 @@ ${info}`,
     return { comment: null, error: `コメント生成エラー: ${err.message}` };
   }
 }
+
+export async function generatePropertyShareStrength(property: {
+  name: string;
+  address: string;
+  type: string;
+  price: number;
+  estimatedYield?: number | null;
+  landArea?: number | null;
+  buildingArea?: number | null;
+  structure?: string | null;
+  buildingAge?: string | null;
+  transport?: string | null;
+  zoning?: string | null;
+  access?: string | null;
+  comment?: string | null;
+}): Promise<{ strength: string | null; error: string | null }> {
+  const { parsed } = await import("dotenv").then(d => d.config());
+  const apiKey = parsed?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return { strength: null, error: "ANTHROPIC_API_KEYが未設定です" };
+  }
+
+  try {
+    const client = new Anthropic({ apiKey });
+    const info = [
+      `物件名: ${property.name}`,
+      `所在地: ${property.address}`,
+      `物件種別: ${property.type}`,
+      `売出価格: ${property.price.toLocaleString()}円`,
+      property.estimatedYield ? `想定利回り: ${property.estimatedYield}%` : null,
+      property.landArea ? `土地面積: ${property.landArea}㎡` : null,
+      property.buildingArea ? `建物延床面積: ${property.buildingArea}㎡` : null,
+      property.structure ? `構造: ${property.structure}` : null,
+      property.buildingAge ? `築年月: ${property.buildingAge}` : null,
+      property.transport ? `交通: ${property.transport}` : null,
+      property.zoning ? `用途地域: ${property.zoning}` : null,
+      property.access ? `接道条件: ${property.access}` : null,
+      property.comment ? `登録済み紹介コメント: ${property.comment}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 180,
+      messages: [
+        {
+          role: "user",
+          content: `以下の物件情報だけを根拠に、SNS紹介文へ載せる「物件の長所」を日本語60〜100文字、1〜2文で作成してください。
+事実にない内容を推測・追加せず、見出し・箇条書き・引用符を付けず、本文だけを返してください。
+
+${info}`,
+        },
+      ],
+    });
+
+    const reply = message.content[0];
+    if (reply.type === "text") {
+      const strength = reply.text.replace(/\s+/g, " ").trim();
+      return strength
+        ? { strength: strength.slice(0, 100), error: null }
+        : { strength: null, error: "AIから空の応答が返されました" };
+    }
+    return { strength: null, error: "AIからの応答が不正です" };
+  } catch (err: any) {
+    return { strength: null, error: `SNS用紹介文生成エラー: ${err.message}` };
+  }
+}

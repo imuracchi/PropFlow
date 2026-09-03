@@ -1970,6 +1970,29 @@ ${propList}`,
         return generatePropertyComment(input);
       }),
 
+    generateShareStrength: protectedProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          address: z.string(),
+          type: z.string(),
+          price: z.number(),
+          estimatedYield: z.number().nullable().optional(),
+          landArea: z.number().nullable().optional(),
+          buildingArea: z.number().nullable().optional(),
+          structure: z.string().nullable().optional(),
+          buildingAge: z.string().nullable().optional(),
+          transport: z.string().nullable().optional(),
+          zoning: z.string().nullable().optional(),
+          access: z.string().nullable().optional(),
+          comment: z.string().nullable().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { generatePropertyShareStrength } = await import("./_core/pdfParser");
+        return generatePropertyShareStrength(input);
+      }),
+
     extractFromPdf: protectedProcedure
       .input(
         z.object({
