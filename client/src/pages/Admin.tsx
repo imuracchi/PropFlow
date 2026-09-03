@@ -259,6 +259,9 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const platformAnalyticsQuery = trpc.admin.platformAnalytics.useQuery(
     undefined
   );
+  const usageAnalyticsQuery = trpc.admin.usageAnalytics.useQuery(undefined, {
+    enabled: activeSection === "usage",
+  });
   const addBroadcastLogMutation = trpc.admin.addBroadcastLog.useMutation({
     onSuccess: () => {
       utils.admin.broadcastLogs.invalidate();
@@ -498,6 +501,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   broadcast: "一斉配信",
                   maintenance: "保守",
                   ai: "市場分析",
+                  usage: "利用実態",
                 }[activeSection]
               }
             </span>
@@ -544,6 +548,10 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
           <TabsTrigger value="ai" className="gap-1.5">
             <TrendingUp className="w-3.5 h-3.5" />
             市場分析
+          </TabsTrigger>
+          <TabsTrigger value="usage" className="gap-1.5">
+            <Activity className="w-3.5 h-3.5" />
+            利用実態
           </TabsTrigger>
           {!isManagement && (
             <>
@@ -2029,6 +2037,243 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               </div>
             </div>
           )}
+        </TabsContent>
+
+        {/* Phase 0 利用実態タブ */}
+        <TabsContent value="usage" className="mt-4 space-y-4">
+          <section className="border border-border bg-card p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="flex items-center gap-2 font-semibold">
+                  <Activity className="size-4 text-primary" />
+                  Phase 0 利用実態
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  既存データのみで、再訪・休眠・機能利用を集計します
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={usageAnalyticsQuery.isFetching}
+                onClick={() => usageAnalyticsQuery.refetch()}
+              >
+                {usageAnalyticsQuery.isFetching && (
+                  <Loader2 className="mr-2 size-3.5 animate-spin" />
+                )}
+                最新データに更新
+              </Button>
+            </div>
+
+            {usageAnalyticsQuery.isLoading && (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                <Loader2 className="mx-auto mb-2 size-6 animate-spin" />
+                集計中...
+              </div>
+            )}
+            {usageAnalyticsQuery.error && (
+              <div className="mt-4 border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                利用実態の取得に失敗しました: {usageAnalyticsQuery.error.message}
+              </div>
+            )}
+            {usageAnalyticsQuery.data && (() => {
+              const data = usageAnalyticsQuery.data;
+              const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
+              const featureNames = Array.from(
+                new Set(data.features.map(row => row.feature))
+              );
+              const featureValue = (feature: string, days: number) =>
+                data.features.find(
+                  row => row.feature === feature && row.periodDays === days
+                );
+
+              return (
+                <div className="mt-5 space-y-5">
+                  <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    {[
+                      ["7日アクティブ", data.active.days7],
+                      ["30日アクティブ", data.active.days30],
+                      ["90日アクティブ", data.active.days90],
+                      ["7日以上未利用", data.inactive.days7],
+                      ["14日以上未利用", data.inactive.days14],
+                      ["30日以上未利用", data.inactive.days30],
+                    ].map(([label, value]) => (
+                      <div
+                        key={String(label)}
+                        className="border border-border bg-muted/20 p-4"
+                      >
+                        <p className="text-xs text-muted-foreground">{label}</p>
+                        <p className="mt-1 text-2xl font-bold tabular-nums">
+                          {value}人
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-5 xl:grid-cols-2">
+                    <section className="border border-border p-4">
+                      <h4 className="text-sm font-semibold">
+                        曜日別利用状況（直近90日）
+                      </h4>
+                      <div className="mt-3 grid grid-cols-7 gap-1 text-center">
+                        {weekdays.map((label, index) => {
+                          const row = data.weekdays.find(
+                            item => item.weekday === index
+                          );
+                          return (
+                            <div key={label} className="bg-muted/30 p-2">
+                              <p className="text-xs text-muted-foreground">{label}</p>
+                              <p className="mt-1 font-bold tabular-nums">
+                                {row?.users ?? 0}人
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {row?.events ?? 0}回
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    <section className="border border-border p-4">
+                      <h4 className="text-sm font-semibold">
+                        物件登録者 vs 未登録者
+                      </h4>
+                      <div className="mt-3 grid grid-cols-2 gap-3">
+                        {data.ownerComparison.map(row => (
+                          <div key={row.segment} className="bg-muted/30 p-3">
+                            <p className="text-xs font-semibold">
+                              {row.segment === "owner" ? "物件登録者" : "未登録者"}
+                              （{row.total}人）
+                            </p>
+                            <div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs">
+                              <span>7日<br /><b>{row.active7}</b></span>
+                              <span>30日<br /><b>{row.active30}</b></span>
+                              <span>90日<br /><b>{row.active90}</b></span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
+
+                  <section className="overflow-x-auto border border-border">
+                    <div className="p-4">
+                      <h4 className="text-sm font-semibold">
+                        機能別の利用人数・回数・利用率
+                      </h4>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        お気に入りと資料生成は現在残っている記録を集計。興味者リストは既存ログに閲覧記録がないため計測対象外です。
+                      </p>
+                    </div>
+                    <table className="w-full min-w-[760px] text-sm">
+                      <thead className="bg-muted/50 text-xs text-muted-foreground">
+                        <tr>
+                          <th className="px-4 py-2 text-left">機能</th>
+                          {[7, 30, 90].map(days => (
+                            <th key={days} className="px-4 py-2 text-right">
+                              {days}日（人数 / 回数 / 率）
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {featureNames.map(feature => {
+                          const sample = data.features.find(
+                            row => row.feature === feature
+                          );
+                          return (
+                            <tr key={feature}>
+                              <td className="px-4 py-2 font-medium">
+                                {sample?.label ?? feature}
+                              </td>
+                              {[7, 30, 90].map(days => {
+                                const row = featureValue(feature, days);
+                                return (
+                                  <td
+                                    key={days}
+                                    className="px-4 py-2 text-right tabular-nums"
+                                  >
+                                    {row?.measurable
+                                      ? `${row.users}人 / ${row.events}回 / ${row.rate}%`
+                                      : "計測データなし"}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </section>
+
+                  <section className="overflow-x-auto border border-border">
+                    <div className="p-4">
+                      <h4 className="text-sm font-semibold">
+                        ユーザー別 最終利用・直近30日の主要行動
+                      </h4>
+                    </div>
+                    <table className="w-full min-w-[1050px] text-xs">
+                      <thead className="bg-muted/50 text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2 text-left">ユーザー</th>
+                          <th className="px-3 py-2 text-left">物件</th>
+                          <th className="px-3 py-2 text-left">最終利用</th>
+                          {[
+                            "閲覧", "お気に入り", "DM", "資料",
+                            "検索", "募集", "登録",
+                          ].map(label => (
+                            <th key={label} className="px-3 py-2 text-right">
+                              {label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {data.users.map(row => (
+                          <tr key={row.id}>
+                            <td className="px-3 py-2">
+                              <p className="font-medium">{row.name ?? row.email}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {row.company ?? row.email}
+                              </p>
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.hasProperty ? "登録あり" : "未登録"}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              {row.lastActiveAt
+                                ? fmtDateTime(row.lastActiveAt)
+                                : "利用記録なし"}
+                            </td>
+                            {[
+                              row.views30,
+                              row.favorites30,
+                              row.messages30,
+                              row.documents30,
+                              row.searches30,
+                              row.requests30,
+                              row.properties30,
+                            ].map((value, index) => (
+                              <td
+                                key={index}
+                                className="px-3 py-2 text-right tabular-nums"
+                              >
+                                {value}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </section>
+                  <p className="text-right text-[10px] text-muted-foreground">
+                    集計日時: {fmtDateTime(data.generatedAt)}
+                  </p>
+                </div>
+              );
+            })()}
+          </section>
         </TabsContent>
 
         {/* 市場分析タブ */}

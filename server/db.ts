@@ -701,6 +701,203 @@ export async function getAdminStats() {
   };
 }
 
+/** 管理画面向けのPhase 0利用実態。ユーザー別集計を含む。 */
+export async function getUsageAnalytics() {
+  const db = await getDb();
+  if (!db) {
+    return {
+      active: { days7: 0, days30: 0, days90: 0 },
+      inactive: { days7: 0, days14: 0, days30: 0 },
+      weekdays: [],
+      features: [],
+      ownerComparison: [],
+      users: [],
+      generatedAt: new Date(),
+    };
+  }
+
+  const [activeResult, weekdayResult, featureResult, comparisonResult, userResult] =
+    await Promise.all([
+      db.execute(sql`
+        SELECT
+          SUM(lastActivityAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS days7,
+          SUM(lastActivityAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS days30,
+          SUM(lastActivityAt >= DATE_SUB(NOW(), INTERVAL 90 DAY)) AS days90,
+          SUM(lastActivityAt IS NULL OR lastActivityAt < DATE_SUB(NOW(), INTERVAL 7 DAY)) AS inactive7,
+          SUM(lastActivityAt IS NULL OR lastActivityAt < DATE_SUB(NOW(), INTERVAL 14 DAY)) AS inactive14,
+          SUM(lastActivityAt IS NULL OR lastActivityAt < DATE_SUB(NOW(), INTERVAL 30 DAY)) AS inactive30
+        FROM (
+          SELECT u.id,
+            CASE
+              WHEN u.lastActiveAt IS NULL THEN logs.lastLoggedAt
+              WHEN logs.lastLoggedAt IS NULL THEN u.lastActiveAt
+              ELSE GREATEST(u.lastActiveAt, logs.lastLoggedAt)
+            END AS lastActivityAt
+          FROM users u
+          LEFT JOIN (
+            SELECT userId, MAX(createdAt) AS lastLoggedAt
+            FROM activity_logs GROUP BY userId
+          ) logs ON logs.userId = u.id
+          WHERE u.role = 'user' AND u.status = 'active'
+        ) active_users
+      `),
+      db.execute(sql`
+        SELECT WEEKDAY(a.createdAt) AS weekday, COUNT(*) AS events,
+          COUNT(DISTINCT a.userId) AS users
+        FROM activity_logs a
+        INNER JOIN users u ON u.id = a.userId
+        WHERE u.role = 'user' AND u.status = 'active'
+          AND a.createdAt >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+          AND a.action NOT LIKE 'admin_%' AND a.action NOT IN ('login_error')
+        GROUP BY WEEKDAY(a.createdAt) ORDER BY weekday
+      `),
+      db.execute(sql`
+        SELECT feature, periodDays, COUNT(*) AS events,
+          COUNT(DISTINCT userId) AS users
+        FROM (
+          SELECT 'property_view' feature, userId, viewedAt occurredAt FROM property_view_events
+          UNION ALL SELECT 'favorite', userId, createdAt FROM favorites
+          UNION ALL SELECT 'inquiry_dm', senderId, createdAt FROM direct_messages
+          UNION ALL SELECT 'document', userId, createdAt FROM generated_documents
+          UNION ALL SELECT 'search', userId, createdAt FROM search_logs
+          UNION ALL SELECT 'property_request', userId, createdAt FROM property_search_requests
+          UNION ALL SELECT 'property_create', userId, createdAt FROM properties
+        ) e
+        CROSS JOIN (SELECT 7 periodDays UNION ALL SELECT 30 UNION ALL SELECT 90) periods
+        INNER JOIN users u ON u.id = e.userId
+        WHERE u.role = 'user' AND u.status = 'active'
+          AND e.occurredAt >= DATE_SUB(NOW(), INTERVAL periods.periodDays DAY)
+        GROUP BY feature, periodDays
+      `),
+      db.execute(sql`
+        SELECT IF(EXISTS(SELECT 1 FROM properties p WHERE p.userId = u.id), 'owner', 'nonOwner') segment,
+          COUNT(*) AS total,
+          SUM(effectiveLastActiveAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS active7,
+          SUM(effectiveLastActiveAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS active30,
+          SUM(effectiveLastActiveAt >= DATE_SUB(NOW(), INTERVAL 90 DAY)) AS active90
+        FROM (
+          SELECT source.id,
+            CASE
+              WHEN source.lastActiveAt IS NULL THEN logs.lastLoggedAt
+              WHEN logs.lastLoggedAt IS NULL THEN source.lastActiveAt
+              ELSE GREATEST(source.lastActiveAt, logs.lastLoggedAt)
+            END AS effectiveLastActiveAt
+          FROM users source
+          LEFT JOIN (
+            SELECT userId, MAX(createdAt) AS lastLoggedAt
+            FROM activity_logs GROUP BY userId
+          ) logs ON logs.userId = source.id
+          WHERE source.role = 'user' AND source.status = 'active'
+        ) u
+        GROUP BY segment
+      `),
+      db.execute(sql`
+        SELECT u.id, u.name, u.company, u.email,
+          CASE
+            WHEN u.lastActiveAt IS NULL THEN logs.lastLoggedAt
+            WHEN logs.lastLoggedAt IS NULL THEN u.lastActiveAt
+            ELSE GREATEST(u.lastActiveAt, logs.lastLoggedAt)
+          END AS lastActiveAt,
+          IF(EXISTS(SELECT 1 FROM properties p WHERE p.userId = u.id), 1, 0) AS hasProperty,
+          (SELECT COUNT(*) FROM property_view_events v WHERE v.userId = u.id AND v.viewedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS views30,
+          (SELECT COUNT(*) FROM favorites f WHERE f.userId = u.id AND f.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS favorites30,
+          (SELECT COUNT(*) FROM direct_messages dm WHERE dm.senderId = u.id AND dm.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS messages30,
+          (SELECT COUNT(*) FROM generated_documents d WHERE d.userId = u.id AND d.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS documents30,
+          (SELECT COUNT(*) FROM search_logs s WHERE s.userId = u.id AND s.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS searches30,
+          (SELECT COUNT(*) FROM property_search_requests r WHERE r.userId = u.id AND r.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS requests30,
+          (SELECT COUNT(*) FROM properties p WHERE p.userId = u.id AND p.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS properties30
+        FROM users u
+        LEFT JOIN (
+          SELECT userId, MAX(createdAt) AS lastLoggedAt
+          FROM activity_logs GROUP BY userId
+        ) logs ON logs.userId = u.id
+        WHERE u.role = 'user' AND u.status = 'active'
+        ORDER BY lastActiveAt IS NULL, lastActiveAt DESC, u.id DESC
+      `),
+    ]);
+
+  const rows = (result: any) => (result?.[0] ?? []) as any[];
+  const summary = rows(activeResult)[0] ?? {};
+  const totalUsers = rows(comparisonResult).reduce(
+    (sum, row) => sum + Number(row.total ?? 0),
+    0
+  );
+  const labels: Record<string, string> = {
+    property_view: "物件閲覧",
+    favorite: "お気に入り",
+    inquiry_dm: "問い合わせ・DM",
+    document: "資料生成",
+    search: "物件検索",
+    property_request: "物件募集",
+    property_create: "物件登録",
+    interested_list: "興味者リスト",
+  };
+  const featureRows = new Map(
+    rows(featureResult).map(row => [
+      `${String(row.feature)}:${Number(row.periodDays)}`,
+      row,
+    ])
+  );
+
+  return {
+    active: {
+      days7: Number(summary.days7 ?? 0),
+      days30: Number(summary.days30 ?? 0),
+      days90: Number(summary.days90 ?? 0),
+    },
+    inactive: {
+      days7: Number(summary.inactive7 ?? 0),
+      days14: Number(summary.inactive14 ?? 0),
+      days30: Number(summary.inactive30 ?? 0),
+    },
+    weekdays: rows(weekdayResult).map(row => ({
+      weekday: Number(row.weekday),
+      events: Number(row.events),
+      users: Number(row.users),
+    })),
+    features: Object.entries(labels).flatMap(([feature, label]) =>
+      [7, 30, 90].map(periodDays => {
+        const row = featureRows.get(`${feature}:${periodDays}`) as any;
+        const featureUsers = Number(row?.users ?? 0);
+        return {
+          feature,
+          label,
+          periodDays,
+          events: Number(row?.events ?? 0),
+          users: featureUsers,
+          rate: totalUsers
+            ? Math.round((featureUsers * 1000) / totalUsers) / 10
+            : 0,
+          measurable: feature !== "interested_list",
+        };
+      })
+    ),
+    ownerComparison: rows(comparisonResult).map(row => ({
+      segment: String(row.segment),
+      total: Number(row.total ?? 0),
+      active7: Number(row.active7 ?? 0),
+      active30: Number(row.active30 ?? 0),
+      active90: Number(row.active90 ?? 0),
+    })),
+    users: rows(userResult).map(row => ({
+      id: Number(row.id),
+      name: row.name ? String(row.name) : null,
+      company: row.company ? String(row.company) : null,
+      email: String(row.email),
+      lastActiveAt: row.lastActiveAt ? new Date(row.lastActiveAt) : null,
+      hasProperty: Boolean(row.hasProperty),
+      views30: Number(row.views30 ?? 0),
+      favorites30: Number(row.favorites30 ?? 0),
+      messages30: Number(row.messages30 ?? 0),
+      documents30: Number(row.documents30 ?? 0),
+      searches30: Number(row.searches30 ?? 0),
+      requests30: Number(row.requests30 ?? 0),
+      properties30: Number(row.properties30 ?? 0),
+    })),
+    generatedAt: new Date(),
+  };
+}
+
 /** 管理画面向けのプロダクト利用分析。個人情報を返さず、集計値だけを返す。 */
 export async function getPlatformAnalytics() {
   const db = await getDb();

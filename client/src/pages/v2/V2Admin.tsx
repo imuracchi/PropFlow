@@ -1,4 +1,4 @@
-import { ArrowLeft, BarChart2, Building2, LayoutDashboard, LogOut, MessageCircle, ScrollText, Search, Send, ShieldCheck, Sparkles, Target, Users, Wrench } from "lucide-react";
+import { Activity, ArrowLeft, BarChart2, Building2, LayoutDashboard, LogOut, MessageCircle, ScrollText, Search, Send, ShieldCheck, Sparkles, Target, Users, Wrench } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -17,6 +17,7 @@ export default function V2Admin() {
     { id: "search", label: "検索ログ", icon: Search },
     { id: "needs", label: "募集ニーズログ", icon: Target },
     { id: "dm", label: "DM管理", icon: MessageCircle },
+    { id: "usage", label: "利用実態", icon: Activity },
     { id: "ai", label: "AI分析", icon: Sparkles },
     ...(!management ? [
       { id: "logs", label: "操作ログ", icon: ScrollText },
