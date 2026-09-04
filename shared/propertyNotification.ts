@@ -14,9 +14,18 @@ export function isLineNotificationAllowedAt(date = new Date()) {
   return hour >= LINE_NOTIFICATION_START_HOUR && hour < LINE_NOTIFICATION_END_HOUR;
 }
 
-export function notificationPropertyTitle(name: string) {
+export function propertyReference(id: number) {
+  return `PF-${id}`;
+}
+
+export function propertyDisplayTitle(id: number, name: string) {
   const title = name.trim();
-  return title.length > PROPERTY_TITLE_MAX_LENGTH
+  const cappedTitle = title.length > PROPERTY_TITLE_MAX_LENGTH
     ? title.slice(0, PROPERTY_TITLE_MAX_LENGTH)
     : title;
+  return `${propertyReference(id)}｜${cappedTitle}`;
+}
+
+export function notificationPropertyTitle(id: number, name: string) {
+  return propertyDisplayTitle(id, name);
 }

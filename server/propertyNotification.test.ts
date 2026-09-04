@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   isLineNotificationAllowedAt,
   notificationPropertyTitle,
+  propertyDisplayTitle,
+  propertyReference,
 } from "@shared/propertyNotification";
 
 describe("property notification rules", () => {
@@ -12,10 +14,13 @@ describe("property notification rules", () => {
     expect(isLineNotificationAllowedAt(new Date("2026-09-04T22:59:59Z"))).toBe(false);
   });
 
-  it("keeps notification titles within 40 characters", () => {
-    expect(notificationPropertyTitle("  京都・東福寺｜一棟収益物件  ")).toBe(
-      "京都・東福寺｜一棟収益物件"
+  it("adds the property number without counting it toward the 40-character title limit", () => {
+    expect(propertyReference(123)).toBe("PF-123");
+    expect(propertyDisplayTitle(123, "  京都・東福寺｜一棟収益物件  ")).toBe(
+      "PF-123｜京都・東福寺｜一棟収益物件"
     );
-    expect(notificationPropertyTitle("あ".repeat(41))).toBe("あ".repeat(40));
+    expect(notificationPropertyTitle(456, "あ".repeat(41))).toBe(
+      `PF-456｜${"あ".repeat(40)}`
+    );
   });
 });

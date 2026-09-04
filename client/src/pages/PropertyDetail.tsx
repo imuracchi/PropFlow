@@ -1264,7 +1264,7 @@ export default function PropertyDetail() {
         {/* 種別バッジ + 公開状態バッジ */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary inline-flex items-center gap-1.5">
-            <Building2 className="w-3.5 h-3.5" />{property.type}
+            <Building2 className="w-3.5 h-3.5" />PF-{property.id}|{property.type}
           </span>
           {property.status !== "available" && (
             <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${property.status === "negotiating" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}>

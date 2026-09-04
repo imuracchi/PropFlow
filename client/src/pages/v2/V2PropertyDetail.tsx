@@ -1159,7 +1159,7 @@ export default function V2PropertyDetail({
             <section className="min-w-0 overflow-hidden bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:p-6">
               <div className="flex items-center gap-2">
                 <span className="bg-[#173f70] px-2 py-1 text-[10px] font-bold text-white">
-                  {property.type}
+                  PF-{property.id}|{property.type}
                 </span>
                 {property.status === "sold" && (
                   <span className="flex items-center gap-1 bg-[#e8f3ec] px-2 py-1 text-[10px] font-bold text-[#27613c]">

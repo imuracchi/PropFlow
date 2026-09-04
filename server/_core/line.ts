@@ -80,7 +80,7 @@ export function buildPropertyFlexMessage(prop: {
   id: number;
 }) {
   const siteUrl = PUBLIC_SITE_URL;
-  const notificationTitle = notificationPropertyTitle(prop.name);
+  const notificationTitle = notificationPropertyTitle(prop.id, prop.name);
   const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
   const areaLine = prop.buildingArea
     ? `建物 ${prop.buildingArea.toFixed(2)}㎡`

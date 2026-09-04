@@ -1766,7 +1766,7 @@ ${propList}`,
           : prop.price
             ? `${prop.price.toLocaleString()}円`
             : "未定";
-        const notificationTitle = notificationPropertyTitle(prop.name);
+        const notificationTitle = notificationPropertyTitle(prop.id, prop.name);
         const excludedIds = await db.getPropertyExcludedUserIds(
           input.propertyId
         );

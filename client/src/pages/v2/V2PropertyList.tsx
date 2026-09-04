@@ -20,6 +20,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
 import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
 import { diversifySameDayByPrefecture } from "@shared/regionDiversification";
+import { propertyReference } from "@shared/propertyNotification";
 
 const REGIONS = [
   {
@@ -319,7 +320,7 @@ export default function V2PropertyList({
         if (mode === "keyword" && appliedKeyword.trim()) {
           const q = appliedKeyword.toLowerCase();
           if (
-            ![p.name, p.address, p.lotNumber, p.remarks].some(v =>
+            ![propertyReference(p.id), p.name, p.address, p.lotNumber, p.remarks].some(v =>
               (v ?? "").toLowerCase().includes(q)
             )
           )
@@ -778,7 +779,7 @@ export default function V2PropertyList({
                 placeholder={
                   mode === "ai"
                     ? "例：23区内、1億円以下の売地"
-                    : "物件名・住所・地番・備考"
+                    : "PF番号・物件名・住所・地番・備考"
                 }
               />
               {(mode === "ai" || mode === "keyword") && (
@@ -941,7 +942,7 @@ export default function V2PropertyList({
                     className={`absolute inset-y-0 left-0 w-[3px] ${p.userId !== user?.id && !readSet.has(p.id) ? "bg-[#173f70]" : "bg-transparent"}`}
                   />
                   <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#5f6e82]">
-                    <span>{p.type}</span>
+                    <span>PF-{p.id}|{p.type}</span>
                     {p.published === 0 && (
                       <span className="bg-[#eef1f5] px-2 py-0.5 text-[#526176]">
                         {p.scheduledPublishAt ? "予約中" : "下書き"}
@@ -1110,6 +1111,9 @@ export default function V2PropertyList({
                       className={`cursor-pointer border-b text-[15px] ${p.status === "sold" ? "border-l-[3px] border-b-[#d8e8de] border-l-[#3f7d5a] bg-[#f5faf7] hover:bg-[#edf6f0]" : "border-b-[#e1e6ec] hover:bg-[#f6f8fa]"}`}
                     >
                       <td className="px-3 py-4">
+                        <p className="mb-1 text-[11px] font-semibold text-[#65748a]">
+                          PF-{p.id}|{p.type}
+                        </p>
                         <div className="flex items-center gap-2">
                           <p className="min-w-0 line-clamp-2 text-[16px] font-bold text-[#102d50]">
                             {p.name}

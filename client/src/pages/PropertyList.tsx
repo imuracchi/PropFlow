@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PropertyRegisterNudgeBanner } from "@/components/PropertyRegisterNudgeBanner";
 import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
+import { propertyReference } from "@shared/propertyNotification";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   available: { label: "公開中", cls: "bg-blue-50 text-blue-700 border border-blue-200" },
@@ -127,6 +128,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
       const q = searchQuery.toLowerCase();
       return p.address.toLowerCase().includes(q)
         || p.name.toLowerCase().includes(q)
+        || propertyReference(p.id).toLowerCase().includes(q)
         || (p.userCompany ?? "").toLowerCase().includes(q);
     })
     .filter(p => {
@@ -391,7 +393,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
             loggedQueryRef.current = trimmed;
             const count = baseFiltered.filter(p => {
               const lower = trimmed.toLowerCase();
-              return p.address.toLowerCase().includes(lower) || p.name.toLowerCase().includes(lower) || (p.userCompany ?? "").toLowerCase().includes(lower);
+              return p.address.toLowerCase().includes(lower) || p.name.toLowerCase().includes(lower) || propertyReference(p.id).toLowerCase().includes(lower) || (p.userCompany ?? "").toLowerCase().includes(lower);
             }).length;
             logSearchMutation.mutate({ query: trimmed, resultCount: count });
           }
@@ -527,7 +529,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="住所・物件名・業者名で検索..."
+                    placeholder="PF番号・住所・物件名・業者名で検索..."
                     className="pl-10 bg-card border-border h-11"
                     value={keywordInput}
                     onChange={e => setKeywordInput(e.target.value)}
@@ -684,9 +686,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                       <td className="px-3 py-3 md:px-4 md:py-4">
                         {/* バッジ行 */}
                         <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                          <span className="text-[10px] text-muted-foreground/60 hidden md:inline">#{property.id}</span>
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                            {property.type}
+                            PF-{property.id}|{property.type}
                           </span>
                           {isNew && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">新着</span>}
                           {property.status !== "available" && (
