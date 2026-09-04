@@ -8,6 +8,10 @@ import {
   decodePropertyNotificationChannels,
   type PropertyNotificationChannels,
 } from "./propertyNotificationChannels";
+import {
+  isLineNotificationAllowedAt,
+  notificationPropertyTitle,
+} from "@shared/propertyNotification";
 
 const escapeHtml = (value: unknown) => String(value ?? "")
   .replaceAll("&", "&amp;")
@@ -24,16 +28,18 @@ export async function sendScheduledPropertyNotifications(
   if (!prop || prop.visibilityScope === "proposal") return;
   const channels = selectedChannels ?? decodePropertyNotificationChannels(prop.scheduledPublishNotify);
   const excludedIds = await db.getPropertyExcludedUserIds(propertyId);
-  if (channels.line && !prop.lineNotifiedAt && !excludedIds.length)
+  const lineAllowed = channels.line && isLineNotificationAllowedAt();
+  if (lineAllowed && !prop.lineNotifiedAt && !excludedIds.length)
     await sendLineBroadcast(buildPropertyFlexMessage(prop)).catch(() => {});
-  if (channels.line && !prop.lineNotifiedAt) await db.markPropertyLineNotified(propertyId);
+  if (lineAllowed && !prop.lineNotifiedAt) await db.markPropertyLineNotified(propertyId);
   const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
+  const notificationTitle = notificationPropertyTitle(prop.name);
   const siteUrl = PUBLIC_SITE_URL;
   const propertyUrl = `${siteUrl.replace(/\/$/, "")}/v2/property/${prop.id}`;
-  const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#1e3a5f">🏠 新着物件のお知らせ</h2><div style="background:#f8fafc;border:1px solid #e2e8f0;padding:16px;margin:16px 0"><p style="font-size:18px;font-weight:700">${escapeHtml(prop.name)}</p><p>📍 ${escapeHtml(prop.address)}</p><p>💰 ${escapeHtml(priceLine)}</p><p>🏷 ${escapeHtml(prop.type)}</p></div><a href="${escapeHtml(propertyUrl)}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;text-decoration:none;font-weight:600">物件の詳細を見る</a></div>`;
+  const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#1e3a5f">🏠 新着物件のお知らせ</h2><div style="background:#f8fafc;border:1px solid #e2e8f0;padding:16px;margin:16px 0"><p style="font-size:18px;font-weight:700">${escapeHtml(notificationTitle)}</p><p>📍 ${escapeHtml(prop.address)}</p><p>💰 ${escapeHtml(priceLine)}</p><p>🏷 ${escapeHtml(prop.type)}</p></div><a href="${escapeHtml(propertyUrl)}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;text-decoration:none;font-weight:600">物件の詳細を見る</a></div>`;
   if (channels.email) {
     const emails = await db.getActiveUserEmailsForNotify("newProperty", excludedIds);
-    for (const email of emails) sendMail(email, `【PropFlow】新着物件: ${prop.name}`, html).catch(() => {});
+    for (const email of emails) sendMail(email, `【PropFlow】新着物件: ${notificationTitle}`, html).catch(() => {});
   }
   const excluded = new Set(excludedIds);
   const targetIds = (await db.listActiveUsers()).filter(user => user.id !== prop.userId && !excluded.has(user.id)).map(user => user.id);

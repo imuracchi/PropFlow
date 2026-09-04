@@ -16,6 +16,10 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { FileViewerModal } from "@/components/FileViewerModal";
 import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
+import {
+  isLineNotificationAllowedAt,
+  PROPERTY_TITLE_MAX_LENGTH,
+} from "@shared/propertyNotification";
 
 type FaqItem = { q: string; a: string };
 
@@ -1076,6 +1080,13 @@ export default function PropertyDetail() {
       setEditError("必須項目を入力してください");
       return;
     }
+    if (
+      f.name !== property?.name &&
+      f.name.length > PROPERTY_TITLE_MAX_LENGTH
+    ) {
+      setEditError(`物件名は${PROPERTY_TITLE_MAX_LENGTH}文字以内で入力してください`);
+      return;
+    }
     if (!f.priceNegotiable && !f.price) {
       setEditError("価格を入力するか「応相談」にチェックしてください");
       return;
@@ -1493,6 +1504,8 @@ export default function PropertyDetail() {
               <div className="flex items-start gap-2 bg-muted/50 rounded-lg px-3 py-2">
                 {(exclusions?.length ?? 0) > 0 ? (
                   <><span className="text-muted-foreground mt-0.5">—</span><span className="text-muted-foreground">LINE通知：閲覧制限があるため送信しません</span></>
+                ) : !isLineNotificationAllowedAt() ? (
+                  <><span className="text-muted-foreground mt-0.5">—</span><span className="text-muted-foreground">LINE通知：8:00〜21:00のみ送信できます</span></>
                 ) : (
                   <><span className="text-green-600 mt-0.5">✓</span><span>LINE通知：全員へ送信</span></>
                 )}
@@ -1504,7 +1517,12 @@ export default function PropertyDetail() {
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2"
                 disabled={notifyLineMutation.isPending}
                 onClick={() => {
-                  notifyLineMutation.mutate({ propertyId }, {
+                  notifyLineMutation.mutate({
+                    propertyId,
+                    sendLine: isLineNotificationAllowedAt(),
+                    sendEmail: true,
+                    sendPush: true,
+                  }, {
                     onSuccess: () => setShowNotifyConfirm(false),
                   });
                 }}
@@ -1817,7 +1835,7 @@ export default function PropertyDetail() {
                             ) : (row as any).textarea ? (
                               <Textarea className="min-h-[2.5rem]" rows={2} value={(editForm as any)[row.key]} onChange={e => setEditForm(p => ({ ...p, [row.key]: e.target.value }))} />
                             ) : (
-                              <Input value={(editForm as any)[row.key]} onChange={e => setEditForm(p => ({ ...p, [row.key]: e.target.value }))} />
+                              <Input maxLength={row.key === "name" ? PROPERTY_TITLE_MAX_LENGTH : undefined} value={(editForm as any)[row.key]} onChange={e => setEditForm(p => ({ ...p, [row.key]: e.target.value }))} />
                             )}
                           </div>
                         </div>

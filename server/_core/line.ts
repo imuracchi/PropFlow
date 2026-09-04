@@ -1,4 +1,5 @@
 import { PUBLIC_SITE_URL } from "./publicUrl";
+import { notificationPropertyTitle } from "@shared/propertyNotification";
 
 export async function sendLinePush(lineUserId: string, message: string | object): Promise<boolean> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -72,16 +73,25 @@ export function buildPropertyFlexMessage(prop: {
   priceNegotiable: number;
   type: string;
   landArea: number | null;
-  comment: string | null;
+  buildingArea?: number | null;
+  transport?: string | null;
+  estimatedYield?: number | null;
+  buildingAge?: string | null;
   id: number;
 }) {
   const siteUrl = PUBLIC_SITE_URL;
+  const notificationTitle = notificationPropertyTitle(prop.name);
   const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
-  const landAreaLine = prop.landArea ? `${prop.landArea.toFixed(2)}㎡（${(prop.landArea * 0.3025).toFixed(1)}坪）` : "—";
+  const areaLine = prop.buildingArea
+    ? `建物 ${prop.buildingArea.toFixed(2)}㎡`
+    : prop.landArea
+      ? `土地 ${prop.landArea.toFixed(2)}㎡`
+      : "—";
+  const yieldLine = prop.estimatedYield ? `${prop.estimatedYield}%` : "—";
 
   return {
     type: "flex",
-    altText: `🏠 新着物件: ${prop.name}`,
+    altText: `🏠 新着物件: ${notificationTitle}`,
     contents: {
       type: "bubble",
       size: "giga",
@@ -100,7 +110,7 @@ export function buildPropertyFlexMessage(prop: {
         spacing: "md",
         paddingAll: "20px",
         contents: [
-          { type: "text", text: prop.name, weight: "bold", size: "lg", color: "#1e3a5f", wrap: true },
+          { type: "text", text: notificationTitle, weight: "bold", size: "lg", color: "#1e3a5f", wrap: true },
           {
             type: "box",
             layout: "vertical",
@@ -127,23 +137,30 @@ export function buildPropertyFlexMessage(prop: {
               },
               {
                 type: "box", layout: "horizontal", contents: [
+                  { type: "text", text: "🚉 交通", size: "xs", color: "#8c8c8c", flex: 3 },
+                  { type: "text", text: prop.transport || "—", size: "sm", color: "#333333", flex: 7, wrap: true },
+                ],
+              },
+              {
+                type: "box", layout: "horizontal", contents: [
                   { type: "text", text: "📐 面積", size: "xs", color: "#8c8c8c", flex: 3 },
-                  { type: "text", text: landAreaLine, size: "sm", color: "#333333", flex: 7 },
+                  { type: "text", text: areaLine, size: "sm", color: "#333333", flex: 7 },
+                ],
+              },
+              {
+                type: "box", layout: "horizontal", contents: [
+                  { type: "text", text: "📈 想定利回り", size: "xs", color: "#8c8c8c", flex: 3 },
+                  { type: "text", text: yieldLine, size: "sm", color: "#333333", flex: 7 },
+                ],
+              },
+              {
+                type: "box", layout: "horizontal", contents: [
+                  { type: "text", text: "🏗 築年", size: "xs", color: "#8c8c8c", flex: 3 },
+                  { type: "text", text: prop.buildingAge || "—", size: "sm", color: "#333333", flex: 7 },
                 ],
               },
             ],
           },
-          ...(prop.comment ? [{
-            type: "box" as const,
-            layout: "vertical" as const,
-            margin: "lg" as const,
-            backgroundColor: "#fffbeb",
-            cornerRadius: "8px",
-            paddingAll: "12px",
-            contents: [
-              { type: "text" as const, text: "💬 " + prop.comment, size: "xs" as const, color: "#92400e", wrap: true },
-            ],
-          }] : []),
         ],
       },
       footer: {

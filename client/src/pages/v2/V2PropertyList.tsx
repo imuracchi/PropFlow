@@ -988,7 +988,7 @@ export default function V2PropertyList({
                     </span>
                   </div>
                   <div className="mt-1.5 min-w-0">
-                    <h2 className="text-[17px] font-bold leading-6 text-[#102d50]">
+                    <h2 className="line-clamp-2 text-[17px] font-bold leading-6 text-[#102d50]">
                       {p.name}
                     </h2>
                     <p className="mt-0.5 truncate text-[13px] leading-5 text-[#65748a]">
@@ -1111,7 +1111,7 @@ export default function V2PropertyList({
                     >
                       <td className="px-3 py-4">
                         <div className="flex items-center gap-2">
-                          <p className="min-w-0 truncate text-[16px] font-bold text-[#102d50]">
+                          <p className="min-w-0 line-clamp-2 text-[16px] font-bold text-[#102d50]">
                             {p.name}
                           </p>
                           {memoSet.has(p.id) && (

@@ -34,6 +34,10 @@ import V2Layout from "@/components/v2/V2Layout";
 import { printProperty } from "@/pages/PropertyDetail";
 import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
 import { FileViewerModal } from "@/components/FileViewerModal";
+import {
+  isLineNotificationAllowedAt,
+  PROPERTY_TITLE_MAX_LENGTH,
+} from "@shared/propertyNotification";
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "";
 
@@ -439,7 +443,9 @@ export default function V2PropertyDetail({
       await schedulePublication.mutateAsync({
         propertyId,
         scheduledAt: scheduledAt.toISOString(),
-        sendLine: scheduleNotifyChannels.line,
+        sendLine:
+          scheduleNotifyChannels.line &&
+          isLineNotificationAllowedAt(scheduledAt),
         sendEmail: scheduleNotifyChannels.email,
         sendPush: scheduleNotifyChannels.push,
       });
@@ -952,6 +958,13 @@ export default function V2PropertyDetail({
       setEditError("物件名・住所・物件種別は必須です");
       return;
     }
+    if (
+      String(editForm.name) !== String(property.name) &&
+      String(editForm.name).length > PROPERTY_TITLE_MAX_LENGTH
+    ) {
+      setEditError(`物件名は${PROPERTY_TITLE_MAX_LENGTH}文字以内で入力してください`);
+      return;
+    }
     if (!editForm.priceNegotiable && !String(editForm.price).trim()) {
       setEditError("価格を入力するか、応相談を選択してください");
       return;
@@ -1055,7 +1068,8 @@ export default function V2PropertyDetail({
               <span className="font-bold text-[#173f70]">公開時に送る通知を選択</span>
               <label className="flex items-center gap-2"><input type="checkbox" checked={scheduleNotifyChannels.email} onChange={event => setScheduleNotifyChannels(current => ({ ...current, email: event.target.checked }))} className="size-4" />新着メール</label>
               <label className="flex items-center gap-2"><input type="checkbox" checked={scheduleNotifyChannels.push} onChange={event => setScheduleNotifyChannels(current => ({ ...current, push: event.target.checked }))} className="size-4" />Webプッシュ</label>
-              <label className={`flex items-center gap-2 ${exclusionCount > 0 ? "text-[#8b95a3]" : ""}`}><input type="checkbox" disabled={exclusionCount > 0} checked={scheduleNotifyChannels.line} onChange={event => setScheduleNotifyChannels(current => ({ ...current, line: event.target.checked }))} className="size-4" />{exclusionCount > 0 ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE"}</label>
+              <label className={`flex items-center gap-2 ${exclusionCount > 0 || !isLineNotificationAllowedAt(new Date(`${scheduleDate}T${scheduleHour}:${scheduleMinute}`)) ? "text-[#8b95a3]" : ""}`}><input type="checkbox" disabled={exclusionCount > 0 || !scheduleDate || !isLineNotificationAllowedAt(new Date(`${scheduleDate}T${scheduleHour}:${scheduleMinute}`))} checked={scheduleNotifyChannels.line && !!scheduleDate && isLineNotificationAllowedAt(new Date(`${scheduleDate}T${scheduleHour}:${scheduleMinute}`))} onChange={event => setScheduleNotifyChannels(current => ({ ...current, line: event.target.checked }))} className="size-4" />{exclusionCount > 0 ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE（8:00〜21:00のみ）"}</label>
+              <p className="text-[11px] leading-5 text-[#65748a]">LINE通知は8:00〜21:00のみ送信できます。時間外に物件登録の作業をする場合は、8:00〜21:00の日時を指定して公開予約してください。</p>
             </div>
             <div className="mt-5 flex gap-3">
               <button onClick={() => setScheduleEditorOpen(false)} className="h-11 flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]">キャンセル</button>
@@ -1085,9 +1099,9 @@ export default function V2PropertyDetail({
                 <input type="checkbox" checked={publishNotifyChannels.push} onChange={event => setPublishNotifyChannels(current => ({ ...current, push: event.target.checked }))} className="size-4" />
                 Webプッシュ
               </label>
-              <label className={`flex items-center gap-2 ${exclusionCount > 0 ? "text-[#8b95a3]" : ""}`}>
-                <input type="checkbox" disabled={exclusionCount > 0} checked={publishNotifyChannels.line} onChange={event => setPublishNotifyChannels(current => ({ ...current, line: event.target.checked }))} className="size-4" />
-                {exclusionCount > 0 ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE"}
+              <label className={`flex items-center gap-2 ${exclusionCount > 0 || !isLineNotificationAllowedAt() ? "text-[#8b95a3]" : ""}`}>
+                <input type="checkbox" disabled={exclusionCount > 0 || !isLineNotificationAllowedAt()} checked={publishNotifyChannels.line && isLineNotificationAllowedAt()} onChange={event => setPublishNotifyChannels(current => ({ ...current, line: event.target.checked }))} className="size-4" />
+                {exclusionCount > 0 ? "公式LINE（閲覧制限のため送信不可）" : !isLineNotificationAllowedAt() ? "公式LINE（8:00〜21:00のみ）" : "公式LINE"}
               </label>
             </div>
             <p className="mt-3 text-[11px] leading-5 text-[#65748a]">
@@ -1115,7 +1129,9 @@ export default function V2PropertyDetail({
                   try {
                     await notifyPublishedProperty.mutateAsync({
                       propertyId,
-                      sendLine: publishNotifyChannels.line,
+                      sendLine:
+                        publishNotifyChannels.line &&
+                        isLineNotificationAllowedAt(),
                       sendEmail: publishNotifyChannels.email,
                       sendPush: publishNotifyChannels.push,
                     });
@@ -2368,11 +2384,11 @@ export default function V2PropertyDetail({
       )}
       {editing && (
         <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/45 p-0 sm:p-5"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-black/45 p-0 sm:p-5"
           onClick={() => setEditing(false)}
         >
           <div
-            className="mx-auto min-h-full w-full bg-white p-5 sm:min-h-0 sm:max-w-2xl"
+            className="flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-white p-5 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:max-w-2xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center">
@@ -2396,7 +2412,7 @@ export default function V2PropertyDetail({
                 {editError}
               </p>
             )}
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain grid gap-4 pr-1 sm:grid-cols-2">
               {[
                 ["name", "物件名", "text"],
                 ["address", "住所", "text"],
@@ -2424,6 +2440,7 @@ export default function V2PropertyDetail({
                     <input
                       type={type}
                       value={String(editForm[key] ?? "")}
+                      maxLength={key === "name" ? PROPERTY_TITLE_MAX_LENGTH : undefined}
                       onChange={e =>
                         setEditForm(f => ({ ...f, [key]: e.target.value }))
                       }
@@ -2595,7 +2612,7 @@ export default function V2PropertyDetail({
                 </div>
               </div>
             </div>
-            <div className="sticky bottom-0 -mx-5 mt-6 flex gap-3 border-t border-[#e2e7ec] bg-white p-4">
+            <div className="-mx-5 mt-4 flex shrink-0 gap-3 border-t border-[#e2e7ec] bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
               <button
                 onClick={() => setEditing(false)}
                 className="h-11 flex-1 border border-[#173f70] text-[13px] font-bold text-[#173f70]"

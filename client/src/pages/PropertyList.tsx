@@ -717,7 +717,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                           )}
                         </div>
                         {/* 物件名 */}
-                        <p className="font-medium text-foreground text-sm md:text-[15px] leading-snug">{property.name}</p>
+                        <p className="line-clamp-2 font-medium text-foreground text-sm md:text-[15px] leading-snug">{property.name}</p>
                         {/* 住所・面積（モバイルのみ） */}
                         <p className="text-[11px] text-muted-foreground mt-0.5 md:hidden">
                           {property.address}

@@ -23,6 +23,11 @@ import {
   decodePropertyNotificationChannels,
   encodePropertyNotificationChannels,
 } from "./_core/propertyNotificationChannels";
+import {
+  isLineNotificationAllowedAt,
+  notificationPropertyTitle,
+  PROPERTY_TITLE_MAX_LENGTH,
+} from "@shared/propertyNotification";
 
 const publicFeedbackAttempts = new Map<string, number[]>();
 
@@ -1103,7 +1108,7 @@ JSONのみ返してください。`,
     create: protectedProcedure
       .input(
         z.object({
-          name: z.string().min(1),
+          name: z.string().min(1).max(PROPERTY_TITLE_MAX_LENGTH),
           address: z.string().min(1),
           lotNumber: z.string().optional(),
           type: z.string().min(1),
@@ -1278,7 +1283,17 @@ JSONのみ返してください。`,
       )
       .mutation(async ({ input, ctx }) => {
         const { id, priceNegotiable, ...rest } = input;
-        await requirePropertyOwner(id, ctx.user);
+        const property = await requirePropertyOwner(id, ctx.user);
+        if (
+          input.name !== undefined &&
+          input.name !== property.name &&
+          input.name.length > PROPERTY_TITLE_MAX_LENGTH
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `物件名は${PROPERTY_TITLE_MAX_LENGTH}文字以内で入力してください`,
+          });
+        }
         return db.updateProperty(id, {
           ...rest,
           ...(priceNegotiable !== undefined
@@ -1735,6 +1750,11 @@ ${propList}`,
       }))
       .mutation(async ({ input, ctx }) => {
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
+        if (input.sendLine && !isLineNotificationAllowedAt())
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "LINE通知は8:00〜21:00のみ送信できます。時間外に物件登録の作業をする場合は、8:00〜21:00の日時を指定して公開予約してください。",
+          });
         if (prop.visibilityScope === "proposal")
           return { success: true, limited: true, hasExclusions: false };
         if (input.sendLine && prop.lineNotifiedAt)
@@ -1746,6 +1766,7 @@ ${propList}`,
           : prop.price
             ? `${prop.price.toLocaleString()}円`
             : "未定";
+        const notificationTitle = notificationPropertyTitle(prop.name);
         const excludedIds = await db.getPropertyExcludedUserIds(
           input.propertyId
         );
@@ -1768,7 +1789,7 @@ ${propList}`,
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
             <h2 style="color:#1e3a5f;">🏠 新着物件のお知らせ</h2>
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">
-              <p style="font-size:18px;font-weight:700;color:#1e3a5f;margin:0 0 8px;">${prop.name}</p>
+              <p style="font-size:18px;font-weight:700;color:#1e3a5f;margin:0 0 8px;">${notificationTitle}</p>
               <p style="margin:4px 0;color:#475569;">📍 ${prop.address}</p>
               <p style="margin:4px 0;color:#475569;">💰 ${priceLine}</p>
               <p style="margin:4px 0;color:#475569;">🏷 ${prop.type}</p>
@@ -1784,7 +1805,7 @@ ${propList}`,
             excludedIds
           );
           for (const email of emails) {
-            sendMail(email, `【PropFlow】新着物件: ${prop.name}`, mailHtml).catch(
+            sendMail(email, `【PropFlow】新着物件: ${notificationTitle}`, mailHtml).catch(
               () => {}
             );
           }
@@ -1841,6 +1862,12 @@ ${propList}`,
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "公開日時は10分刻みで指定してください",
+          });
+        }
+        if (input.sendLine === true && !isLineNotificationAllowedAt(scheduledAt)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "LINE通知を含む公開予約は8:00〜21:00の日時を指定してください",
           });
         }
         const taskUid = `internal-property-${prop.id}-${scheduledAt.getTime()}`;

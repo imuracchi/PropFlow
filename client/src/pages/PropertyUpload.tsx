@@ -32,6 +32,10 @@ import {
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import {
+  isLineNotificationAllowedAt,
+  PROPERTY_TITLE_MAX_LENGTH,
+} from "@shared/propertyNotification";
 
 type FaqItem = { q: string; a: string };
 
@@ -289,6 +293,10 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
       setError("必須項目を入力してください");
       return;
     }
+    if (name.length > PROPERTY_TITLE_MAX_LENGTH) {
+      setError(`物件名は${PROPERTY_TITLE_MAX_LENGTH}文字以内で入力してください`);
+      return;
+    }
     if (!priceNegotiable && !price) {
       setError("価格を入力するか「応相談」にチェックしてください");
       return;
@@ -425,7 +433,9 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
           await schedulePublicationMutation.mutateAsync({
             propertyId: result.id,
             scheduledAt: new Date(scheduledAt).toISOString(),
-            sendLine: scheduledNotifyChannels.line,
+            sendLine:
+              scheduledNotifyChannels.line &&
+              isLineNotificationAllowedAt(new Date(scheduledAt)),
             sendEmail: scheduledNotifyChannels.email,
             sendPush: scheduledNotifyChannels.push,
           });
@@ -459,6 +469,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
   // ── 登録完了後 通知ダイアログ ──
   if (showNotifyDialog && newPropertyId) {
     const hasExclusions = excludedUsers.length > 0;
+    const lineAvailableNow = isLineNotificationAllowedAt();
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
         <div className="bg-card border border-border rounded-xl shadow-lg p-6 max-w-sm w-full space-y-4">
@@ -484,9 +495,9 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
               <input type="checkbox" className="size-4" checked={notifyChannels.push} onChange={event => setNotifyChannels(current => ({ ...current, push: event.target.checked }))} />
               Webプッシュ
             </label>
-            <label className={`flex items-center gap-2 ${hasExclusions ? "text-muted-foreground" : ""}`}>
-              <input type="checkbox" className="size-4" disabled={hasExclusions} checked={notifyChannels.line} onChange={event => setNotifyChannels(current => ({ ...current, line: event.target.checked }))} />
-              {hasExclusions ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE"}
+            <label className={`flex items-center gap-2 ${hasExclusions || !lineAvailableNow ? "text-muted-foreground" : ""}`}>
+              <input type="checkbox" className="size-4" disabled={hasExclusions || !lineAvailableNow} checked={notifyChannels.line && lineAvailableNow} onChange={event => setNotifyChannels(current => ({ ...current, line: event.target.checked }))} />
+              {hasExclusions ? "公式LINE（閲覧制限のため送信不可）" : !lineAvailableNow ? "公式LINE（8:00〜21:00のみ）" : "公式LINE"}
             </label>
           </div>
           <div className="flex flex-col gap-2">
@@ -497,7 +508,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
                 notifyLineMutation.mutate(
                   {
                     propertyId: newPropertyId,
-                    sendLine: notifyChannels.line,
+                    sendLine: notifyChannels.line && lineAvailableNow,
                     sendEmail: notifyChannels.email,
                     sendPush: notifyChannels.push,
                   },
@@ -1051,11 +1062,17 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
               label: "物件名",
               required: true,
               input: (
-                <Input
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="例: 港区南青山4"
-                />
+                <div>
+                  <Input
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    maxLength={PROPERTY_TITLE_MAX_LENGTH}
+                    placeholder="例: 港区南青山4"
+                  />
+                  <p className="mt-1 text-right text-[11px] text-muted-foreground">
+                    {name.length}/{PROPERTY_TITLE_MAX_LENGTH}文字
+                  </p>
+                </div>
               ),
             },
             {
@@ -2022,7 +2039,8 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
             <span className="font-bold text-[#173f70]">公開時に送る通知を選択</span>
             <label className="flex items-center gap-2"><input type="checkbox" checked={scheduledNotifyChannels.email} onChange={event => setScheduledNotifyChannels(current => ({ ...current, email: event.target.checked }))} className="size-4" />新着メール</label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={scheduledNotifyChannels.push} onChange={event => setScheduledNotifyChannels(current => ({ ...current, push: event.target.checked }))} className="size-4" />Webプッシュ</label>
-            <label className={`flex items-center gap-2 ${excludedUsers.length > 0 ? "text-[#8b95a3]" : ""}`}><input type="checkbox" disabled={excludedUsers.length > 0} checked={scheduledNotifyChannels.line} onChange={event => setScheduledNotifyChannels(current => ({ ...current, line: event.target.checked }))} className="size-4" />{excludedUsers.length > 0 ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE"}</label>
+            <label className={`flex items-center gap-2 ${excludedUsers.length > 0 || (scheduledAt && !isLineNotificationAllowedAt(new Date(scheduledAt))) ? "text-[#8b95a3]" : ""}`}><input type="checkbox" disabled={excludedUsers.length > 0 || !scheduledAt || !isLineNotificationAllowedAt(new Date(scheduledAt))} checked={scheduledNotifyChannels.line && !!scheduledAt && isLineNotificationAllowedAt(new Date(scheduledAt))} onChange={event => setScheduledNotifyChannels(current => ({ ...current, line: event.target.checked }))} className="size-4" />{excludedUsers.length > 0 ? "公式LINE（閲覧制限のため送信不可）" : "公式LINE（8:00〜21:00のみ）"}</label>
+            <p className="text-[11px] leading-5 text-[#65748a]">LINE通知は8:00〜21:00のみ送信できます。時間外に物件登録の作業をする場合は、8:00〜21:00の日時を指定して公開予約してください。</p>
           </div>
           {!Object.values(scheduledNotifyChannels).some(Boolean) && <span className="mt-1 block text-[11px] text-[#65748a]">新着通知を送らずに公開します</span>}
         </label>
