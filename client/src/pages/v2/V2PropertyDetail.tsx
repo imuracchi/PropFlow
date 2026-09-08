@@ -1078,7 +1078,7 @@ export default function V2PropertyDetail({
                   物件番号 PF-{property.id}
                 </span>
                 <span className="bg-[#173f70] px-2 py-1 text-[10px] font-bold text-white">
-                  PF-{property.id}|{property.type}
+                  {property.type || "種別未設定"}
                 </span>
                 {property.status === "sold" && (
                   <span className="flex items-center gap-1 bg-[#e8f3ec] px-2 py-1 text-[10px] font-bold text-[#27613c]">
