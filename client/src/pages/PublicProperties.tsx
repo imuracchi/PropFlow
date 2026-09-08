@@ -30,7 +30,7 @@ function getReferrerDomain() {
 function PublicHeader({ onRegistrationClick }: { onRegistrationClick?: () => void }) {
   const [, setLocation] = useLocation();
   return (
-    <header className="border-b border-[#d8e0e9] bg-white">
+    <header className="sticky top-0 z-40 border-b border-[#d8e0e9] bg-white/95 shadow-[0_2px_10px_rgba(23,63,112,.06)] backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center px-4 sm:px-6">
         <button onClick={() => setLocation("/")} aria-label="ログインページへ戻る" className="flex items-center gap-2 text-[#173f70]">
           <Building2 size={25} />
@@ -139,16 +139,10 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
           <h1 className="text-2xl font-bold sm:text-3xl">公開物件情報</h1>
           <span className="inline-flex h-7 items-center bg-[#e8eef5] px-2.5 text-xs font-bold text-[#315d8b]">最大100件</span>
         </div>
-        <div className="mt-5 flex flex-col gap-3 border-l-4 border-[#d6a43e] bg-white px-4 py-4 shadow-[0_2px_8px_rgba(23,63,112,.05)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-5 border-l-4 border-[#d6a43e] bg-white px-4 py-4 shadow-[0_2px_8px_rgba(23,63,112,.05)]">
           <div>
             <p className="text-sm font-bold text-[#102d50]">会員ログイン後は、さらに多くの物件をご覧いただけます</p>
             <p className="mt-1 text-xs leading-5 text-[#65748a]">会員限定物件の詳細確認、資料閲覧、問い合わせもご利用いただけます。</p>
-          </div>
-          <div className="grid shrink-0 grid-cols-2 gap-2">
-            <a href="/registration-request" onClick={() => recordEvents([{ eventType: "registration_click" }])} className="inline-flex h-10 items-center justify-center bg-[#173f70] px-4 text-xs font-bold text-white">新規登録（無料）</a>
-            <a href="/?returnTo=%2Fv2%2Fproperties" className="inline-flex h-10 items-center justify-center gap-2 border border-[#173f70] px-4 text-xs font-bold text-[#173f70]">
-              <LogIn size={15} />会員ログイン
-            </a>
           </div>
         </div>
         <form onSubmit={event => { event.preventDefault(); setAppliedKeyword(keyword); const normalized = keyword.trim().toLocaleLowerCase("ja"); const resultCount = properties?.filter(property => [property.name, property.type, property.area, buildPublicCardIntroduction({ ...property, address: property.area }), property.id, `PF-${property.id}`].some(value => String(value ?? "").toLocaleLowerCase("ja").includes(normalized))).length ?? 0; recordEvents([{ eventType: "search", searchKeyword: keyword.trim() || null, resultCount }]); }} className="mt-5 flex max-w-2xl gap-2">
