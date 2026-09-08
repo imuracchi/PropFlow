@@ -102,7 +102,13 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
   const recordEvents = (events: PublicEvent[]) => {
     if (preview || events.length === 0) return;
     visitorIdRef.current ||= getPublicVisitorId();
-    void analyticsMutation.mutateAsync({ visitorId: visitorIdRef.current, referrerDomain: getReferrerDomain(), events }).catch(() => {});
+    for (let index = 0; index < events.length; index += 50) {
+      void analyticsMutation.mutateAsync({
+        visitorId: visitorIdRef.current,
+        referrerDomain: getReferrerDomain(),
+        events: events.slice(index, index + 50),
+      }).catch(() => {});
+    }
   };
   const normalizedKeyword = appliedKeyword.trim().toLocaleLowerCase("ja");
   const filteredProperties = properties?.filter(property => {
