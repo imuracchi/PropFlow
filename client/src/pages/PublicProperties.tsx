@@ -32,7 +32,7 @@ function PublicHeader({ onRegistrationClick }: { onRegistrationClick?: () => voi
   return (
     <header className="border-b border-[#d8e0e9] bg-white">
       <div className="mx-auto flex h-16 max-w-6xl items-center px-4 sm:px-6">
-        <button onClick={() => setLocation("/public/properties")} className="flex items-center gap-2 text-[#173f70]">
+        <button onClick={() => setLocation("/")} aria-label="ログインページへ戻る" className="flex items-center gap-2 text-[#173f70]">
           <Building2 size={25} />
           <span className="text-xl font-bold">PropFlow</span>
         </button>
@@ -136,6 +136,15 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <p className="text-xs font-bold tracking-[.15em] text-[#5d7797]">PUBLIC PROPERTY</p>
         <h1 className="mt-2 text-2xl font-bold sm:text-3xl">公開物件情報</h1>
+        <div className="mt-5 flex flex-col gap-3 border-l-4 border-[#d6a43e] bg-white px-4 py-4 shadow-[0_2px_8px_rgba(23,63,112,.05)] sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-bold text-[#102d50]">会員ログイン後は、さらに多くの物件をご覧いただけます</p>
+            <p className="mt-1 text-xs leading-5 text-[#65748a]">会員限定物件の詳細確認、資料閲覧、問い合わせもご利用いただけます。</p>
+          </div>
+          <a href="/?returnTo=%2Fv2%2Fproperties" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 border border-[#173f70] px-4 text-xs font-bold text-[#173f70]">
+            <LogIn size={15} />会員ログイン
+          </a>
+        </div>
         <form onSubmit={event => { event.preventDefault(); setAppliedKeyword(keyword); const normalized = keyword.trim().toLocaleLowerCase("ja"); const resultCount = properties?.filter(property => [property.name, property.type, property.area, buildPublicCardIntroduction({ ...property, address: property.area }), property.id, `PF-${property.id}`].some(value => String(value ?? "").toLocaleLowerCase("ja").includes(normalized))).length ?? 0; recordEvents([{ eventType: "search", searchKeyword: keyword.trim() || null, resultCount }]); }} className="mt-5 flex max-w-2xl gap-2">
           <div className="flex min-w-0 flex-1 items-center border border-[#b9c8d8] bg-white focus-within:border-[#173f70] focus-within:ring-1 focus-within:ring-[#173f70]">
             <Search className="ml-4 shrink-0 text-[#65748a]" size={18} />
