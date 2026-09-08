@@ -201,6 +201,8 @@ async function startServer() {
         if (
           prop.deleted === 1 ||
           prop.published === 0 ||
+          (prop.visibilityScope === "proposal" &&
+            prop.proposalTargetUserId !== user.id) ||
           exclusions.some(item => item.userId === user.id)
         ) {
           res.status(404).end();

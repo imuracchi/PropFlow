@@ -21,6 +21,10 @@ type CardData = {
 
 export default function RegistrationRequest() {
   const [, setLocation] = useLocation();
+  const sourcePropertyId = Number(new URLSearchParams(window.location.search).get("sourcePropertyId") ?? 0);
+  const sourceIntentParam = new URLSearchParams(window.location.search).get("sourceIntent");
+  const sourceIntent = sourceIntentParam === "document" || sourceIntentParam === "inquiry" ? sourceIntentParam : null;
+  const sourcePath = sourcePropertyId > 0 ? `/public/property/${sourcePropertyId}` : "/";
   const cardInputRef = useRef<HTMLInputElement>(null);
   const [cardBase64, setCardBase64] = useState("");
   const [cardMimeType, setCardMimeType] = useState<(typeof ACCEPTED_TYPES)[number]>("image/jpeg");
@@ -88,6 +92,8 @@ export default function RegistrationRequest() {
         ...cardData,
         businessCardBase64: cardBase64,
         businessCardMimeType: cardMimeType,
+        sourcePropertyId: sourcePropertyId > 0 ? sourcePropertyId : null,
+        sourceIntent: sourcePropertyId > 0 ? sourceIntent : null,
         acceptedTerms: true,
       });
       if (!result.success) {
@@ -114,7 +120,7 @@ export default function RegistrationRequest() {
             <li><strong className="mr-2 text-[#173f70]">4.</strong>届いたログイン情報でPropFlowへログインしてください。</li>
           </ol>
           <p className="mt-4 text-xs leading-5 text-[#758194]">メールが届かない場合は、迷惑メールフォルダもご確認ください。</p>
-          <button onClick={() => setLocation("/")} className="mt-6 h-11 bg-[#173f70] px-6 text-sm font-bold text-white">ログイン画面へ</button>
+          <button onClick={() => setLocation(sourcePath)} className="mt-6 h-11 bg-[#173f70] px-6 text-sm font-bold text-white">{sourcePropertyId > 0 ? "物件ページへ戻る" : "ログイン画面へ"}</button>
         </div>
       </AuthPageShell>
     );
@@ -127,6 +133,7 @@ export default function RegistrationRequest() {
           <div className="flex items-center gap-2 text-[#173f70]"><Building2 size={22}/><span className="font-bold">PropFlow</span></div>
           <h1 className="mt-4 text-[22px] font-bold text-[#102d50]">名刺を送って代理登録</h1>
           <p className="mt-2 text-[13px] leading-6 text-[#65748a]">名刺画像を1枚送るだけで申請できます。入力作業は必要ありません。</p>
+          {sourcePropertyId > 0 && <p className="mt-3 border-l-4 border-[#173f70] bg-[#edf3f8] px-3 py-2 text-xs font-bold text-[#173f70]">PF-{sourcePropertyId} の物件詳細PDF閲覧に向けた登録申請です</p>}
         </header>
         <div className="space-y-5 p-6">
           <div className="border border-dashed border-[#9fb1c5] bg-[#f7f9fb] p-5 text-center">
@@ -143,7 +150,7 @@ export default function RegistrationRequest() {
           <button type="button" onClick={() => void submit()} disabled={!cardData || !acceptedTerms || submitRequest.isPending || reading} className="flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white disabled:opacity-40">
             {submitRequest.isPending ? <Loader2 size={18} className="animate-spin"/> : <Send size={18}/>}名刺を送信する
           </button>
-          <button type="button" onClick={() => setLocation("/")} className="w-full text-sm font-semibold text-[#65748a]">← ログイン画面へ戻る</button>
+          <button type="button" onClick={() => setLocation(sourcePath)} className="w-full text-sm font-semibold text-[#65748a]">← {sourcePropertyId > 0 ? "物件ページへ戻る" : "ログイン画面へ戻る"}</button>
         </div>
       </div>
     </AuthPageShell>

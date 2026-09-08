@@ -57,8 +57,14 @@ export function decodeAndValidateDmAttachment(input: {
     data.subarray(8, 12).toString() === "WEBP"
   )
     [mimeType, extension] = ["image/webp", "webp"];
+  else if (
+    data.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04])) ||
+    data.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x05, 0x06])) ||
+    data.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x07, 0x08]))
+  )
+    [mimeType, extension] = ["application/zip", "zip"];
   if (!mimeType || !extension)
-    throw new Error("PDF、JPEG、PNG、WebPのみ添付できます");
+    throw new Error("PDF、JPEG、PNG、WebP、ZIPのみ添付できます");
   const fileName =
     input.fileName.replace(/[\\/\0\r\n]/g, "_").slice(0, 255) ||
     `attachment.${extension}`;

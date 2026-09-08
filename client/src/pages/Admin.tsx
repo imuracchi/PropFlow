@@ -262,6 +262,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
   const usageAnalyticsQuery = trpc.admin.usageAnalytics.useQuery(undefined, {
     enabled: activeSection === "usage",
   });
+  const publicPageAnalyticsQuery = trpc.admin.publicPageAnalytics.useQuery(undefined);
   const addBroadcastLogMutation = trpc.admin.addBroadcastLog.useMutation({
     onSuccess: () => {
       utils.admin.broadcastLogs.invalidate();
@@ -619,6 +620,11 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                             <p className="mt-1 text-xs text-[#65748a]">
                               {request.phone || "電話番号なし"}
                             </p>
+                            {request.sourcePropertyId && (
+                              <a href={`/v2/property/${request.sourcePropertyId}`} className="mt-2 inline-block text-xs font-bold text-[#173f70] underline">
+                                申請元：PF-{request.sourcePropertyId}{request.sourceIntent === "document" ? "（物件資料希望）" : request.sourceIntent === "inquiry" ? "（問い合わせ希望）" : ""}
+                              </a>
+                            )}
                           </div>
                         </div>
                         <div className="mt-3 flex gap-2">
@@ -2369,6 +2375,19 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
               );
               return (
                 <div className="space-y-5">
+                  {publicPageAnalyticsQuery.data && (() => {
+                    const publicAnalytics = publicPageAnalyticsQuery.data;
+                    return <section className="border-2 border-[#2f6f63] bg-[#f2f8f6] p-4">
+                      <div className="mb-3"><h4 className="text-[15px] font-bold text-[#163f38]">ログイン前の公開ページ利用状況</h4><p className="mt-1 text-[10px] leading-5 text-[#58736e]">匿名IDによる推定人数です。同じ方が別端末を利用した場合は別人として集計されることがあります。</p></div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+                        {[["閲覧者", `${publicAnalytics.today.visitors}人`], ["一覧表示", `${publicAnalytics.today.listViews}回`], ["物件表示", `${publicAnalytics.today.propertyImpressions}回`], ["検索", `${publicAnalytics.today.searches}回`], ["資料希望", `${publicAnalytics.today.documentClicks}回`], ["問い合わせ", `${publicAnalytics.today.inquiryClicks}回`], ["登録クリック", `${publicAnalytics.today.registrationClicks}回`], ["申請完了", `${publicAnalytics.today.registrationRequests}件`]].map(([label, value]) => <div key={label} className="border border-[#bdd4cf] bg-white p-3"><p className="text-[10px] font-bold text-[#58736e]">{label}</p><p className="mt-1 text-xl font-bold tabular-nums text-[#163f38]">{value}</p></div>)}
+                      </div>
+                      <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                        <div className="max-h-[360px] overflow-auto border border-[#bdd4cf] bg-white"><table className="w-full min-w-[680px] text-[11px]"><thead className="sticky top-0 bg-[#e2efec] text-[#58736e]"><tr><th className="px-3 py-2 text-left">日付</th><th className="px-3 py-2 text-right">閲覧者</th><th className="px-3 py-2 text-right">一覧</th><th className="px-3 py-2 text-right">検索</th><th className="px-3 py-2 text-right">資料</th><th className="px-3 py-2 text-right">問合せ</th><th className="px-3 py-2 text-right">登録</th><th className="px-3 py-2 text-right">申請完了</th></tr></thead><tbody className="divide-y divide-[#d8e5e2]">{publicAnalytics.last30Days.map((row, index) => <tr key={row.day} className={index === 0 ? "bg-[#fff8e8] font-bold" : ""}><td className="px-3 py-2">{index === 0 ? "本日 " : ""}{row.day.slice(5).replace("-", "/")}</td><td className="px-3 py-2 text-right">{row.visitors}</td><td className="px-3 py-2 text-right">{row.listViews}</td><td className="px-3 py-2 text-right">{row.searches}</td><td className="px-3 py-2 text-right">{row.documentClicks}</td><td className="px-3 py-2 text-right">{row.inquiryClicks}</td><td className="px-3 py-2 text-right">{row.registrationClicks}</td><td className="px-3 py-2 text-right">{row.registrationRequests}</td></tr>)}</tbody></table></div>
+                        <div className="grid gap-3 sm:grid-cols-2"><div className="border border-[#bdd4cf] bg-white p-3"><h5 className="text-xs font-bold">反響のある公開物件（30日）</h5><div className="mt-2 space-y-2">{publicAnalytics.popularProperties.slice(0, 8).map(row => <div key={row.propertyId} className="border-t border-[#e1ebe9] pt-2 text-[10px]"><p className="truncate font-bold">PF-{row.propertyId} {row.propertyName}</p><p className="mt-1 text-[#58736e]">表示 {row.impressions}／資料 {row.documentClicks}／問合せ {row.inquiryClicks}</p></div>)}{publicAnalytics.popularProperties.length === 0 && <p className="text-[10px] text-muted-foreground">まだデータはありません</p>}</div></div><div className="border border-[#bdd4cf] bg-white p-3"><h5 className="text-xs font-bold">検索キーワード（30日）</h5><div className="mt-2 space-y-2">{publicAnalytics.popularSearches.slice(0, 8).map(row => <div key={row.keyword} className="flex justify-between gap-2 border-t border-[#e1ebe9] pt-2 text-[10px]"><span className="truncate font-bold">{row.keyword}</span><span className="shrink-0 text-[#58736e]">{row.count}回／平均{row.averageResults}件</span></div>)}{publicAnalytics.popularSearches.length === 0 && <p className="text-[10px] text-muted-foreground">まだデータはありません</p>}</div></div></div>
+                      </div>
+                    </section>;
+                  })()}
                   <section className="border-2 border-[#173f70] bg-white p-4">
                     <div className="mb-3">
                       <h4 className="text-[15px] font-bold text-[#102d50]">本日の利用状況</h4>

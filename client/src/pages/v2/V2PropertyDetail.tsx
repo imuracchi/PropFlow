@@ -38,6 +38,10 @@ import {
   isLineNotificationAllowedAt,
   PROPERTY_TITLE_MAX_LENGTH,
 } from "@shared/propertyNotification";
+import {
+  buildPropertyShareText,
+  propertyPriceLabel as priceLabel,
+} from "@shared/propertyShareText";
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "";
 
@@ -167,6 +171,8 @@ const previewProperty: any = {
   lotNumber: "代沢五丁目124番8",
   heightDistrict: "第二種高度地区",
   otherRestrictions: "日影規制あり",
+  socialIntroduction:
+    "世田谷区代沢に位置する、2015年築・鉄筋コンクリート造の一棟マンションです。",
   remarks: "",
   comment:
     "世田谷区代沢の一棟物件です。2024年に共用部の大規模修繕を実施済みです。",
@@ -193,27 +199,6 @@ const previewFiles: any[] = [
 ];
 const PREVIEW_FAVORITES_KEY = "propflow-v2-preview-favorites";
 
-function priceLabel(price: number | null, negotiable: number | boolean) {
-  if (negotiable || !price) return "応相談";
-  const oku = Math.floor(price / 100000000),
-    man = Math.floor((price % 100000000) / 10000);
-  return oku
-    ? `${oku}億${man ? `${man.toLocaleString()}万円` : "円"}`
-    : `${man.toLocaleString()}万円`;
-}
-
-function publicAreaLabel(address: string) {
-  const prefecture = address.match(/^(東京都|北海道|大阪府|京都府|.{2,3}県)/)?.[1];
-  if (!prefecture) return address;
-  const rest = address.slice(prefecture.length);
-  const county = rest.match(/^(.+?郡.+?[町村])/);
-  if (county) return `${prefecture}${county[1]}`;
-  const designatedWard = rest.match(/^(.+?市.+?区)/);
-  if (designatedWard) return `${prefecture}${designatedWard[1]}`;
-  const municipality = rest.match(/^(.+?[市区町村])/);
-  return municipality ? `${prefecture}${municipality[1]}` : prefecture;
-}
-
 function scheduledNotificationChannels(value: number | null | undefined) {
   if (value === 1) return { line: true, email: true, push: true };
   if (!value || value < 8) return { line: false, email: false, push: false };
@@ -223,33 +208,6 @@ function scheduledNotificationChannels(value: number | null | undefined) {
     email: (mask & 2) !== 0,
     push: (mask & 4) !== 0,
   };
-}
-
-function buildPropertyShareText(
-  property: any,
-  mode: "propflow" | "email",
-  strength = ""
-) {
-  const details = [
-    ["物件種別", property.type],
-    ["所在地", publicAreaLabel(property.address ?? "")],
-    ["価格", priceLabel(property.price, property.priceNegotiable)],
-    ["想定利回り", property.estimatedYield ? `${property.estimatedYield}%` : null],
-    ["土地面積", property.landArea ? `${property.landArea}㎡` : null],
-    ["建物面積", property.buildingArea ? `${property.buildingArea}㎡` : null],
-    ["構造", property.structure],
-    ["築年月", property.buildingAge],
-    ["交通", property.transport],
-    ["用途地域", property.zoning],
-  ]
-    .filter(([, value]) => value)
-    .map(([label, value]) => `${label}：${value}`)
-    .join("\n");
-  const header = `【物件情報】${strength ? `\n${strength}` : ""}\n\n■ ${property.name}\n${details}`;
-  if (mode === "propflow") {
-    return `${header}\n\n物件の詳細や資料は、PropFlowでご確認いただけます。\n\n▼PropFlowのご案内\nhttps://propflow.jp/propflow-intro.html\n\n▼登録申請\nhttps://propflow.jp/registration-request\n\n物件番号：PF-${property.id}`;
-  }
-  return `${header}\n\n物件の詳細や資料をご希望の不動産業者様は、下記までお気軽にお問い合わせください。\n\nお問い合わせ先\nproperty@gspec.me\n\nメールの件名または本文に\n「物件番号：PF-${property.id}」\nとご記載ください。`;
 }
 
 function saveBase64(name: string, contentBase64: string) {
@@ -406,7 +364,6 @@ export default function V2PropertyDetail({
   const updateProperty = trpc.property.update.useMutation();
   const analyzeTransport = trpc.property.analyzeTransport.useMutation();
   const generateComment = trpc.property.generateComment.useMutation();
-  const generateShareStrength = trpc.property.generateShareStrength.useMutation();
   const uploadFile = trpc.property.uploadFile.useMutation();
   const deleteFile = trpc.property.deleteFile.useMutation();
   const setFileVisibility = trpc.property.setFileVisibility.useMutation();
@@ -510,8 +467,6 @@ export default function V2PropertyDetail({
   });
   const [shareTextMode, setShareTextMode] = useState<"propflow" | "email">("propflow");
   const [shareTextCopied, setShareTextCopied] = useState(false);
-  const [shareStrength, setShareStrength] = useState("");
-  const [shareStrengthError, setShareStrengthError] = useState("");
   const [introGenerating, setIntroGenerating] = useState(false);
   const [introAttachments, setIntroAttachments] = useState<Set<number>>(
     new Set()
@@ -558,48 +513,14 @@ export default function V2PropertyDetail({
     : (negotiationQuery.data ?? { mine: false, others: false });
 
   const propertyShareText = property
-    ? buildPropertyShareText(property, shareTextMode, shareStrength)
+    ? buildPropertyShareText(property, shareTextMode)
     : "";
-  const openGeneratedShareText = async () => {
-    if (!property || generateShareStrength.isPending) return;
+  const openGeneratedShareText = () => {
+    if (!property) return;
     setShareTextMode("propflow");
     setShareTextCopied(false);
     setSharePromptFromPublish(false);
-    setShareStrength("");
-    setShareStrengthError("");
     setShareTextOpen(true);
-    try {
-      const result = await generateShareStrength.mutateAsync({
-        name: property.name ?? "",
-        address: property.address ?? "",
-        type: property.type ?? "",
-        price: Number(property.price ?? 0),
-        estimatedYield: property.estimatedYield ?? null,
-        landArea: property.landArea ?? null,
-        buildingArea: property.buildingArea ?? null,
-        structure: property.structure ?? null,
-        buildingAge: property.buildingAge ?? null,
-        transport: property.transport ?? null,
-        zoning: property.zoning ?? null,
-        access: property.access ?? null,
-        comment: property.comment ?? null,
-      });
-      if (result.strength) {
-        setShareStrength(result.strength);
-        return;
-      }
-      throw new Error(result.error ?? "物件の長所を生成できませんでした");
-    } catch (error) {
-      const fallback = String(property.comment ?? "").trim();
-      setShareStrength(fallback.length > 100 ? `${fallback.slice(0, 99)}…` : fallback);
-      setShareStrengthError(
-        fallback
-          ? "AI生成に失敗したため、登録済みの紹介コメントを短く表示しています。"
-          : error instanceof Error
-            ? error.message
-            : "物件の長所を生成できませんでした"
-      );
-    }
   };
   const copyPropertyShareText = async () => {
     try {
@@ -646,11 +567,6 @@ export default function V2PropertyDetail({
     url.searchParams.delete("share");
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }, [preview, property?.id]);
-  useEffect(() => {
-    if (shareTextOpen) return;
-    setShareStrength("");
-    setShareStrengthError("");
-  }, [shareTextOpen]);
   const facts = useMemo(
     () =>
       property
@@ -1158,6 +1074,9 @@ export default function V2PropertyDetail({
           <div className="min-w-0 space-y-2 lg:space-y-5">
             <section className="min-w-0 overflow-hidden bg-white px-4 py-5 lg:border lg:border-[#d9e0e8] lg:p-6">
               <div className="flex items-center gap-2">
+                <span className="border border-[#b9cee5] bg-white px-2 py-1 text-[10px] font-bold text-[#173f70]">
+                  物件番号 PF-{property.id}
+                </span>
                 <span className="bg-[#173f70] px-2 py-1 text-[10px] font-bold text-white">
                   PF-{property.id}|{property.type}
                 </span>
@@ -1743,16 +1662,11 @@ export default function V2PropertyDetail({
                   </div>
                   <button
                     type="button"
-                    onClick={() => void openGeneratedShareText()}
-                    disabled={generateShareStrength.isPending}
-                    className="mt-3 flex h-10 w-full items-center justify-center gap-2 bg-[#173f70] px-3 text-[12px] font-bold text-white disabled:opacity-60"
+                    onClick={openGeneratedShareText}
+                    className="mt-3 flex h-10 w-full items-center justify-center gap-2 bg-[#173f70] px-3 text-[12px] font-bold text-white"
                   >
-                    {generateShareStrength.isPending ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Copy size={16} />
-                    )}
-                    {generateShareStrength.isPending ? "作成中..." : "物件紹介文を作る"}
+                    <Copy size={16} />
+                    物件紹介文を作る
                   </button>
                 </div>
                 <div className="mt-4 border-y border-[#e2e7ec] py-3">
@@ -1860,17 +1774,18 @@ export default function V2PropertyDetail({
                   <div className="border-b border-[#e2e7ec] py-4">
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-bold text-[#526176]">ログインページへの簡易掲載</p>
-                        <p className="mt-1 text-[10px] leading-5 text-[#758194]">市区・物件種別・価格帯・面積のみ表示</p>
+                        <p className="text-[12px] font-bold text-[#526176]">一般公開への簡易掲載</p>
+                        <p className="mt-1 text-[10px] leading-5 text-[#758194]">ログイン前の公開物件一覧に、物件名・市区・価格・紹介文・面積・構造・築年月・交通を表示</p>
                         <span className={`mt-2 inline-flex px-2 py-1 text-[10px] font-bold ${property.externalListingConsent === 1 ? "bg-[#e8f3ec] text-[#27613c]" : "bg-[#edf1f5] text-[#65748a]"}`}>
                           {property.externalListingConsent === 1 ? "簡易掲載に同意済み" : "簡易掲載しない"}
                         </span>
+                        {property.externalListingConsent === 1 && property.published === 1 && property.status !== "sold" && <a href={`/public/property/${propertyId}`} target="_blank" rel="noopener noreferrer" className="ml-2 text-[10px] font-bold text-[#173f70] underline">公開ページを確認</a>}
                       </div>
                       <button
                         disabled={setExternalListingConsent.isPending}
                         onClick={async () => {
                           const consent = property.externalListingConsent !== 1;
-                          if (consent && !window.confirm("ログイン前の方にも、市区・物件種別・価格帯・面積を簡易掲載します。詳細住所、会社名、担当者名、資料は掲載されません。内容を確認し、簡易掲載に同意しますか？")) return;
+                          if (consent && !window.confirm("ログイン前の公開物件一覧に、物件名・市区・価格・紹介文・面積・構造・築年月・交通を簡易掲載します。詳細住所、写真、添付資料、会社名、担当者名、連絡先、商流は表示されません。簡易掲載に同意しますか？")) return;
                           await setExternalListingConsent.mutateAsync({ id: propertyId, consent });
                         }}
                         className="h-10 shrink-0 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50"
@@ -2008,18 +1923,12 @@ export default function V2PropertyDetail({
                 : "外部サービスへのリンクは載せず、property@gspec.meへ案内します。登録案内や手続きはPropFlow運営担当が対応するため、物件掲載者様にご対応いただく必要はありません。"}
             </div>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain whitespace-pre-wrap border border-[#d9e0e8] bg-[#f8fafc] p-4 text-[12px] leading-6 text-[#334a66]">
-              {generateShareStrength.isPending ? "物件の長所を作成しています..." : propertyShareText}
+              {propertyShareText}
             </div>
-            {shareStrengthError && (
-              <p className="mt-2 shrink-0 text-[10px] leading-5 text-[#a65a21]">
-                {shareStrengthError}
-              </p>
-            )}
             <button
               type="button"
               onClick={() => void copyPropertyShareText()}
-              disabled={generateShareStrength.isPending}
-              className={`mt-4 flex h-12 w-full shrink-0 items-center justify-center gap-2 text-[14px] font-bold text-white disabled:opacity-60 ${shareTextCopied ? "bg-[#35724f]" : "bg-[#173f70]"}`}
+              className={`mt-4 flex h-12 w-full shrink-0 items-center justify-center gap-2 text-[14px] font-bold text-white ${shareTextCopied ? "bg-[#35724f]" : "bg-[#173f70]"}`}
             >
               <Copy size={18} />
               {shareTextCopied ? "コピーしました" : "この紹介文をコピー"}

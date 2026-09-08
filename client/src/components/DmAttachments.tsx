@@ -1,7 +1,7 @@
-import { FileText, Image as ImageIcon, Paperclip, X } from "lucide-react";
+import { Archive, FileText, Image as ImageIcon, Paperclip, X } from "lucide-react";
 import type { ChangeEvent, RefObject } from "react";
 
-export const DM_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp";
+export const DM_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp,application/zip,application/x-zip-compressed,.zip";
 export const DM_MAX_FILES = 3;
 export const DM_MAX_FILE_BYTES = 10 * 1024 * 1024;
 export const DM_MAX_TOTAL_BYTES = 20 * 1024 * 1024;
@@ -31,9 +31,20 @@ export function validateSelectedFiles(current: File[], incoming: File[]) {
     "image/jpeg",
     "image/png",
     "image/webp",
+    "application/zip",
+    "application/x-zip-compressed",
   ]);
-  if (files.some(file => !allowed.has(file.type)))
-    throw new Error("PDF、JPEG、PNG、WebPのみ添付できます");
+  if (
+    files.some(
+      file =>
+        !allowed.has(file.type) &&
+        !(
+          file.name.toLowerCase().endsWith(".zip") &&
+          (!file.type || file.type === "application/octet-stream")
+        )
+    )
+  )
+    throw new Error("PDF、JPEG、PNG、WebP、ZIPのみ添付できます");
   if (files.some(file => file.size > DM_MAX_FILE_BYTES))
     throw new Error("1ファイル10MB以下にしてください");
   if (files.reduce((sum, file) => sum + file.size, 0) > DM_MAX_TOTAL_BYTES)
@@ -123,7 +134,9 @@ export function AttachmentSelection({
               key={`${file.name}-${index}`}
               className="flex items-center gap-2 border border-[#ccd6e1] bg-[#f7f9fb] px-2.5 py-2 text-[#334a66]"
             >
-              {file.type === "application/pdf" ? (
+              {file.name.toLowerCase().endsWith(".zip") ? (
+                <Archive size={15} />
+              ) : file.type === "application/pdf" ? (
                 <FileText size={15} />
               ) : (
                 <ImageIcon size={15} />
@@ -192,7 +205,9 @@ export function MessageAttachments({
               href={`${url}?download=1`}
               className="flex min-w-0 items-center gap-2"
             >
-              {file.mimeType === "application/pdf" ? (
+              {file.mimeType === "application/zip" ? (
+                <Archive size={16} />
+              ) : file.mimeType === "application/pdf" ? (
                 <FileText size={16} />
               ) : (
                 <ImageIcon size={16} />

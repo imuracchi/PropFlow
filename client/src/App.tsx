@@ -53,6 +53,8 @@ import V2Documents from "./pages/v2/V2Documents";
 import V2Admin from "./pages/v2/V2Admin";
 import V2IssueReport from "./pages/v2/V2IssueReport";
 import PublicFeedback from "./pages/PublicFeedback";
+import { PublicPropertyDetail, PublicPropertyList } from "./pages/PublicProperties";
+import PreviewPublicLogin from "./pages/PreviewPublicLogin";
 
 import V2Layout from "./components/v2/V2Layout";
 import { useAuth } from "./_core/hooks/useAuth";
@@ -117,6 +119,7 @@ function usePushNotification() {
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, loading, refresh, logout } = useAuth();
+  const [, setLocation] = useLocation();
   usePushNotification();
 
   if (loading) {
@@ -128,7 +131,19 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <Login onLoginSuccess={() => refresh()} />;
+    return (
+      <Login
+        onLoginSuccess={async () => {
+          await refresh();
+          const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+          setLocation(
+            returnTo && /^\/v2\/property\/\d+$/.test(returnTo)
+              ? returnTo
+              : "/v2/properties"
+          );
+        }}
+      />
+    );
   }
 
   if (user?.termsAgreedVersion !== CURRENT_LEGAL_VERSION) {
@@ -318,6 +333,10 @@ function AppContent() {
       <Route path="/registration-request">
         {() => <RegistrationRequest />}
       </Route>
+      <Route path="/public/properties">{() => <PublicPropertyList />}</Route>
+      <Route path="/public/preview">{() => <PublicPropertyList preview />}</Route>
+      <Route path="/public/login-preview">{() => <PreviewPublicLogin />}</Route>
+      <Route path="/public/property/:id">{() => <PublicPropertyDetail />}</Route>
       <Route path="/feedback">{() => <PublicFeedback />}</Route>
       <Route path="/view-ranking">
         {() => (

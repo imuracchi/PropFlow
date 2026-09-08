@@ -227,7 +227,7 @@ export default function V2PropertyList({
 }) {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
-  const [mode, setMode] = useState<"area" | "keyword" | "ai">("area");
+  const [mode, setMode] = useState<"area" | "keyword" | "ai">("keyword");
   const [region, setRegion] = useState<string | null>(null);
   const [prefecture, setPrefecture] = useState<string | null>(null);
   const [keyword, setKeyword] = useState("");
@@ -707,8 +707,8 @@ export default function V2PropertyList({
         <section className="mt-4 border border-[#d9e0e8] bg-white p-3 lg:p-4">
           <div className="grid grid-cols-3 bg-[#edf1f5] p-1 lg:flex lg:w-fit">
             {[
-              { id: "area", label: "エリア" },
               { id: "keyword", label: "キーワード検索" },
+              { id: "area", label: "エリア" },
               { id: "ai", label: "AI検索" },
             ].map(item => (
               <button
@@ -942,12 +942,28 @@ export default function V2PropertyList({
                     className={`absolute inset-y-0 left-0 w-[3px] ${p.userId !== user?.id && !readSet.has(p.id) ? "bg-[#173f70]" : "bg-transparent"}`}
                   />
                   <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#5f6e82]">
-                    <span>PF-{p.id}|{p.type}</span>
+                    <span className="shrink-0 font-bold text-[#173f70]">PF-{p.id}</span>
+                    <span className="h-3 w-px shrink-0 bg-[#cbd5df]" aria-hidden="true" />
+                    <span className="min-w-0 truncate">{p.type}</span>
                     {p.published === 0 && (
-                      <span className="bg-[#eef1f5] px-2 py-0.5 text-[#526176]">
+                      <span
+                        className={
+                          p.scheduledPublishAt
+                            ? "border border-[#b9cee5] bg-[#e8f0f8] px-2 py-0.5 text-[#173f70]"
+                            : "border border-[#d5dbe3] bg-[#eef1f5] px-2 py-0.5 text-[#526176]"
+                        }
+                      >
                         {p.scheduledPublishAt ? "予約中" : "下書き"}
                       </span>
                     )}
+                    {collection === "mine" &&
+                      p.published !== 0 &&
+                      p.status !== "negotiating" &&
+                      p.status !== "sold" && (
+                        <span className="border border-[#acd0ba] bg-[#e8f5ed] px-2 py-0.5 text-[#286342]">
+                          公開中
+                        </span>
+                      )}
                     {collection === "mine" &&
                       p.visibilityScope === "proposal" && (
                         <span className="bg-[#e8f0f8] px-2 py-0.5 text-[#173f70]">
@@ -1111,8 +1127,8 @@ export default function V2PropertyList({
                       className={`cursor-pointer border-b text-[15px] ${p.status === "sold" ? "border-l-[3px] border-b-[#d8e8de] border-l-[#3f7d5a] bg-[#f5faf7] hover:bg-[#edf6f0]" : "border-b-[#e1e6ec] hover:bg-[#f6f8fa]"}`}
                     >
                       <td className="px-3 py-4">
-                        <p className="mb-1 text-[11px] font-semibold text-[#65748a]">
-                          PF-{p.id}|{p.type}
+                        <p className="mb-1 text-[13px] font-bold tracking-wide text-[#173f70]">
+                          PF-{p.id}
                         </p>
                         <div className="flex items-center gap-2">
                           <p className="min-w-0 line-clamp-2 text-[16px] font-bold text-[#102d50]">
@@ -1161,7 +1177,13 @@ export default function V2PropertyList({
                       <td className="px-3 py-3">
                         <div className="flex min-w-[118px] flex-wrap gap-1.5">
                           {p.published === 0 && (
-                            <span className="bg-[#eef1f5] px-2 py-1 text-[12px] font-bold text-[#526176]">
+                            <span
+                              className={`px-2 py-1 text-[12px] font-bold ${
+                                p.scheduledPublishAt
+                                  ? "border border-[#b9cee5] bg-[#e8f0f8] text-[#173f70]"
+                                  : "border border-[#d5dbe3] bg-[#eef1f5] text-[#526176]"
+                              }`}
+                            >
                               {p.scheduledPublishAt ? "予約中" : "下書き"}
                             </span>
                           )}
@@ -1199,7 +1221,7 @@ export default function V2PropertyList({
                             p.status !== "negotiating" &&
                             p.status !== "sold" &&
                             p.userId === user?.id && (
-                              <span className="bg-[#f1f4f8] px-2 py-1 text-[12px] font-bold text-[#65748a]">
+                              <span className="border border-[#acd0ba] bg-[#e8f5ed] px-2 py-1 text-[12px] font-bold text-[#286342]">
                                 公開中
                               </span>
                             )}

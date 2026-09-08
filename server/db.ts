@@ -44,6 +44,7 @@ import {
   propertyReads,
   propertyViewEvents,
   propertySearchNeedLogs,
+  publicPageEvents,
 } from "../drizzle/schema";
 import {
   CURRENT_LEGAL_VERSION,
@@ -97,6 +98,10 @@ export async function runStartupMigrations() {
     "ALTER TABLE `properties` ADD COLUMN `externalListingConsent` int NOT NULL DEFAULT 0",
     "ALTER TABLE `properties` ADD COLUMN `externalListingConsentedAt` timestamp NULL",
     "ALTER TABLE `properties` ADD COLUMN `externalListingConsentVersion` varchar(20) NULL",
+    "ALTER TABLE `properties` ADD COLUMN `socialIntroduction` text NULL AFTER `otherRestrictions`",
+    "ALTER TABLE `registration_requests` ADD COLUMN `sourcePropertyId` int NULL",
+    "ALTER TABLE `registration_requests` ADD COLUMN `sourceIntent` varchar(20) NULL",
+    "ALTER TABLE `registration_requests` ADD INDEX `idx_registration_requests_source_property` (`sourcePropertyId`)",
     "ALTER TABLE `property_search_proposals` ADD COLUMN `viewedAt` datetime NULL",
     "ALTER TABLE `property_search_requests` ADD COLUMN `adminHidden` int NOT NULL DEFAULT 0",
     "ALTER TABLE `property_search_requests` ADD COLUMN `publishedAt` datetime NULL AFTER `status`",
@@ -145,6 +150,20 @@ export async function runStartupMigrations() {
       \`lastGeneratedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY \`uq_property_document_events_property_user\` (\`propertyId\`, \`userId\`),
       KEY \`idx_property_document_events_property\` (\`propertyId\`)
+    )`,
+    `CREATE TABLE IF NOT EXISTS \`public_page_events\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`visitorHash\` varchar(64) NOT NULL,
+      \`eventType\` varchar(32) NOT NULL,
+      \`propertyId\` int NULL,
+      \`searchKeyword\` varchar(200) NULL,
+      \`resultCount\` int NULL,
+      \`referrerDomain\` varchar(255) NULL,
+      \`deviceType\` varchar(10) NOT NULL,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY \`idx_public_page_events_created_type\` (\`createdAt\`, \`eventType\`),
+      KEY \`idx_public_page_events_property_created\` (\`propertyId\`, \`createdAt\`),
+      KEY \`idx_public_page_events_visitor_created\` (\`visitorHash\`, \`createdAt\`)
     )`,
     `INSERT IGNORE INTO \`property_document_events\`
       (\`userId\`, \`propertyId\`, \`generationCount\`, \`firstGeneratedAt\`, \`lastGeneratedAt\`)
@@ -2190,6 +2209,7 @@ export async function listProperties(viewerUserId?: number) {
       access: properties.access,
       heightDistrict: properties.heightDistrict,
       otherRestrictions: properties.otherRestrictions,
+      socialIntroduction: properties.socialIntroduction,
       negotiation: properties.negotiation,
       remarks: properties.remarks,
       viewCount: properties.viewCount,
@@ -2547,6 +2567,7 @@ export async function getPropertyById(id: number) {
       comment: properties.comment,
       heightDistrict: properties.heightDistrict,
       otherRestrictions: properties.otherRestrictions,
+      socialIntroduction: properties.socialIntroduction,
       faqs: properties.faqs,
       files: properties.files,
       deleted: properties.deleted,
@@ -2648,9 +2669,7 @@ export async function setPropertyPublished(id: number, published: 0 | 1) {
     .set({
       published,
       ...(published === 1
-        ? {
-            publishedAt: sql`COALESCE(${properties.publishedAt}, CURRENT_TIMESTAMP)`,
-          }
+        ? { publishedAt: sql`COALESCE(${properties.publishedAt}, CURRENT_TIMESTAMP)` }
         : {}),
     })
     .where(eq(properties.id, id));
@@ -3705,6 +3724,83 @@ export async function getDirectMessages(
     byMessage.set(attachment.messageId, list);
   }
   return rows.map(row => ({ ...row, attachments: byMessage.get(row.id) ?? [] }));
+}
+
+const publicSnsWhere = and(
+  eq(properties.deleted, 0),
+  eq(properties.published, 1),
+  eq(properties.visibilityScope, "public"),
+  ne(properties.status, "sold"),
+  eq(properties.externalListingConsent, 1)
+);
+
+const publicSnsFields = {
+  id: properties.id,
+  name: properties.name,
+  address: properties.address,
+  type: properties.type,
+  price: properties.price,
+  priceNegotiable: properties.priceNegotiable,
+  estimatedYield: properties.estimatedYield,
+  landArea: properties.landArea,
+  buildingArea: properties.buildingArea,
+  structure: properties.structure,
+  buildingAge: properties.buildingAge,
+  transport: properties.transport,
+  zoning: properties.zoning,
+  socialIntroduction: properties.socialIntroduction,
+  publishedAt: properties.publishedAt,
+};
+
+export async function getPublicSnsProperties() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select(publicSnsFields)
+    .from(properties)
+    .where(publicSnsWhere)
+    .orderBy(desc(properties.publishedAt), desc(properties.createdAt))
+    .limit(100);
+  if (rows.length === 0) return [];
+  const files = await db
+    .select({ propertyId: propertyFiles.propertyId, name: propertyFiles.name, category: propertyFiles.category })
+    .from(propertyFiles)
+    .where(
+      and(
+        inArray(propertyFiles.propertyId, rows.map(row => row.id)),
+        eq(propertyFiles.category, "document"),
+        eq(propertyFiles.visible, 1)
+      )
+    )
+    .orderBy(propertyFiles.createdAt);
+  return rows.map(({ address, ...row }) => ({
+    ...row,
+    area: publicArea(address),
+    hasPdf: files.some(file => file.propertyId === row.id && file.category === "document" && file.name.toLowerCase().endsWith(".pdf")),
+  }));
+}
+
+export async function getPublicSnsPropertyById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select(publicSnsFields)
+    .from(properties)
+    .where(and(publicSnsWhere, eq(properties.id, id)))
+    .limit(1);
+  const property = rows[0];
+  if (!property) return null;
+  const files = await db
+    .select({ id: propertyFiles.id, name: propertyFiles.name, category: propertyFiles.category })
+    .from(propertyFiles)
+    .where(and(eq(propertyFiles.propertyId, id), eq(propertyFiles.visible, 1)))
+    .orderBy(propertyFiles.createdAt);
+  const { address, ...safeProperty } = property;
+  return {
+    ...safeProperty,
+    area: publicArea(address),
+    hasPdf: files.some(file => file.category === "document" && file.name.toLowerCase().endsWith(".pdf")),
+  };
 }
 
 export async function hasDirectMessageThread(
@@ -5340,6 +5436,107 @@ export async function logActivity(
     .update(users)
     .set({ lastActiveAt: activityAt })
     .where(eq(users.id, userId));
+}
+
+export async function savePublicPageEvents(events: Array<{
+  visitorHash: string;
+  eventType: string;
+  propertyId?: number | null;
+  searchKeyword?: string | null;
+  resultCount?: number | null;
+  referrerDomain?: string | null;
+  userAgent?: string;
+}>) {
+  const db = await getDb();
+  if (!db || events.length === 0) return;
+  await db.insert(publicPageEvents).values(events.map(event => ({
+    visitorHash: event.visitorHash,
+    eventType: event.eventType,
+    propertyId: event.propertyId ?? null,
+    searchKeyword: event.searchKeyword ?? null,
+    resultCount: event.resultCount ?? null,
+    referrerDomain: event.referrerDomain ?? null,
+    deviceType: detectDeviceType(event.userAgent),
+  })));
+}
+
+export async function getPublicPageAnalytics() {
+  const db = await getDb();
+  const empty = {
+    today: { visitors: 0, listViews: 0, propertyImpressions: 0, searches: 0, documentClicks: 0, inquiryClicks: 0, registrationClicks: 0, registrationRequests: 0 },
+    last30Days: [] as Array<{ day: string; visitors: number; listViews: number; searches: number; documentClicks: number; inquiryClicks: number; registrationClicks: number; registrationRequests: number }>,
+    popularProperties: [] as Array<{ propertyId: number; propertyName: string; impressions: number; documentClicks: number; inquiryClicks: number }>,
+    popularSearches: [] as Array<{ keyword: string; count: number; averageResults: number }>,
+  };
+  if (!db) return empty;
+  const [todayResult, dailyResult, propertiesResult, searchesResult] = await Promise.all([
+    db.execute(sql`
+      SELECT COUNT(DISTINCT visitorHash) AS visitors,
+        SUM(eventType = 'list_view') AS listViews,
+        SUM(eventType = 'property_impression') AS propertyImpressions,
+        SUM(eventType = 'search') AS searches,
+        SUM(eventType = 'document_click') AS documentClicks,
+        SUM(eventType = 'inquiry_click') AS inquiryClicks,
+        SUM(eventType = 'registration_click') AS registrationClicks,
+        (SELECT COUNT(*) FROM registration_requests r WHERE r.sourcePropertyId IS NOT NULL
+          AND r.createdAt >= CURRENT_DATE AND r.createdAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)) AS registrationRequests
+      FROM public_page_events
+      WHERE createdAt >= CURRENT_DATE AND createdAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)
+    `),
+    db.execute(sql`
+      WITH RECURSIVE days AS (
+        SELECT CURRENT_DATE AS day UNION ALL
+        SELECT DATE_SUB(day, INTERVAL 1 DAY) FROM days
+        WHERE day > DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+      ), daily AS (
+        SELECT DATE(createdAt) AS day, COUNT(DISTINCT visitorHash) AS visitors,
+          SUM(eventType = 'list_view') AS listViews, SUM(eventType = 'search') AS searches,
+          SUM(eventType = 'document_click') AS documentClicks,
+          SUM(eventType = 'inquiry_click') AS inquiryClicks,
+          SUM(eventType = 'registration_click') AS registrationClicks
+        FROM public_page_events WHERE createdAt >= DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+        GROUP BY DATE(createdAt)
+      ), request_daily AS (
+        SELECT DATE(createdAt) AS day, COUNT(*) AS registrationRequests
+        FROM registration_requests
+        WHERE sourcePropertyId IS NOT NULL AND createdAt >= DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+        GROUP BY DATE(createdAt)
+      )
+      SELECT DATE_FORMAT(d.day, '%Y-%m-%d') AS day,
+        COALESCE(a.visitors, 0) AS visitors, COALESCE(a.listViews, 0) AS listViews,
+        COALESCE(a.searches, 0) AS searches, COALESCE(a.documentClicks, 0) AS documentClicks,
+        COALESCE(a.inquiryClicks, 0) AS inquiryClicks, COALESCE(a.registrationClicks, 0) AS registrationClicks,
+        COALESCE(r.registrationRequests, 0) AS registrationRequests
+      FROM days d LEFT JOIN daily a ON a.day = d.day LEFT JOIN request_daily r ON r.day = d.day ORDER BY d.day DESC
+    `),
+    db.execute(sql`
+      SELECT e.propertyId, COALESCE(p.name, CONCAT('PF-', e.propertyId)) AS propertyName,
+        SUM(e.eventType = 'property_impression') AS impressions,
+        SUM(e.eventType = 'document_click') AS documentClicks,
+        SUM(e.eventType = 'inquiry_click') AS inquiryClicks
+      FROM public_page_events e LEFT JOIN properties p ON p.id = e.propertyId
+      WHERE e.propertyId IS NOT NULL AND e.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      GROUP BY e.propertyId, p.name ORDER BY documentClicks DESC, inquiryClicks DESC, impressions DESC LIMIT 20
+    `),
+    db.execute(sql`
+      SELECT searchKeyword AS keyword, COUNT(*) AS count, ROUND(AVG(resultCount), 1) AS averageResults
+      FROM public_page_events
+      WHERE eventType = 'search' AND searchKeyword IS NOT NULL AND searchKeyword <> ''
+        AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      GROUP BY searchKeyword ORDER BY count DESC, searchKeyword LIMIT 20
+    `),
+  ]);
+  const rows = (result: any) => (result?.[0] ?? []) as any[];
+  const today = rows(todayResult)[0] ?? {};
+  return {
+    today: {
+      visitors: Number(today.visitors ?? 0), listViews: Number(today.listViews ?? 0), propertyImpressions: Number(today.propertyImpressions ?? 0),
+      searches: Number(today.searches ?? 0), documentClicks: Number(today.documentClicks ?? 0), inquiryClicks: Number(today.inquiryClicks ?? 0), registrationClicks: Number(today.registrationClicks ?? 0), registrationRequests: Number(today.registrationRequests ?? 0),
+    },
+    last30Days: rows(dailyResult).map(row => ({ day: String(row.day), visitors: Number(row.visitors), listViews: Number(row.listViews), searches: Number(row.searches), documentClicks: Number(row.documentClicks), inquiryClicks: Number(row.inquiryClicks), registrationClicks: Number(row.registrationClicks), registrationRequests: Number(row.registrationRequests) })),
+    popularProperties: rows(propertiesResult).map(row => ({ propertyId: Number(row.propertyId), propertyName: String(row.propertyName), impressions: Number(row.impressions), documentClicks: Number(row.documentClicks), inquiryClicks: Number(row.inquiryClicks) })),
+    popularSearches: rows(searchesResult).map(row => ({ keyword: String(row.keyword), count: Number(row.count), averageResults: Number(row.averageResults ?? 0) })),
+  };
 }
 
 export async function getActivityLogs(limit = 200) {

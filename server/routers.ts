@@ -12,6 +12,7 @@ import { hashPassword, verifyPassword, createSessionToken } from "./_core/auth";
 import { parsePropertyFromPdfs } from "./_core/pdfParser";
 import * as db from "./db";
 import { nanoid } from "nanoid";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { DAILY_DM_UPLOAD_BYTES, DM_ATTACHMENT_TTL_MS, MAX_DM_ATTACHMENTS, MAX_DM_ATTACHMENT_TOTAL_BYTES, deleteDmAttachmentObject, putDmAttachment } from "./_core/dmAttachmentStorage";
 import {
@@ -28,8 +29,32 @@ import {
   notificationPropertyTitle,
   PROPERTY_TITLE_MAX_LENGTH,
 } from "@shared/propertyNotification";
+import { generatePropertySocialIntroduction } from "./_core/propertySocialIntroduction";
 
 const publicFeedbackAttempts = new Map<string, number[]>();
+const publicAnalyticsAttempts = new Map<string, number[]>();
+
+function publicRequestKey(req: { headers: Record<string, unknown>; socket?: { remoteAddress?: string } }) {
+  const forwarded = req.headers["x-forwarded-for"];
+  return (Array.isArray(forwarded) ? forwarded[0] : String(forwarded ?? "").split(",")[0]).trim() || req.socket?.remoteAddress || "unknown";
+}
+
+function checkPublicAnalyticsRateLimit(req: { headers: Record<string, unknown>; socket?: { remoteAddress?: string } }) {
+  const key = publicRequestKey(req);
+  const now = Date.now();
+  const recent = (publicAnalyticsAttempts.get(key) ?? []).filter(time => now - time < 60 * 60 * 1000);
+  if (recent.length >= 120) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "記録回数が上限に達しました" });
+  recent.push(now);
+  publicAnalyticsAttempts.set(key, recent);
+}
+
+function sanitizePublicSearchKeyword(value?: string | null) {
+  if (!value) return null;
+  return value.trim()
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[メールアドレス]")
+    .replace(/(?:\+?\d[\d\s()-]{8,}\d)/g, "[電話番号]")
+    .slice(0, 200) || null;
+}
 
 function checkPublicFeedbackRateLimit(req: {
   headers: Record<string, unknown>;
@@ -354,6 +379,8 @@ export const appRouter = router({
           address: z.string().trim().max(1000).optional(),
           url: z.string().trim().max(500).optional(),
           license: z.string().trim().max(128).optional(),
+          sourcePropertyId: z.number().int().positive().nullable().optional(),
+          sourceIntent: z.enum(["document", "inquiry"]).nullable().optional(),
           businessCardBase64: z.string().min(1).max(12_000_000),
           businessCardMimeType: z.enum([
             "image/jpeg",
@@ -364,6 +391,18 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
+        if (
+          input.sourcePropertyId &&
+          !(await db.getPublicSnsPropertyById(input.sourcePropertyId))
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "申請元の物件は現在公開されていません",
+          });
+        }
+        if (input.sourceIntent && !input.sourcePropertyId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "申請元の物件が指定されていません" });
+        }
         const email = input.email.trim().toLowerCase();
         if (await db.getUserByEmail(email)) {
           return {
@@ -409,6 +448,7 @@ export const appRouter = router({
             <p>氏名：${escapeHtml(input.name)}</p>
             <p>会社名：${escapeHtml(input.company)}</p>
             <p>メール：${escapeHtml(email)}</p>
+            ${input.sourcePropertyId ? `<p>申請元物件：PF-${input.sourcePropertyId}（${input.sourceIntent === "document" ? "物件資料希望" : "問い合わせ希望"}）</p>` : ""}
             <a href="${siteUrl}/v2/admin" style="display:inline-block;background:#173f70;color:white;padding:10px 24px;text-decoration:none;font-weight:600;">管理画面で確認する</a>
           </div>`
         ).catch(() => {});
@@ -1032,6 +1072,42 @@ JSONのみ返してください。`,
       db.getPublicPropertyHighlights()
     ),
     publicShowcase: publicProcedure.query(() => db.getPublicPropertyShowcase()),
+    publicSnsList: publicProcedure.query(() => db.getPublicSnsProperties()),
+    publicSnsDetail: publicProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .query(({ input }) => db.getPublicSnsPropertyById(input.id)),
+    recordPublicEvents: publicProcedure
+      .input(z.object({
+        visitorId: z.string().uuid(),
+        referrerDomain: z.string().trim().max(255).regex(/^[a-z0-9.-]+$/i).nullable().optional(),
+        events: z.array(z.object({
+          eventType: z.enum(["list_view", "property_impression", "search", "document_click", "inquiry_click", "registration_click"]),
+          propertyId: z.number().int().positive().nullable().optional(),
+          searchKeyword: z.string().trim().max(200).nullable().optional(),
+          resultCount: z.number().int().min(0).max(100000).nullable().optional(),
+        })).min(1).max(50),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        checkPublicAnalyticsRateLimit(ctx.req);
+        const propertyRequiredEventTypes = new Set(["property_impression", "document_click", "inquiry_click"]);
+        if (input.events.some(event => propertyRequiredEventTypes.has(event.eventType) && !event.propertyId)) throw new TRPCError({ code: "BAD_REQUEST", message: "対象物件が指定されていません" });
+        const propertyIds = [...new Set(input.events.map(event => event.propertyId).filter((id): id is number => Boolean(id)))];
+        for (const propertyId of propertyIds as number[]) {
+          if (!(await db.getPublicSnsPropertyById(propertyId))) throw new TRPCError({ code: "BAD_REQUEST", message: "対象物件は現在公開されていません" });
+        }
+        const visitorHash = createHash("sha256").update(`public:${input.visitorId}`).digest("hex");
+        const userAgent = ctx.req.headers["user-agent"];
+        await db.savePublicPageEvents(input.events.map(event => ({
+          visitorHash,
+          eventType: event.eventType,
+          propertyId: event.propertyId ?? null,
+          searchKeyword: event.eventType === "search" ? sanitizePublicSearchKeyword(event.searchKeyword) : null,
+          resultCount: event.eventType === "search" ? event.resultCount ?? null : null,
+          referrerDomain: input.referrerDomain ?? null,
+          userAgent: Array.isArray(userAgent) ? userAgent[0] : userAgent,
+        })));
+        return { success: true };
+      }),
     list: protectedProcedure.query(async ({ ctx }) => {
       return db.listProperties(ctx.user.id);
     }),
@@ -1167,6 +1243,20 @@ JSONのみ返してください。`,
               code: "BAD_REQUEST",
               message: "提案先限定の物件は一時保存できません",
             });
+          const socialIntroduction = await generatePropertySocialIntroduction({
+            name: input.name,
+            address: input.address,
+            type: input.type,
+            price: input.price ?? null,
+            priceNegotiable: input.priceNegotiable,
+            estimatedYield: input.estimatedYield ?? null,
+            landArea: input.landArea ?? null,
+            buildingArea: input.buildingArea ?? null,
+            transport: input.transport ?? null,
+            structure: input.structure ?? null,
+            buildingAge: input.buildingAge ?? null,
+            zoning: input.zoning ?? null,
+          });
           const result = await db.createProperty({
             userId: ctx.user.id,
             published: input.published === false ? 0 : 1,
@@ -1203,6 +1293,7 @@ JSONのみ返してください。`,
             comment: input.comment ?? null,
             heightDistrict: input.heightDistrict ?? null,
             otherRestrictions: input.otherRestrictions ?? null,
+            socialIntroduction,
             faqs: input.faqs ?? null,
             files: input.files ?? null,
             externalListingConsent:
@@ -3593,6 +3684,9 @@ ${propList}`,
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#039;");
         const { sendMail } = await import("./_core/mail");
+        const loginUrl = request.sourcePropertyId
+          ? `${PUBLIC_SITE_URL}/?returnTo=${encodeURIComponent(`/v2/property/${request.sourcePropertyId}`)}`
+          : `${PUBLIC_SITE_URL}/`;
         const emailSent = await sendMail(
           request.email,
           "【PropFlow】ご登録完了のお知らせ",
@@ -3601,10 +3695,11 @@ ${propList}`,
 <p>お問い合わせ、並びに、ご登録希望ありがとうございます。</p>
 <p>下記にてご登録をさせて頂きました。</p>
 <p>
-  ログインURL：<a href="https://propflow.jp/">https://propflow.jp/</a><br>
+  ログインURL：<a href="${loginUrl}">${loginUrl}</a><br>
   ログインID：${request.email}<br>
   初期パスワード：${initialPassword}
 </p>
+${request.sourcePropertyId ? `<p>登録申請のきっかけとなった物件：PF-${request.sourcePropertyId}<br>上記URLからログインすると、該当物件を確認できます。</p>` : ""}
 <p>パスワードは、ログイン後にマイページから変更頂けます。</p>
 <p>
   個別物件のご質問に関しては、<br>
@@ -3675,6 +3770,9 @@ ${propList}`,
 
     platformAnalytics: managementProcedure.query(async () => {
       return db.getPlatformAnalytics();
+    }),
+    publicPageAnalytics: managementProcedure.query(async () => {
+      return db.getPublicPageAnalytics();
     }),
 
     usageAnalytics: managementProcedure.query(async () => {

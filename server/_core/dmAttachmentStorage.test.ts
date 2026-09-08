@@ -11,13 +11,22 @@ describe("DM attachment validation", () => {
     expect(result.fileName).toBe("概要書.pdf");
   });
 
+  it("accepts a ZIP by its binary signature", () => {
+    const result = decodeAndValidateDmAttachment({
+      fileName: "物件資料一式.zip",
+      dataBase64: Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]).toString("base64"),
+    });
+    expect(result.mimeType).toBe("application/zip");
+    expect(result.fileName).toBe("物件資料一式.zip");
+  });
+
   it("does not trust a disguised extension", () => {
     expect(() =>
       decodeAndValidateDmAttachment({
         fileName: "document.pdf",
         dataBase64: Buffer.from("not a pdf").toString("base64"),
       })
-    ).toThrow("PDF、JPEG、PNG、WebPのみ");
+    ).toThrow("PDF、JPEG、PNG、WebP、ZIPのみ");
   });
 
   it("removes path and line-break characters from names", () => {

@@ -98,6 +98,7 @@ export const properties = mysqlTable("properties", {
   comment: text("comment"),
   heightDistrict: text("heightDistrict"),
   otherRestrictions: text("otherRestrictions"),
+  socialIntroduction: text("socialIntroduction"),
   faqs: json("faqs").$type<{ q: string; a: string }[]>(),
   files: json("files").$type<{ name: string; size: number }[]>(),
   viewCount: int("viewCount").default(0).notNull(),
@@ -230,6 +231,8 @@ export const registrationRequests = mysqlTable(
     address: text("address"),
     url: varchar("url", { length: 500 }),
     license: varchar("license", { length: 128 }),
+    sourcePropertyId: int("sourcePropertyId"),
+    sourceIntent: varchar("sourceIntent", { length: 20 }),
     businessCardBase64: longtext("businessCardBase64").notNull(),
       businessCardMimeType: varchar("businessCardMimeType", { length: 64 })
         .default("image/jpeg")
@@ -361,6 +364,26 @@ export const activityLogs = mysqlTable("activity_logs", {
   deviceType: varchar("deviceType", { length: 10 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export const publicPageEvents = mysqlTable(
+  "public_page_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    visitorHash: varchar("visitorHash", { length: 64 }).notNull(),
+    eventType: varchar("eventType", { length: 32 }).notNull(),
+    propertyId: int("propertyId"),
+    searchKeyword: varchar("searchKeyword", { length: 200 }),
+    resultCount: int("resultCount"),
+    referrerDomain: varchar("referrerDomain", { length: 255 }),
+    deviceType: varchar("deviceType", { length: 10 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    createdTypeIdx: index("idx_public_page_events_created_type").on(table.createdAt, table.eventType),
+    propertyCreatedIdx: index("idx_public_page_events_property_created").on(table.propertyId, table.createdAt),
+    visitorCreatedIdx: index("idx_public_page_events_visitor_created").on(table.visitorHash, table.createdAt),
+  })
+);
 
 export const generatedDocuments = mysqlTable("generated_documents", {
   id: int("id").autoincrement().primaryKey(),
