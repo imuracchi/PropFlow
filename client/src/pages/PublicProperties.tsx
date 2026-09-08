@@ -30,7 +30,7 @@ function getReferrerDomain() {
 function PublicHeader({ onRegistrationClick }: { onRegistrationClick?: () => void }) {
   const [, setLocation] = useLocation();
   return (
-    <header className="sticky top-0 z-40 border-b border-[#d8e0e9] bg-white/95 shadow-[0_2px_10px_rgba(23,63,112,.06)] backdrop-blur">
+    <header className="border-b border-[#d8e0e9] bg-white">
       <div className="mx-auto flex h-16 max-w-6xl items-center px-4 sm:px-6">
         <button onClick={() => setLocation("/")} aria-label="ログインページへ戻る" className="flex items-center gap-2 text-[#173f70]">
           <Building2 size={25} />
@@ -132,27 +132,32 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
   }, [preview, properties]);
   return (
     <div className="min-h-screen bg-[#f2f5f8] text-[#102d50]">
-      <PublicHeader onRegistrationClick={() => recordEvents([{ eventType: "registration_click" }])} />
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <p className="text-xs font-bold tracking-[.15em] text-[#5d7797]">PUBLIC PROPERTY</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2.5">
-          <h1 className="text-2xl font-bold sm:text-3xl">公開物件情報</h1>
-          <span className="inline-flex h-7 items-center bg-[#e8eef5] px-2.5 text-xs font-bold text-[#315d8b]">最大100件</span>
-        </div>
-        <div className="mt-5 border-l-4 border-[#d6a43e] bg-white px-4 py-4 shadow-[0_2px_8px_rgba(23,63,112,.05)]">
-          <div>
-            <p className="text-sm font-bold text-[#102d50]">会員ログイン後は、さらに多くの物件をご覧いただけます</p>
-            <p className="mt-1 text-xs leading-5 text-[#65748a]">会員限定物件の詳細確認、資料閲覧、問い合わせもご利用いただけます。</p>
+      <section className="fixed inset-x-0 top-0 z-40 border-b border-[#cbd6e2] bg-[#f2f5f8]/95 shadow-[0_3px_14px_rgba(23,63,112,.10)] backdrop-blur">
+        <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-bold sm:text-2xl">公開物件情報</h1>
+              <span className="inline-flex h-6 items-center bg-[#e2eaf3] px-2 text-[11px] font-bold text-[#315d8b]">最大100件</span>
+            </div>
+            <div className="flex gap-2">
+              <a href="/registration-request" onClick={() => recordEvents([{ eventType: "registration_click" }])} className="inline-flex h-9 items-center justify-center bg-[#173f70] px-3 text-[11px] font-bold text-white sm:px-4 sm:text-xs">新規登録（無料）</a>
+              <a href="/?returnTo=%2Fv2%2Fproperties" className="inline-flex h-9 items-center justify-center gap-1.5 border border-[#173f70] bg-white px-3 text-[11px] font-bold text-[#173f70] sm:px-4 sm:text-xs"><LogIn size={14} />会員ログイン</a>
+            </div>
+          </div>
+          <div className="mt-2 grid items-center gap-2 md:grid-cols-[minmax(250px,.8fr)_minmax(360px,1.2fr)]">
+            <p className="text-[11px] font-semibold leading-5 text-[#526176] sm:text-xs">ログイン後は、会員限定物件を含むさらに多くの物件をご覧いただけます。</p>
+            <form onSubmit={event => { event.preventDefault(); setAppliedKeyword(keyword); const normalized = keyword.trim().toLocaleLowerCase("ja"); const resultCount = properties?.filter(property => [property.name, property.type, property.area, buildPublicCardIntroduction({ ...property, address: property.area }), property.id, `PF-${property.id}`].some(value => String(value ?? "").toLocaleLowerCase("ja").includes(normalized))).length ?? 0; recordEvents([{ eventType: "search", searchKeyword: keyword.trim() || null, resultCount }]); }} className="flex gap-2">
+              <div className="flex min-w-0 flex-1 items-center border border-[#b9c8d8] bg-white focus-within:border-[#173f70] focus-within:ring-1 focus-within:ring-[#173f70]">
+                <Search className="ml-3 shrink-0 text-[#65748a]" size={16} />
+                <input value={keyword} onChange={event => setKeyword(event.target.value)} type="search" placeholder="物件番号・物件名・物件種別・エリアから検索" aria-label="公開物件をキーワード検索" className="h-10 min-w-0 flex-1 bg-transparent px-2.5 text-xs outline-none placeholder:text-[#8a97a6] sm:text-sm" />
+                {keyword && <button type="button" onClick={() => { setKeyword(""); setAppliedKeyword(""); }} aria-label="検索キーワードを消去" className="mr-1 grid size-8 shrink-0 place-items-center text-[#65748a]"><X size={16} /></button>}
+              </div>
+              <button type="submit" className="h-10 shrink-0 bg-[#173f70] px-4 text-xs font-bold text-white">検索</button>
+            </form>
           </div>
         </div>
-        <form onSubmit={event => { event.preventDefault(); setAppliedKeyword(keyword); const normalized = keyword.trim().toLocaleLowerCase("ja"); const resultCount = properties?.filter(property => [property.name, property.type, property.area, buildPublicCardIntroduction({ ...property, address: property.area }), property.id, `PF-${property.id}`].some(value => String(value ?? "").toLocaleLowerCase("ja").includes(normalized))).length ?? 0; recordEvents([{ eventType: "search", searchKeyword: keyword.trim() || null, resultCount }]); }} className="mt-5 flex max-w-2xl gap-2">
-          <div className="flex min-w-0 flex-1 items-center border border-[#b9c8d8] bg-white focus-within:border-[#173f70] focus-within:ring-1 focus-within:ring-[#173f70]">
-            <Search className="ml-4 shrink-0 text-[#65748a]" size={18} />
-            <input value={keyword} onChange={event => setKeyword(event.target.value)} type="search" placeholder="物件番号・物件名・物件種別・エリアから検索" aria-label="公開物件をキーワード検索" className="h-12 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-[#8a97a6]" />
-            {keyword && <button type="button" onClick={() => { setKeyword(""); setAppliedKeyword(""); }} aria-label="検索キーワードを消去" className="mr-1 grid size-9 shrink-0 place-items-center text-[#65748a]"><X size={17} /></button>}
-          </div>
-          <button type="submit" className="h-12 shrink-0 bg-[#173f70] px-5 text-sm font-bold text-white">検索</button>
-        </form>
+      </section>
+      <main className="mx-auto max-w-5xl px-4 pb-8 pt-[205px] sm:px-6 sm:pt-[175px] md:pt-[130px]">
         {!preview && query.isLoading ? (
           <p className="py-16 text-center text-sm text-[#65748a]">読み込み中…</p>
         ) : filteredProperties?.length ? (
