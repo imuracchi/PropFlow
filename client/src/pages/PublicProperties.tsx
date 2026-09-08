@@ -135,7 +135,10 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
       <PublicHeader onRegistrationClick={() => recordEvents([{ eventType: "registration_click" }])} />
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <p className="text-xs font-bold tracking-[.15em] text-[#5d7797]">PUBLIC PROPERTY</p>
-        <h1 className="mt-2 text-2xl font-bold sm:text-3xl">公開物件情報</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-2.5">
+          <h1 className="text-2xl font-bold sm:text-3xl">公開物件情報</h1>
+          <span className="inline-flex h-7 items-center bg-[#e8eef5] px-2.5 text-xs font-bold text-[#315d8b]">最大100件</span>
+        </div>
         <div className="mt-5 flex flex-col gap-3 border-l-4 border-[#d6a43e] bg-white px-4 py-4 shadow-[0_2px_8px_rgba(23,63,112,.05)] sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-bold text-[#102d50]">会員ログイン後は、さらに多くの物件をご覧いただけます</p>
