@@ -141,9 +141,12 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
             <p className="text-sm font-bold text-[#102d50]">会員ログイン後は、さらに多くの物件をご覧いただけます</p>
             <p className="mt-1 text-xs leading-5 text-[#65748a]">会員限定物件の詳細確認、資料閲覧、問い合わせもご利用いただけます。</p>
           </div>
-          <a href="/?returnTo=%2Fv2%2Fproperties" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 border border-[#173f70] px-4 text-xs font-bold text-[#173f70]">
-            <LogIn size={15} />会員ログイン
-          </a>
+          <div className="grid shrink-0 grid-cols-2 gap-2">
+            <a href="/registration-request" onClick={() => recordEvents([{ eventType: "registration_click" }])} className="inline-flex h-10 items-center justify-center bg-[#173f70] px-4 text-xs font-bold text-white">新規登録（無料）</a>
+            <a href="/?returnTo=%2Fv2%2Fproperties" className="inline-flex h-10 items-center justify-center gap-2 border border-[#173f70] px-4 text-xs font-bold text-[#173f70]">
+              <LogIn size={15} />会員ログイン
+            </a>
+          </div>
         </div>
         <form onSubmit={event => { event.preventDefault(); setAppliedKeyword(keyword); const normalized = keyword.trim().toLocaleLowerCase("ja"); const resultCount = properties?.filter(property => [property.name, property.type, property.area, buildPublicCardIntroduction({ ...property, address: property.area }), property.id, `PF-${property.id}`].some(value => String(value ?? "").toLocaleLowerCase("ja").includes(normalized))).length ?? 0; recordEvents([{ eventType: "search", searchKeyword: keyword.trim() || null, resultCount }]); }} className="mt-5 flex max-w-2xl gap-2">
           <div className="flex min-w-0 flex-1 items-center border border-[#b9c8d8] bg-white focus-within:border-[#173f70] focus-within:ring-1 focus-within:ring-[#173f70]">
@@ -164,7 +167,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
                   <div className="flex items-center justify-between gap-3 text-[11px] font-bold text-[#5d7797]"><span className="bg-[#edf3f8] px-2 py-1 text-[#315d8b]">{property.type}</span><span className="text-sm tracking-wide text-[#173f70]">PF-{property.id}</span></div>
                   <h2 className="mt-3 line-clamp-2 min-h-12 text-[17px] font-bold leading-6 text-[#102d50]">{property.name}</h2>
                   <div className="mt-3 flex min-h-7 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-[#e1e7ed] pb-3"><p className="text-sm text-[#65748a]">{property.area}</p><p className="text-lg font-bold text-[#173f70]">{propertyPriceLabel(property.price, property.priceNegotiable)}</p></div>
-                  <p className="mt-3 line-clamp-2 min-h-12 text-[13px] leading-6 text-[#3f5269]">{buildPublicCardIntroduction({ ...property, address: property.area })}</p>
+                  <p className="mt-3 min-h-12 text-[13px] leading-6 text-[#3f5269]">{buildPublicCardIntroduction({ ...property, address: property.area })}</p>
                   <PublicPropertyFields property={property} />
                   <div className="mt-auto grid gap-2 pt-5">
                     <button disabled={!property.hasPdf} onClick={() => { if (property.hasPdf) { recordEvents([{ eventType: "document_click", propertyId: property.id }]); setRegistration({ propertyId: property.id, intent: "document" }); } }} className="flex h-12 items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-[#9aa8b8]"><FileText size={18} />{property.hasPdf ? "物件資料が欲しい" : "物件資料は未登録"}</button>
