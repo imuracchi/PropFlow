@@ -141,7 +141,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
             </div>
             <div className="flex gap-2">
               <a href="/registration-request" onClick={() => recordEvents([{ eventType: "registration_click" }])} className="inline-flex h-9 items-center justify-center bg-[#173f70] px-3 text-[11px] font-bold text-white sm:px-4 sm:text-xs">新規登録（無料）</a>
-              <a href="/?returnTo=%2Fv2%2Fproperties" className="inline-flex h-9 items-center justify-center gap-1.5 border border-[#173f70] bg-white px-3 text-[11px] font-bold text-[#173f70] sm:px-4 sm:text-xs"><LogIn size={14} />会員ログイン</a>
+              <a href="/?returnTo=%2Fv2%2Fproperties" className="inline-flex h-9 items-center justify-center border border-[#173f70] bg-white px-3 text-[11px] font-bold text-[#173f70] sm:px-4 sm:text-xs">← ログイン画面へ</a>
             </div>
           </div>
           <div className="mt-2 grid items-center gap-2 md:grid-cols-[minmax(250px,.8fr)_minmax(360px,1.2fr)]">
