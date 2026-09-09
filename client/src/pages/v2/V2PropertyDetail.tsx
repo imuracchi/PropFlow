@@ -13,6 +13,7 @@ import {
   FileText,
   Heart,
   Loader2,
+  Mail,
   Map,
   MapPin,
   MessageCircle,
@@ -349,6 +350,10 @@ export default function V2PropertyDetail({
   const property: any = preview
     ? (previewOverride ?? previewProperty)
     : propertyQuery.data;
+  const externalSharesQuery = trpc.externalFileShare.list.useQuery(
+    { propertyId },
+    { enabled: !preview && !!propertyId && !!user && property?.userId === user.id }
+  );
   const files: any[] = preview
     ? previewFileList
     : (filesQuery.data ?? []).filter((f: any) => f.category !== "photo");
@@ -368,6 +373,9 @@ export default function V2PropertyDetail({
   const uploadFile = trpc.property.uploadFile.useMutation();
   const deleteFile = trpc.property.deleteFile.useMutation();
   const setFileVisibility = trpc.property.setFileVisibility.useMutation();
+  const createExternalShare = trpc.externalFileShare.create.useMutation();
+  const sendExternalShareEmail = trpc.externalFileShare.sendEmail.useMutation();
+  const revokeExternalShare = trpc.externalFileShare.revoke.useMutation();
   const setPublished = trpc.property.setPublished.useMutation({
     onSuccess: async () => {
       await propertyQuery.refetch();
@@ -459,6 +467,12 @@ export default function V2PropertyDetail({
   const [introOpen, setIntroOpen] = useState(false);
   const [ownerToolsOpen, setOwnerToolsOpen] = useState(false);
   const [shareTextOpen, setShareTextOpen] = useState(false);
+  const [externalShareOpen, setExternalShareOpen] = useState(false);
+  const [externalShareHistoryOpen, setExternalShareHistoryOpen] = useState(false);
+  const [externalShareFileIds, setExternalShareFileIds] = useState<number[]>([]);
+  const [generatedExternalShareUrl, setGeneratedExternalShareUrl] = useState("");
+  const [externalShareRecipientEmail, setExternalShareRecipientEmail] = useState("");
+  const [externalShareEmailStatus, setExternalShareEmailStatus] = useState("");
   const [sharePromptFromPublish, setSharePromptFromPublish] = useState(false);
   const [publishNotifyOpen, setPublishNotifyOpen] = useState(false);
   const [publishNotifyChannels, setPublishNotifyChannels] = useState({
@@ -988,10 +1002,91 @@ export default function V2PropertyDetail({
       </V2Layout>
     );
 
+  const previewExternalShares = [
+    { id: -1, files: [{ name: "物件概要書.pdf" }, { name: "レントロール.pdf" }], recipientEmail: null, viewCount: 3, expiresAt: new Date(Date.now() + 2 * 86400000), revokedAt: null, createdAt: new Date(), accesses: [{ email: "sample@example.jp", acceptedAt: new Date(), accessCount: 3 }] },
+    { id: -2, files: [{ name: "登記簿謄本.pdf" }], recipientEmail: "buyer@example.jp", viewCount: 1, expiresAt: new Date(Date.now() - 86400000), revokedAt: null, createdAt: new Date(Date.now() - 86400000), accesses: [{ email: "buyer@example.jp", acceptedAt: new Date(), accessCount: 1 }] },
+  ];
+  const externalShareHistory = (preview ? previewExternalShares : (externalSharesQuery.data ?? [])).slice(0, 30);
+  const isExternalShareActive = (share: any) => !share.revokedAt && new Date(share.expiresAt).getTime() > Date.now();
+  const orderedExternalShareHistory = [...externalShareHistory].sort((a: any, b: any) => Number(isExternalShareActive(b)) - Number(isExternalShareActive(a)) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const renderExternalShareHistoryItem = (share: any) => {
+    const active = isExternalShareActive(share);
+    const status = share.revokedAt ? "停止済み" : active ? "共有中" : "期限切れ";
+    const downloadedEmails = [...new Set((share.accesses ?? []).filter((access: any) => access.accessCount > 0).map((access: any) => access.email as string))];
+    return <div key={share.id} className="mt-2 border border-[#d9e0e8] bg-[#f4f6f8] p-3"><div className="flex items-center gap-2"><div className="min-w-0 flex-1"><div className="flex items-start gap-2"><p className="min-w-0 flex-1 text-[12px] font-semibold text-[#263b58]">{(share.files ?? []).map((file: any) => file.name).join("、")}</p><span className={`shrink-0 px-2 py-0.5 text-[9px] font-bold ${active ? "bg-[#e8f3ec] text-[#27613c]" : "bg-[#e5e8ec] text-[#65748a]"}`}>{status}</span></div><p className="mt-1 text-[10px] font-bold text-[#173f70]">{share.recipientEmail ? `メール送信：${share.recipientEmail}` : "リンク作成"}</p>{downloadedEmails.length > 0 && <p className="mt-1 break-all text-[10px] font-semibold text-[#405775]">ダウンロード：{downloadedEmails.join("、")}</p>}<p className="mt-1 text-[10px] text-[#65748a]">閲覧 {share.viewCount}回・期限 {new Date(share.expiresAt).toLocaleDateString("ja-JP")}</p></div>{active && <button onClick={async () => { if (preview) return; await revokeExternalShare.mutateAsync({ shareId: share.id }); await externalSharesQuery.refetch(); }} className="shrink-0 text-[11px] font-bold text-[#a72e2e]">共有停止</button>}</div></div>;
+  };
+
   return (
     <V2Layout preview={preview}>
       {viewingFile && (
         <FileViewerModal fileId={viewingFile.id} name={viewingFile.name} onClose={() => setViewingFile(null)} />
+      )}
+      {externalShareOpen && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center" onClick={() => setExternalShareOpen(false)}>
+          <div className="max-h-[90vh] w-full overflow-y-auto bg-white p-5 sm:max-w-2xl" onClick={event => event.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-[18px] font-bold text-[#102d50]">会員外へ資料を共有</h3>
+                <p className="mt-1 text-[12px] leading-5 text-[#65748a]">選んだPDF（最大10件）だけを、期限付きURLで共有します。URLを知っている方は会員登録なしで閲覧できます。</p>
+              </div>
+              <button onClick={() => setExternalShareOpen(false)} className="grid size-8 shrink-0 place-items-center text-[#65748a]" aria-label="閉じる"><X size={18}/></button>
+            </div>
+            <div className="mt-4 space-y-2">
+              {files.map(file => (
+                <label key={file.id} className={`flex cursor-pointer items-center border p-3 ${externalShareFileIds.includes(file.id) ? "border-[#173f70] bg-[#edf3f9]" : "border-[#d9e0e8]"}`}>
+                  <input type="checkbox" checked={externalShareFileIds.includes(file.id)} onChange={() => { setExternalShareFileIds(current => current.includes(file.id) ? current.filter(id => id !== file.id) : current.length < 10 ? [...current, file.id] : current); setGeneratedExternalShareUrl(""); }} className="size-4 accent-[#173f70]"/>
+                  <FileText size={17} className="ml-3 shrink-0 text-[#173f70]"/>
+                  <span className="ml-2 min-w-0 flex-1 truncate text-[13px] font-semibold text-[#263b58]">{file.name}</span>
+                  <span className={`ml-2 px-2 py-0.5 text-[10px] font-bold ${file.visible === 0 ? "bg-[#fff0c9] text-[#8b5a08]" : "bg-[#e8f3ec] text-[#27613c]"}`}>{file.visible === 0 ? "非公開" : "公開中"}</span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-4 text-[12px] font-bold text-[#526176]">有効期限：発行から3日間</p>
+            <p className="mt-3 bg-[#fff8e8] px-3 py-2 text-[11px] leading-5 text-[#75500c]">リンクは転送できます。共有先と資料を確認し、不要になったら共有を停止してください。</p>
+            <p className="mt-2 border-l-4 border-[#a72e2e] bg-[#fff3f1] px-3 py-2 text-[10px] leading-5 text-[#7f2929]">資料の選択、送付先、送付行為および送付後の取り扱いは掲載者の責任で行ってください。PropFlowは、会員外への資料送付・共有に関して一切の責任を負いません。</p>
+            {generatedExternalShareUrl && (
+              <div className="mt-4 bg-[#edf3f9] p-3">
+                <p className="text-[11px] font-bold text-[#173f70]">共有リンクを作成しました</p>
+                <p className="mt-1 break-all text-[11px] text-[#526176]">{generatedExternalShareUrl}</p>
+                <button onClick={async () => { await navigator.clipboard.writeText(generatedExternalShareUrl); }} className="mt-2 flex h-9 items-center gap-2 bg-[#173f70] px-4 text-[12px] font-bold text-white"><Copy size={14}/>リンクをコピー</button>
+              </div>
+            )}
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <div className="border border-[#d9e0e8] p-3">
+                <p className="flex items-center gap-2 text-[12px] font-bold text-[#102d50]"><Copy size={15}/>リンクを作成</p>
+                <p className="mt-1 text-[10px] leading-5 text-[#65748a]">ダウンロード用URLをコピーして貼り付けられます。URLをクリックしメールアドレスを入れればダウンロードが可能になります。</p>
+                <button disabled={!externalShareFileIds.length || createExternalShare.isPending} onClick={async () => { if (!externalShareFileIds.length) return; if (preview) { setGeneratedExternalShareUrl("https://propflow.jp/shared/document/sample-link"); return; } const result = await createExternalShare.mutateAsync({ fileIds: externalShareFileIds }); setGeneratedExternalShareUrl(result.url); await externalSharesQuery.refetch(); }} className="mt-2 h-10 w-full bg-[#173f70] px-2 text-[11px] font-bold text-white disabled:opacity-40">{createExternalShare.isPending ? "作成中…" : "リンクを作成"}</button>
+              </div>
+              <div className="border border-[#d9e0e8] p-3">
+                <p className="flex items-center gap-2 text-[12px] font-bold text-[#102d50]"><Mail size={15}/>メールで送る</p>
+                <p className="mt-1 text-[10px] leading-5 text-[#65748a]">特定の人に、ダウンロード用の専用URLを送ります。</p>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <input type="email" value={externalShareRecipientEmail} onChange={event => { setExternalShareRecipientEmail(event.target.value); setExternalShareEmailStatus(""); }} placeholder="送付先メールアドレス" className="h-10 min-w-0 flex-1 border border-[#cbd5df] px-3 text-[12px] outline-none focus:border-[#173f70]"/>
+                <button disabled={!externalShareFileIds.length || !externalShareRecipientEmail.trim() || sendExternalShareEmail.isPending} onClick={async () => { if (!externalShareFileIds.length) return; try { if (preview) { setExternalShareEmailStatus("送信しました"); return; } await sendExternalShareEmail.mutateAsync({ fileIds: externalShareFileIds, email: externalShareRecipientEmail.trim() }); setExternalShareEmailStatus("送信しました"); await externalSharesQuery.refetch(); } catch (error) { setExternalShareEmailStatus(error instanceof Error ? error.message : "送信できませんでした"); } }} className="h-10 w-full bg-[#173f70] px-4 text-[11px] font-bold text-white disabled:opacity-40 sm:w-40">{sendExternalShareEmail.isPending ? "送信中…" : "メールで送る"}</button>
+                </div>
+                {externalShareEmailStatus && <p className="mt-2 text-[11px] font-bold text-[#27613c]">{externalShareEmailStatus}</p>}
+              </div>
+            </div>
+            <div className="mt-5 border-t-2 border-[#173f70] pt-4">
+              <div className="flex items-center gap-3"><p className="text-[14px] font-bold text-[#102d50]">共有履歴</p>{externalShareHistory.length > 0 && <button onClick={() => setExternalShareHistoryOpen(true)} className="text-[11px] font-bold text-[#173f70] underline underline-offset-2">すべて見る</button>}<span className="ml-auto text-[10px] text-[#65748a]">最新2件</span></div>
+              {orderedExternalShareHistory.slice(0, 2).map(renderExternalShareHistoryItem)}
+              {!externalShareHistory.length && <p className="mt-3 bg-[#f4f6f8] px-3 py-4 text-center text-[11px] text-[#65748a]">共有履歴はありません。</p>}
+            </div>
+            <div className="mt-5 flex gap-2">
+              <button onClick={() => setExternalShareOpen(false)} className="h-11 w-full border border-[#9aabc0] text-[13px] font-bold text-[#526176]">閉じる</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {externalShareHistoryOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end bg-black/50 sm:items-center sm:justify-center" onClick={() => setExternalShareHistoryOpen(false)}>
+          <div className="max-h-[85vh] w-full overflow-y-auto bg-white p-5 sm:max-w-xl" onClick={event => event.stopPropagation()}>
+            <div className="flex items-center justify-between"><div><h3 className="text-[18px] font-bold text-[#102d50]">共有履歴</h3><p className="mt-1 text-[11px] text-[#65748a]">直近30件を表示しています</p></div><button onClick={() => setExternalShareHistoryOpen(false)} className="grid size-8 place-items-center text-[#65748a]" aria-label="共有履歴を閉じる"><X size={18}/></button></div>
+            <section className="mt-5"><h4 className="text-[13px] font-bold text-[#27613c]">共有中（{orderedExternalShareHistory.filter(isExternalShareActive).length}件）</h4>{orderedExternalShareHistory.filter(isExternalShareActive).map(renderExternalShareHistoryItem)}{!orderedExternalShareHistory.some(isExternalShareActive) && <p className="mt-2 bg-[#f4f6f8] p-3 text-[11px] text-[#65748a]">現在共有中の資料はありません。</p>}</section>
+            <section className="mt-6 border-t border-[#d9e0e8] pt-5"><h4 className="text-[13px] font-bold text-[#65748a]">停止済み・期限切れ（{orderedExternalShareHistory.filter(share => !isExternalShareActive(share)).length}件）</h4>{orderedExternalShareHistory.filter(share => !isExternalShareActive(share)).map(renderExternalShareHistoryItem)}{orderedExternalShareHistory.every(isExternalShareActive) && <p className="mt-2 bg-[#f4f6f8] p-3 text-[11px] text-[#65748a]">停止済み・期限切れの履歴はありません。</p>}</section>
+            <button onClick={() => setExternalShareHistoryOpen(false)} className="mt-6 h-11 w-full border border-[#9aabc0] text-[13px] font-bold text-[#526176]">閉じる</button>
+          </div>
+        </div>
       )}
       {scheduleEditorOpen && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center" onClick={() => setScheduleEditorOpen(false)}>
@@ -1301,6 +1396,7 @@ export default function V2PropertyDetail({
                       )}
                       資料を追加
                     </button>
+                    {(preview || isRegistrant) && files.length > 0 && <div className="flex shrink-0 items-center gap-2"><button onClick={() => { setExternalShareFileIds(files[0]?.id ? [files[0].id] : []); setGeneratedExternalShareUrl(""); setExternalShareRecipientEmail(""); setExternalShareEmailStatus(""); setExternalShareOpen(true); }} className="flex items-center gap-1 border border-[#173f70] px-2.5 py-2 text-[11px] font-bold text-[#173f70]"><Share2 size={14}/>会員外へ共有</button><button onClick={() => { setExternalShareFileIds(files[0]?.id ? [files[0].id] : []); setGeneratedExternalShareUrl(""); setExternalShareRecipientEmail(""); setExternalShareEmailStatus(""); setExternalShareOpen(true); }} className="text-[10px] font-bold text-[#173f70] underline underline-offset-2">共有履歴 {preview ? 2 : (externalSharesQuery.data ?? []).length}件</button></div>}
                   </>
                 )}
               </div>

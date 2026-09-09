@@ -159,6 +159,65 @@ export const propertyFiles = mysqlTable("property_files", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const externalFileShares = mysqlTable(
+  "external_file_shares",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    propertyId: int("propertyId").notNull(),
+    fileId: int("fileId").notNull(),
+    fileIdsJson: text("fileIdsJson").notNull(),
+    ownerId: int("ownerId").notNull(),
+    recipientEmail: varchar("recipientEmail", { length: 320 }),
+    tokenHash: varchar("tokenHash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expiresAt").notNull(),
+    revokedAt: timestamp("revokedAt"),
+    viewCount: int("viewCount").default(0).notNull(),
+    lastViewedAt: timestamp("lastViewedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    tokenUnique: uniqueIndex("uq_external_file_shares_token").on(table.tokenHash),
+    ownerPropertyIdx: index("idx_external_file_shares_owner_property").on(table.ownerId, table.propertyId),
+    fileIdx: index("idx_external_file_shares_file").on(table.fileId),
+  })
+);
+
+export const externalFileShareAccesses = mysqlTable(
+  "external_file_share_accesses",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    shareId: int("shareId").notNull(),
+    email: varchar("email", { length: 320 }).notNull(),
+    accessTokenHash: varchar("accessTokenHash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expiresAt").notNull(),
+    acceptedAt: timestamp("acceptedAt").defaultNow().notNull(),
+    lastAccessedAt: timestamp("lastAccessedAt"),
+    accessCount: int("accessCount").default(0).notNull(),
+  },
+  table => ({
+    tokenUnique: uniqueIndex("uq_external_file_share_access_token").on(table.accessTokenHash),
+    shareIdx: index("idx_external_file_share_access_share").on(table.shareId),
+  })
+);
+
+export const publicPropertyDocumentAccesses = mysqlTable(
+  "public_property_document_accesses",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    propertyId: int("propertyId").notNull(),
+    email: varchar("email", { length: 320 }).notNull(),
+    accessTokenHash: varchar("accessTokenHash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expiresAt").notNull(),
+    downloadedAt: timestamp("downloadedAt"),
+    downloadCount: int("downloadCount").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    tokenUnique: uniqueIndex("uq_public_property_document_access_token").on(table.accessTokenHash),
+    propertyCreatedIdx: index("idx_public_property_document_property_created").on(table.propertyId, table.createdAt),
+  })
+);
+
 export const directMessages = mysqlTable(
   "direct_messages",
   {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Building2, CheckCircle, FileText, Loader2, Lock, Mail, Search } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { buildPublicCardIntroduction, propertyPriceLabel } from "@shared/propertyShareText";
+import { PublicDocumentDialog } from "./PublicProperties";
 
 const CLOSING_REPORT_EXPIRES_AT = new Date("2026-09-27T00:00:00+09:00").getTime();
 type RegistrationIntent = { propertyId: number; intent: "document" | "inquiry" };
@@ -11,6 +12,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [registration, setRegistration] = useState<RegistrationIntent | null>(null);
+  const [documentRequest, setDocumentRequest] = useState<{ propertyId: number; propertyName: string } | null>(null);
   const loginMutation = trpc.auth.login.useMutation();
   const publicPropertiesQuery = trpc.property.publicSnsList.useQuery(undefined, { staleTime: 300_000, retry: false });
   const previousWeekQuery = trpc.property.previousWeekSummary.useQuery(undefined, { staleTime: 300_000, retry: false });
@@ -88,7 +90,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
                     <div className="mt-2 flex min-h-7 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-[#e1e7ed] pb-2"><p className="text-xs text-[#65748a]">{property.area}</p><p className="text-base font-bold text-[#173f70]">{propertyPriceLabel(property.price, property.priceNegotiable)}</p></div>
                     <p className="mt-3 min-h-12 text-[12px] leading-6 text-[#3f5269]">{buildPublicCardIntroduction({ ...property, address: property.area })}</p>
                     <div className="mt-auto grid gap-2 pt-4">
-                      <button type="button" disabled={!property.hasPdf} onClick={() => property.hasPdf && setRegistration({ propertyId: property.id, intent: "document" })} className="flex h-11 items-center justify-center gap-2 bg-[#173f70] text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-[#9aa8b8]"><FileText size={16} />{property.hasPdf ? "物件資料が欲しい" : "物件資料は未登録"}</button>
+                      <button type="button" onClick={() => setDocumentRequest({ propertyId: property.id, propertyName: property.name })} className="flex h-11 items-center justify-center gap-2 bg-[#173f70] text-xs font-bold text-white"><FileText size={16} />物件概要書を見る</button>
                       <button type="button" onClick={() => setRegistration({ propertyId: property.id, intent: "inquiry" })} className="h-11 border border-[#173f70] text-xs font-bold text-[#173f70]">問い合わせする</button>
                     </div>
                   </div>
@@ -100,6 +102,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
       </main>
       <footer className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-[#7b8795]"><a href="/terms.html">利用規約</a><a href="/privacy.html">個人情報保護方針</a><span>運営：G-Spec合同会社</span></footer>
       {registration && <div className="fixed inset-0 z-50 grid place-items-end bg-black/55 sm:place-items-center" onClick={() => setRegistration(null)}><div role="dialog" aria-modal="true" className="w-full bg-white p-6 sm:max-w-md sm:border-t-4 sm:border-t-[#173f70]" onClick={event => event.stopPropagation()}><h2 className="text-xl font-bold">{purpose}には会員登録が必要です</h2><p className="mt-3 text-sm leading-7 text-[#526176]">{purpose}には、PropFlowへの会員登録が必要です。PropFlowは不動産事業者向けのサービスです。</p><a href={`/registration-request?sourcePropertyId=${registration.propertyId}&sourceIntent=${registration.intent}`} className="mt-5 flex h-12 w-full items-center justify-center bg-[#173f70] text-sm font-bold text-white">登録申請する</a><a href={`/?returnTo=${encodeURIComponent(`/v2/property/${registration.propertyId}`)}`} className="mt-3 flex h-12 w-full items-center justify-center border border-[#173f70] text-sm font-bold text-[#173f70]">既に会員の方はログイン</a><button type="button" onClick={() => setRegistration(null)} className="mt-4 w-full text-sm font-semibold text-[#65748a]">閉じる</button></div></div>}
+      {documentRequest && <PublicDocumentDialog propertyId={documentRequest.propertyId} propertyName={documentRequest.propertyName} onClose={() => setDocumentRequest(null)} />}
     </div>
   );
 }

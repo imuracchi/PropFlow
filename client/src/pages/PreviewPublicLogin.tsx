@@ -1,6 +1,7 @@
 import { Building2, FileText, Lock, Mail, Search } from "lucide-react";
 import { useState } from "react";
 import { propertyPriceLabel } from "@shared/propertyShareText";
+import { PublicDocumentDialog } from "./PublicProperties";
 
 const properties = [
   { id: 242, name: "都内・一棟収益マンション", type: "一棟マンション", area: "東京都新宿区", price: 328_000_000, intro: "東京都新宿区の一棟マンションです。RC造、最寄駅徒歩6分。", land: "184.2㎡", building: "612.4㎡", structure: "RC造 ／ 2012年3月", transport: "最寄駅徒歩6分", hasPdf: true },
@@ -8,7 +9,7 @@ const properties = [
   { id: 231, name: "郊外ロードサイド店舗", type: "店舗", area: "埼玉県さいたま市", price: null, intro: "さいたま市のロードサイド店舗です。幹線道路沿いの事業用物件です。", land: "820㎡", building: "315㎡", structure: "鉄骨造 ／ 2018年6月", transport: "－", hasPdf: false },
 ];
 
-function PreviewPropertyCard({ property, onSelect }: { property: typeof properties[number]; onSelect: (intent: "document" | "inquiry") => void }) {
+function PreviewPropertyCard({ property, onSelect, onDocument }: { property: typeof properties[number]; onSelect: (intent: "inquiry") => void; onDocument: () => void }) {
   return (
     <article className="flex border border-[#ccd7e3] bg-white shadow-[0_2px_10px_rgba(23,63,112,.06)]">
       <div className="flex w-full flex-col p-5">
@@ -22,7 +23,7 @@ function PreviewPropertyCard({ property, onSelect }: { property: typeof properti
           <div className="grid grid-cols-[6.5rem_1fr] gap-2"><dt className="text-[#65748a]">交通</dt><dd>{property.transport}</dd></div>
         </dl>
         <div className="mt-auto grid gap-2 pt-5">
-          <button onClick={() => property.hasPdf && onSelect("document")} disabled={!property.hasPdf} className="flex h-11 items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white disabled:bg-[#9aa8b8]"><FileText size={17}/>{property.hasPdf ? "物件資料が欲しい" : "物件資料は未登録"}</button>
+          <button onClick={onDocument} className="flex h-11 items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white"><FileText size={17}/>物件概要書を見る</button>
           <button onClick={() => onSelect("inquiry")} className="h-11 border border-[#173f70] text-sm font-bold text-[#173f70]">問い合わせする</button>
         </div>
       </div>
@@ -32,6 +33,7 @@ function PreviewPropertyCard({ property, onSelect }: { property: typeof properti
 
 export default function PreviewPublicLogin() {
   const [registration, setRegistration] = useState<{ propertyId: number; intent: "document" | "inquiry" } | null>(null);
+  const [documentRequest, setDocumentRequest] = useState<{ propertyId: number; propertyName: string } | null>(null);
   const purpose = registration?.intent === "document" ? "物件資料の閲覧" : "物件への問い合わせ";
   return (
     <div className="min-h-screen bg-[#eef2f6] px-4 py-6 text-[#102d50] sm:py-10">
@@ -66,11 +68,12 @@ export default function PreviewPublicLogin() {
         </section>
         <section className="border-t border-[#d7e0e9] bg-[#f5f7fa] px-4 py-8 sm:px-7 lg:px-9">
           <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[.18em] text-[#5d7797]">PUBLIC PROPERTY</p><h2 className="mt-1 text-xl font-bold sm:text-2xl">公開中の物件</h2></div><a href="/public/preview" className="inline-flex h-10 items-center justify-center gap-2 bg-[#173f70] px-5 text-xs font-bold text-white shadow-sm transition hover:bg-[#0f3159]"><Search size={16}/>公開物件をもっと見る</a></div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{properties.map(property => <PreviewPropertyCard key={property.id} property={property} onSelect={intent => setRegistration({ propertyId: property.id, intent })}/>)}</div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{properties.map(property => <PreviewPropertyCard key={property.id} property={property} onSelect={intent => setRegistration({ propertyId: property.id, intent })} onDocument={() => setDocumentRequest({ propertyId: property.id, propertyName: property.name })}/>)}</div>
         </section>
       </main>
       <p className="mt-5 text-center text-[11px] text-[#7b8795]">プレビュー画面です。ボタン操作による送信は行われません。</p>
       {registration && <div className="fixed inset-0 z-50 grid place-items-end bg-black/55 sm:place-items-center" onClick={() => setRegistration(null)}><div role="dialog" aria-modal="true" className="w-full bg-white p-6 text-[#102d50] sm:max-w-md sm:border-t-4 sm:border-t-[#173f70]" onClick={event => event.stopPropagation()}><h2 className="text-xl font-bold">{purpose}には会員登録が必要です</h2><p className="mt-3 text-sm leading-7 text-[#526176]">{purpose}には、PropFlowへの会員登録が必要です。PropFlowは不動産事業者向けのサービスです。</p><a href={`/registration-request?sourcePropertyId=${registration.propertyId}&sourceIntent=${registration.intent}`} className="mt-5 flex h-12 w-full items-center justify-center bg-[#173f70] text-sm font-bold text-white">登録申請する</a><a href={`/?returnTo=${encodeURIComponent(`/v2/property/${registration.propertyId}`)}`} className="mt-3 flex h-12 w-full items-center justify-center border border-[#173f70] text-sm font-bold text-[#173f70]">既に会員の方はログイン</a><button onClick={() => setRegistration(null)} className="mt-4 w-full text-sm font-semibold text-[#65748a]">閉じる</button></div></div>}
+      {documentRequest && <PublicDocumentDialog propertyId={documentRequest.propertyId} propertyName={documentRequest.propertyName} preview onClose={() => setDocumentRequest(null)} />}
     </div>
   );
 }

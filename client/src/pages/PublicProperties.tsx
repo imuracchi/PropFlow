@@ -53,6 +53,26 @@ function RegistrationDialog({ propertyId, intent, onClose, onRegistrationClick }
   return <div className="fixed inset-0 z-50 grid place-items-end bg-black/55 sm:place-items-center" onClick={onClose}><div role="dialog" aria-modal="true" className="w-full bg-white p-6 sm:max-w-md sm:border-t-4 sm:border-t-[#173f70]" onClick={event => event.stopPropagation()}><h2 className="text-xl font-bold">{purpose}には会員登録が必要です</h2><p className="mt-3 text-sm leading-7 text-[#526176]">{purpose}には、PropFlowへの会員登録が必要です。PropFlowは不動産事業者向けのサービスです。</p><button onClick={() => { onRegistrationClick?.(); setLocation(`/registration-request?sourcePropertyId=${propertyId}&sourceIntent=${intent}`); }} className="mt-5 h-12 w-full bg-[#173f70] text-sm font-bold text-white">登録申請する</button><a href={`/?returnTo=${encodeURIComponent(`/v2/property/${propertyId}`)}`} className="mt-3 flex h-12 w-full items-center justify-center border border-[#173f70] text-sm font-bold text-[#173f70]">既に会員の方はログイン</a><button onClick={onClose} className="mt-4 w-full text-sm font-semibold text-[#65748a]">閉じる</button></div></div>;
 }
 
+export function PublicDocumentDialog({ propertyId, propertyName, preview = false, onClose }: { propertyId: number; propertyName: string; preview?: boolean; onClose: () => void }) {
+  const requestDocument = trpc.property.requestPublicDocument.useMutation();
+  const [email, setEmail] = useState("");
+  const [accepted, setAccepted] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  return <div className="fixed inset-0 z-50 grid place-items-end bg-black/55 sm:place-items-center" onClick={onClose}><div role="dialog" aria-modal="true" className="w-full bg-white p-6 sm:max-w-md sm:border-t-4 sm:border-t-[#173f70]" onClick={event => event.stopPropagation()}>
+    <h2 className="text-xl font-bold">物件概要書を見る</h2>
+    <p className="mt-2 text-sm font-bold text-[#173f70]">{propertyName}（PF-{propertyId}）</p>
+    {sent ? <div className="mt-5 border border-[#b9d6c2] bg-[#eef8f1] px-4 py-4 text-sm leading-7 text-[#27613c]"><strong>ダウンロード用URLをメールで送りました。</strong><br/>届いたメールから物件概要書をダウンロードしてください。</div> : <>
+      <p className="mt-4 text-sm leading-7 text-[#526176]">メールアドレスを入力すると、一般公開用の物件概要書をダウンロードするための専用URLが届きます。</p>
+      <label className="mt-4 block text-xs font-bold text-[#526176]">メールアドレス<input type="email" value={email} onChange={event => { setEmail(event.target.value); setError(""); }} placeholder="example@company.jp" className="mt-1 h-12 w-full border border-[#cbd5df] px-3 text-sm font-normal outline-none focus:border-[#173f70]"/></label>
+      <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs leading-6 text-[#526176]"><input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>掲載会社名・担当者情報・詳細住所等を非表示にした一般公開用資料であることを確認しました。</span></label>
+      {error && <p className="mt-2 text-xs font-bold text-[#a72e2e]">{error}</p>}
+      <button disabled={!email.trim() || !accepted || requestDocument.isPending} onClick={async () => { try { setError(""); if (!preview) await requestDocument.mutateAsync({ propertyId, email: email.trim(), acceptedNotice: true }); setSent(true); } catch (cause) { setError(cause instanceof Error ? cause.message : "送信できませんでした"); } }} className="mt-5 h-12 w-full bg-[#173f70] text-sm font-bold text-white disabled:opacity-40">{requestDocument.isPending ? "送信中…" : "ダウンロード用URLをメールで受け取る"}</button>
+    </>}
+    <button onClick={onClose} className="mt-4 w-full text-sm font-semibold text-[#65748a]">閉じる</button>
+  </div></div>;
+}
+
 type PublicPropertyFieldData = {
   type?: string | null;
   area: string;
@@ -92,6 +112,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
   const [, setLocation] = useLocation();
   const query = trpc.property.publicSnsList.useQuery(undefined, { enabled: !preview, retry: false });
   const [registration, setRegistration] = useState<{ propertyId: number; intent: "document" | "inquiry" } | null>(null);
+  const [documentRequest, setDocumentRequest] = useState<{ propertyId: number; propertyName: string } | null>(null);
   const [keyword, setKeyword] = useState("");
   const [appliedKeyword, setAppliedKeyword] = useState("");
   const [expandedPropertyId, setExpandedPropertyId] = useState<number | null>(null);
@@ -200,7 +221,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
                     <p className="mt-3 text-[13px] leading-6 text-[#3f5269] sm:min-h-12">{buildPublicCardIntroduction({ ...property, address: property.area })}</p>
                     <PublicPropertyFields property={property} />
                     <div className="mt-auto grid gap-2 pt-4 sm:pt-5">
-                      <button disabled={!property.hasPdf} onClick={() => { if (property.hasPdf) { recordEvents([{ eventType: "document_click", propertyId: property.id }]); setRegistration({ propertyId: property.id, intent: "document" }); } }} className="flex h-11 items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-[#9aa8b8] sm:h-12"><FileText size={18} />{property.hasPdf ? "物件資料が欲しい" : "物件資料は未登録"}</button>
+                      <button onClick={() => { recordEvents([{ eventType: "document_click", propertyId: property.id }]); setDocumentRequest({ propertyId: property.id, propertyName: property.name }); }} className="flex h-11 items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white sm:h-12"><FileText size={18} />物件概要書を見る</button>
                       <button onClick={() => { recordEvents([{ eventType: "inquiry_click", propertyId: property.id }]); setRegistration({ propertyId: property.id, intent: "inquiry" }); }} className="h-11 border border-[#173f70] text-sm font-bold text-[#173f70] sm:h-12">問い合わせする</button>
                     </div>
                   </div>
@@ -213,6 +234,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
         )}
       </main>
       {registration && <RegistrationDialog propertyId={registration.propertyId} intent={registration.intent} onClose={() => setRegistration(null)} onRegistrationClick={() => recordEvents([{ eventType: "registration_click", propertyId: registration.propertyId }])} />}
+      {documentRequest && <PublicDocumentDialog propertyId={documentRequest.propertyId} propertyName={documentRequest.propertyName} preview={preview} onClose={() => setDocumentRequest(null)} />}
     </div>
   );
 }
@@ -223,6 +245,7 @@ export function PublicPropertyDetail() {
   const propertyId = Number(params?.id ?? 0);
   const query = trpc.property.publicSnsDetail.useQuery({ id: propertyId }, { enabled: propertyId > 0, retry: false });
   const [registrationIntent, setRegistrationIntent] = useState<"document" | "inquiry" | null>(null);
+  const [documentRequestOpen, setDocumentRequestOpen] = useState(false);
   const analyticsMutation = trpc.property.recordPublicEvents.useMutation();
   const recordedPropertyRef = useRef<number | null>(null);
   const visitorIdRef = useRef<string | undefined>(undefined);
@@ -251,7 +274,7 @@ export function PublicPropertyDetail() {
             <p className="mt-2 text-sm text-[#65748a]">{property.area}</p>
             <div className="mt-6 whitespace-pre-wrap border-y border-[#dce3eb] py-5 text-sm leading-7 text-[#334a66]">{summary}</div>
             <div className="mt-6 grid gap-3 sm:max-w-md sm:grid-cols-2">
-              {property.hasPdf && <button onClick={() => { recordEvent({ eventType: "document_click", propertyId: property.id }); setRegistrationIntent("document"); }} className="flex h-14 items-center justify-center gap-2 bg-[#173f70] px-5 text-sm font-bold text-white"><FileText size={20} />物件資料が欲しい</button>}
+              <button onClick={() => { recordEvent({ eventType: "document_click", propertyId: property.id }); setDocumentRequestOpen(true); }} className="flex h-14 items-center justify-center gap-2 bg-[#173f70] px-5 text-sm font-bold text-white"><FileText size={20} />物件概要書を見る</button>
               <button onClick={() => { recordEvent({ eventType: "inquiry_click", propertyId: property.id }); setRegistrationIntent("inquiry"); }} className="h-14 border border-[#173f70] px-5 text-sm font-bold text-[#173f70]">問い合わせする</button>
             </div>
             <p className="mt-4 text-xs leading-6 text-[#758194]">詳細住所、添付資料、掲載会社・担当者情報、商流は会員限定です。</p>
@@ -259,6 +282,7 @@ export function PublicPropertyDetail() {
         </div>
       </main>
       {registrationIntent && <RegistrationDialog propertyId={property.id} intent={registrationIntent} onClose={() => setRegistrationIntent(null)} onRegistrationClick={() => recordEvent({ eventType: "registration_click", propertyId: property.id })} />}
+      {documentRequestOpen && <PublicDocumentDialog propertyId={property.id} propertyName={property.name} onClose={() => setDocumentRequestOpen(false)} />}
     </div>
   );
 }

@@ -24,6 +24,9 @@ import {
   messages,
   favorites,
   propertyFiles,
+  externalFileShares,
+  externalFileShareAccesses,
+  publicPropertyDocumentAccesses,
   propertyMemos,
   directMessages,
   dmMessageReactions,
@@ -52,6 +55,7 @@ import {
   EXTERNAL_LISTING_CONSENT_VERSION,
 } from "../shared/legal";
 import { isPropertyAttentionWorthy } from "../shared/propertyAttention";
+import { isExternalFileShareAvailable } from "./_core/externalFileShareAccess";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _migrationsDone = false;
@@ -193,6 +197,47 @@ export async function runStartupMigrations() {
       \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY \`uq_dm_message_reactions_message_user\` (\`messageId\`, \`userId\`),
       KEY \`idx_dm_message_reactions_user\` (\`userId\`)
+    )`,
+    `CREATE TABLE IF NOT EXISTS \`external_file_shares\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`propertyId\` int NOT NULL,
+      \`fileId\` int NOT NULL,
+      \`fileIdsJson\` text NOT NULL,
+      \`ownerId\` int NOT NULL,
+      \`recipientEmail\` varchar(320) NULL,
+      \`tokenHash\` varchar(64) NOT NULL,
+      \`expiresAt\` timestamp NOT NULL,
+      \`revokedAt\` timestamp NULL,
+      \`viewCount\` int NOT NULL DEFAULT 0,
+      \`lastViewedAt\` timestamp NULL,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY \`uq_external_file_shares_token\` (\`tokenHash\`),
+      KEY \`idx_external_file_shares_owner_property\` (\`ownerId\`, \`propertyId\`),
+      KEY \`idx_external_file_shares_file\` (\`fileId\`)
+    )`,
+    `CREATE TABLE IF NOT EXISTS \`external_file_share_accesses\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`shareId\` int NOT NULL,
+      \`email\` varchar(320) NOT NULL,
+      \`accessTokenHash\` varchar(64) NOT NULL,
+      \`expiresAt\` timestamp NOT NULL,
+      \`acceptedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`lastAccessedAt\` timestamp NULL,
+      \`accessCount\` int NOT NULL DEFAULT 0,
+      UNIQUE KEY \`uq_external_file_share_access_token\` (\`accessTokenHash\`),
+      KEY \`idx_external_file_share_access_share\` (\`shareId\`)
+    )`,
+    `CREATE TABLE IF NOT EXISTS \`public_property_document_accesses\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`propertyId\` int NOT NULL,
+      \`email\` varchar(320) NOT NULL,
+      \`accessTokenHash\` varchar(64) NOT NULL,
+      \`expiresAt\` timestamp NOT NULL,
+      \`downloadedAt\` timestamp NULL,
+      \`downloadCount\` int NOT NULL DEFAULT 0,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY \`uq_public_property_document_access_token\` (\`accessTokenHash\`),
+      KEY \`idx_public_property_document_property_created\` (\`propertyId\`, \`createdAt\`)
     )`,
     `CREATE TABLE IF NOT EXISTS \`property_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -3196,6 +3241,184 @@ export async function setPropertyFileVisibility(
     .where(eq(propertyFiles.id, fileId));
 }
 
+export async function createExternalFileShare(data: {
+  propertyId: number;
+  fileId: number;
+  fileIdsJson: string;
+  ownerId: number;
+  recipientEmail?: string | null;
+  tokenHash: string;
+  expiresAt: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(externalFileShares).values(data);
+  const rows = await db
+    .select({ id: externalFileShares.id })
+    .from(externalFileShares)
+    .where(eq(externalFileShares.tokenHash, data.tokenHash))
+    .limit(1);
+  return rows[0]?.id;
+}
+
+export async function listExternalFileShares(ownerId: number, propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: externalFileShares.id,
+      fileId: externalFileShares.fileId,
+      fileIdsJson: externalFileShares.fileIdsJson,
+      recipientEmail: externalFileShares.recipientEmail,
+      expiresAt: externalFileShares.expiresAt,
+      revokedAt: externalFileShares.revokedAt,
+      viewCount: externalFileShares.viewCount,
+      lastViewedAt: externalFileShares.lastViewedAt,
+      createdAt: externalFileShares.createdAt,
+    })
+    .from(externalFileShares)
+    .where(
+      and(
+        eq(externalFileShares.ownerId, ownerId),
+        eq(externalFileShares.propertyId, propertyId)
+      )
+    )
+    .orderBy(desc(externalFileShares.createdAt))
+    .limit(30);
+  if (!rows.length) return [];
+  const fileIds = [...new Set(rows.flatMap(row => {
+    try { return JSON.parse(row.fileIdsJson) as number[]; } catch { return [row.fileId]; }
+  }))];
+  const sharedFiles = fileIds.length ? await db
+    .select({ id: propertyFiles.id, name: propertyFiles.name })
+    .from(propertyFiles)
+    .where(inArray(propertyFiles.id, fileIds)) : [];
+  const accesses = await db
+    .select({
+      shareId: externalFileShareAccesses.shareId,
+      email: externalFileShareAccesses.email,
+      acceptedAt: externalFileShareAccesses.acceptedAt,
+      lastAccessedAt: externalFileShareAccesses.lastAccessedAt,
+      accessCount: externalFileShareAccesses.accessCount,
+    })
+    .from(externalFileShareAccesses)
+    .where(inArray(externalFileShareAccesses.shareId, rows.map(row => row.id)))
+    .orderBy(desc(externalFileShareAccesses.acceptedAt));
+  return rows.map(row => ({
+    ...row,
+    files: (() => {
+      let ids: number[];
+      try { ids = JSON.parse(row.fileIdsJson); } catch { ids = [row.fileId]; }
+      return ids.map(id => sharedFiles.find(file => file.id === id)).filter(Boolean);
+    })(),
+    accesses: accesses.filter(access => access.shareId === row.id),
+  }));
+}
+
+export async function revokeExternalFileShare(ownerId: number, shareId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(externalFileShares)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(externalFileShares.id, shareId), eq(externalFileShares.ownerId, ownerId)));
+}
+
+export async function getExternalFileShare(tokenHash: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({
+      id: externalFileShares.id,
+      propertyId: externalFileShares.propertyId,
+      fileId: externalFileShares.fileId,
+      fileIdsJson: externalFileShares.fileIdsJson,
+      ownerId: externalFileShares.ownerId,
+      recipientEmail: externalFileShares.recipientEmail,
+      expiresAt: externalFileShares.expiresAt,
+      revokedAt: externalFileShares.revokedAt,
+      fileName: propertyFiles.name,
+      fileSize: propertyFiles.size,
+      fileContentBase64: propertyFiles.contentBase64,
+      fileCategory: propertyFiles.category,
+      propertyName: properties.name,
+      propertyStatus: properties.status,
+      propertyDeleted: properties.deleted,
+    })
+    .from(externalFileShares)
+    .innerJoin(propertyFiles, eq(propertyFiles.id, externalFileShares.fileId))
+    .innerJoin(properties, eq(properties.id, externalFileShares.propertyId))
+    .where(eq(externalFileShares.tokenHash, tokenHash))
+    .limit(1);
+  const share = rows[0];
+  if (!share || !isExternalFileShareAvailable(share)) return null;
+  let fileIds: number[];
+  try { fileIds = JSON.parse(share.fileIdsJson); } catch { fileIds = [share.fileId]; }
+  if (!Array.isArray(fileIds) || !fileIds.length) fileIds = [share.fileId];
+  const files = await db
+    .select({ id: propertyFiles.id, name: propertyFiles.name, size: propertyFiles.size, contentBase64: propertyFiles.contentBase64, category: propertyFiles.category })
+    .from(propertyFiles)
+    .where(and(inArray(propertyFiles.id, fileIds), eq(propertyFiles.propertyId, share.propertyId), eq(propertyFiles.category, "document")));
+  if (!files.length) return null;
+  return { ...share, files };
+}
+
+export async function recordExternalFileShareView(shareId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(externalFileShares)
+    .set({
+      viewCount: sql`${externalFileShares.viewCount} + 1`,
+      lastViewedAt: new Date(),
+    })
+    .where(eq(externalFileShares.id, shareId));
+}
+
+export async function createExternalFileShareAccess(data: {
+  shareId: number;
+  email: string;
+  accessTokenHash: string;
+  expiresAt: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(externalFileShareAccesses).values(data);
+}
+
+export async function getExternalFileShareAccess(shareId: number, accessTokenHash: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({
+      id: externalFileShareAccesses.id,
+      expiresAt: externalFileShareAccesses.expiresAt,
+    })
+    .from(externalFileShareAccesses)
+    .where(
+      and(
+        eq(externalFileShareAccesses.shareId, shareId),
+        eq(externalFileShareAccesses.accessTokenHash, accessTokenHash)
+      )
+    )
+    .limit(1);
+  const access = rows[0];
+  if (!access || new Date(access.expiresAt).getTime() <= Date.now()) return null;
+  return access;
+}
+
+export async function recordExternalFileShareAccess(accessId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(externalFileShareAccesses)
+    .set({
+      accessCount: sql`${externalFileShareAccesses.accessCount} + 1`,
+      lastAccessedAt: new Date(),
+    })
+    .where(eq(externalFileShareAccesses.id, accessId));
+}
+
 // ---- Property Memos ----
 
 export async function getMemo(userId: number, propertyId: number) {
@@ -3901,6 +4124,43 @@ export async function getDirectMessageById(id: number) {
     .where(eq(directMessages.id, id))
     .limit(1);
   return rows[0] ?? null;
+}
+
+export async function createPublicPropertyDocumentAccess(input: {
+  propertyId: number;
+  email: string;
+  accessTokenHash: string;
+  expiresAt: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.insert(publicPropertyDocumentAccesses).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function getPublicPropertyDocumentAccess(accessTokenHash: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(publicPropertyDocumentAccesses)
+    .where(eq(publicPropertyDocumentAccesses.accessTokenHash, accessTokenHash))
+    .limit(1);
+  const access = rows[0];
+  if (!access || new Date(access.expiresAt).getTime() <= Date.now()) return null;
+  return access;
+}
+
+export async function recordPublicPropertyDocumentDownload(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(publicPropertyDocumentAccesses)
+    .set({
+      downloadedAt: new Date(),
+      downloadCount: sql`${publicPropertyDocumentAccesses.downloadCount} + 1`,
+    })
+    .where(eq(publicPropertyDocumentAccesses.id, id));
 }
 
 export type DmReactionType = "request" | "handle" | "thanks";

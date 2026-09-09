@@ -19,6 +19,31 @@ describe("public SNS PDF access", () => {
     });
   });
 
+  it("rejects unauthenticated external-share creation", async () => {
+    const caller = appRouter.createCaller(createAnonymousContext());
+    await expect(caller.externalFileShare.create({ fileIds: [1] })).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  it("requires explicit prohibition acceptance before emailing a download URL", async () => {
+    const caller = appRouter.createCaller(createAnonymousContext());
+    await expect(caller.externalFileShare.requestDownloadLink({
+      token: "a".repeat(48),
+      email: "viewer@example.jp",
+      acceptedProhibitions: false,
+    } as any)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("requires the public-document notice to be accepted", async () => {
+    const caller = appRouter.createCaller(createAnonymousContext());
+    await expect(caller.property.requestPublicDocument({
+      propertyId: 1,
+      email: "viewer@example.jp",
+      acceptedNotice: false,
+    } as any)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
   it("accepts an anonymous public list event without requiring login", async () => {
     const caller = appRouter.createCaller(createAnonymousContext());
     await expect(caller.property.recordPublicEvents({

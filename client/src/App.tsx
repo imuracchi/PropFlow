@@ -54,7 +54,9 @@ import V2Admin from "./pages/v2/V2Admin";
 import V2IssueReport from "./pages/v2/V2IssueReport";
 import PublicFeedback from "./pages/PublicFeedback";
 import { PublicPropertyDetail, PublicPropertyList } from "./pages/PublicProperties";
+import PublicDocumentDownload from "./pages/PublicDocumentDownload";
 import PreviewPublicLogin from "./pages/PreviewPublicLogin";
+import SharedDocument from "./pages/SharedDocument";
 
 import V2Layout from "./components/v2/V2Layout";
 import { useAuth } from "./_core/hooks/useAuth";
@@ -337,6 +339,10 @@ function AppContent() {
       <Route path="/public/preview">{() => <PublicPropertyList preview />}</Route>
       <Route path="/public/login-preview">{() => <PreviewPublicLogin />}</Route>
       <Route path="/public/property/:id">{() => <PublicPropertyDetail />}</Route>
+      <Route path="/public/document-preview">{() => <PublicDocumentDownload preview />}</Route>
+      <Route path="/public/document/:token">{() => <PublicDocumentDownload />}</Route>
+      <Route path="/shared/document/:token">{() => <SharedDocument />}</Route>
+      <Route path="/shared/document-preview">{() => <SharedDocument preview />}</Route>
       <Route path="/feedback">{() => <PublicFeedback />}</Route>
       <Route path="/view-ranking">
         {() => (

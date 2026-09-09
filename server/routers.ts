@@ -30,9 +30,11 @@ import {
   PROPERTY_TITLE_MAX_LENGTH,
 } from "@shared/propertyNotification";
 import { generatePropertySocialIntroduction } from "./_core/propertySocialIntroduction";
+import { doesExternalShareRecipientMatch } from "./_core/externalFileShareAccess";
 
 const publicFeedbackAttempts = new Map<string, number[]>();
 const publicAnalyticsAttempts = new Map<string, number[]>();
+const externalShareUnlockAttempts = new Map<string, number[]>();
 
 function publicRequestKey(req: { headers: Record<string, unknown>; socket?: { remoteAddress?: string } }) {
   const forwarded = req.headers["x-forwarded-for"];
@@ -46,6 +48,16 @@ function checkPublicAnalyticsRateLimit(req: { headers: Record<string, unknown>; 
   if (recent.length >= 120) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "記録回数が上限に達しました" });
   recent.push(now);
   publicAnalyticsAttempts.set(key, recent);
+}
+
+function checkExternalShareUnlockRateLimit(req: { headers: Record<string, unknown>; socket?: { remoteAddress?: string } }) {
+  const key = publicRequestKey(req);
+  const now = Date.now();
+  const recent = (externalShareUnlockAttempts.get(key) ?? []).filter(time => now - time < 60 * 60 * 1000);
+  if (recent.length >= 20) return false;
+  recent.push(now);
+  externalShareUnlockAttempts.set(key, recent);
+  return true;
 }
 
 function sanitizePublicSearchKeyword(value?: string | null) {
@@ -391,14 +403,15 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        if (
-          input.sourcePropertyId &&
-          !(await db.getPublicSnsPropertyById(input.sourcePropertyId))
-        ) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "申請元の物件は現在公開されていません",
-          });
+        if (input.sourcePropertyId) {
+          if (input.sourceIntent === "inquiry") {
+            const sourceProperty = await db.getPropertyById(input.sourcePropertyId);
+            if (!sourceProperty || sourceProperty.deleted === 1 || sourceProperty.status === "sold") {
+              throw new TRPCError({ code: "BAD_REQUEST", message: "申請元の物件は現在問い合わせを受け付けていません" });
+            }
+          } else if (!(await db.getPublicSnsPropertyById(input.sourcePropertyId))) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "申請元の物件は現在公開されていません" });
+          }
         }
         if (input.sourceIntent && !input.sourcePropertyId) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "申請元の物件が指定されていません" });
@@ -1078,6 +1091,153 @@ JSONのみ返してください。`,
     }),
   }),
 
+  externalFileShare: router({
+    create: protectedProcedure
+      .input(z.object({ fileIds: z.array(z.number().int().positive()).min(1).max(10) }))
+      .mutation(async ({ input, ctx }) => {
+        const fileIds = [...new Set(input.fileIds)];
+        const files = await Promise.all(fileIds.map(fileId => db.getPropertyFileContent(fileId)));
+        const file = files[0];
+        if (!file || files.some(item => !item || item.category !== "document" || item.propertyId !== file.propertyId)) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "資料が見つかりません" });
+        }
+        const property = await db.getPropertyById(file.propertyId);
+        if (!property || property.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "外部共有の作成権限がありません" });
+        }
+        if (property.deleted === 1 || property.status === "sold") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "成約・削除済み物件の資料は共有できません" });
+        }
+        const token = nanoid(48);
+        const tokenHash = createHash("sha256").update(token).digest("hex");
+        const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+        const shareId = await db.createExternalFileShare({
+          propertyId: property.id,
+          fileId: file.id,
+          fileIdsJson: JSON.stringify(fileIds),
+          ownerId: ctx.user.id,
+          recipientEmail: null,
+          tokenHash,
+          expiresAt,
+        });
+        return {
+          id: shareId,
+          url: `${PUBLIC_SITE_URL}/shared/document/${token}`,
+          expiresAt,
+        };
+      }),
+
+    sendEmail: protectedProcedure
+      .input(z.object({ fileIds: z.array(z.number().int().positive()).min(1).max(10), email: z.string().trim().email().max(320) }))
+      .mutation(async ({ input, ctx }) => {
+        const fileIds = [...new Set(input.fileIds)];
+        const files = await Promise.all(fileIds.map(fileId => db.getPropertyFileContent(fileId)));
+        const file = files[0];
+        if (!file || files.some(item => !item || item.category !== "document" || item.propertyId !== file.propertyId)) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "資料が見つかりません" });
+        }
+        const property = await db.getPropertyById(file.propertyId);
+        if (!property || property.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "外部共有の作成権限がありません" });
+        }
+        if (property.deleted === 1 || property.status === "sold") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "成約・削除済み物件の資料は共有できません" });
+        }
+        const recipientEmail = input.email.trim().toLowerCase();
+        const token = nanoid(48);
+        const tokenHash = createHash("sha256").update(token).digest("hex");
+        const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+        const shareId = await db.createExternalFileShare({
+          propertyId: property.id,
+          fileId: file.id,
+          fileIdsJson: JSON.stringify(fileIds),
+          ownerId: ctx.user.id,
+          recipientEmail,
+          tokenHash,
+          expiresAt,
+        });
+        if (!shareId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const url = `${PUBLIC_SITE_URL}/shared/document/${token}`;
+        const escape = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]!));
+        const { sendMail } = await import("./_core/mail");
+        const sent = await sendMail(
+          recipientEmail,
+          `【PropFlow】物件資料「${property.name}」が共有されました`,
+          `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#263b58"><h2 style="color:#173f70">物件資料が共有されました</h2><p><strong>対象物件：</strong>${escape(property.name)}</p><p><strong>資料：</strong>${files.map(item => escape(item!.name)).join("、")}</p><p>下記からメールアドレスを入力し、禁止事項へ同意のうえご確認ください。リンクの有効期限は送信から3日間です。</p><p><a href="${url}" style="display:inline-block;background:#173f70;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold">資料のダウンロード画面を開く</a></p><p style="font-size:12px;color:#65748a">このメールに心当たりがない場合は、リンクを開かず破棄してください。</p></div>`
+        );
+        if (!sent) {
+          await db.revokeExternalFileShare(ctx.user.id, shareId);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "メールを送信できませんでした" });
+        }
+        return { success: true, expiresAt };
+      }),
+
+    list: protectedProcedure
+      .input(z.object({ propertyId: z.number().int().positive() }))
+      .query(async ({ input, ctx }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || property.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return db.listExternalFileShares(ctx.user.id, input.propertyId);
+      }),
+
+    revoke: protectedProcedure
+      .input(z.object({ shareId: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.revokeExternalFileShare(ctx.user.id, input.shareId);
+        return { success: true };
+      }),
+
+    get: publicProcedure
+      .input(z.object({ token: z.string().min(32).max(128) }))
+      .query(async ({ input }) => {
+        const tokenHash = createHash("sha256").update(input.token).digest("hex");
+        const share = await db.getExternalFileShare(tokenHash);
+        if (!share) throw new TRPCError({ code: "NOT_FOUND", message: "共有リンクが無効または期限切れです" });
+        return {
+          propertyId: share.propertyId,
+          propertyName: share.propertyName,
+          files: share.files.map(file => ({ id: file.id, fileSize: file.size })),
+          expiresAt: share.expiresAt,
+          recipientRestricted: !!share.recipientEmail,
+        };
+      }),
+
+    requestDownloadLink: publicProcedure
+      .input(z.object({
+        token: z.string().min(32).max(128),
+        email: z.string().trim().email().max(320),
+        acceptedProhibitions: z.literal(true),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!checkExternalShareUnlockRateLimit(ctx.req)) {
+          throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "試行回数が上限に達しました。時間をおいてお試しください" });
+        }
+        const tokenHash = createHash("sha256").update(input.token).digest("hex");
+        const share = await db.getExternalFileShare(tokenHash);
+        if (!share) throw new TRPCError({ code: "NOT_FOUND", message: "共有リンクが無効または期限切れです" });
+        const email = input.email.trim().toLowerCase();
+        if (!doesExternalShareRecipientMatch(share.recipientEmail, email)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "送付先のメールアドレスと一致しません" });
+        }
+        const accessToken = nanoid(48);
+        await db.createExternalFileShareAccess({
+          shareId: share.id,
+          email,
+          accessTokenHash: createHash("sha256").update(accessToken).digest("hex"),
+          expiresAt: share.expiresAt,
+        });
+        const downloadUrl = `${PUBLIC_SITE_URL}/shared/document/${encodeURIComponent(input.token)}?access=${encodeURIComponent(accessToken)}`;
+        const inquiryUrl = `${PUBLIC_SITE_URL}/registration-request?sourcePropertyId=${share.propertyId}&sourceIntent=inquiry`;
+        const escape = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]!));
+        const { sendMail } = await import("./_core/mail");
+        const sent = await sendMail(email, `【PropFlow】物件資料「${share.propertyName}」のダウンロード`, `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#263b58"><h2 style="color:#173f70">物件資料のダウンロード</h2><p><strong>対象物件：</strong>${escape(share.propertyName)}</p><p>下記の専用URLから資料をダウンロードできます。</p><p><a href="${downloadUrl}" style="display:inline-block;background:#173f70;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold">資料をダウンロードする</a></p><p style="font-size:12px;color:#65748a">資料ダウンロードURLの有効期限は元の共有リンクと同じです。第三者へ転送しないでください。</p><hr style="margin:24px 0;border:0;border-top:1px solid #d9e0e8"><h3 style="color:#173f70">この物件への問い合わせ</h3><p>問い合わせにはPropFlowへの会員登録が必要です。</p><p><a href="${inquiryUrl}" style="display:inline-block;border:1px solid #173f70;color:#173f70;padding:10px 18px;text-decoration:none;font-weight:bold">この物件への問い合わせ</a></p><p style="font-size:12px;color:#65748a">問い合わせURLに有効期限はありません。ただし、物件の成約・削除・受付終了後は問い合わせできません。</p></div>`);
+        if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "ダウンロード用URLを送信できませんでした" });
+        return { success: true };
+      }),
+  }),
+
   property: router({
     previousWeekSummary: publicProcedure.query(async () => {
       const { getOrCreateWeeklyPropertyDigest } = await import(
@@ -1099,6 +1259,42 @@ JSONのみ返してください。`,
     publicSnsDetail: publicProcedure
       .input(z.object({ id: z.number().int().positive() }))
       .query(({ input }) => db.getPublicSnsPropertyById(input.id)),
+    requestPublicDocument: publicProcedure
+      .input(z.object({
+        propertyId: z.number().int().positive(),
+        email: z.string().trim().email().max(320),
+        acceptedNotice: z.literal(true),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        checkExternalShareUnlockRateLimit(ctx.req);
+        const property = await db.getPublicSnsPropertyById(input.propertyId);
+        if (!property) throw new TRPCError({ code: "NOT_FOUND", message: "対象物件は現在公開されていません" });
+        const email = input.email.trim().toLowerCase();
+        const accessToken = nanoid(48);
+        const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+        await db.createPublicPropertyDocumentAccess({
+          propertyId: property.id,
+          email,
+          accessTokenHash: createHash("sha256").update(accessToken).digest("hex"),
+          expiresAt,
+        });
+        const downloadUrl = `${PUBLIC_SITE_URL}/public/document/${accessToken}`;
+        const inquiryUrl = `${PUBLIC_SITE_URL}/registration-request?sourcePropertyId=${property.id}&sourceIntent=inquiry`;
+        const escape = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]!));
+        const { sendMail } = await import("./_core/mail");
+        const sent = await sendMail(email, `【PropFlow】物件概要書「${property.name}」`, `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#263b58"><h2 style="color:#173f70">物件概要書のダウンロード</h2><p><strong>対象物件：</strong>${escape(property.name)}（PF-${property.id}）</p><p>下記の専用URLから一般公開用の物件概要書をダウンロードできます。</p><p><a href="${downloadUrl}" style="display:inline-block;background:#173f70;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold">物件概要書をダウンロード</a></p><p style="font-size:12px;color:#65748a">URLの有効期限は3日間です。掲載会社名・担当者情報・詳細住所等は非表示です。</p><hr style="margin:24px 0;border:0;border-top:1px solid #d9e0e8"><p><a href="${inquiryUrl}" style="color:#173f70;font-weight:bold">この物件への問い合わせ</a></p></div>`);
+        if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "ダウンロード用URLを送信できませんでした" });
+        return { success: true };
+      }),
+    publicDocumentDownload: publicProcedure
+      .input(z.object({ token: z.string().min(32).max(128) }))
+      .query(async ({ input }) => {
+        const access = await db.getPublicPropertyDocumentAccess(createHash("sha256").update(input.token).digest("hex"));
+        if (!access) throw new TRPCError({ code: "NOT_FOUND", message: "ダウンロードURLが無効または期限切れです" });
+        const property = await db.getPublicSnsPropertyById(access.propertyId);
+        if (!property) throw new TRPCError({ code: "NOT_FOUND", message: "対象物件は現在公開されていません" });
+        return { propertyId: property.id, propertyName: property.name, expiresAt: access.expiresAt };
+      }),
     recordPublicEvents: publicProcedure
       .input(z.object({
         visitorId: z.string().uuid(),

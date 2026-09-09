@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import { createHash } from "node:crypto";
+import { createStoredZip } from "./storedZip";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -166,6 +168,93 @@ async function startServer() {
     } catch (error) {
       console.error("[publish-property] error:", error);
       return res.status(500).json({ error: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() });
+    }
+  });
+
+  // Expiring capability URL for a property owner to download all selected PDFs as one ZIP.
+  app.get("/api/external-files/:token/all", async (req, res) => {
+    try {
+      const token = String(req.params.token ?? "");
+      const accessToken = String(req.query.access ?? "");
+      if (!/^[A-Za-z0-9_-]{32,128}$/.test(token) || !/^[A-Za-z0-9_-]{32,128}$/.test(accessToken)) return res.status(403).end();
+      const { getExternalFileShare, getExternalFileShareAccess, recordExternalFileShareAccess, recordExternalFileShareView } = await import("../db");
+      const share = await getExternalFileShare(createHash("sha256").update(token).digest("hex"));
+      if (!share) return res.status(404).end();
+      const access = await getExternalFileShareAccess(share.id, createHash("sha256").update(accessToken).digest("hex"));
+      if (!access) return res.status(403).end();
+      const entries = share.files.map((file, index) => {
+        const safeName = file.name.replace(/[\\/:*?"<>|]/g, "_");
+        return { name: `${String(index + 1).padStart(2, "0")}_${safeName}`, data: Buffer.from(file.contentBase64, "base64") };
+      });
+      const archive = createStoredZip(entries);
+      await Promise.all([recordExternalFileShareView(share.id), recordExternalFileShareAccess(access.id)]);
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`PF-${share.propertyId}_資料一式.zip`)}`);
+      res.setHeader("Content-Length", archive.length);
+      res.setHeader("Cache-Control", "private, no-store, max-age=0");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+      res.setHeader("Referrer-Policy", "no-referrer");
+      res.send(archive);
+    } catch (error) {
+      console.error("[external-files-all] error:", error);
+      res.status(500).end();
+    }
+  });
+
+  // Expiring capability URL for a property owner to share selected PDFs outside PropFlow.
+  app.get(["/api/external-files/:token", "/api/external-files/:token/:fileId"], async (req, res) => {
+    try {
+      const token = String(req.params.token ?? "");
+      if (!/^[A-Za-z0-9_-]{32,128}$/.test(token)) {
+        res.status(404).end();
+        return;
+      }
+      const accessToken = String(req.query.access ?? "");
+      if (!/^[A-Za-z0-9_-]{32,128}$/.test(accessToken)) {
+        res.status(403).end();
+        return;
+      }
+      const { getExternalFileShare, getExternalFileShareAccess, recordExternalFileShareAccess, recordExternalFileShareView } = await import("../db");
+      const tokenHash = createHash("sha256").update(token).digest("hex");
+      const share = await getExternalFileShare(tokenHash);
+      if (!share) {
+        res.status(404).end();
+        return;
+      }
+      const requestedFileId = req.params.fileId ? Number(req.params.fileId) : share.fileId;
+      const sharedFile = share.files.find(file => file.id === requestedFileId);
+      if (!sharedFile) {
+        res.status(404).end();
+        return;
+      }
+      const access = await getExternalFileShareAccess(
+        share.id,
+        createHash("sha256").update(accessToken).digest("hex")
+      );
+      if (!access) {
+        res.status(403).end();
+        return;
+      }
+      await Promise.all([
+        recordExternalFileShareView(share.id),
+        recordExternalFileShareAccess(access.id),
+      ]);
+      const binary = Buffer.from(sharedFile.contentBase64, "base64");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `${req.query.download === "1" ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(sharedFile.name)}`
+      );
+      res.setHeader("Content-Length", binary.length);
+      res.setHeader("Cache-Control", "private, no-store, max-age=0");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+      res.setHeader("Referrer-Policy", "no-referrer");
+      res.send(binary);
+    } catch (error) {
+      console.error("[external-files] error:", error);
+      res.status(500).end();
     }
   });
 
@@ -349,6 +438,44 @@ async function startServer() {
     ];
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(url => `  <url><loc>${escapeXml(url)}</loc></url>`).join("\n")}\n</urlset>\n`;
     res.type("application/xml").send(xml);
+  });
+
+  // Email-verified, public-data-only property overview PDF.
+  app.get("/api/public-property-document/:token", async (req, res) => {
+    let browser: Awaited<ReturnType<typeof import("puppeteer")["default"]["launch"]>> | null = null;
+    try {
+      const token = String(req.params.token ?? "");
+      if (!/^[A-Za-z0-9_-]{32,128}$/.test(token)) return res.status(404).end();
+      const { getPublicPropertyDocumentAccess, getPublicSnsPropertyById, recordPublicPropertyDocumentDownload } = await import("../db");
+      const access = await getPublicPropertyDocumentAccess(createHash("sha256").update(token).digest("hex"));
+      if (!access) return res.status(404).end();
+      const property = await getPublicSnsPropertyById(access.propertyId);
+      if (!property) return res.status(404).end();
+      const { buildPublicPropertyDocumentHtml } = await import("./publicPropertyDocument");
+      const inquiryUrl = `${PUBLIC_SITE_URL}/registration-request?sourcePropertyId=${property.id}&sourceIntent=inquiry`;
+      const html = buildPublicPropertyDocumentHtml(property, inquiryUrl);
+      const { default: puppeteer } = await import("puppeteer");
+      const { existsSync } = await import("node:fs");
+      const systemBrowser = [process.env.PUPPETEER_EXECUTABLE_PATH, "/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome-stable", "/usr/bin/google-chrome"].find((path): path is string => !!path && existsSync(path));
+      browser = await puppeteer.launch({ headless: true, ...(systemBrowser ? { executablePath: systemBrowser } : {}), args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"], timeout: 30000 });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.emulateMediaType("print");
+      const pdf = await page.pdf({ format: "A4", printBackground: true, timeout: 60000 });
+      await recordPublicPropertyDocumentDownload(access.id);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`PF-${property.id}_物件概要書.pdf`)}`);
+      res.setHeader("Cache-Control", "private, no-store, max-age=0");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+      res.setHeader("Referrer-Policy", "no-referrer");
+      res.send(Buffer.from(pdf));
+    } catch (error) {
+      console.error("[public-property-document] error:", error);
+      res.status(500).json({ error: "PDF generation failed" });
+    } finally {
+      await browser?.close().catch(() => {});
+    }
   });
 
   // PDF generation from HTML
