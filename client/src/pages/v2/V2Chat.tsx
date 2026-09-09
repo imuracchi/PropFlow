@@ -478,7 +478,9 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                   >
                     <div className={`flex items-end gap-1.5 ${mine ? "flex-row-reverse" : ""}`}><div
                         className={`whitespace-pre-wrap px-3 py-2 text-[14px] leading-5 lg:px-4 lg:py-2.5 lg:leading-6 ${mine ? "bg-[#173f70] text-white" : "border border-[#d9e0e8] bg-white text-[#263b58]"}`}
-                      >{message.content && <span>{message.content}</span>}<MessageAttachments attachments={message.attachments} mine={mine}/></div><p className="shrink-0 pb-0.5 text-[9px] text-[#8a96a5]">
+                      >{message.content && <span>{message.content}</span>}<MessageAttachments attachments={message.attachments} mine={mine}/></div>{!mine && !isRestricted && !isClosed && (
+                        <button onClick={() => setReactionPickerMessageId(current => current === message.id ? null : message.id)} className="grid size-6 shrink-0 place-items-center text-[#7b8898] hover:bg-[#e8edf3] hover:text-[#173f70]" aria-label="リアクションを選ぶ" title="リアクション"><SmilePlus size={15}/></button>
+                      )}<p className="shrink-0 pb-0.5 text-[9px] text-[#8a96a5]">
                       {new Date(message.createdAt).toLocaleTimeString("ja-JP", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -488,15 +490,12 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                       {DM_REACTIONS.map(option => {
                         const count = messageReactions.filter((item: any) => item.reaction === option.value).length;
                         if (!count) return null;
-                        return <span key={option.value} className={`border px-2 py-0.5 text-[10px] font-bold ${myReaction === option.value ? "border-[#7898ba] bg-[#eaf2fa] text-[#173f70]" : "border-[#d9e0e8] bg-white text-[#526176]"}`}>{option.emoji} {option.label}{count > 1 ? ` ${count}` : ""}</span>;
+                        return <span key={option.value} className={`px-1 py-0.5 text-[10px] font-bold ${myReaction === option.value ? "text-[#173f70]" : "text-[#526176]"}`}>{option.emoji} {option.label}{count > 1 ? ` ${count}` : ""}</span>;
                       })}
-                      {!mine && !isRestricted && !isClosed && (
-                        <button onClick={() => setReactionPickerMessageId(current => current === message.id ? null : message.id)} className="flex h-6 items-center gap-1 border border-[#cbd5df] bg-white px-2 text-[10px] font-bold text-[#526176] hover:border-[#7898ba] hover:text-[#173f70]" aria-label="リアクションを選ぶ"><SmilePlus size={13}/>反応</button>
-                      )}
                     </div>
                     {reactionPickerMessageId === message.id && (
                       <div className={`mt-1 flex flex-wrap gap-1 ${mine ? "justify-end" : "justify-start"}`}>
-                        {DM_REACTIONS.map(option => <button key={option.value} onClick={() => reactToMessage(message.id, option.value)} disabled={toggleReaction.isPending} className={`border px-2.5 py-1.5 text-[11px] font-bold disabled:opacity-50 ${myReaction === option.value ? "border-[#173f70] bg-[#173f70] text-white" : "border-[#b9c6d4] bg-white text-[#173f70]"}`}>{option.emoji} {option.label}</button>)}
+                        {DM_REACTIONS.map(option => <button key={option.value} onClick={() => reactToMessage(message.id, option.value)} disabled={toggleReaction.isPending} className={`px-1.5 py-1 text-[11px] font-bold disabled:opacity-50 ${myReaction === option.value ? "text-[#173f70] underline underline-offset-4" : "text-[#526176] hover:text-[#173f70]"}`}>{option.emoji} {option.label}</button>)}
                       </div>
                     )}
                   </div>
