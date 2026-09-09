@@ -26,6 +26,7 @@ import {
   propertyFiles,
   propertyMemos,
   directMessages,
+  dmMessageReactions,
   dmAttachments,
   chatExits,
   pushSubscriptions,
@@ -183,6 +184,15 @@ export async function runStartupMigrations() {
       KEY \`idx_dm_attachments_message\` (\`messageId\`),
       KEY \`idx_dm_attachments_expiry\` (\`deletedAt\`, \`expiresAt\`),
       KEY \`idx_dm_attachments_uploader_created\` (\`uploaderId\`, \`createdAt\`)
+    )`,
+    `CREATE TABLE IF NOT EXISTS \`dm_message_reactions\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`messageId\` int NOT NULL,
+      \`userId\` int NOT NULL,
+      \`reaction\` enum('request','handle','thanks') NOT NULL,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY \`uq_dm_message_reactions_message_user\` (\`messageId\`, \`userId\`),
+      KEY \`idx_dm_message_reactions_user\` (\`userId\`)
     )`,
     `CREATE TABLE IF NOT EXISTS \`property_reads\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -3723,7 +3733,25 @@ export async function getDirectMessages(
     list.push(attachment);
     byMessage.set(attachment.messageId, list);
   }
-  return rows.map(row => ({ ...row, attachments: byMessage.get(row.id) ?? [] }));
+  const reactions = await db
+    .select({
+      messageId: dmMessageReactions.messageId,
+      userId: dmMessageReactions.userId,
+      reaction: dmMessageReactions.reaction,
+    })
+    .from(dmMessageReactions)
+    .where(inArray(dmMessageReactions.messageId, rows.map(row => row.id)));
+  const reactionsByMessage = new Map<number, typeof reactions>();
+  for (const reaction of reactions) {
+    const list = reactionsByMessage.get(reaction.messageId) ?? [];
+    list.push(reaction);
+    reactionsByMessage.set(reaction.messageId, list);
+  }
+  return rows.map(row => ({
+    ...row,
+    attachments: byMessage.get(row.id) ?? [],
+    reactions: reactionsByMessage.get(row.id) ?? [],
+  }));
 }
 
 const publicSnsWhere = and(
@@ -3871,6 +3899,45 @@ export async function getDirectMessageById(id: number) {
     .where(eq(directMessages.id, id))
     .limit(1);
   return rows[0] ?? null;
+}
+
+export type DmReactionType = "request" | "handle" | "thanks";
+
+export async function toggleDmMessageReaction(
+  userId: number,
+  messageId: number,
+  reaction: DmReactionType
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const message = await getDirectMessageById(messageId);
+  if (!message || message.receiverId !== userId) {
+    throw new Error("Message not found");
+  }
+  const existing = await db
+    .select({ reaction: dmMessageReactions.reaction })
+    .from(dmMessageReactions)
+    .where(and(eq(dmMessageReactions.messageId, messageId), eq(dmMessageReactions.userId, userId)))
+    .limit(1);
+  const removed = existing[0]?.reaction === reaction;
+  if (removed) {
+    await db.delete(dmMessageReactions).where(
+      and(eq(dmMessageReactions.messageId, messageId), eq(dmMessageReactions.userId, userId))
+    );
+  } else if (existing.length > 0) {
+    await db.update(dmMessageReactions)
+      .set({ reaction })
+      .where(and(eq(dmMessageReactions.messageId, messageId), eq(dmMessageReactions.userId, userId)));
+  } else {
+    await db.insert(dmMessageReactions).values({ messageId, userId, reaction });
+  }
+  const partnerId = message.senderId;
+  if (reaction === "handle") {
+    await setDmFlag(userId, partnerId, message.propertyId ?? null, !removed);
+  } else if (existing[0]?.reaction === "handle") {
+    await setDmFlag(userId, partnerId, message.propertyId ?? null, false);
+  }
+  return { removed, partnerId, propertyId: message.propertyId ?? null };
 }
 
 export async function getAnnouncementCount(
@@ -4191,6 +4258,7 @@ export async function deleteOwnDirectMessage(
     )
     .limit(1);
   if (!message.length) return false;
+  await db.delete(dmMessageReactions).where(eq(dmMessageReactions.messageId, messageId));
   await db
     .delete(directMessages)
     .where(
@@ -4420,6 +4488,28 @@ export async function setDmFlag(
       lastReadAt: new Date(),
       flagged: flagged ? 1 : 0,
     });
+  }
+  if (!flagged) {
+    const participantCondition = or(
+      and(eq(directMessages.senderId, userId), eq(directMessages.receiverId, partnerId)),
+      and(eq(directMessages.senderId, partnerId), eq(directMessages.receiverId, userId))
+    );
+    const messageCondition = propertyId !== null
+      ? and(participantCondition, eq(directMessages.propertyId, propertyId))
+      : and(participantCondition, or(sql`${directMessages.propertyId} IS NULL`, eq(directMessages.propertyId, 0)));
+    const threadMessages = await db
+      .select({ id: directMessages.id })
+      .from(directMessages)
+      .where(messageCondition!);
+    if (threadMessages.length > 0) {
+      await db.delete(dmMessageReactions).where(
+        and(
+          eq(dmMessageReactions.userId, userId),
+          eq(dmMessageReactions.reaction, "handle"),
+          inArray(dmMessageReactions.messageId, threadMessages.map(message => message.id))
+        )
+      );
+    }
   }
 }
 

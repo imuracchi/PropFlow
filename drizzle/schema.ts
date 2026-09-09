@@ -178,6 +178,21 @@ export const directMessages = mysqlTable(
   })
 );
 
+export const dmMessageReactions = mysqlTable(
+  "dm_message_reactions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    messageId: int("messageId").notNull(),
+    userId: int("userId").notNull(),
+    reaction: mysqlEnum("reaction", ["request", "handle", "thanks"]).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    messageUserUnique: uniqueIndex("uq_dm_message_reactions_message_user").on(table.messageId, table.userId),
+    userIdx: index("idx_dm_message_reactions_user").on(table.userId),
+  })
+);
+
 export const dmAttachments = mysqlTable(
   "dm_attachments",
   {

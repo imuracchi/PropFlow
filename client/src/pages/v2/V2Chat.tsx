@@ -15,6 +15,7 @@ import {
   Printer,
   Send,
   Share2,
+  SmilePlus,
   Trash2,
   X,
 } from "lucide-react";
@@ -25,6 +26,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
 import { AttachmentPicker, AttachmentSelection, MessageAttachments, filesToPayload, validateSelectedFiles } from "@/components/DmAttachments";
 
+type DmReaction = "request" | "handle" | "thanks";
+const DM_REACTIONS: Array<{ value: DmReaction; emoji: string; label: string }> = [
+  { value: "request", emoji: "🙏", label: "お願いします" },
+  { value: "handle", emoji: "✅", label: "対応します" },
+  { value: "thanks", emoji: "😊", label: "ありがとうございます" },
+];
+
 const previewMessages: any[] = [
   {
     id: 1,
@@ -32,6 +40,7 @@ const previewMessages: any[] = [
     content:
       "代沢レジデンスについて、レントロールを確認しました。修繕履歴も共有いただけますか？",
     createdAt: new Date("2026-08-21T08:10:00Z"),
+    reactions: [],
   },
   {
     id: 2,
@@ -39,12 +48,14 @@ const previewMessages: any[] = [
     content:
       "お問い合わせありがとうございます。関連資料に修繕履歴を追加しました。",
     createdAt: new Date("2026-08-21T08:24:00Z"),
+    reactions: [],
   },
   {
     id: 3,
     senderId: 12,
     content: "確認できました。社内で検討後、改めてご連絡します。",
     createdAt: new Date("2026-08-22T01:20:00Z"),
+    reactions: [],
   },
 ];
 
@@ -92,6 +103,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const markRead = trpc.dm.markRead.useMutation();
   const sendBusinessCard = trpc.dm.sendBusinessCard.useMutation();
   const setFlag = trpc.dm.setFlag.useMutation();
+  const toggleReaction = trpc.dm.toggleReaction.useMutation();
   const utils = trpc.useUtils();
   const [previewItems, setPreviewItems] = useState(previewMessages);
   const [input, setInput] = useState("");
@@ -103,6 +115,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const [shareError, setShareError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [previewFlagged, setPreviewFlagged] = useState(false);
+  const [reactionPickerMessageId, setReactionPickerMessageId] = useState<number | null>(null);
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
@@ -165,11 +178,40 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
   const isUnpublished = thread?.propertyPublished === 0;
   const isClosed = property?.status === "sold";
   const toggleFlag = async (checked: boolean) => {
-    if (preview) setPreviewFlagged(checked);
+    if (preview) {
+      setPreviewFlagged(checked);
+      if (!checked) {
+        setPreviewItems(items => items.map(message => ({
+          ...message,
+          reactions: (message.reactions ?? []).filter((item: any) => !(item.userId === myId && item.reaction === "handle")),
+        })));
+      }
+    }
     else {
       await setFlag.mutateAsync({ partnerId, propertyId, flagged: checked });
       await utils.dm.threads.invalidate();
+      if (!checked) await messagesQuery.refetch();
     }
+  };
+  const reactToMessage = async (messageId: number, reaction: DmReaction) => {
+    if (preview) {
+      const currentMessage = previewItems.find(message => message.id === messageId);
+      const previousReaction = (currentMessage?.reactions ?? []).find((item: any) => item.userId === myId)?.reaction;
+      setPreviewItems(items => items.map(message => {
+        if (message.id !== messageId) return message;
+        const mine = (message.reactions ?? []).find((item: any) => item.userId === myId);
+        const reactions = mine?.reaction === reaction
+          ? (message.reactions ?? []).filter((item: any) => item.userId !== myId)
+          : [...(message.reactions ?? []).filter((item: any) => item.userId !== myId), { userId: myId, reaction }];
+        return { ...message, reactions };
+      }));
+      if (reaction === "handle") setPreviewFlagged(previousReaction !== "handle");
+      else if (previousReaction === "handle") setPreviewFlagged(false);
+    } else {
+      await toggleReaction.mutateAsync({ messageId, reaction });
+      await Promise.all([messagesQuery.refetch(), utils.dm.threads.invalidate()]);
+    }
+    setReactionPickerMessageId(null);
   };
 
   useEffect(() => {
@@ -344,7 +386,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             {sideThreads.map(item => {
               const selected = item.partnerId === partnerId && item.propertyId === propertyId;
               return <button key={`${item.partnerId}-${item.propertyId ?? 0}`} onClick={() => setLocation(preview ? "/v2/preview/chat" : `/v2/chat/${item.partnerId}/${item.propertyId ?? 0}`)} className={`w-full border-b border-[#e2e7ec] px-4 py-4 text-left ${selected ? "bg-[#edf3f9]" : "hover:bg-[#f6f8fa]"}`}>
-                <div className="flex items-center gap-2"><p className="min-w-0 flex-1 truncate text-[14px] font-bold text-[#102d50]">{item.propertyName || "物件指定なし"}</p>{item.flagged && <span className="shrink-0 bg-[#fff0c9] px-1.5 py-0.5 text-[10px] font-bold text-[#8b5a08]">要返信</span>}</div>
+                <div className="flex items-center gap-2"><p className="min-w-0 flex-1 truncate text-[14px] font-bold text-[#102d50]">{item.propertyName || "物件指定なし"}</p>{item.flagged && <span className="shrink-0 bg-[#fff0c9] px-1.5 py-0.5 text-[10px] font-bold text-[#8b5a08]">要対応</span>}</div>
                 <p className="mt-1 truncate text-[12px] font-semibold text-[#526176]">{item.partnerName}</p>
                 <p className="mt-0.5 truncate text-[11px] text-[#758194]">{item.partnerCompany || ""}</p>
               </button>;
@@ -424,6 +466,8 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
           ) : messages.length ? (
             messages.map(message => {
               const mine = message.senderId === myId;
+              const messageReactions = message.reactions ?? [];
+              const myReaction = messageReactions.find((item: any) => item.userId === myId)?.reaction;
               return (
                 <div
                   key={message.id}
@@ -440,6 +484,21 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
                         minute: "2-digit",
                       })}
                     </p>{mine && !isRestricted && <button onClick={async () => { if (!confirm("このメッセージを削除しますか？相手の画面からも削除されます。")) return; await deleteMessage.mutateAsync({messageId:message.id}); await messagesQuery.refetch(); await utils.dm.threads.invalidate(); }} disabled={deleteMessage.isPending} className="grid size-6 shrink-0 place-items-center text-[#8a96a5] hover:text-[#a72e2e] disabled:opacity-40 lg:size-8" aria-label="メッセージを削除"><Trash2 className="size-3.5"/></button>}</div>
+                    <div className={`mt-1 flex flex-wrap items-center gap-1 ${mine ? "justify-end" : "justify-start"}`}>
+                      {DM_REACTIONS.map(option => {
+                        const count = messageReactions.filter((item: any) => item.reaction === option.value).length;
+                        if (!count) return null;
+                        return <span key={option.value} className={`border px-2 py-0.5 text-[10px] font-bold ${myReaction === option.value ? "border-[#7898ba] bg-[#eaf2fa] text-[#173f70]" : "border-[#d9e0e8] bg-white text-[#526176]"}`}>{option.emoji} {option.label}{count > 1 ? ` ${count}` : ""}</span>;
+                      })}
+                      {!mine && !isRestricted && !isClosed && (
+                        <button onClick={() => setReactionPickerMessageId(current => current === message.id ? null : message.id)} className="flex h-6 items-center gap-1 border border-[#cbd5df] bg-white px-2 text-[10px] font-bold text-[#526176] hover:border-[#7898ba] hover:text-[#173f70]" aria-label="リアクションを選ぶ"><SmilePlus size={13}/>反応</button>
+                      )}
+                    </div>
+                    {reactionPickerMessageId === message.id && (
+                      <div className={`mt-1 flex flex-wrap gap-1 ${mine ? "justify-end" : "justify-start"}`}>
+                        {DM_REACTIONS.map(option => <button key={option.value} onClick={() => reactToMessage(message.id, option.value)} disabled={toggleReaction.isPending} className={`border px-2.5 py-1.5 text-[11px] font-bold disabled:opacity-50 ${myReaction === option.value ? "border-[#173f70] bg-[#173f70] text-white" : "border-[#b9c6d4] bg-white text-[#173f70]"}`}>{option.emoji} {option.label}</button>)}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -480,7 +539,7 @@ export default function V2Chat({ preview = false }: { preview?: boolean }) {
             </button>
             <label className={`ml-auto flex h-9 cursor-pointer items-center gap-2 border px-3 text-[11px] font-bold ${flagged ? "border-[#d5ad54] bg-[#fff0c9] text-[#8b5a08]" : "border-[#9aabc0] text-[#526176]"}`}>
               <input type="checkbox" checked={flagged} onChange={event => toggleFlag(event.target.checked)} disabled={setFlag.isPending} className="size-4 accent-[#b67b12]" />
-              要返信
+              要対応
             </label>
           </div>}
           {isRestricted ? (

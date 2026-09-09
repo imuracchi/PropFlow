@@ -2718,6 +2718,18 @@ ${propList}`,
         return { success: true };
       }),
 
+    toggleReaction: protectedProcedure
+      .input(
+        z.object({
+          messageId: z.number().int().positive(),
+        reaction: z.enum(["request", "handle", "thanks"]),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const result = await db.toggleDmMessageReaction(ctx.user.id, input.messageId, input.reaction);
+        return { success: true, ...result };
+      }),
+
     canDm: protectedProcedure
       .input(z.object({ userId: z.number() }))
       .query(async ({ input }) => {
