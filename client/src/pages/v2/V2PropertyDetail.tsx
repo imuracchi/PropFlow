@@ -668,8 +668,11 @@ export default function V2PropertyDetail({
   const downloadAll = async () => {
     if (preview) return;
     setDownloading("all");
-    for (const file of visibleFiles) await download(file);
-    setDownloading(null);
+    const anchor = document.createElement("a");
+    anchor.href = `/api/properties/${propertyId}/files.zip`;
+    anchor.download = `PF-${propertyId}_資料一式.zip`;
+    anchor.click();
+    window.setTimeout(() => setDownloading(null), 1000);
   };
   const addFiles = async (fileList: FileList) => {
     const pdfs = Array.from(fileList).filter(

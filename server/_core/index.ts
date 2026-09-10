@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { PUBLIC_SITE_URL } from "./publicUrl";
+import { createStoredZip } from "./storedZip";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -233,6 +234,47 @@ async function startServer() {
       res.send(binary);
     } catch (e) {
       console.error("[files/raw] error:", e);
+      res.status(500).end();
+    }
+  });
+
+  // Download every currently visible document for one accessible property as a single ZIP.
+  app.get("/api/properties/:propertyId/files.zip", async (req, res) => {
+    try {
+      const { getSessionCookie, verifySessionToken } = await import("./auth");
+      const { getUserById, getPropertyById, getPropertyExclusions, listPropertyFileContents } = await import("../db");
+      const cookie = getSessionCookie(req);
+      if (!cookie) return res.status(401).end();
+      const session = await verifySessionToken(cookie);
+      if (!session) return res.status(401).end();
+      const user = await getUserById(session.userId);
+      if (!user) return res.status(401).end();
+      const propertyId = Number(req.params.propertyId);
+      if (!Number.isInteger(propertyId) || propertyId <= 0) return res.status(400).end();
+      const property = await getPropertyById(propertyId);
+      if (!property) return res.status(404).end();
+      if (property.status === "sold") return res.status(403).json({ error: "成約済み物件の資料はダウンロードできません" });
+      const isOwner = property.userId === user.id || user.role === "admin";
+      if (!isOwner) {
+        const exclusions = await getPropertyExclusions(propertyId);
+        if (property.deleted === 1 || property.published === 0 ||
+          (property.visibilityScope === "proposal" && property.proposalTargetUserId !== user.id) ||
+          exclusions.some(item => item.userId === user.id)) return res.status(404).end();
+      }
+      const files = (await listPropertyFileContents(propertyId)).filter(file => file.category === "document" && file.visible !== 0);
+      if (!files.length) return res.status(404).json({ error: "ダウンロードできる資料がありません" });
+      const archive = createStoredZip(files.map((file, index) => ({
+        name: `${String(index + 1).padStart(2, "0")}_${file.name.replace(/[\\/:*?"<>|]/g, "_")}`,
+        data: Buffer.from(file.contentBase64, "base64"),
+      })));
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`PF-${propertyId}_資料一式.zip`)}`);
+      res.setHeader("Content-Length", archive.length);
+      res.setHeader("Cache-Control", "private, no-store, max-age=0");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.send(archive);
+    } catch (error) {
+      console.error("[property-files-zip] error:", error);
       res.status(500).end();
     }
   });
