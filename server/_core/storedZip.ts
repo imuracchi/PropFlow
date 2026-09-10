@@ -36,3 +36,30 @@ export function createStoredZip(files: Array<{ name: string; data: Buffer }>) {
   end.writeUInt32LE(directory.length, 12); end.writeUInt32LE(offset, 16);
   return Buffer.concat([...localParts, directory, end]);
 }
+
+export function createStoredZipEntry(nameText: string, data: Buffer, offset: number) {
+  const name = Buffer.from(nameText, "utf8");
+  const crc = crc32(data);
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt16LE(0x0800, 6);
+  local.writeUInt16LE(0, 8); local.writeUInt32LE(crc, 14); local.writeUInt32LE(data.length, 18);
+  local.writeUInt32LE(data.length, 22); local.writeUInt16LE(name.length, 26);
+  const directory = Buffer.alloc(46);
+  directory.writeUInt32LE(0x02014b50, 0); directory.writeUInt16LE(20, 4); directory.writeUInt16LE(20, 6);
+  directory.writeUInt16LE(0x0800, 8); directory.writeUInt16LE(0, 10); directory.writeUInt32LE(crc, 16);
+  directory.writeUInt32LE(data.length, 20); directory.writeUInt32LE(data.length, 24);
+  directory.writeUInt16LE(name.length, 28); directory.writeUInt32LE(offset, 42);
+  return {
+    local: Buffer.concat([local, name]),
+    directory: Buffer.concat([directory, name]),
+    nextOffset: offset + local.length + name.length + data.length,
+  };
+}
+
+export function createStoredZipEnd(directories: Buffer[], fileCount: number, offset: number) {
+  const directory = Buffer.concat(directories);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(fileCount, 8); end.writeUInt16LE(fileCount, 10);
+  end.writeUInt32LE(directory.length, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([directory, end]);
+}

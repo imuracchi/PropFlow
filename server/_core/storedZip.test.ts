@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createStoredZip } from "./storedZip";
+import { createStoredZip, createStoredZipEnd, createStoredZipEntry } from "./storedZip";
 
 describe("createStoredZip", () => {
   it("creates a UTF-8 ZIP containing every supplied file", () => {
@@ -13,5 +13,14 @@ describe("createStoredZip", () => {
     expect(zip.includes(Buffer.from("first"))).toBe(true);
     expect(zip.readUInt32LE(zip.length - 22)).toBe(0x06054b50);
     expect(zip.readUInt16LE(zip.length - 12)).toBe(2);
+  });
+
+  it("builds a valid ZIP incrementally", () => {
+    const data = Buffer.from("streamed");
+    const entry = createStoredZipEntry("01_資料.pdf", data, 0);
+    const zip = Buffer.concat([entry.local, data, createStoredZipEnd([entry.directory], 1, entry.nextOffset)]);
+    expect(zip.readUInt32LE(0)).toBe(0x04034b50);
+    expect(zip.readUInt32LE(zip.length - 22)).toBe(0x06054b50);
+    expect(zip.readUInt16LE(zip.length - 12)).toBe(1);
   });
 });

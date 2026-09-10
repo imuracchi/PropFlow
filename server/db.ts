@@ -3149,12 +3149,6 @@ export async function getPropertyFileContent(fileId: number) {
   return result[0] ?? null;
 }
 
-export async function listPropertyFileContents(propertyId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(propertyFiles).where(eq(propertyFiles.propertyId, propertyId)).orderBy(propertyFiles.createdAt);
-}
-
 export async function addPropertyFile(data: {
   propertyId: number;
   name: string;

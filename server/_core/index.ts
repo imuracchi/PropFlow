@@ -9,7 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { PUBLIC_SITE_URL } from "./publicUrl";
-import { createStoredZip } from "./storedZip";
+import { createStoredZipEnd, createStoredZipEntry } from "./storedZip";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -242,7 +242,7 @@ async function startServer() {
   app.get("/api/properties/:propertyId/files.zip", async (req, res) => {
     try {
       const { getSessionCookie, verifySessionToken } = await import("./auth");
-      const { getUserById, getPropertyById, getPropertyExclusions, listPropertyFileContents } = await import("../db");
+      const { getUserById, getPropertyById, getPropertyExclusions, getPropertyFileContent, listPropertyFiles } = await import("../db");
       const cookie = getSessionCookie(req);
       if (!cookie) return res.status(401).end();
       const session = await verifySessionToken(cookie);
@@ -261,18 +261,28 @@ async function startServer() {
           (property.visibilityScope === "proposal" && property.proposalTargetUserId !== user.id) ||
           exclusions.some(item => item.userId === user.id)) return res.status(404).end();
       }
-      const files = (await listPropertyFileContents(propertyId)).filter(file => file.category === "document" && file.visible !== 0);
+      const files = (await listPropertyFiles(propertyId)).filter(file => file.category === "document" && file.visible !== 0);
       if (!files.length) return res.status(404).json({ error: "ダウンロードできる資料がありません" });
-      const archive = createStoredZip(files.map((file, index) => ({
-        name: `${String(index + 1).padStart(2, "0")}_${file.name.replace(/[\\/:*?"<>|]/g, "_")}`,
-        data: Buffer.from(file.contentBase64, "base64"),
-      })));
       res.setHeader("Content-Type", "application/zip");
       res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`PF-${propertyId}_資料一式.zip`)}`);
-      res.setHeader("Content-Length", archive.length);
       res.setHeader("Cache-Control", "private, no-store, max-age=0");
       res.setHeader("X-Content-Type-Options", "nosniff");
-      res.send(archive);
+      res.flushHeaders();
+      const directories: Buffer[] = [];
+      let offset = 0;
+      let written = 0;
+      for (const [index, metadata] of files.entries()) {
+        const file = await getPropertyFileContent(metadata.id);
+        if (!file) continue;
+        const data = Buffer.from(file.contentBase64, "base64");
+        const entry = createStoredZipEntry(`${String(index + 1).padStart(2, "0")}_${file.name.replace(/[\\/:*?"<>|]/g, "_")}`, data, offset);
+        res.write(entry.local);
+        res.write(data);
+        directories.push(entry.directory);
+        offset = entry.nextOffset;
+        written += 1;
+      }
+      res.end(createStoredZipEnd(directories, written, offset));
     } catch (error) {
       console.error("[property-files-zip] error:", error);
       res.status(500).end();
