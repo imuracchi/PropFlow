@@ -134,7 +134,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
   }, [preview, properties]);
   return (
     <div className="min-h-screen bg-[#f2f5f8] text-[#102d50]">
-      <section className="fixed inset-x-0 top-0 z-40 border-b border-[#cbd6e2] bg-[#f2f5f8]/95 shadow-[0_3px_14px_rgba(23,63,112,.10)] backdrop-blur">
+      <section className="sticky top-0 z-40 border-b border-[#cbd6e2] bg-[#f2f5f8]/95 shadow-[0_3px_14px_rgba(23,63,112,.10)] backdrop-blur">
         <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
@@ -159,7 +159,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
           </div>
         </div>
       </section>
-      <main className="mx-auto max-w-5xl px-4 pb-8 pt-[205px] sm:px-6 sm:pt-[175px] md:pt-[130px]">
+      <main className="mx-auto max-w-5xl px-4 pb-8 pt-3 sm:px-6">
         <section className="border border-[#e3c68c] bg-[#fffaf0] text-[#4f4433]">
           <button
             type="button"
