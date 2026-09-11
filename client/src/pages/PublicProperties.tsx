@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, ChevronDown, FileText, LogIn, Search, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Building2, ChevronDown, FileText, LogIn, Search, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -95,6 +95,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
   const [keyword, setKeyword] = useState("");
   const [appliedKeyword, setAppliedKeyword] = useState("");
   const [expandedPropertyId, setExpandedPropertyId] = useState<number | null>(null);
+  const [noticeOpen, setNoticeOpen] = useState(false);
   const properties = preview ? PREVIEW_PUBLIC_PROPERTIES : query.data;
   const analyticsMutation = trpc.property.recordPublicEvents.useMutation();
   const visitorIdRef = useRef<string | undefined>(undefined);
@@ -159,6 +160,22 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
         </div>
       </section>
       <main className="mx-auto max-w-5xl px-4 pb-8 pt-[205px] sm:px-6 sm:pt-[175px] md:pt-[130px]">
+        <section className="border border-[#e3c68c] bg-[#fffaf0] text-[#4f4433]">
+          <button
+            type="button"
+            aria-expanded={noticeOpen}
+            onClick={() => setNoticeOpen(open => !open)}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left sm:pointer-events-none sm:px-4 sm:pb-1 sm:pt-3"
+          >
+            <AlertTriangle size={17} className="shrink-0 text-[#a35a00]" />
+            <span className="text-[12px] font-bold text-[#70420d] sm:text-[13px]">物件情報・お取引に関するご注意</span>
+            <ChevronDown size={16} className={`ml-auto text-[#a35a00] transition-transform sm:hidden ${noticeOpen ? "rotate-180" : ""}`} />
+          </button>
+          <div className={`${noticeOpen ? "block" : "hidden"} px-3 pb-3 text-[11px] leading-5 sm:block sm:px-4 sm:pb-3 sm:text-[12px] sm:leading-6`}>
+            <p>PropFlowは、掲載物件・資料の内容、正確性、最新性および取引の安全性を保証しません。物件情報や取引条件は、掲載者へ必ずご確認ください。</p>
+            <p>当事者間の交渉・契約・紛争について、PropFlowは原則として関与いたしません。</p>
+          </div>
+        </section>
         {!preview && query.isLoading ? (
           <p className="py-16 text-center text-sm text-[#65748a]">読み込み中…</p>
         ) : filteredProperties?.length ? (
