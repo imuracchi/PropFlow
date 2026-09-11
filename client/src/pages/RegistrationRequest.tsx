@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Building2, Camera, CheckCircle, Loader2, Send } from "lucide-react";
 import AuthPageShell from "@/components/v2/AuthPageShell";
 import { trpc } from "@/lib/trpc";
+import { normalizeBusinessCardImage } from "@/lib/businessCardImage";
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -50,9 +51,9 @@ export default function RegistrationRequest() {
     }
     setReading(true);
     try {
-      const buffer = await file.arrayBuffer();
-      const base64 = btoa(new Uint8Array(buffer).reduce((value, byte) => value + String.fromCharCode(byte), ""));
-      const mimeType = file.type as (typeof ACCEPTED_TYPES)[number];
+      const normalized = await normalizeBusinessCardImage(file);
+      const base64 = normalized.base64;
+      const mimeType = normalized.mimeType;
       const result = await readCard.mutateAsync({ imageBase64: base64, mimeType });
       if (!result.success || !result.data) throw new Error("read_failed");
       const data = result.data as Record<string, string | null>;

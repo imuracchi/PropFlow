@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { normalizeBusinessCardImage } from "@/lib/businessCardImage";
 import AuthPageShell from "@/components/v2/AuthPageShell";
 
 export default function Register() {
@@ -68,25 +69,17 @@ export default function Register() {
     }
   }, [tokenInfo]);
 
-  const toBase64 = (file: File): Promise<string> =>
-    file
-      .arrayBuffer()
-      .then(buf =>
-        btoa(
-          new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), "")
-        )
-      );
-
   const handleCardSelect = async (file: File) => {
     setCardError("");
     setCardReading(true);
     try {
-      const b64 = await toBase64(file);
+      const normalized = await normalizeBusinessCardImage(file);
+      const b64 = normalized.base64;
       setCardBase64(b64);
-      setCardMime(file.type || "image/jpeg");
+      setCardMime(normalized.mimeType);
       const result = await readCardMutation.mutateAsync({
         imageBase64: b64,
-        mimeType: file.type,
+        mimeType: normalized.mimeType,
       });
       if (result.success && result.data) {
         const d = result.data as any;

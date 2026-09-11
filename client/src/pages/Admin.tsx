@@ -56,6 +56,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc";
+import { normalizeBusinessCardImage } from "@/lib/businessCardImage";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -3762,13 +3763,13 @@ function CreateUserForm({
     const file = e.target.files?.[0];
     if (!file) return;
     setCardReading(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(",")[1];
+    try {
+      const normalized = await normalizeBusinessCardImage(file);
+      const base64 = normalized.base64;
       setCardBase64(base64);
       const result = await readCardMutation.mutateAsync({
         imageBase64: base64,
-        mimeType: file.type,
+        mimeType: normalized.mimeType,
       });
       if (result.success && result.data) {
         const d = result.data as any;
@@ -3784,8 +3785,10 @@ function CreateUserForm({
         setPassword(passwordFromPhone(d.mobile || d.phone));
       }
       setCardReading(false);
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      setError("名刺画像を読み込めませんでした。別の画像をお試しください。");
+      setCardReading(false);
+    }
   };
 
   const handleSubmit = async () => {

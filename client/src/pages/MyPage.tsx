@@ -45,6 +45,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { normalizeBusinessCardImage } from "@/lib/businessCardImage";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PropertyRegisterNudgeBanner } from "@/components/PropertyRegisterNudgeBanner";
 
@@ -396,19 +397,12 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
                 onChange={async e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const toBase64 = (f: File): Promise<string> =>
-                    f
-                      .arrayBuffer()
-                      .then(buf =>
-                        btoa(
-                          new Uint8Array(buf).reduce(
-                            (s, b) => s + String.fromCharCode(b),
-                            ""
-                          )
-                        )
-                      );
-                  const b64 = await toBase64(file);
-                  cardMutation.mutate({ businessCardBase64: b64 });
+                  try {
+                    const normalized = await normalizeBusinessCardImage(file);
+                    cardMutation.mutate({ businessCardBase64: normalized.base64 });
+                  } catch {
+                    window.alert("名刺画像を読み込めませんでした。別の画像をお試しください。");
+                  }
                 }}
               />
               {cardMutation.isPending ? (
