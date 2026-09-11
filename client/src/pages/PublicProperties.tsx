@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, FileText, LogIn, Search, X } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, FileText, LogIn, Search, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -94,6 +94,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
   const [registration, setRegistration] = useState<{ propertyId: number; intent: "document" | "inquiry" } | null>(null);
   const [keyword, setKeyword] = useState("");
   const [appliedKeyword, setAppliedKeyword] = useState("");
+  const [expandedPropertyId, setExpandedPropertyId] = useState<number | null>(null);
   const properties = preview ? PREVIEW_PUBLIC_PROPERTIES : query.data;
   const analyticsMutation = trpc.property.recordPublicEvents.useMutation();
   const visitorIdRef = useRef<string | undefined>(undefined);
@@ -165,15 +166,26 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
             {filteredProperties.map(property => {
               return (
               <article key={property.id} className="flex overflow-hidden border border-[#ccd7e3] bg-white shadow-[0_2px_10px_rgba(23,63,112,.06)]">
-                <div className="flex w-full flex-col p-5">
+                <div className="flex w-full flex-col p-4 sm:p-5">
                   <div className="flex items-center justify-between gap-3 text-[11px] font-bold text-[#5d7797]"><span className="bg-[#edf3f8] px-2 py-1 text-[#315d8b]">{property.type}</span><span className="text-sm tracking-wide text-[#173f70]">PF-{property.id}</span></div>
-                  <h2 className="mt-3 line-clamp-2 min-h-12 text-[17px] font-bold leading-6 text-[#102d50]">{property.name}</h2>
-                  <div className="mt-3 flex min-h-7 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-[#e1e7ed] pb-3"><p className="text-sm text-[#65748a]">{property.area}</p><p className="text-lg font-bold text-[#173f70]">{propertyPriceLabel(property.price, property.priceNegotiable)}</p></div>
-                  <p className="mt-3 min-h-12 text-[13px] leading-6 text-[#3f5269]">{buildPublicCardIntroduction({ ...property, address: property.area })}</p>
-                  <PublicPropertyFields property={property} />
-                  <div className="mt-auto grid gap-2 pt-5">
-                    <button disabled={!property.hasPdf} onClick={() => { if (property.hasPdf) { recordEvents([{ eventType: "document_click", propertyId: property.id }]); setRegistration({ propertyId: property.id, intent: "document" }); } }} className="flex h-12 items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-[#9aa8b8]"><FileText size={18} />{property.hasPdf ? "物件資料が欲しい" : "物件資料は未登録"}</button>
-                    <button onClick={() => { recordEvents([{ eventType: "inquiry_click", propertyId: property.id }]); setRegistration({ propertyId: property.id, intent: "inquiry" }); }} className="h-12 border border-[#173f70] text-sm font-bold text-[#173f70]">問い合わせする</button>
+                  <h2 className="mt-2 line-clamp-2 text-[16px] font-bold leading-6 text-[#102d50] sm:mt-3 sm:min-h-12 sm:text-[17px]">{property.name}</h2>
+                  <div className="mt-2 flex min-h-7 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 sm:mt-3"><p className="text-[13px] text-[#65748a] sm:text-sm">{property.area}</p><p className="text-[17px] font-bold text-[#173f70] sm:text-lg">{propertyPriceLabel(property.price, property.priceNegotiable)}</p></div>
+                  <button
+                    type="button"
+                    aria-expanded={expandedPropertyId === property.id}
+                    onClick={() => setExpandedPropertyId(current => current === property.id ? null : property.id)}
+                    className="mt-2 flex h-9 w-full items-center justify-center gap-1 border-t border-[#e1e7ed] pt-2 text-[12px] font-bold text-[#315d8b] sm:hidden"
+                  >
+                    {expandedPropertyId === property.id ? "詳細を閉じる" : "詳細・問い合わせを見る"}
+                    <ChevronDown size={16} className={`transition-transform ${expandedPropertyId === property.id ? "rotate-180" : ""}`} />
+                  </button>
+                  <div className={`${expandedPropertyId === property.id ? "block" : "hidden"} sm:block`}>
+                    <p className="mt-3 text-[13px] leading-6 text-[#3f5269] sm:min-h-12">{buildPublicCardIntroduction({ ...property, address: property.area })}</p>
+                    <PublicPropertyFields property={property} />
+                    <div className="mt-auto grid gap-2 pt-4 sm:pt-5">
+                      <button disabled={!property.hasPdf} onClick={() => { if (property.hasPdf) { recordEvents([{ eventType: "document_click", propertyId: property.id }]); setRegistration({ propertyId: property.id, intent: "document" }); } }} className="flex h-11 items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-[#9aa8b8] sm:h-12"><FileText size={18} />{property.hasPdf ? "物件資料が欲しい" : "物件資料は未登録"}</button>
+                      <button onClick={() => { recordEvents([{ eventType: "inquiry_click", propertyId: property.id }]); setRegistration({ propertyId: property.id, intent: "inquiry" }); }} className="h-11 border border-[#173f70] text-sm font-bold text-[#173f70] sm:h-12">問い合わせする</button>
+                    </div>
                   </div>
                 </div>
               </article>
