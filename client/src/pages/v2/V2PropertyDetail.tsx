@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { saveAuthenticatedFile } from "@/lib/fileDownload";
 import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
 import { printProperty } from "@/pages/PropertyDetail";
@@ -627,11 +628,16 @@ export default function V2PropertyDetail({
   const download = async (file: any) => {
     if (preview) return;
     setDownloading(file.id);
-    const anchor = document.createElement("a");
-    anchor.href = `/api/files/raw/${file.id}?download=1`;
-    anchor.download = file.name;
-    anchor.click();
-    setDownloading(null);
+    try {
+      await saveAuthenticatedFile(
+        `/api/files/raw/${file.id}?download=1`,
+        file.name
+      );
+    } catch {
+      alert("資料を保存できませんでした。通信状況を確認して、もう一度お試しください。");
+    } finally {
+      setDownloading(null);
+    }
   };
   const previewPdf = async (file: any) => {
     if (!preview) {

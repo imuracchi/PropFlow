@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ChevronLeft, ChevronRight, Download, Loader2, X } from "lucide-react";
+import { saveAuthenticatedFile } from "@/lib/fileDownload";
 
 interface Props {
   fileId: number;
@@ -136,13 +137,18 @@ export function FileViewerModal({ fileId, name, onClose }: Props) {
           >
             <ChevronRight size={17} />
           </button>
-          <a
-            href={`/api/files/raw/${fileId}?download=1`}
-            download={name}
+          <button
+            type="button"
+            onClick={() => {
+              void saveAuthenticatedFile(
+                `/api/files/raw/${fileId}?download=1`,
+                name
+              ).catch(() => window.alert("資料を保存できませんでした。通信状況を確認して、もう一度お試しください。"));
+            }}
             className="ml-2 flex h-8 items-center gap-1 rounded border border-white/50 px-2 text-[11px] font-semibold"
           >
             <Download size={14} /> DL
-          </a>
+          </button>
         </div>
       )}
 

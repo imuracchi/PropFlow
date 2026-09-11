@@ -11,6 +11,27 @@ import { serveStatic, setupVite } from "./vite";
 import { PUBLIC_SITE_URL } from "./publicUrl";
 import { createStoredZipEnd, createStoredZipEntry } from "./storedZip";
 
+function detectFileType(binary: Buffer, originalName: string) {
+  const lowerName = originalName.toLowerCase();
+  if (binary.subarray(0, 5).toString("ascii") === "%PDF-")
+    return { contentType: "application/pdf", extension: ".pdf" };
+  if (binary[0] === 0xff && binary[1] === 0xd8 && binary[2] === 0xff)
+    return { contentType: "image/jpeg", extension: ".jpg" };
+  if (binary.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])))
+    return { contentType: "image/png", extension: ".png" };
+  if (binary.subarray(0, 4).toString("ascii") === "RIFF" && binary.subarray(8, 12).toString("ascii") === "WEBP")
+    return { contentType: "image/webp", extension: ".webp" };
+  if (binary[0] === 0x50 && binary[1] === 0x4b)
+    return { contentType: "application/zip", extension: ".zip" };
+  const extension = lowerName.includes(".") ? `.${lowerName.split(".").pop()}` : "";
+  return { contentType: "application/octet-stream", extension };
+}
+
+function downloadableFileName(originalName: string, extension: string) {
+  if (!extension || originalName.toLowerCase().endsWith(extension)) return originalName;
+  return `${originalName}${extension}`;
+}
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
@@ -218,19 +239,18 @@ async function startServer() {
         }
       }
 
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-      const contentType =
-        ext === "pdf"
-          ? "application/pdf"
-          : `image/${ext === "jpg" ? "jpeg" : ext}`;
       const binary = Buffer.from(file.contentBase64, "base64");
+      const { contentType, extension } = detectFileType(binary, file.name);
+      const fileName = downloadableFileName(file.name, extension);
+      const asciiFallback = `PF-file-${file.id}${extension}`;
       res.setHeader("Content-Type", contentType);
       res.setHeader(
         "Content-Disposition",
-        `${req.query.download === "1" ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(file.name)}`
+        `${req.query.download === "1" ? "attachment" : "inline"}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
       );
       res.setHeader("Content-Length", binary.length);
       res.setHeader("Cache-Control", "private, max-age=300");
+      res.setHeader("X-Content-Type-Options", "nosniff");
       res.send(binary);
     } catch (e) {
       console.error("[files/raw] error:", e);
