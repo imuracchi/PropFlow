@@ -179,7 +179,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
                     {expandedPropertyId === property.id ? "詳細を閉じる" : "詳細・問い合わせを見る"}
                     <ChevronDown size={16} className={`transition-transform ${expandedPropertyId === property.id ? "rotate-180" : ""}`} />
                   </button>
-                  <div className={`${expandedPropertyId === property.id ? "block" : "hidden"} sm:block`}>
+                  <div className={`${expandedPropertyId === property.id ? "block" : "hidden"} sm:flex sm:flex-1 sm:flex-col`}>
                     <p className="mt-3 text-[13px] leading-6 text-[#3f5269] sm:min-h-12">{buildPublicCardIntroduction({ ...property, address: property.area })}</p>
                     <PublicPropertyFields property={property} />
                     <div className="mt-auto grid gap-2 pt-4 sm:pt-5">
