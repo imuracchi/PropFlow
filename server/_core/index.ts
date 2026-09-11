@@ -243,7 +243,15 @@ async function startServer() {
       const { contentType, extension } = detectFileType(binary, file.name);
       const fileName = downloadableFileName(file.name, extension);
       const asciiFallback = `PF-file-${file.id}${extension}`;
-      res.setHeader("Content-Type", contentType);
+      // iOS embedded browsers often ignore `attachment` for application/pdf
+      // and open Quick Look, whose share action may save only the source URL.
+      // Use a generic binary type for the download response while preserving
+      // the real type for inline previews.
+      res.setHeader(
+        "Content-Type",
+        req.query.download === "1" ? "application/octet-stream" : contentType
+      );
+      res.setHeader("X-File-Mime-Type", contentType);
       res.setHeader(
         "Content-Disposition",
         `${req.query.download === "1" ? "attachment" : "inline"}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
