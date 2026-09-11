@@ -1012,6 +1012,29 @@ JSONのみ返してください。`,
       return { success: true };
     }),
 
+    tradeNoticeStatus: protectedProcedure.query(async ({ ctx }) => {
+      const lastConfirmedAt = await db.getLatestActivityAt(
+        ctx.user.id,
+        "trade_notice_confirm"
+      );
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      return {
+        shouldShow:
+          !lastConfirmedAt ||
+          Date.now() - new Date(lastConfirmedAt).getTime() >= thirtyDaysMs,
+      };
+    }),
+
+    confirmTradeNotice: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.logActivity(
+        ctx.user.id,
+        "trade_notice_confirm",
+        "物件情報・取引に関する注意を確認",
+        ctx.req.headers["user-agent"]
+      );
+      return { success: true };
+    }),
+
     getVisibilitySettings: protectedProcedure.query(async ({ ctx }) => {
       return db.getVisibilitySettings(ctx.user.id);
     }),

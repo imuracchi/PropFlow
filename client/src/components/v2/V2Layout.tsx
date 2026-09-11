@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Bell,
   BookOpen,
   Building2,
@@ -71,6 +72,15 @@ export default function V2Layout({
     refetchInterval: 30000,
   });
   const unreadAnnouncementCount = unreadAnnouncementCountQuery.data ?? 0;
+  const tradeNoticeStatus = trpc.auth.tradeNoticeStatus.useQuery(undefined, {
+    enabled: !preview && !!user,
+    refetchOnWindowFocus: false,
+  });
+  const confirmTradeNotice = trpc.auth.confirmTradeNotice.useMutation({
+    onSuccess: () => {
+      tradeNoticeStatus.refetch();
+    },
+  });
   const logReferralCopy = trpc.mypage.logReferralCopy.useMutation();
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
@@ -470,6 +480,46 @@ export default function V2Layout({
                 LINEやメールに貼り付けてお送りください。
               </p>
             )}
+          </section>
+        </div>
+      )}
+      {!preview && tradeNoticeStatus.data?.shouldShow && (
+        <div className="fixed inset-0 z-[80] flex items-end bg-black/50 sm:items-center sm:justify-center sm:p-5">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="trade-notice-title"
+            className="w-full bg-white p-5 shadow-xl sm:max-w-lg sm:border sm:border-[#d9e0e8] sm:p-7"
+          >
+            <div className="flex items-start gap-3">
+              <div className="grid size-10 shrink-0 place-items-center bg-[#fff4df] text-[#a35a00]">
+                <AlertTriangle size={21} />
+              </div>
+              <div>
+                <h2 id="trade-notice-title" className="text-[18px] font-bold text-[#102d50]">
+                  物件情報・お取引に関するご注意
+                </h2>
+                <p className="mt-1 text-[11px] text-[#758194]">定期的にご確認をお願いしています</p>
+              </div>
+            </div>
+            <div className="mt-5 border-l-4 border-[#d6972e] bg-[#fffaf0] p-4 text-[13px] leading-7 text-[#334a66]">
+              <p>PropFlowは、掲載物件・資料・メッセージの内容、正確性、最新性および取引の安全性を保証しません。</p>
+              <p className="mt-3">取引条件や資料の内容は、当事者間で必ずご確認ください。</p>
+              <p className="mt-3">当事者間の交渉・契約・紛争について、PropFlowは原則として関与いたしません。</p>
+            </div>
+            <div className="mt-4 text-center text-[11px] leading-5 text-[#65748a]">
+              <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="font-bold text-[#173f70] underline">利用規約</a>
+              <span className="mx-2">・</span>
+              <a href="/support.html" target="_blank" rel="noopener noreferrer" className="font-bold text-[#173f70] underline">ヘルプ・お問い合わせ</a>
+            </div>
+            <button
+              type="button"
+              disabled={confirmTradeNotice.isPending}
+              onClick={() => confirmTradeNotice.mutate()}
+              className="mt-5 h-12 w-full bg-[#173f70] text-[14px] font-bold text-white disabled:opacity-60"
+            >
+              {confirmTradeNotice.isPending ? "保存中…" : "確認しました"}
+            </button>
           </section>
         </div>
       )}

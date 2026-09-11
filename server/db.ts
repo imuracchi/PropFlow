@@ -5528,6 +5528,18 @@ export async function logActivity(
     .where(eq(users.id, userId));
 }
 
+export async function getLatestActivityAt(userId: number, action: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({ createdAt: activityLogs.createdAt })
+    .from(activityLogs)
+    .where(and(eq(activityLogs.userId, userId), eq(activityLogs.action, action)))
+    .orderBy(desc(activityLogs.createdAt))
+    .limit(1);
+  return rows[0]?.createdAt ?? null;
+}
+
 export async function savePublicPageEvents(events: Array<{
   visitorHash: string;
   eventType: string;
