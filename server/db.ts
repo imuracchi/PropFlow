@@ -3801,9 +3801,11 @@ export async function getPublicSnsProperties() {
       )
     )
     .orderBy(propertyFiles.createdAt);
+  const attentionCounts = await getRecentPropertyAttentionCountsForPublicPage();
   return rows.map(({ address, ...row }) => ({
     ...row,
     area: publicArea(address),
+    attention: isPropertyAttentionWorthy(attentionCounts.get(row.id) ?? {}),
     hasPdf: files.some(file => file.propertyId === row.id && file.category === "document" && file.name.toLowerCase().endsWith(".pdf")),
   }));
 }

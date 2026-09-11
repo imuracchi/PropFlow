@@ -83,9 +83,9 @@ function PublicPropertyFields({ property }: { property: PublicPropertyFieldData 
 }
 
 const PREVIEW_PUBLIC_PROPERTIES = [
-  { id: 242, name: "都内・一棟収益マンション", type: "一棟マンション", area: "東京都新宿区", price: 328_000_000, priceNegotiable: 0, estimatedYield: 5.8, landArea: 184.2, buildingArea: 612.4, structure: "RC造", buildingAge: "2012年3月", transport: "最寄駅徒歩6分", zoning: "商業地域", socialIntroduction: "都心の駅徒歩6分に位置する、2012年築・RC造の一棟収益マンションです。", publishedAt: new Date(), hasPdf: true },
-  { id: 238, name: "駅近・事業用ビル", type: "事務所ビル", area: "大阪府大阪市北区", price: 485_000_000, priceNegotiable: 0, estimatedYield: 6.2, landArea: 142.8, buildingArea: 728.1, structure: "鉄骨造", buildingAge: "2008年9月", transport: "最寄駅徒歩3分", zoning: "商業地域", socialIntroduction: "大阪市北区の駅徒歩3分、商業地域に位置する事業用ビルです。", publishedAt: new Date(), hasPdf: true },
-  { id: 231, name: "郊外ロードサイド店舗", type: "店舗", area: "埼玉県さいたま市", price: null, priceNegotiable: 1, estimatedYield: null, landArea: 820, buildingArea: 315, structure: "鉄骨造", buildingAge: "2018年6月", transport: null, zoning: "準工業地域", publishedAt: new Date(), hasPdf: false },
+  { id: 242, name: "都内・一棟収益マンション", type: "一棟マンション", area: "東京都新宿区", price: 328_000_000, priceNegotiable: 0, estimatedYield: 5.8, landArea: 184.2, buildingArea: 612.4, structure: "RC造", buildingAge: "2012年3月", transport: "最寄駅徒歩6分", zoning: "商業地域", socialIntroduction: "都心の駅徒歩6分に位置する、2012年築・RC造の一棟収益マンションです。", publishedAt: new Date(), hasPdf: true, attention: true },
+  { id: 238, name: "駅近・事業用ビル", type: "事務所ビル", area: "大阪府大阪市北区", price: 485_000_000, priceNegotiable: 0, estimatedYield: 6.2, landArea: 142.8, buildingArea: 728.1, structure: "鉄骨造", buildingAge: "2008年9月", transport: "最寄駅徒歩3分", zoning: "商業地域", socialIntroduction: "大阪市北区の駅徒歩3分、商業地域に位置する事業用ビルです。", publishedAt: new Date(), hasPdf: true, attention: false },
+  { id: 231, name: "郊外ロードサイド店舗", type: "店舗", area: "埼玉県さいたま市", price: null, priceNegotiable: 1, estimatedYield: null, landArea: 820, buildingArea: 315, structure: "鉄骨造", buildingAge: "2018年6月", transport: null, zoning: "準工業地域", publishedAt: new Date(), hasPdf: false, attention: false },
 ];
 
 export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
@@ -167,7 +167,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
               return (
               <article key={property.id} className="flex overflow-hidden border border-[#ccd7e3] bg-white shadow-[0_2px_10px_rgba(23,63,112,.06)]">
                 <div className="flex w-full flex-col p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-3 text-[11px] font-bold text-[#5d7797]"><span className="bg-[#edf3f8] px-2 py-1 text-[#315d8b]">{property.type}</span><span className="text-sm tracking-wide text-[#173f70]">PF-{property.id}</span></div>
+                  <div className="flex items-center justify-between gap-3 text-[11px] font-bold text-[#5d7797]"><div className="flex items-center gap-1.5"><span className="bg-[#edf3f8] px-2 py-1 text-[#315d8b]">{property.type}</span>{property.attention && <span className="bg-[#fff0dc] px-2 py-1 text-[#b8581d]">注目</span>}</div><span className="text-sm tracking-wide text-[#173f70]">PF-{property.id}</span></div>
                   <h2 className="mt-2 line-clamp-2 text-[16px] font-bold leading-6 text-[#102d50] sm:mt-3 sm:min-h-12 sm:text-[17px]">{property.name}</h2>
                   <div className="mt-2 flex min-h-7 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 sm:mt-3"><p className="text-[13px] text-[#65748a] sm:text-sm">{property.area}</p><p className="text-[17px] font-bold text-[#173f70] sm:text-lg">{propertyPriceLabel(property.price, property.priceNegotiable)}</p></div>
                   <button

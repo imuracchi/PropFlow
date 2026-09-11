@@ -520,20 +520,20 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
   <div class="wrap">
     <div class="section-head">
       <span class="eyebrow">LIVE PROPERTY INFORMATION</span>
-      <h2>今、こんな物件が登録されています</h2>
-      <p>掲載者がログインページへの簡易掲載に同意した物件のみ、市区・物件種別・価格帯・面積をご紹介しています。</p>
+      <h2>会員登録前でも、公開物件を確認できます</h2>
+      <p>掲載者が「一般公開への簡易掲載」に同意した物件について、物件名・物件番号・所在地・価格・紹介文などをご覧いただけます。</p>
     </div>
     <div class="showcase-group" id="showcase-attention-group" hidden>
       <div class="showcase-group-head"><h3>注目の物件</h3><span>最近よく見られています</span></div>
       <div class="showcase-grid" id="showcase-attention"></div>
     </div>
     <div class="showcase-group" id="showcase-newest-group" hidden>
-      <div class="showcase-group-head"><h3>最近登録された物件</h3><span>同日内は地域分散</span></div>
+      <div class="showcase-group-head"><h3>公開物件情報</h3><span>一部をご紹介</span></div>
       <div class="showcase-grid" id="showcase-newest"></div>
     </div>
     <div class="showcase-action">
-      <a class="btn-primary" href="https://propflow.jp/">会員登録して詳細を見る →</a>
-      <p class="showcase-note">詳細住所・資料・担当者への問い合わせはログイン後に確認できます。</p>
+      <a class="btn-primary" href="/public/properties">公開物件情報をもっと見る →</a>
+      <p class="showcase-note">物件資料の希望や問い合わせには、PropFlowへの会員登録が必要です。</p>
     </div>
   </div>
 </section>
@@ -814,36 +814,42 @@ footer .copyright { padding: 16px 0 40px; font-size: 12px; color: var(--text-sub
   const escapeShowcaseText = value => String(value ?? '').replace(/[&<>'"]/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   })[character]);
+  const publicPriceLabel = item => {
+    if (item.priceNegotiable) return '応相談';
+    const price = Number(item.price);
+    if (!Number.isFinite(price) || price <= 0) return '価格非公開';
+    if (price >= 100000000) {
+      const oku = Math.floor(price / 100000000);
+      const man = Math.round((price % 100000000) / 10000);
+      return `${oku}億${man ? `${man.toLocaleString('ja-JP')}万` : ''}円`;
+    }
+    return `${Math.round(price / 10000).toLocaleString('ja-JP')}万円`;
+  };
   const renderShowcaseCards = (container, items, attention) => {
     container.innerHTML = items.map(item => `
-      <article class="showcase-card${attention ? ' showcase-card--attention' : ''}">
-        <span class="showcase-badge">${attention ? '注目' : '登録'}</span>
-        <h4 class="showcase-location">${escapeShowcaseText(item.area)}</h4>
-        <p class="showcase-type">${escapeShowcaseText(item.type)}</p>
-        <div class="showcase-meta"><strong>${escapeShowcaseText(item.priceBand)}${item.sizeLabel ? `｜${escapeShowcaseText(item.sizeLabel)}` : ''}</strong></div>
+      <article class="showcase-card${item.attention ? ' showcase-card--attention' : ''}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="display:flex;align-items:center;gap:6px;"><span class="showcase-badge">${escapeShowcaseText(item.type)}</span>${item.attention ? '<span style="background:#fff0dc;color:#a94f18;padding:5px 9px;font-size:11px;font-weight:800;">注目</span>' : ''}</div>
+          <strong style="color:#174574;font-size:14px;">PF-${escapeShowcaseText(item.id)}</strong>
+        </div>
+        <h4 class="showcase-location" style="margin-top:14px;">${escapeShowcaseText(item.name)}</h4>
+        <div class="showcase-meta" style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;"><span>${escapeShowcaseText(item.area)}</span><strong>${escapeShowcaseText(publicPriceLabel(item))}</strong></div>
+        <p style="margin-top:12px;color:#465b73;font-size:13px;line-height:1.75;">${escapeShowcaseText(item.socialIntroduction || `${item.area}の${item.type}です。`)}</p>
       </article>`).join('');
   };
   // 端末やアプリ内ブラウザが市区名を地図リンクに変換しても、紹介欄からは遷移させない。
   document.getElementById('property-showcase').addEventListener('click', event => {
     if (event.target.closest('.showcase-location a')) event.preventDefault();
   });
-  fetch('/api/trpc/property.publicShowcase?input=%7B%22json%22%3Anull%7D')
+  fetch('/api/trpc/property.publicSnsList?input=%7B%22json%22%3Anull%7D')
     .then(response => response.ok ? response.json() : Promise.reject(new Error('request failed')))
     .then(payload => {
       const data = payload?.result?.data?.json ?? payload?.result?.data;
-      const attention = Array.isArray(data?.attention) ? data.attention : [];
-      const newest = Array.isArray(data?.newest) ? data.newest : [];
-      if (attention.length + newest.length < 6) return;
+      const items = Array.isArray(data) ? data : [];
+      if (!items.length) return;
       const mobile = window.matchMedia('(max-width: 760px)').matches;
-      const displayedAttention = mobile ? attention.slice(0, 2) : attention;
-      const displayedNewest = mobile
-        ? newest.slice(0, Math.max(0, 6 - displayedAttention.length))
-        : newest;
+      const displayedNewest = items.slice(0, mobile ? 3 : 6);
       const section = document.getElementById('property-showcase');
-      if (displayedAttention.length) {
-        renderShowcaseCards(document.getElementById('showcase-attention'), displayedAttention, true);
-        document.getElementById('showcase-attention-group').hidden = false;
-      }
       if (displayedNewest.length) {
         renderShowcaseCards(document.getElementById('showcase-newest'), displayedNewest, false);
         document.getElementById('showcase-newest-group').hidden = false;
