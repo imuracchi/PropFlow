@@ -461,15 +461,19 @@ async function startServer() {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
       await page.evaluate(async () => {
+        const fontText = document.body.innerText || "物件情報・所在地・価格・交通・用途地域";
         await Promise.race([
           (async () => {
-            await document.fonts.load('400 11px "Noto Sans JP"');
-            await document.fonts.load('600 11px "Noto Sans JP"');
-            await document.fonts.load('700 25px "Noto Sans JP"');
+            await document.fonts.load('400 11px "Noto Sans JP"', fontText);
+            await document.fonts.load('600 11px "Noto Sans JP"', fontText);
+            await document.fonts.load('700 25px "Noto Sans JP"', fontText);
             await document.fonts.ready;
           })(),
           new Promise(resolve => window.setTimeout(resolve, 15000)),
         ]);
+        if (!document.fonts.check('400 11px "Noto Sans JP"', fontText)) {
+          throw new Error("Japanese PDF font could not be loaded");
+        }
       });
       await page.emulateMediaType("print");
       const pdf = await page.pdf({ format: "A4", printBackground: true, timeout: 60000 });
