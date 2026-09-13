@@ -68,7 +68,7 @@ function exportPropertyCsv(
 export async function printProperty(
   p: {
     name: string; address: string; type: string; status: string;
-    price: number | null; priceNegotiable: number;
+    price: number | null; priceNegotiable: number; estimatedYield: number | null;
     landArea: number | null; buildingArea: number | null;
     comment: string | null; transport: string | null;
     lotNumber: string | null; landCategory: string | null;
@@ -224,7 +224,7 @@ ${p.comment ? `<div class="cmt"><b>紹介コメント</b>${p.comment}</div>` : "
 <tr><th>所在地</th><td colspan="3">${p.address}</td></tr>
 <tr><th>地番</th><td>${v(p.lotNumber)}</td><th>物件種別</th><td>${p.type}</td></tr>
 <tr><th>交通</th><td colspan="3">${v(p.transport)}</td></tr>
-<tr><th>売出価格</th><td colspan="3">${priceText}</td></tr>
+<tr><th>売出価格</th><td>${priceText}</td><th>想定利回り</th><td>${p.estimatedYield != null ? `${p.estimatedYield}%` : "—"}</td></tr>
 <tr><th>土地面積</th><td>${p.landArea ? p.landArea.toFixed(2) + "㎡（" + toTsubo(p.landArea) + "坪）" : "—"}</td><th>建物延床面積</th><td>${p.buildingArea ? p.buildingArea.toFixed(2) + "㎡（" + toTsubo(p.buildingArea) + "坪）" : "—"}</td></tr>
 <tr><th>地目</th><td>${v(p.landCategory)}</td><th>権利</th><td>${v(p.rights)}</td></tr>
 <tr><th>構造</th><td>${v(p.structure)}</td><th>築年数</th><td>${v(p.buildingAge)}</td></tr>
@@ -1099,8 +1099,10 @@ export default function PropertyDetail() {
     }
     const priceNum = f.price ? Number(f.price.replace(/,/g, "")) : null;
     const landAreaNum = f.landArea ? Number(f.landArea) : null;
+    const yieldNum = f.estimatedYield ? Number(f.estimatedYield) : null;
     if (priceNum !== null && (isNaN(priceNum) || priceNum <= 0)) { setEditError("価格を正しく入力してください"); return; }
     if (landAreaNum !== null && (isNaN(landAreaNum) || landAreaNum <= 0)) { setEditError("土地面積を正しく入力してください"); return; }
+    if (yieldNum !== null && (!Number.isFinite(yieldNum) || yieldNum < 0)) { setEditError("想定利回りを正しく入力してください"); return; }
 
     await updateMutation.mutateAsync({
       id: propertyId,
@@ -1110,7 +1112,7 @@ export default function PropertyDetail() {
       type: f.type,
       price: priceNum,
       priceNegotiable: f.priceNegotiable,
-      estimatedYield: f.estimatedYield ? Number(f.estimatedYield) : null,
+      estimatedYield: yieldNum,
       landArea: landAreaNum,
       buildingArea: f.buildingArea ? Number(f.buildingArea) : null,
       transport: f.transport || null,
@@ -1186,7 +1188,7 @@ export default function PropertyDetail() {
         address: property.address,
         type: property.type,
         price: property.price || 0,
-        estimatedYield: null,
+        estimatedYield: property.estimatedYield || null,
         landArea: property.landArea || 0,
         buildingArea: property.buildingArea || null,
         zoning: property.zoning || undefined,
@@ -1248,6 +1250,7 @@ export default function PropertyDetail() {
     ["交通", property.transport || "—"],
     ["物件種別", property.type],
     ["売出価格", property.priceNegotiable ? "応相談" : property.price?.toLocaleString() ?? "—"],
+    ["想定利回り", property.estimatedYield != null ? `${property.estimatedYield}%` : "—"],
     ["土地面積", property.landArea ? `${property.landArea.toFixed(2)}㎡（${toTsubo(property.landArea)}坪）` : "—"],
     ["地目", property.landCategory || "—"],
     ["権利", property.rights || "—"],
@@ -1575,6 +1578,10 @@ export default function PropertyDetail() {
                     <span className="text-sm text-muted-foreground">応相談</span>
                   </label>
                 </div>
+                <div className="space-y-2">
+                  <Label>想定利回り（%）</Label>
+                  <Input type="number" min="0" step="0.01" value={editForm.estimatedYield} onChange={e => setEditForm(p => ({ ...p, estimatedYield: e.target.value }))} placeholder="例: 7.82" />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>土地面積（㎡） <span className="text-red-500">*</span></Label><Input value={editForm.landArea} onChange={e => setEditForm(p => ({ ...p, landArea: e.target.value }))} /></div>
@@ -1793,6 +1800,7 @@ export default function PropertyDetail() {
                         { label: "交通", key: "transport", aiTransport: true },
                         { label: "物件種別", key: "type", required: true, select: PROPERTY_TYPES },
                         { label: "売出価格", key: "price", priceField: true },
+                        { label: "想定利回り（%）", key: "estimatedYield" },
                         { label: "土地面積（㎡）", key: "landArea" },
                         { label: "地目", key: "landCategory" },
                         { label: "権利", key: "rights" },

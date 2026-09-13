@@ -314,6 +314,10 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
 
     const buildingAreaNum = buildingArea ? Number(buildingArea) : null;
     const yieldNum = estimatedYield ? Number(estimatedYield) : null;
+    if (yieldNum !== null && (!Number.isFinite(yieldNum) || yieldNum < 0)) {
+      setError("想定利回りを正しく入力してください");
+      return;
+    }
     const validFaqs = faqs.filter(f => f.q.trim() && f.a.trim());
 
     setSubmitting(true);
@@ -1176,6 +1180,19 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
                     </span>
                   </label>
                 </div>
+              ),
+            },
+            {
+              label: "想定利回り（%）",
+              input: (
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={estimatedYield}
+                  onChange={e => setEstimatedYield(e.target.value)}
+                  placeholder="例: 7.82"
+                />
               ),
             },
             {

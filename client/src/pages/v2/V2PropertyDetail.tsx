@@ -574,6 +574,12 @@ export default function V2PropertyDetail({
         ? [
             ["物件種別", property.type],
             [
+              "想定利回り",
+              property.estimatedYield != null
+                ? `${property.estimatedYield}%`
+                : "—",
+            ],
+            [
               "土地面積",
               property.landArea
                 ? `${property.landArea}㎡（${(property.landArea * 0.3025).toFixed(2)}坪）`
@@ -866,6 +872,9 @@ export default function V2PropertyDetail({
       address,
       type: propertyType,
       price: Number(editForm.price || 0),
+      estimatedYield: editForm.estimatedYield
+        ? Number(editForm.estimatedYield)
+        : null,
       landArea: editForm.landArea ? Number(editForm.landArea) : null,
       buildingArea: editForm.buildingArea
         ? Number(editForm.buildingArea)
@@ -901,6 +910,11 @@ export default function V2PropertyDetail({
       String(editForm[key] ?? "").trim() ? Number(editForm[key]) : null;
     const nullableText = (key: string) =>
       String(editForm[key] ?? "").trim() || null;
+    const estimatedYield = nullableNumber("estimatedYield");
+    if (estimatedYield !== null && (!Number.isFinite(estimatedYield) || estimatedYield < 0)) {
+      setEditError("想定利回りを正しく入力してください");
+      return;
+    }
     const values: any = {
       name: String(editForm.name),
       address: String(editForm.address),
@@ -908,6 +922,7 @@ export default function V2PropertyDetail({
       type: String(editForm.type),
       price: nullableNumber("price"),
       priceNegotiable: !!editForm.priceNegotiable,
+      estimatedYield,
       landArea: nullableNumber("landArea"),
       buildingArea: nullableNumber("buildingArea"),
       structure: nullableText("structure"),
@@ -2339,6 +2354,7 @@ export default function V2PropertyDetail({
                 ["address", "住所", "text"],
                 ["type", "物件種別", "text"],
                 ["price", "価格（円）", "number"],
+                ["estimatedYield", "想定利回り（%）", "number"],
                 ["landArea", "土地面積（㎡）", "number"],
                 ["buildingArea", "建物面積（㎡）", "number"],
                 ["structure", "構造", "text"],
