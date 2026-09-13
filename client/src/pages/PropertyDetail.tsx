@@ -1240,7 +1240,7 @@ export default function PropertyDetail() {
     );
   }
 
-  const STATUS_MAP: Record<string, string> = { available: "公開中", negotiating: "問い合わせあり", sold: "売却済" };
+  const STATUS_MAP: Record<string, string> = { available: "公開中", negotiating: "問合せあり", sold: "売却済" };
   const createdDate = fmtDate(property.createdAt);
 
   const details: [string, string][] = [

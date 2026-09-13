@@ -16,7 +16,7 @@ import { propertyReference } from "@shared/propertyNotification";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   available: { label: "公開中", cls: "bg-blue-50 text-blue-700 border border-blue-200" },
-  negotiating: { label: "問い合わせあり", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
+  negotiating: { label: "問合せあり", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
   sold: { label: "売却済", cls: "bg-gray-100 text-gray-500 border border-gray-200" },
 };
 
@@ -258,7 +258,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
     return list;
   })();
 
-  const STATUS_LABEL: Record<string, string> = { available: "公開中", negotiating: "問い合わせあり", sold: "売却済" };
+  const STATUS_LABEL: Record<string, string> = { available: "公開中", negotiating: "問合せあり", sold: "売却済" };
 
   const toggleSelect = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();

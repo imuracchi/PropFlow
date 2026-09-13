@@ -61,7 +61,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
     cls: "bg-blue-50 text-blue-700 border border-blue-200",
   },
   negotiating: {
-    label: "問い合わせあり",
+    label: "問合せあり",
     cls: "bg-amber-50 text-amber-700 border border-amber-200",
   },
   sold: {

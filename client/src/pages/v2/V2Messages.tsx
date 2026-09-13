@@ -114,7 +114,7 @@ export default function V2Messages({ preview = false }: { preview?: boolean }) {
               className={`border-b-2 px-4 py-3 text-[13px] font-bold ${tab === "active" ? "border-[#173f70] text-[#173f70]" : "border-transparent text-[#758194]"}`}
             >
               <MessageCircle size={15} className="mr-1.5 inline" />
-              問い合わせあり
+              問合せあり
             </button>
             <button
               onClick={() => setTab("flagged")}
