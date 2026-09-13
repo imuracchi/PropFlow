@@ -53,6 +53,47 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+async function renderPropertyPdf(html: string) {
+  const { default: puppeteer } = await import("puppeteer");
+  const { existsSync } = await import("node:fs");
+  const systemBrowser = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/google-chrome",
+  ].find((path): path is string => !!path && existsSync(path));
+  const browser = await puppeteer.launch({
+    headless: true,
+    ...(systemBrowser ? { executablePath: systemBrowser } : {}),
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    timeout: 30000,
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.evaluate(async () => {
+      const images = Array.from(document.images);
+      const imageReady = Promise.all(images.map(image => {
+        if (image.complete) return Promise.resolve();
+        return new Promise<void>(resolve => {
+          image.addEventListener("load", () => resolve(), { once: true });
+          image.addEventListener("error", () => resolve(), { once: true });
+        });
+      }));
+      const fontsReady = document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve();
+      await Promise.race([
+        Promise.all([imageReady, fontsReady]),
+        new Promise(resolve => window.setTimeout(resolve, 12000)),
+      ]);
+    });
+    await page.emulateMediaType("print");
+    return await page.pdf({ format: "A4", printBackground: true, timeout: 60000 });
+  } finally {
+    await browser.close().catch(() => {});
+  }
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
@@ -442,7 +483,6 @@ async function startServer() {
 
   // Email-verified, public-data-only property overview PDF.
   app.get("/api/public-property-document/:token", async (req, res) => {
-    let browser: Awaited<ReturnType<typeof import("puppeteer")["default"]["launch"]>> | null = null;
     try {
       const token = String(req.params.token ?? "");
       if (!/^[A-Za-z0-9_-]{32,128}$/.test(token)) return res.status(404).end();
@@ -454,29 +494,7 @@ async function startServer() {
       const { buildPublicPropertyDocumentHtml } = await import("./publicPropertyDocument");
       const inquiryUrl = `${PUBLIC_SITE_URL}/registration-request?sourcePropertyId=${property.id}&sourceIntent=inquiry`;
       const html = buildPublicPropertyDocumentHtml(property, inquiryUrl);
-      const { default: puppeteer } = await import("puppeteer");
-      const { existsSync } = await import("node:fs");
-      const systemBrowser = [process.env.PUPPETEER_EXECUTABLE_PATH, "/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome-stable", "/usr/bin/google-chrome"].find((path): path is string => !!path && existsSync(path));
-      browser = await puppeteer.launch({ headless: true, ...(systemBrowser ? { executablePath: systemBrowser } : {}), args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"], timeout: 30000 });
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
-      await page.evaluate(async () => {
-        const fontText = document.body.innerText || "物件情報・所在地・価格・交通・用途地域";
-        await Promise.race([
-          (async () => {
-            await document.fonts.load('400 11px "Noto Sans JP"', fontText);
-            await document.fonts.load('600 11px "Noto Sans JP"', fontText);
-            await document.fonts.load('700 25px "Noto Sans JP"', fontText);
-            await document.fonts.ready;
-          })(),
-          new Promise(resolve => window.setTimeout(resolve, 15000)),
-        ]);
-        if (!document.fonts.check('400 11px "Noto Sans JP"', fontText)) {
-          throw new Error("Japanese PDF font could not be loaded");
-        }
-      });
-      await page.emulateMediaType("print");
-      const pdf = await page.pdf({ format: "A4", printBackground: true, timeout: 60000 });
+      const pdf = await renderPropertyPdf(html);
       await recordPublicPropertyDocumentDownload(access.id);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`PF-${property.id}_物件概要書.pdf`)}`);
@@ -488,8 +506,6 @@ async function startServer() {
     } catch (error) {
       console.error("[public-property-document] error:", error);
       res.status(500).json({ error: "PDF generation failed" });
-    } finally {
-      await browser?.close().catch(() => {});
     }
   });
 
@@ -520,67 +536,9 @@ async function startServer() {
         return;
       }
 
-      const { default: puppeteer } = await import("puppeteer");
-      const { existsSync } = await import("node:fs");
-      const systemBrowser = [
-        process.env.PUPPETEER_EXECUTABLE_PATH,
-        "/usr/bin/chromium",
-        "/usr/bin/chromium-browser",
-        "/usr/bin/google-chrome-stable",
-        "/usr/bin/google-chrome",
-      ].find((path): path is string => !!path && existsSync(path));
-      const browser = await puppeteer.launch({
-        headless: true,
-        ...(systemBrowser ? { executablePath: systemBrowser } : {}),
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-gpu",
-        ],
-        timeout: 30000,
-      });
-      try {
-        const page = await browser.newPage();
-        // Google Maps やWebフォントの一部が応答しなくても、紹介資料全体の
-        // 生成を失敗させない。画像は最大12秒だけ待ち、読めたものをPDF化する。
-        await page.setContent(html, {
-          waitUntil: "domcontentloaded",
-          timeout: 30000,
-        });
-        await page.evaluate(async () => {
-          const images = Array.from(document.images);
-          const imageReady = Promise.all(
-            images.map(image => {
-              if (image.complete) return Promise.resolve();
-              return new Promise<void>(resolve => {
-                image.addEventListener("load", () => resolve(), { once: true });
-                image.addEventListener("error", () => resolve(), {
-                  once: true,
-                });
-              });
-            })
-          );
-          const fontsReady =
-            document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve();
-          await Promise.race([
-            Promise.all([imageReady, fontsReady]),
-            new Promise(resolve => window.setTimeout(resolve, 12000)),
-          ]);
-        });
-        await page.emulateMediaType("print");
-        const pdf = await page.pdf({
-          format: "A4",
-          printBackground: true,
-          timeout: 60000,
-        });
-        await browser.close();
-        res.setHeader("Content-Type", "application/pdf");
-        res.send(Buffer.from(pdf));
-      } catch (e) {
-        await browser.close().catch(() => {});
-        throw e;
-      }
+      const pdf = await renderPropertyPdf(html);
+      res.setHeader("Content-Type", "application/pdf");
+      res.send(Buffer.from(pdf));
     } catch (e) {
       console.error("[generate-pdf] error:", e);
       res.status(500).json({ error: "PDF generation failed" });
