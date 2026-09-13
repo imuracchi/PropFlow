@@ -388,7 +388,7 @@ function downloadBase64File(name: string, base64: string) {
   const ia = new Uint8Array(ab);
   for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
   const ext = name.split(".").pop()?.toLowerCase() ?? "pdf";
-  const mime = ext === "pdf" ? "application/pdf" : `image/${ext}`;
+  const mime = ext === "pdf" ? "application/pdf" : ext === "zip" ? "application/zip" : `image/${ext}`;
   const blob = new Blob([ab], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -553,12 +553,18 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
   };
 
   const handleUpload = async (fileList: FileList) => {
-    const pdfFiles = Array.from(fileList).filter(f => f.type === "application/pdf");
-    if (pdfFiles.length === 0) return;
+    const documentFiles = Array.from(fileList).filter(f =>
+      (f.type === "application/pdf" ||
+        f.type === "application/zip" ||
+        f.type === "application/x-zip-compressed" ||
+        /\.(pdf|zip)$/i.test(f.name)) &&
+      f.size <= 20 * 1024 * 1024
+    );
+    if (documentFiles.length === 0) return;
     setUploading(true);
-    for (let i = 0; i < pdfFiles.length; i++) {
-      const file = pdfFiles[i];
-      setUploadProgress(`${i + 1}/${pdfFiles.length}件 アップロード中... ${file.name}`);
+    for (let i = 0; i < documentFiles.length; i++) {
+      const file = documentFiles[i];
+      setUploadProgress(`${i + 1}/${documentFiles.length}件 アップロード中... ${file.name}`);
       const base64 = await fileToBase64(file);
       await uploadMutation.mutateAsync({ propertyId, name: file.name, size: file.size, contentBase64: base64 });
     }
@@ -620,7 +626,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="application/pdf"
+                accept="application/pdf,.pdf,application/zip,application/x-zip-compressed,.zip"
                 multiple
                 className="hidden"
                 onChange={e => { if (e.target.files) { handleUpload(e.target.files); e.target.value = ""; } }}
@@ -661,7 +667,7 @@ function PropertyFiles({ isOwner, propertyId }: { isOwner: boolean; propertyId: 
             <div key={file.id} className="px-5 py-3.5 space-y-2">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-red-500 shrink-0" />
-                <button className="text-sm text-primary hover:underline flex-1 text-left truncate" onClick={() => handlePreview(file.id, file.name)}>{file.name}</button>
+                <button className="text-sm text-primary hover:underline flex-1 text-left truncate" onClick={() => /\.zip$/i.test(file.name) ? handleDownload(file.id) : handlePreview(file.id, file.name)}>{file.name}</button>
               </div>
               <div className="flex flex-wrap items-center gap-3 pl-7">
                 <button

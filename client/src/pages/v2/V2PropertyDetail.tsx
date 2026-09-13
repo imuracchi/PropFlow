@@ -681,19 +681,22 @@ export default function V2PropertyDetail({
     window.setTimeout(() => setDownloading(null), 1000);
   };
   const addFiles = async (fileList: FileList) => {
-    const pdfs = Array.from(fileList).filter(
+    const documents = Array.from(fileList).filter(
       file =>
-        file.type === "application/pdf" ||
-        file.name.toLowerCase().endsWith(".pdf")
+        (file.type === "application/pdf" ||
+          file.type === "application/zip" ||
+          file.type === "application/x-zip-compressed" ||
+          /\.(pdf|zip)$/i.test(file.name)) &&
+        file.size <= 20 * 1024 * 1024
     );
-    if (!pdfs.length) {
-      setUploadStatus("PDFファイルを選択してください");
+    if (!documents.length) {
+      setUploadStatus("20MB以下のPDFまたはZIPファイルを選択してください");
       return;
     }
     setUploading(true);
-    for (let index = 0; index < pdfs.length; index++) {
-      const file = pdfs[index];
-      setUploadStatus(`${index + 1}/${pdfs.length}件を追加中：${file.name}`);
+    for (let index = 0; index < documents.length; index++) {
+      const file = documents[index];
+      setUploadStatus(`${index + 1}/${documents.length}件を追加中：${file.name}`);
       if (preview) {
         setPreviewFileList(items => [
           ...items,
@@ -723,7 +726,7 @@ export default function V2PropertyDetail({
     }
     if (!preview) await utils.property.listFiles.invalidate({ propertyId });
     setUploading(false);
-    setUploadStatus(`${pdfs.length}件の資料を追加しました`);
+    setUploadStatus(`${documents.length}件の資料を追加しました`);
   };
   const removeFile = async (file: any) => {
     if (!window.confirm(`「${file.name}」を削除しますか？`)) return;
@@ -1263,7 +1266,7 @@ export default function V2PropertyDetail({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="application/pdf,.pdf"
+                      accept="application/pdf,.pdf,application/zip,application/x-zip-compressed,.zip"
                       multiple
                       className="hidden"
                       onChange={event => {
@@ -1322,7 +1325,7 @@ export default function V2PropertyDetail({
                       </span>
                     ) : (
                       <button
-                        onClick={() => previewPdf(file)}
+                        onClick={() => /\.zip$/i.test(file.name) ? download(file) : previewPdf(file)}
                         className="ml-3 min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[#173f70] hover:underline lg:text-[14px]"
                       >
                         {file.name}

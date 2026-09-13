@@ -1434,7 +1434,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
           <input
             ref={additionalFileInputRef}
             type="file"
-            accept="application/pdf,image/*"
+            accept="application/pdf,image/*,application/zip,application/x-zip-compressed,.zip"
             multiple
             className="hidden"
             onChange={e => {
@@ -1442,7 +1442,10 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
               const files = Array.from(e.target.files).filter(
                 f =>
                   (f.type === "application/pdf" ||
-                    f.type.startsWith("image/")) &&
+                    f.type.startsWith("image/") ||
+                    f.type === "application/zip" ||
+                    f.type === "application/x-zip-compressed" ||
+                    f.name.toLowerCase().endsWith(".zip")) &&
                   f.size <= 20 * 1024 * 1024
               );
               setAdditionalFiles(prev => {
@@ -1478,7 +1481,10 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
               const files = Array.from(e.dataTransfer.files).filter(
                 f =>
                   (f.type === "application/pdf" ||
-                    f.type.startsWith("image/")) &&
+                    f.type.startsWith("image/") ||
+                    f.type === "application/zip" ||
+                    f.type === "application/x-zip-compressed" ||
+                    f.name.toLowerCase().endsWith(".zip")) &&
                   f.size <= 20 * 1024 * 1024
               );
               setAdditionalFiles(prev => {
@@ -1492,7 +1498,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
           >
             <Upload className="w-6 h-6 text-muted-foreground/50" />
             <span className="text-sm text-muted-foreground">
-              ドロップまたはクリックして資料を追加（PDF/JPG/PNG、最大20MB）
+              ドロップまたはクリックして資料を追加（PDF/JPG/PNG/ZIP、最大20MB）
             </span>
           </div>
           {additionalFiles.length > 0 && (

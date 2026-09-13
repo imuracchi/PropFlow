@@ -1620,6 +1620,20 @@ JSONのみ返してください。`,
         })
       )
       .mutation(async ({ input, ctx }) => {
+        const maxFileBytes = 20 * 1024 * 1024;
+        const binary = Buffer.from(input.contentBase64, "base64");
+        if (input.size <= 0 || input.size > maxFileBytes || binary.length > maxFileBytes) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "ファイルサイズは20MB以下にしてください",
+          });
+        }
+        if (/\.zip$/i.test(input.name) && !(binary[0] === 0x50 && binary[1] === 0x4b)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "正しいZIPファイルを選択してください",
+          });
+        }
         const prop = await db.getPropertyById(input.propertyId);
         if (
           !prop ||
