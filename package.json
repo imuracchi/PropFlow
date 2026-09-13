@@ -14,7 +14,7 @@
     "test:v2:restriction-ui": "tsx scripts/viewing-restriction-ui-test.ts",
     "test:v2:user-ui": "tsx scripts/user-ui-regression-test.ts",
     "release:preflight": "tsx scripts/release-preflight.ts",
-    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --loader:.ttf=dataurl --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",

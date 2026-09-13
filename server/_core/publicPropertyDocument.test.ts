@@ -7,7 +7,8 @@ describe("public property document", () => {
     expect(html).toContain("PF-287");
     expect(html).toContain("埼玉県坂戸市");
     expect(html).toContain("一般公開用資料です");
-    expect(html).toContain("Noto Sans CJK JP");
+    expect(html).toContain("PropFlow Japanese");
+    expect(html).toContain("NotoSansJP-VF.ttf");
     expect(html).not.toContain("fonts.googleapis.com");
     expect(html).not.toContain("G-Spec");
     expect(html).not.toContain("<img");
