@@ -460,6 +460,17 @@ async function startServer() {
       browser = await puppeteer.launch({ headless: true, ...(systemBrowser ? { executablePath: systemBrowser } : {}), args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"], timeout: 30000 });
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.evaluate(async () => {
+        await Promise.race([
+          (async () => {
+            await document.fonts.load('400 11px "Noto Sans JP"');
+            await document.fonts.load('600 11px "Noto Sans JP"');
+            await document.fonts.load('700 25px "Noto Sans JP"');
+            await document.fonts.ready;
+          })(),
+          new Promise(resolve => window.setTimeout(resolve, 15000)),
+        ]);
+      });
       await page.emulateMediaType("print");
       const pdf = await page.pdf({ format: "A4", printBackground: true, timeout: 60000 });
       await recordPublicPropertyDocumentDownload(access.id);
