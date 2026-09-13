@@ -27,7 +27,14 @@ export function FileViewerModal({ fileId, name, onClose }: Props) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         if (isPdf) {
           const pdfjs = await loadPdfJs();
-          const pdf = await pdfjs.getDocument({ data: await res.arrayBuffer() }).promise;
+          const pdf = await pdfjs.getDocument({
+            data: await res.arrayBuffer(),
+            cMapUrl: `${PDFJS_ASSET_BASE}/cmaps/`,
+            cMapPacked: true,
+            standardFontDataUrl: `${PDFJS_ASSET_BASE}/standard_fonts/`,
+            useSystemFonts: true,
+            disableFontFace: false,
+          }).promise;
           if (cancelled) {
             await pdf.destroy();
             return;
@@ -171,16 +178,18 @@ export function FileViewerModal({ fileId, name, onClose }: Props) {
 }
 
 const PDFJS_VERSION = "3.11.174";
+const PDFJS_CDN = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}`;
+const PDFJS_ASSET_BASE = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}`;
 let pdfJsPromise: Promise<any> | null = null;
 function loadPdfJs() {
   if ((window as any).pdfjsLib) return Promise.resolve((window as any).pdfjsLib);
   if (pdfJsPromise) return pdfJsPromise;
   pdfJsPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`;
+    script.src = `${PDFJS_CDN}/pdf.min.js`;
     script.onload = () => {
       const pdfjs = (window as any).pdfjsLib;
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`;
+      pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.js`;
       resolve(pdfjs);
     };
     script.onerror = () => reject(new Error("PDF viewer load failed"));
