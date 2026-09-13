@@ -18,6 +18,16 @@ export function propertyReference(id: number) {
   return `PF-${id}`;
 }
 
+export function normalizePropertySearchText(value: unknown) {
+  const normalized = String(value ?? "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("ja")
+    .replace(/[‐‑‒–—―ー−]/g, "-")
+    .trim();
+  const propertyNumber = normalized.replace(/\s/g, "").match(/^pf-?(\d+)$/);
+  return propertyNumber ? `pf-${propertyNumber[1]}` : normalized;
+}
+
 export function propertyDisplayTitle(id: number, name: string) {
   const title = name.trim();
   const cappedTitle = title.length > PROPERTY_TITLE_MAX_LENGTH

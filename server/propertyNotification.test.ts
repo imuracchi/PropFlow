@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isLineNotificationAllowedAt,
+  normalizePropertySearchText,
   notificationPropertyTitle,
   propertyDisplayTitle,
   propertyReference,
@@ -23,4 +24,11 @@ describe("property notification rules", () => {
       `PF-456｜${"あ".repeat(40)}`
     );
   });
+
+  it.each(["PF-191", "pf191", "ＰＦ－１９１", "PFー191", "PF − 191"])(
+    "normalizes property number searches: %s",
+    input => {
+      expect(normalizePropertySearchText(input)).toBe("pf-191");
+    }
+  );
 });

@@ -20,7 +20,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import V2Layout from "@/components/v2/V2Layout";
 import { isPropertyAttentionWorthy } from "@shared/propertyAttention";
 import { diversifySameDayByPrefecture } from "@shared/regionDiversification";
-import { propertyReference } from "@shared/propertyNotification";
+import {
+  normalizePropertySearchText,
+  propertyReference,
+} from "@shared/propertyNotification";
 
 const REGIONS = [
   {
@@ -318,10 +321,10 @@ export default function V2PropertyList({
         )
           return false;
         if (mode === "keyword" && appliedKeyword.trim()) {
-          const q = appliedKeyword.toLowerCase();
+          const q = normalizePropertySearchText(appliedKeyword);
           if (
             ![propertyReference(p.id), p.name, p.address, p.lotNumber, p.remarks].some(v =>
-              (v ?? "").toLowerCase().includes(q)
+              normalizePropertySearchText(v).includes(q)
             )
           )
             return false;
@@ -571,17 +574,16 @@ export default function V2PropertyList({
     const query = keyword.trim();
     setAppliedKeyword(query);
     if (!query || preview) return;
-    const lower = query.toLowerCase();
+    const lower = normalizePropertySearchText(query);
     const resultCount = (properties ?? []).filter((property: any) =>
       [
+        propertyReference(property.id),
         property.name,
         property.address,
         property.lotNumber,
         property.remarks,
       ].some(value =>
-        String(value ?? "")
-          .toLowerCase()
-          .includes(lower)
+        normalizePropertySearchText(value).includes(lower)
       )
     ).length;
     logSearch.mutate({ query, resultCount });
