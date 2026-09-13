@@ -1068,7 +1068,7 @@ export default function V2PropertyDetail({
               </div>
             </div>
             <div className="mt-5 border-t-2 border-[#173f70] pt-4">
-              <div className="flex items-center gap-3"><p className="text-[14px] font-bold text-[#102d50]">共有履歴</p>{externalShareHistory.length > 0 && <button onClick={() => setExternalShareHistoryOpen(true)} className="text-[11px] font-bold text-[#173f70] underline underline-offset-2">すべて見る</button>}<span className="ml-auto text-[10px] text-[#65748a]">最新2件</span></div>
+              <div className="flex items-center gap-3"><p className="text-[14px] font-bold text-[#102d50]">共有履歴</p>{externalShareHistory.length > 0 && <button onClick={() => setExternalShareHistoryOpen(true)} className="text-[11px] font-bold text-[#173f70] underline underline-offset-2">すべて見る</button>}</div>
               {orderedExternalShareHistory.slice(0, 2).map(renderExternalShareHistoryItem)}
               {!externalShareHistory.length && <p className="mt-3 bg-[#f4f6f8] px-3 py-4 text-center text-[11px] text-[#65748a]">共有履歴はありません。</p>}
             </div>
@@ -1081,9 +1081,9 @@ export default function V2PropertyDetail({
       {externalShareHistoryOpen && (
         <div className="fixed inset-0 z-[60] flex items-end bg-black/50 sm:items-center sm:justify-center" onClick={() => setExternalShareHistoryOpen(false)}>
           <div className="max-h-[85vh] w-full overflow-y-auto bg-white p-5 sm:max-w-xl" onClick={event => event.stopPropagation()}>
-            <div className="flex items-center justify-between"><div><h3 className="text-[18px] font-bold text-[#102d50]">共有履歴</h3><p className="mt-1 text-[11px] text-[#65748a]">直近30件を表示しています</p></div><button onClick={() => setExternalShareHistoryOpen(false)} className="grid size-8 place-items-center text-[#65748a]" aria-label="共有履歴を閉じる"><X size={18}/></button></div>
-            <section className="mt-5"><h4 className="text-[13px] font-bold text-[#27613c]">共有中（{orderedExternalShareHistory.filter(isExternalShareActive).length}件）</h4>{orderedExternalShareHistory.filter(isExternalShareActive).map(renderExternalShareHistoryItem)}{!orderedExternalShareHistory.some(isExternalShareActive) && <p className="mt-2 bg-[#f4f6f8] p-3 text-[11px] text-[#65748a]">現在共有中の資料はありません。</p>}</section>
-            <section className="mt-6 border-t border-[#d9e0e8] pt-5"><h4 className="text-[13px] font-bold text-[#65748a]">停止済み・期限切れ（{orderedExternalShareHistory.filter(share => !isExternalShareActive(share)).length}件）</h4>{orderedExternalShareHistory.filter(share => !isExternalShareActive(share)).map(renderExternalShareHistoryItem)}{orderedExternalShareHistory.every(isExternalShareActive) && <p className="mt-2 bg-[#f4f6f8] p-3 text-[11px] text-[#65748a]">停止済み・期限切れの履歴はありません。</p>}</section>
+            <div className="flex items-center justify-between"><h3 className="text-[18px] font-bold text-[#102d50]">共有履歴</h3><button onClick={() => setExternalShareHistoryOpen(false)} className="grid size-8 place-items-center text-[#65748a]" aria-label="共有履歴を閉じる"><X size={18}/></button></div>
+            <section className="mt-5"><h4 className="text-[13px] font-bold text-[#27613c]">共有中</h4>{orderedExternalShareHistory.filter(isExternalShareActive).map(renderExternalShareHistoryItem)}{!orderedExternalShareHistory.some(isExternalShareActive) && <p className="mt-2 bg-[#f4f6f8] p-3 text-[11px] text-[#65748a]">現在共有中の資料はありません。</p>}</section>
+            <section className="mt-6 border-t border-[#d9e0e8] pt-5"><h4 className="text-[13px] font-bold text-[#65748a]">停止済み・期限切れ</h4>{orderedExternalShareHistory.filter(share => !isExternalShareActive(share)).map(renderExternalShareHistoryItem)}{orderedExternalShareHistory.every(isExternalShareActive) && <p className="mt-2 bg-[#f4f6f8] p-3 text-[11px] text-[#65748a]">停止済み・期限切れの履歴はありません。</p>}</section>
             <button onClick={() => setExternalShareHistoryOpen(false)} className="mt-6 h-11 w-full border border-[#9aabc0] text-[13px] font-bold text-[#526176]">閉じる</button>
           </div>
         </div>
@@ -1396,7 +1396,7 @@ export default function V2PropertyDetail({
                       )}
                       資料を追加
                     </button>
-                    {(preview || isRegistrant) && files.length > 0 && <div className="flex shrink-0 items-center gap-2"><button onClick={() => { setExternalShareFileIds(files[0]?.id ? [files[0].id] : []); setGeneratedExternalShareUrl(""); setExternalShareRecipientEmail(""); setExternalShareEmailStatus(""); setExternalShareOpen(true); }} className="flex items-center gap-1 border border-[#173f70] px-2.5 py-2 text-[11px] font-bold text-[#173f70]"><Share2 size={14}/>会員外へ共有</button><button onClick={() => { setExternalShareFileIds(files[0]?.id ? [files[0].id] : []); setGeneratedExternalShareUrl(""); setExternalShareRecipientEmail(""); setExternalShareEmailStatus(""); setExternalShareOpen(true); }} className="text-[10px] font-bold text-[#173f70] underline underline-offset-2">共有履歴 {preview ? 2 : (externalSharesQuery.data ?? []).length}件</button></div>}
+                    {(preview || isRegistrant) && files.length > 0 && <div className="flex shrink-0 items-center gap-2"><button onClick={() => { setExternalShareFileIds(files[0]?.id ? [files[0].id] : []); setGeneratedExternalShareUrl(""); setExternalShareRecipientEmail(""); setExternalShareEmailStatus(""); setExternalShareOpen(true); }} className="flex items-center gap-1 border border-[#173f70] px-2.5 py-2 text-[11px] font-bold text-[#173f70]"><Share2 size={14}/>会員外へ共有</button><button onClick={() => { setExternalShareFileIds(files[0]?.id ? [files[0].id] : []); setGeneratedExternalShareUrl(""); setExternalShareRecipientEmail(""); setExternalShareEmailStatus(""); setExternalShareOpen(true); }} className="text-[10px] font-bold text-[#173f70] underline underline-offset-2">共有履歴</button></div>}
                   </>
                 )}
               </div>
@@ -1898,7 +1898,7 @@ export default function V2PropertyDetail({
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-[12px] font-bold text-[#526176]">一般公開への簡易掲載</p>
-                        <p className="mt-1 text-[10px] leading-5 text-[#758194]">ログイン前の公開物件一覧に、物件名・市区・価格・紹介文・面積・構造・築年月・交通を表示</p>
+                        <p className="mt-1 text-[10px] leading-5 text-[#758194]">ログイン前の公開物件一覧に、物件名・市区町村・町名（丁目・番地等を除く）・価格・紹介文・面積・構造・築年月・交通を表示</p>
                         <span className={`mt-2 inline-flex px-2 py-1 text-[10px] font-bold ${property.externalListingConsent === 1 ? "bg-[#e8f3ec] text-[#27613c]" : "bg-[#edf1f5] text-[#65748a]"}`}>
                           {property.externalListingConsent === 1 ? "簡易掲載に同意済み" : "簡易掲載しない"}
                         </span>
@@ -1908,7 +1908,7 @@ export default function V2PropertyDetail({
                         disabled={setExternalListingConsent.isPending}
                         onClick={async () => {
                           const consent = property.externalListingConsent !== 1;
-                          if (consent && !window.confirm("ログイン前の公開物件一覧に、物件名・市区・価格・紹介文・面積・構造・築年月・交通を簡易掲載します。詳細住所、写真、添付資料、会社名、担当者名、連絡先、商流は表示されません。簡易掲載に同意しますか？")) return;
+                          if (consent && !window.confirm("ログイン前の公開物件一覧に、物件名・市区町村・町名（丁目・番地等を除く）・価格・紹介文・面積・構造・築年月・交通を簡易掲載します。丁目・番地・建物名などの詳細住所、写真、添付資料、会社名、担当者名、連絡先、商流は表示されません。簡易掲載に同意しますか？")) return;
                           await setExternalListingConsent.mutateAsync({ id: propertyId, consent });
                         }}
                         className="h-10 shrink-0 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50"

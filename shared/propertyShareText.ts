@@ -17,15 +17,23 @@ export type ShareableProperty = {
 };
 
 export function publicAreaLabel(address: string) {
-  const prefecture = address.match(/^(東京都|北海道|大阪府|京都府|.{2,3}県)/)?.[1];
-  if (!prefecture) return address;
-  const rest = address.slice(prefecture.length);
+  const normalized = address.trim().replace(/[０-９]/g, character => String.fromCharCode(character.charCodeAt(0) - 0xfee0));
+  const prefecture = normalized.match(/^(東京都|北海道|大阪府|京都府|.{2,3}県)/)?.[1];
+  if (!prefecture) return "エリア非公開";
+  const rest = normalized.slice(prefecture.length);
   const county = rest.match(/^(.+?郡.+?[町村])/);
-  if (county) return `${prefecture}${county[1]}`;
   const designatedWard = rest.match(/^(.+?市.+?区)/);
-  if (designatedWard) return `${prefecture}${designatedWard[1]}`;
   const municipality = rest.match(/^(.+?[市区町村])/);
-  return municipality ? `${prefecture}${municipality[1]}` : prefecture;
+  const municipalityName = county?.[1] ?? designatedWard?.[1] ?? municipality?.[1];
+  if (!municipalityName) return prefecture;
+  const neighborhoodAndStreet = rest.slice(municipalityName.length).trim();
+  const neighborhood = neighborhoodAndStreet
+    .replace(/^(.+?)[一二三四五六七八九十百〇]+丁目.*$/, "$1")
+    .replace(/^(.+?)[0-9]+(?:丁目|番地?|号|-).*$/, "$1")
+    .replace(/^(.+?)[0-9]+.*$/, "$1")
+    .replace(/^(.+?)\s+[0-9一二三四五六七八九十百〇-].*$/, "$1")
+    .trim();
+  return `${prefecture}${municipalityName}${neighborhood}`;
 }
 
 export function propertyPriceLabel(price: number | null | undefined, negotiable?: number | boolean | null) {

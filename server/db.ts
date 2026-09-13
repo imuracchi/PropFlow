@@ -16,6 +16,7 @@ import {
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql, { type RowDataPacket } from "mysql2/promise";
 import { diversifySameDayByPrefecture } from "@shared/regionDiversification";
+import { publicAreaLabel } from "@shared/propertyShareText";
 import {
   InsertUser,
   users,
@@ -2026,17 +2027,7 @@ export type PublicPropertyHighlight = {
 };
 
 function publicArea(address: string) {
-  const prefecture = address.match(
-    /^(東京都|北海道|大阪府|京都府|.{2,3}県)/
-  )?.[1];
-  if (!prefecture) return "エリア非公開";
-  const rest = address.slice(prefecture.length);
-  const county = rest.match(/^(.+?郡.+?[町村])/);
-  if (county) return `${prefecture}${county[1]}`;
-  const designatedWard = rest.match(/^(.+?市.+?区)/);
-  if (designatedWard) return `${prefecture}${designatedWard[1]}`;
-  const municipality = rest.match(/^(.+?[市区町村])/);
-  return municipality ? `${prefecture}${municipality[1]}` : prefecture;
+  return publicAreaLabel(address) || "エリア非公開";
 }
 
 function publicPriceBand(price: number | null) {
