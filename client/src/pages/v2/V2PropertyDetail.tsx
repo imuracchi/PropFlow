@@ -1219,7 +1219,7 @@ export default function V2PropertyDetail({
                 {facts.map(([label, value]) => (
                   <div
                     key={label}
-                    className="grid min-w-0 grid-cols-[96px_minmax(0,1fr)] border-b border-[#e5e9ee] py-3 text-[13px] sm:grid-cols-[110px_minmax(0,1fr)] lg:grid-cols-[120px_minmax(0,1fr)] lg:border-r lg:py-0 lg:text-[14px]"
+                    className={`grid min-w-0 grid-cols-[96px_minmax(0,1fr)] border-b border-[#e5e9ee] py-3 text-[13px] sm:grid-cols-[110px_minmax(0,1fr)] lg:grid-cols-[120px_minmax(0,1fr)] lg:border-r lg:py-0 lg:text-[14px] ${label === "その他制限" ? "lg:col-span-2" : ""}`}
                   >
                     <dt className="text-[#6d798b] lg:bg-[#edf1f5] lg:p-3">
                       {label}
