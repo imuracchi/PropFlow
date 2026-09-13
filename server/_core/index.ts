@@ -317,6 +317,40 @@ async function startServer() {
     }
   });
 
+  app.get("/robots.txt", (_req, res) => {
+    res.type("text/plain").send([
+      "User-agent: *",
+      "Allow: /public/properties",
+      "Allow: /public/property/",
+      "Allow: /propflow-intro.html",
+      "Allow: /propflow-guide.html",
+      "Allow: /support.html",
+      "Disallow: /api/",
+      "Disallow: /v2/",
+      "Disallow: /admin",
+      "Disallow: /registration-request",
+      `Sitemap: ${PUBLIC_SITE_URL}/sitemap.xml`,
+      "",
+    ].join("\n"));
+  });
+
+  app.get("/sitemap.xml", async (_req, res) => {
+    const { getPublicSnsProperties } = await import("../db");
+    const properties = await getPublicSnsProperties();
+    const escapeXml = (value: string) => value.replace(/[&<>"']/g, character => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;",
+    })[character]!);
+    const urls = [
+      `${PUBLIC_SITE_URL}/propflow-intro.html`,
+      `${PUBLIC_SITE_URL}/propflow-guide.html`,
+      `${PUBLIC_SITE_URL}/support.html`,
+      `${PUBLIC_SITE_URL}/public/properties`,
+      ...properties.map(property => `${PUBLIC_SITE_URL}/public/property/${property.id}`),
+    ];
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(url => `  <url><loc>${escapeXml(url)}</loc></url>`).join("\n")}\n</urlset>\n`;
+    res.type("application/xml").send(xml);
+  });
+
   // PDF generation from HTML
   app.post("/api/generate-pdf", async (req, res) => {
     try {
