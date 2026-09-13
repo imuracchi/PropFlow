@@ -1264,6 +1264,7 @@ JSONのみ返してください。`,
         propertyId: z.number().int().positive(),
         email: z.string().trim().email().max(320),
         acceptedNotice: z.literal(true),
+        acceptedTransactionNotice: z.literal(true),
       }))
       .mutation(async ({ input, ctx }) => {
         checkExternalShareUnlockRateLimit(ctx.req);

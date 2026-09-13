@@ -41,6 +41,17 @@ describe("public SNS PDF access", () => {
       propertyId: 1,
       email: "viewer@example.jp",
       acceptedNotice: false,
+      acceptedTransactionNotice: true,
+    } as any)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("requires the property and transaction notice to be accepted", async () => {
+    const caller = appRouter.createCaller(createAnonymousContext());
+    await expect(caller.property.requestPublicDocument({
+      propertyId: 1,
+      email: "viewer@example.jp",
+      acceptedNotice: true,
+      acceptedTransactionNotice: false,
     } as any)).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 

@@ -7,6 +7,7 @@ import {
   buildPropertyShareSummary,
   propertyPriceLabel,
 } from "@shared/propertyShareText";
+import { normalizePropertySearchText } from "@shared/propertyNotification";
 
 type PublicEvent = { eventType: "list_view" | "property_impression" | "search" | "document_click" | "inquiry_click" | "registration_click"; propertyId?: number | null; searchKeyword?: string | null; resultCount?: number | null };
 
@@ -56,7 +57,8 @@ function RegistrationDialog({ propertyId, intent, onClose, onRegistrationClick }
 export function PublicDocumentDialog({ propertyId, propertyName, preview = false, onClose }: { propertyId: number; propertyName: string; preview?: boolean; onClose: () => void }) {
   const requestDocument = trpc.property.requestPublicDocument.useMutation();
   const [email, setEmail] = useState("");
-  const [accepted, setAccepted] = useState(false);
+  const [acceptedDocumentNotice, setAcceptedDocumentNotice] = useState(false);
+  const [acceptedTransactionNotice, setAcceptedTransactionNotice] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   return <div className="fixed inset-0 z-50 grid place-items-end bg-black/55 sm:place-items-center" onClick={onClose}><div role="dialog" aria-modal="true" className="w-full bg-white p-6 sm:max-w-md sm:border-t-4 sm:border-t-[#173f70]" onClick={event => event.stopPropagation()}>
@@ -65,9 +67,10 @@ export function PublicDocumentDialog({ propertyId, propertyName, preview = false
     {sent ? <div className="mt-5 border border-[#b9d6c2] bg-[#eef8f1] px-4 py-4 text-sm leading-7 text-[#27613c]"><strong>ダウンロード用URLをメールで送りました。</strong><br/>届いたメールから物件概要書をダウンロードしてください。</div> : <>
       <p className="mt-4 text-sm leading-7 text-[#526176]">メールアドレスを入力すると、一般公開用の物件概要書をダウンロードするための専用URLが届きます。</p>
       <label className="mt-4 block text-xs font-bold text-[#526176]">メールアドレス<input type="email" value={email} onChange={event => { setEmail(event.target.value); setError(""); }} placeholder="example@company.jp" className="mt-1 h-12 w-full border border-[#cbd5df] px-3 text-sm font-normal outline-none focus:border-[#173f70]"/></label>
-      <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs leading-6 text-[#526176]"><input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>掲載会社名・担当者情報・詳細住所等を非表示にした一般公開用資料であることを確認しました。</span></label>
+      <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs leading-6 text-[#526176]"><input type="checkbox" checked={acceptedDocumentNotice} onChange={event => setAcceptedDocumentNotice(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>掲載会社名・担当者情報・詳細住所等を非表示にした一般公開用資料であることを確認しました。</span></label>
+      <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs font-bold leading-6 text-[#526176]"><input type="checkbox" checked={acceptedTransactionNotice} onChange={event => setAcceptedTransactionNotice(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>物件情報・お取引に関する注意を確認した。</span></label>
       {error && <p className="mt-2 text-xs font-bold text-[#a72e2e]">{error}</p>}
-      <button disabled={!email.trim() || !accepted || requestDocument.isPending} onClick={async () => { try { setError(""); if (!preview) await requestDocument.mutateAsync({ propertyId, email: email.trim(), acceptedNotice: true }); setSent(true); } catch (cause) { setError(cause instanceof Error ? cause.message : "送信できませんでした"); } }} className="mt-5 h-12 w-full bg-[#173f70] text-sm font-bold text-white disabled:opacity-40">{requestDocument.isPending ? "送信中…" : "ダウンロード用URLをメールで受け取る"}</button>
+      <button disabled={!email.trim() || !acceptedDocumentNotice || !acceptedTransactionNotice || requestDocument.isPending} onClick={async () => { try { setError(""); if (!preview) await requestDocument.mutateAsync({ propertyId, email: email.trim(), acceptedNotice: true, acceptedTransactionNotice: true }); setSent(true); } catch (cause) { setError(cause instanceof Error ? cause.message : "送信できませんでした"); } }} className="mt-5 h-12 w-full bg-[#173f70] text-sm font-bold text-white disabled:opacity-40">{requestDocument.isPending ? "送信中…" : "ダウンロード用URLをメールで受け取る"}</button>
     </>}
     <button onClick={onClose} className="mt-4 w-full text-sm font-semibold text-[#65748a]">閉じる</button>
   </div></div>;
@@ -133,12 +136,12 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
       }).catch(() => {});
     }
   };
-  const normalizedKeyword = appliedKeyword.trim().toLocaleLowerCase("ja");
+  const normalizedKeyword = normalizePropertySearchText(appliedKeyword);
   const filteredProperties = properties?.filter(property => {
     if (!normalizedKeyword) return true;
     const introduction = buildPublicCardIntroduction({ ...property, address: property.area });
     return [property.name, property.type, property.area, introduction, property.id, `PF-${property.id}`]
-      .some(value => String(value ?? "").toLocaleLowerCase("ja").includes(normalizedKeyword));
+      .some(value => normalizePropertySearchText(value).includes(normalizedKeyword));
   });
   useEffect(() => {
     if (preview || listViewRecordedRef.current) return;
@@ -169,7 +172,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
           </div>
           <div className="mt-2 grid items-center gap-2 md:grid-cols-[minmax(250px,.8fr)_minmax(360px,1.2fr)]">
             <p className="text-[11px] font-semibold leading-5 text-[#526176] sm:text-xs">ログイン後は、会員限定物件を含むさらに多くの物件をご覧いただけます。</p>
-            <form onSubmit={event => { event.preventDefault(); setAppliedKeyword(keyword); const normalized = keyword.trim().toLocaleLowerCase("ja"); const resultCount = properties?.filter(property => [property.name, property.type, property.area, buildPublicCardIntroduction({ ...property, address: property.area }), property.id, `PF-${property.id}`].some(value => String(value ?? "").toLocaleLowerCase("ja").includes(normalized))).length ?? 0; recordEvents([{ eventType: "search", searchKeyword: keyword.trim() || null, resultCount }]); }} className="flex gap-2">
+            <form onSubmit={event => { event.preventDefault(); setAppliedKeyword(keyword); const normalized = normalizePropertySearchText(keyword); const resultCount = properties?.filter(property => [property.name, property.type, property.area, buildPublicCardIntroduction({ ...property, address: property.area }), property.id, `PF-${property.id}`].some(value => normalizePropertySearchText(value).includes(normalized))).length ?? 0; recordEvents([{ eventType: "search", searchKeyword: keyword.trim() || null, resultCount }]); }} className="flex gap-2">
               <div className="flex min-w-0 flex-1 items-center border border-[#b9c8d8] bg-white focus-within:border-[#173f70] focus-within:ring-1 focus-within:ring-[#173f70]">
                 <Search className="ml-3 shrink-0 text-[#65748a]" size={16} />
                 <input value={keyword} onChange={event => setKeyword(event.target.value)} type="search" placeholder="物件番号・物件名・物件種別・エリアから検索" aria-label="公開物件をキーワード検索" className="h-10 min-w-0 flex-1 bg-transparent px-2.5 text-xs outline-none placeholder:text-[#8a97a6] sm:text-sm" />
