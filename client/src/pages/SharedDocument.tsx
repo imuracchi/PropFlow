@@ -42,6 +42,7 @@ export default function SharedDocument({ preview = false }: { preview?: boolean 
     expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
     recipientRestricted: false,
   } : query.data;
+  const directEmailShare = !!accessToken && !!data?.recipientRestricted;
   const fileDownloadUrl = (fileId: number) => `/api/external-files/${encodeURIComponent(token)}/${fileId}?access=${encodeURIComponent(accessToken)}&download=1`;
   const zipDownloadUrl = `/api/external-files/${encodeURIComponent(token)}/all?access=${encodeURIComponent(accessToken)}`;
   return (
@@ -69,7 +70,7 @@ export default function SharedDocument({ preview = false }: { preview?: boolean 
               <p className="ml-auto text-[11px] text-[#65748a]">合計 {formatBytes(data.files.reduce((sum, file) => sum + file.fileSize, 0))}</p>
             </div>
             <p className="mt-3 text-[11px] text-[#65748a]">有効期限：{new Date(data.expiresAt).toLocaleString("ja-JP")}</p>
-            {!accessToken && <div className="mt-5 border-l-4 border-[#b56b24] bg-[#fff8ed] px-4 py-4">
+            {(!accessToken || directEmailShare) && <div className="mt-5 border-l-4 border-[#b56b24] bg-[#fff8ed] px-4 py-4">
               <h2 className="text-[15px] font-bold text-[#7b470f]">禁止事項・資料の取り扱い</h2>
               <ul className="mt-3 list-disc space-y-2 pl-5 text-[14px] leading-6 text-[#694b2c]">
                 <li>掲載者の許可なく、共有URLや資料を第三者へ転送・転載・再配布しないでください。</li>
@@ -90,6 +91,10 @@ export default function SharedDocument({ preview = false }: { preview?: boolean 
               <button disabled={!email.trim() || !accepted || requestDownloadLink.isPending} onClick={async () => { try { setUnlockError(""); if (!preview) await requestDownloadLink.mutateAsync({ token, email: email.trim(), acceptedProhibitions: true }); setEmailSent(true); } catch (error) { setUnlockError(error instanceof Error ? error.message : "送信できませんでした"); } }} className="mt-4 h-12 w-full bg-[#173f70] text-[14px] font-bold text-white disabled:opacity-40">{requestDownloadLink.isPending ? "送信中…" : "ダウンロード用URLをメールで受け取る"}</button>
               </>}
             </div> : <div className="mt-6">
+              {directEmailShare && !accepted ? <div className="border-t border-[#dce3eb] pt-5">
+                <h2 className="text-[14px] font-bold text-[#102d50]">ダウンロード前の確認</h2>
+                <label className="mt-3 flex cursor-pointer items-start gap-2 text-[13px] leading-6 text-[#526176]"><input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>上記の禁止事項を確認し、遵守することに同意します。</span></label>
+              </div> : <>
               {data.files.length < 5 ? <div className="grid gap-2 sm:grid-cols-2">
                 {data.files.map((file, index) => <a key={file.id} href={preview ? "#" : fileDownloadUrl(file.id)} onClick={preview ? event => event.preventDefault() : undefined} className="flex h-11 items-center justify-center gap-2 border border-[#173f70] text-[13px] font-bold text-[#173f70]"><Download size={16}/>資料{data.files.length === 1 ? "" : index + 1}をダウンロード</a>)}
               </div> : <>
@@ -103,9 +108,10 @@ export default function SharedDocument({ preview = false }: { preview?: boolean 
                 <a href={`/registration-request?sourcePropertyId=${data.propertyId}&sourceIntent=inquiry`} className="mt-4 flex h-12 w-full items-center justify-center bg-[#173f70] text-[14px] font-bold text-white">この物件への問い合わせ</a>
                 <a href={`/?returnTo=${encodeURIComponent(`/v2/property/${data.propertyId}`)}`} className="mt-3 flex h-11 w-full items-center justify-center bg-white text-[12px] font-bold text-[#173f70] underline underline-offset-2">既に会員の方はログイン</a>
               </div>
+              </>}
             </div>}
             <p className="mt-4 text-[11px] leading-5 text-[#65748a]">スマートフォンで表示が不安定な場合は、ダウンロードしてご確認ください。このリンクは転送される可能性があります。</p>
-            {accessToken && <div className="mt-5 border-l-4 border-[#b56b24] bg-[#fff8ed] px-4 py-4">
+            {accessToken && !directEmailShare && <div className="mt-5 border-l-4 border-[#b56b24] bg-[#fff8ed] px-4 py-4">
               <h2 className="text-[15px] font-bold text-[#7b470f]">禁止事項・資料の取り扱い</h2>
               <ul className="mt-3 list-disc space-y-2 pl-5 text-[14px] leading-6 text-[#694b2c]">
                 <li>掲載者の許可なく、共有URLや資料を第三者へ転送・転載・再配布しないでください。</li>

@@ -1157,13 +1157,20 @@ JSONのみ返してください。`,
           expiresAt,
         });
         if (!shareId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-        const url = `${PUBLIC_SITE_URL}/shared/document/${token}`;
+        const accessToken = nanoid(48);
+        await db.createExternalFileShareAccess({
+          shareId,
+          email: recipientEmail,
+          accessTokenHash: createHash("sha256").update(accessToken).digest("hex"),
+          expiresAt,
+        });
+        const url = `${PUBLIC_SITE_URL}/shared/document/${token}?access=${encodeURIComponent(accessToken)}`;
         const escape = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]!));
         const { sendMail } = await import("./_core/mail");
         const sent = await sendMail(
           recipientEmail,
           `【PropFlow】物件資料「${property.name}」が共有されました`,
-          `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#263b58"><h2 style="color:#173f70">物件資料が共有されました</h2><p><strong>対象物件：</strong>${escape(property.name)}</p><p><strong>資料：</strong>${files.map(item => escape(item!.name)).join("、")}</p><p>下記からメールアドレスを入力し、禁止事項へ同意のうえご確認ください。リンクの有効期限は送信から3日間です。</p><p><a href="${url}" style="display:inline-block;background:#173f70;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold">資料のダウンロード画面を開く</a></p><p style="font-size:12px;color:#65748a">このメールに心当たりがない場合は、リンクを開かず破棄してください。</p></div>`
+          `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#263b58"><h2 style="color:#173f70">物件資料が共有されました</h2><p><strong>対象物件：</strong>${escape(property.name)}</p><p><strong>資料：</strong>${files.map(item => escape(item!.name)).join("、")}</p><p>下記から禁止事項を確認・同意のうえ、資料をダウンロードできます。メールアドレスの再入力は不要です。リンクの有効期限は送信から3日間です。</p><p><a href="${url}" style="display:inline-block;background:#173f70;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold">資料のダウンロード画面を開く</a></p><p style="font-size:12px;color:#65748a">このメールに心当たりがない場合は、リンクを開かず破棄してください。第三者へ転送しないでください。</p></div>`
         );
         if (!sent) {
           await db.revokeExternalFileShare(ctx.user.id, shareId);
