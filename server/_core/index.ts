@@ -543,7 +543,6 @@ async function startServer() {
       const inquiryUrl = `${PUBLIC_SITE_URL}/registration-request?sourcePropertyId=${property.id}&sourceIntent=inquiry`;
       const html = buildPublicPropertyDocumentHtml(property, inquiryUrl);
       const pdf = await renderPropertyPdf(html);
-      await recordPublicPropertyDocumentDownload(access.id);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`PF-${property.id}_物件概要書.pdf`)}`);
       res.setHeader("Cache-Control", "private, no-store, max-age=0");
@@ -551,6 +550,11 @@ async function startServer() {
       res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
       res.setHeader("Referrer-Policy", "no-referrer");
       res.send(Buffer.from(pdf));
+      // The PDF response is the primary operation. Analytics is best-effort and
+      // must not turn a successful download into a 500 response.
+      void recordPublicPropertyDocumentDownload(access.id).catch(error => {
+        console.error("[public-property-document-download] analytics error:", error);
+      });
     } catch (error) {
       console.error("[public-property-document] error:", error);
       res.status(500).json({ error: "PDF generation failed" });

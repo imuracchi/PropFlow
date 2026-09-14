@@ -1300,7 +1300,10 @@ JSONのみ返してください。`,
       .query(async ({ input }) => {
         const access = await db.getPublicPropertyDocumentAccess(createHash("sha256").update(input.token).digest("hex"));
         if (!access) throw new TRPCError({ code: "NOT_FOUND", message: "ダウンロードURLが無効または期限切れです" });
-        await db.recordPublicPropertyDocumentView(access.id);
+        // Analytics must never block access to the document landing page.
+        void db.recordPublicPropertyDocumentView(access.id).catch(error => {
+          console.error("[public-property-document-view] analytics error:", error);
+        });
         const property = await db.getPublicSnsPropertyById(access.propertyId);
         if (!property) throw new TRPCError({ code: "NOT_FOUND", message: "対象物件は現在公開されていません" });
         return { propertyId: property.id, propertyName: property.name, expiresAt: access.expiresAt };
