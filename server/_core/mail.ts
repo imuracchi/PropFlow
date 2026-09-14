@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { config } from "dotenv";
 
-export async function sendMail(to: string, subject: string, html: string, options?: { replyTo?: string; cc?: string; bcc?: string; attachments?: { filename: string; content: string }[] }) {
+export async function sendMail(to: string, subject: string, html: string, options?: { from?: string; replyTo?: string; cc?: string; bcc?: string; attachments?: { filename: string; content: string }[] }) {
   const { parsed } = config();
   const apiKey = parsed?.RESEND_API_KEY || process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -12,7 +12,7 @@ export async function sendMail(to: string, subject: string, html: string, option
   try {
     const resend = new Resend(apiKey);
     const result = await resend.emails.send({
-      from: "PropFlow <noreply@propflow.jp>",
+      from: options?.from ?? "PropFlow <noreply@propflow.jp>",
       to,
       subject,
       html,

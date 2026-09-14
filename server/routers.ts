@@ -4277,6 +4277,7 @@ ${request.sourcePropertyId ? `<p>登録申請のきっかけとなった物件�
       .input(
         z.object({
           email: z.string().email(),
+          inquiryEmail: z.string().email().optional(),
           password: z.string().min(6),
           name: z.string().optional(),
           company: z.string().optional(),
@@ -4354,7 +4355,33 @@ ${request.sourcePropertyId ? `<p>登録申請のきっかけとなった物件�
           }
         );
 
-        return { success: true, emailSent } as const;
+        const normalizedInquiryEmail = input.inquiryEmail?.trim().toLowerCase();
+        const normalizedRegistrationEmail = input.email.trim().toLowerCase();
+        let inquiryNoticeSent: boolean | null = null;
+        if (normalizedInquiryEmail && normalizedInquiryEmail !== normalizedRegistrationEmail) {
+          inquiryNoticeSent = await sendMail(
+            normalizedInquiryEmail,
+            "【PropFlow】登録完了メールをご確認ください",
+            `
+<p>${nameLabel}</p>
+<p>PropFlowへの登録が完了しました。</p>
+<p>ログイン情報は、登録メールアドレス宛に以下の送信元からお送りしています。</p>
+<p>
+  送信元：noreply@propflow.jp<br>
+  件名：【PropFlow】ご登録完了のお知らせ
+</p>
+<p>メールが見当たらない場合は、受信箱で「noreply@propflow.jp」または「PropFlow」と検索してください。</p>
+<p>あわせて、迷惑メールフォルダもご確認ください。</p>
+<p>PropFlowサポート<br>support@gspec.me</p>
+            `.trim(),
+            {
+              from: "PropFlowサポート <support@gspec.me>",
+              replyTo: "support@gspec.me",
+            }
+          );
+        }
+
+        return { success: true, emailSent, inquiryNoticeSent } as const;
       }),
 
     resendWelcomeEmail: adminProcedure

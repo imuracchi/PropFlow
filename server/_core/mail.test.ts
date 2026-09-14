@@ -23,6 +23,19 @@ describe("sendMail", () => {
       .resolves.toBe(true);
   });
 
+  it("uses an explicitly requested verified sender", async () => {
+    sendMock.mockResolvedValue({ data: { id: "email-456" }, error: null });
+
+    await sendMail("to@example.com", "subject", "<p>body</p>", {
+      from: "PropFlowサポート <support@gspec.me>",
+    });
+
+    expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
+      from: "PropFlowサポート <support@gspec.me>",
+      to: "to@example.com",
+    }));
+  });
+
   it("returns false when Resend returns an API error without throwing", async () => {
     sendMock.mockResolvedValue({
       data: null,

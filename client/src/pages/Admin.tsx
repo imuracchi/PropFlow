@@ -3762,6 +3762,7 @@ function CreateUserForm({
   onSuccess: () => void;
 }) {
   const [email, setEmail] = useState("");
+  const [inquiryEmail, setInquiryEmail] = useState("");
   const [password, setPassword] = useState(() => passwordFromPhone());
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
@@ -3823,6 +3824,7 @@ function CreateUserForm({
     try {
       const result = await mutation.mutateAsync({
         email,
+        inquiryEmail: inquiryEmail || undefined,
         password,
         name: name || undefined,
         company: company || undefined,
@@ -3838,7 +3840,13 @@ function CreateUserForm({
         const emailMsg = (result as any).emailSent
           ? "✅ 登録完了メールを送信しました"
           : "⚠️ 登録しましたがメール送信に失敗しました";
-        alert(`ユーザーを登録しました\n${emailMsg}`);
+        const inquiryMsg =
+          (result as any).inquiryNoticeSent === true
+            ? "\n✅ 問い合わせ元へ確認案内を送信しました"
+            : (result as any).inquiryNoticeSent === false
+              ? "\n⚠️ 問い合わせ元への確認案内に失敗しました"
+              : "";
+        alert(`ユーザーを登録しました\n${emailMsg}${inquiryMsg}`);
         onSuccess();
       } else {
         setError((result as any).error ?? "登録に失敗しました");
@@ -3898,6 +3906,20 @@ function CreateUserForm({
               onChange={e => setEmail(e.target.value)}
               placeholder="example@company.com"
             />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">
+              問い合わせ時のメールアドレス
+            </label>
+            <Input
+              type="email"
+              value={inquiryEmail}
+              onChange={e => setInquiryEmail(e.target.value)}
+              placeholder="登録メールと異なる場合のみ"
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              異なる場合、support@gspec.meから登録完了メールの検索方法を案内します。
+            </p>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">
