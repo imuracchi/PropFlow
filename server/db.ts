@@ -1407,6 +1407,13 @@ export async function getPlatformAnalytics() {
       WITH eligible_activity AS (
         SELECT
           COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id)) AS companyKey,
+          u.id AS userId, u.lastActiveAt AS createdAt
+        FROM users u
+        WHERE u.role = 'user' AND u.status = 'active'
+          AND u.lastActiveAt IS NOT NULL
+        UNION ALL
+        SELECT
+          COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id)) AS companyKey,
           u.id AS userId, a.createdAt
         FROM activity_logs a
         INNER JOIN users u ON u.id = a.userId
@@ -1472,6 +1479,12 @@ export async function getPlatformAnalytics() {
         WHERE day > DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
       ),
       eligible_activity AS (
+        SELECT COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id)) AS companyKey,
+          u.id AS userId, u.lastActiveAt AS createdAt
+        FROM users u
+        WHERE u.role = 'user' AND u.status = 'active'
+          AND u.lastActiveAt IS NOT NULL
+        UNION ALL
         SELECT COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id)) AS companyKey,
           u.id AS userId, a.createdAt
         FROM activity_logs a

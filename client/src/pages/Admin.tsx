@@ -2396,7 +2396,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
                       {[
-                        ["利用会社", `${analytics.today.activeCompanies}社`, "操作または物件閲覧がある会社"],
+                        ["利用会社", `${analytics.today.activeCompanies}社`, "ログイン中の利用・操作・物件閲覧がある会社"],
                         ["閲覧会社", `${analytics.today.viewingCompanies}社`, "物件を閲覧した会社"],
                         ["問い合わせ会社", `${analytics.today.inquiryCompanies}社`, "他社物件へDMした会社"],
                         ["物件登録会社", `${analytics.today.listingCompanies}社`, "物件を登録した会社"],
