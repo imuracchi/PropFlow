@@ -2,7 +2,8 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { nanoid } from "nanoid";
 import { createStoredZip } from "./storedZip";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -115,6 +116,52 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Issues a public-property document URL for the Gmail autoresponder.
+  // This is intentionally separate from the browser-facing request flow and
+  // requires a shared secret configured in both Railway and Apps Script.
+  app.post("/api/integrations/gas/public-property-document", async (req, res) => {
+    try {
+      const configuredSecret = process.env.GAS_INTEGRATION_SECRET ?? "";
+      const suppliedSecret = String(req.get("X-PropFlow-Integration-Key") ?? "");
+      const configuredBuffer = Buffer.from(configuredSecret);
+      const suppliedBuffer = Buffer.from(suppliedSecret);
+      const authorized = configuredBuffer.length > 0 &&
+        configuredBuffer.length === suppliedBuffer.length &&
+        timingSafeEqual(configuredBuffer, suppliedBuffer);
+      if (!authorized) return res.status(401).json({ error: "認証できませんでした" });
+
+      const propertyId = Number(req.body?.propertyId);
+      const email = String(req.body?.email ?? "").trim().toLowerCase();
+      if (!Number.isInteger(propertyId) || propertyId <= 0 || !/^\S+@\S+\.\S+$/.test(email)) {
+        return res.status(400).json({ error: "物件番号またはメールアドレスが正しくありません" });
+      }
+
+      const { createPublicPropertyDocumentAccess, getPublicSnsPropertyById } = await import("../db");
+      const property = await getPublicSnsPropertyById(propertyId);
+      if (!property) return res.status(404).json({ error: "対象物件は現在公開されていません" });
+
+      const accessToken = nanoid(48);
+      const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+      await createPublicPropertyDocumentAccess({
+        propertyId: property.id,
+        email,
+        accessTokenHash: createHash("sha256").update(accessToken).digest("hex"),
+        expiresAt,
+      });
+      res.setHeader("Cache-Control", "no-store");
+      res.json({
+        propertyId: property.id,
+        propertyName: property.name,
+        downloadUrl: `${PUBLIC_SITE_URL}/public/document/${accessToken}`,
+        inquiryUrl: `${PUBLIC_SITE_URL}/registration-request?sourcePropertyId=${property.id}&sourceIntent=inquiry`,
+        expiresAt: expiresAt.toISOString(),
+      });
+    } catch (error) {
+      console.error("[gas-public-property-document] error:", error);
+      res.status(500).json({ error: "資料URLを発行できませんでした" });
+    }
+  });
 
   app.get("/healthz", async (_req, res) => {
     const { checkDatabaseHealth } = await import("../db");
