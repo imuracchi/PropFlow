@@ -1483,6 +1483,9 @@ JSONのみ返してください。`,
             structure: input.structure ?? null,
             buildingAge: input.buildingAge ?? null,
             zoning: input.zoning ?? null,
+            access: input.access ?? null,
+            comment: input.comment ?? null,
+            otherRestrictions: input.otherRestrictions ?? null,
           });
           const result = await db.createProperty({
             userId: ctx.user.id,

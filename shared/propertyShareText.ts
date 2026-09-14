@@ -12,6 +12,9 @@ export type ShareableProperty = {
   buildingAge?: string | null;
   transport?: string | null;
   zoning?: string | null;
+  access?: string | null;
+  comment?: string | null;
+  otherRestrictions?: string | null;
   socialIntroduction?: string | null;
   externalListingConsent?: number | boolean | null;
 };
@@ -47,14 +50,26 @@ export function propertyPriceLabel(price: number | null | undefined, negotiable?
 
 export function buildPublicCardIntroduction(property: ShareableProperty) {
   const savedIntroduction = property.socialIntroduction?.trim();
-  if (savedIntroduction) return savedIntroduction;
+  if (savedIntroduction && (!property.transport || !savedIntroduction.includes(property.transport.trim()))) return savedIntroduction;
   const area = publicAreaLabel(property.address ?? "");
-  const subject = [area, property.type].filter(Boolean).join("の") || "公開中の物件";
+  const subject = property.type === "土地" ? "売地" : property.type || "物件";
+  const stationMatches = [...(property.transport ?? "").matchAll(/[「『\"]([^」』\"]+)[」』\"]駅\s*徒歩\s*([0-9０-９]+)分/g)];
+  const stations = new Set(stationMatches.map(match => `${match[1]}:${match[2]}`));
+  const stationFeature = stations.size === 1 && stationMatches.length > 1
+    ? `${stationMatches[0][1]}駅徒歩${stationMatches[0][2]}分、${stationMatches.length}路線を利用できる`
+    : stationMatches[0]
+      ? `${stationMatches[0][1]}駅徒歩${stationMatches[0][2]}分の`
+      : null;
+  const noBuildingCondition = /建築条件(?:無|なし)/.test(property.name) ? "建築条件なしの" : "";
+  const lead = stationFeature
+    ? `${stationFeature}${noBuildingCondition}${subject}です。`
+    : `${[area, noBuildingCondition ? `${noBuildingCondition}${subject}` : property.type].filter(Boolean).join("の") || "公開中の物件"}です。`;
   const features = [
     property.structure || null,
-    property.transport || null,
+    property.landArea ? `土地面積${property.landArea}㎡` : null,
+    !stationFeature ? property.transport || null : null,
   ].filter(Boolean).slice(0, 2);
-  return `${subject}です。${features.length ? `${features.join("、")}。` : "詳細は物件情報をご確認ください。"}`;
+  return `${lead}${features.length ? `${features.join("、")}。` : `${area}に所在します。`}`;
 }
 
 export function buildPropertyShareSummary(property: ShareableProperty) {

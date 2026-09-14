@@ -46,6 +46,22 @@ describe("public property share text", () => {
       .toMatch(new RegExp(`^${socialIntroduction}`));
   });
 
+  it("replaces an older introduction that repeats the full transport field", () => {
+    const transport = "JR山手線「目黒」駅 徒歩7分 東急目黒線「目黒」駅 徒歩7分 都営地下鉄三田線「目黒」駅 徒歩7分 東京メトロ南北線「目黒」駅 徒歩7分";
+    const introduction = buildPublicCardIntroduction({
+      ...property,
+      name: "下目黒2丁目 建築条件無売地（131.86㎡）",
+      address: "東京都目黒区下目黒2丁目",
+      type: "土地",
+      landArea: 131.86,
+      transport,
+      socialIntroduction: `東京都目黒区下目黒の土地です。${transport}。`,
+    });
+
+    expect(introduction).toBe("目黒駅徒歩7分、4路線を利用できる建築条件なしの売地です。土地面積131.86㎡。");
+    expect(introduction).not.toContain("JR山手線");
+  });
+
   it("uses only the email inquiry route in email mode", () => {
     const text = buildPropertyShareText(property, "email");
 

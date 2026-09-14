@@ -30,6 +30,9 @@ export async function generatePropertySocialIntroduction(property: IntroductionS
       ["築年月", property.buildingAge],
       ["交通", property.transport],
       ["用途地域", property.zoning],
+      ["接道条件", property.access],
+      ["紹介コメント", property.comment],
+      ["その他制限", property.otherRestrictions],
     ]
       .filter(([, value]) => value !== null && value !== undefined && value !== "")
       .map(([label, value]) => `${label}：${value}`)
@@ -39,7 +42,7 @@ export async function generatePropertySocialIntroduction(property: IntroductionS
       max_tokens: 180,
       messages: [{
         role: "user",
-        content: `不動産事業者向けSNS投稿の冒頭に置く、物件の特徴・長所をまとめた短文を1文だけ作成してください。\n\n【ルール】\n- 60〜100文字程度\n- 入力情報から客観的に確認できる内容だけを使う\n- 推測、誇張、投資判断、将来の収益保証を含めない\n- 詳細住所、会社名、担当者名、連絡先、商流は書かない\n- 見出し、箇条書き、引用符、注釈は付けない\n\n【物件情報】\n${facts}`,
+        content: `不動産事業者向けSNS投稿の冒頭に置く、物件の特徴・長所をまとめた短文を1文だけ作成してください。\n\n【ルール】\n- 60〜100文字程度\n- 入力情報から客観的に確認できる内容だけを使う\n- 推測、誇張、投資判断、将来の収益保証を含めない\n- 物件情報欄の読み上げではなく、駅距離、複数路線、建築条件、面積、構造、築年、接道などから差別化できる特徴を2つ程度選ぶ\n- 交通欄をそのまま転記しない。同じ駅・徒歩分数が複数ある場合は「○路線利用可能」のようにまとめる\n- 所在地・物件種別だけの説明にしない\n- この文章の直後に物件情報欄が続くため、同じ情報の羅列や重複を避ける\n- 詳細住所、会社名、担当者名、連絡先、商流は書かない\n- 見出し、箇条書き、引用符、注釈は付けない\n\n【物件情報】\n${facts}`,
       }],
     });
     const text = response.content[0]?.type === "text" ? cleanIntroduction(response.content[0].text) : "";
