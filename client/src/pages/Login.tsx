@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Building2, CheckCircle, FileText, Loader2, Lock, Mail, Search } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { buildPublicCardIntroduction, propertyPriceLabel } from "@shared/propertyShareText";
@@ -11,6 +11,8 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loginFailureCount, setLoginFailureCount] = useState(0);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
   const [registration, setRegistration] = useState<RegistrationIntent | null>(null);
   const [documentRequest, setDocumentRequest] = useState<{ propertyId: number; propertyName: string } | null>(null);
   const loginMutation = trpc.auth.login.useMutation();
@@ -26,8 +28,12 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
     try {
       const result = await loginMutation.mutateAsync({ email, password });
       if (result.success) onLoginSuccess();
-      else setError(result.error ?? "ログインに失敗しました");
+      else {
+        setLoginFailureCount(count => count + 1);
+        setError(result.error ?? "ログインに失敗しました");
+      }
     } catch {
+      setLoginFailureCount(count => count + 1);
       setError("ログインに失敗しました。入力内容をご確認ください。");
     }
   };
@@ -57,14 +63,23 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
               <label htmlFor="login-email" className="mt-5 block text-sm font-bold">メールアドレス</label>
               <div className="mt-2 flex h-12 items-center border border-[#c9d4df] bg-[#f8fafc] px-3 focus-within:border-[#173f70] focus-within:ring-1 focus-within:ring-[#173f70]">
                 <Mail size={17} className="shrink-0 text-[#718096]" />
-                <input id="login-email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} onKeyDown={event => event.key === "Enter" && void handleLogin()} placeholder="example@company.com" className="ml-3 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" />
+                <input id="login-email" type="email" autoComplete="email" value={email} onChange={event => { setEmail(event.target.value); setLoginFailureCount(0); setError(""); }} onKeyDown={event => event.key === "Enter" && void handleLogin()} placeholder="example@company.com" className="ml-3 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" />
               </div>
               <label htmlFor="login-password" className="mt-4 block text-sm font-bold">パスワード</label>
               <div className="mt-2 flex h-12 items-center border border-[#c9d4df] bg-[#f8fafc] px-3 focus-within:border-[#173f70] focus-within:ring-1 focus-within:ring-[#173f70]">
                 <Lock size={17} className="shrink-0 text-[#718096]" />
-                <input id="login-password" type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} onKeyDown={event => event.key === "Enter" && void handleLogin()} placeholder="••••••••" className="ml-3 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" />
+                <input ref={passwordInputRef} id="login-password" type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} onKeyDown={event => event.key === "Enter" && void handleLogin()} placeholder="••••••••" className="ml-3 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" />
               </div>
               {error && <p role="alert" className="mt-3 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+              {loginFailureCount >= 2 && (
+                <div className="mt-3 border border-[#d4dfeb] bg-[#f5f8fb] p-4">
+                  <p className="text-sm font-bold text-[#102d50]">パスワードを忘れた可能性がある場合は、再設定してください。</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <a href="/forgot-password" className="flex h-11 items-center justify-center bg-[#173f70] px-3 text-xs font-bold text-white">パスワードを再設定</a>
+                    <button type="button" onClick={() => { passwordInputRef.current?.focus(); passwordInputRef.current?.select(); }} className="h-11 border border-[#173f70] bg-white px-3 text-xs font-bold text-[#173f70]">もう一度入力する</button>
+                  </div>
+                </div>
+              )}
               <button type="button" onClick={() => void handleLogin()} disabled={!email || !password || loginMutation.isPending} className="mt-5 flex h-12 w-full items-center justify-center gap-2 bg-[#173f70] text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{loginMutation.isPending && <Loader2 size={17} className="animate-spin" />}ログイン</button>
               <div className="mt-4 text-center"><a href="/forgot-password" className="text-xs text-[#65748a] underline underline-offset-4">パスワードをお忘れの方</a></div>
               <div className="mt-6 border-t border-[#dce3eb] pt-4 text-center text-xs text-[#60738a]">
