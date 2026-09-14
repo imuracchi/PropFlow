@@ -2420,7 +2420,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                         ["利用会社", `${analytics.today.activeCompanies}社`, "ログイン中の利用・操作・物件閲覧がある会社"],
                         ["閲覧会社", `${analytics.today.viewingCompanies}社`, "物件を閲覧した会社"],
                         ["問い合わせ会社", `${analytics.today.inquiryCompanies}社`, "他社物件へDMした会社"],
-                        ["物件登録会社", `${analytics.today.listingCompanies}社`, "物件を登録した会社"],
+                        ["物件公開会社", `${analytics.today.listingCompanies}社`, "物件を公開した会社（マネジメントを含む）"],
                         ["初回／継続利用者", `${analytics.today.firstUsers}／${analytics.today.returningUsers}人`, "本日初回／過去利用あり"],
                         ["上位3社の操作割合", `${analytics.today.topThreeShare.toFixed(1)}%`, "本日の全操作に占める割合"],
                       ].map(([label, value, note]) => (
@@ -2439,7 +2439,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                             <th className="px-3 py-2 text-right">利用会社</th>
                             <th className="px-3 py-2 text-right">閲覧会社</th>
                             <th className="px-3 py-2 text-right">問い合わせ会社</th>
-                            <th className="px-3 py-2 text-right">物件登録会社</th>
+                            <th className="px-3 py-2 text-right">物件公開会社</th>
                             <th className="px-3 py-2 text-right">初回／継続利用者</th>
                             <th className="px-3 py-2 text-right">上位3社割合</th>
                           </tr>

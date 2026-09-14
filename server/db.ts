@@ -1472,8 +1472,8 @@ export async function getPlatformAnalytics() {
             AND dm.createdAt >= CURRENT_DATE AND dm.createdAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)) AS inquiryCompanies,
         (SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(owner.company), ''), CONCAT('user:', owner.id)))
           FROM properties p INNER JOIN users owner ON owner.id = p.userId
-          WHERE owner.role = 'user' AND owner.status = 'active'
-            AND p.createdAt >= CURRENT_DATE AND p.createdAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)) AS listingCompanies,
+          WHERE owner.role IN ('user', 'management') AND owner.status = 'active'
+            AND p.publishedAt >= CURRENT_DATE AND p.publishedAt < DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY)) AS listingCompanies,
         (SELECT COUNT(*) FROM today_users t INNER JOIN first_activity f ON f.userId = t.userId
           WHERE f.firstAt >= CURRENT_DATE) AS firstUsers,
         (SELECT COUNT(*) FROM today_users t INNER JOIN first_activity f ON f.userId = t.userId
@@ -1560,12 +1560,12 @@ export async function getPlatformAnalytics() {
         GROUP BY DATE(dm.createdAt)
       ),
       listing_daily AS (
-        SELECT DATE(p.createdAt) AS day,
+        SELECT DATE(p.publishedAt) AS day,
           COUNT(DISTINCT COALESCE(NULLIF(TRIM(owner.company), ''), CONCAT('user:', owner.id))) AS listingCompanies
         FROM properties p INNER JOIN users owner ON owner.id = p.userId
-        WHERE owner.role = 'user' AND owner.status = 'active'
-          AND p.createdAt >= DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
-        GROUP BY DATE(p.createdAt)
+        WHERE owner.role IN ('user', 'management') AND owner.status = 'active'
+          AND p.publishedAt >= DATE_SUB(CURRENT_DATE, INTERVAL 29 DAY)
+        GROUP BY DATE(p.publishedAt)
       )
       SELECT DATE_FORMAT(d.day, '%Y-%m-%d') AS day,
         COALESCE(a.activeCompanies, 0) AS activeCompanies,
