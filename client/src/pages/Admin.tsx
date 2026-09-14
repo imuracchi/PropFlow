@@ -2381,10 +2381,10 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                     return <section className="border-2 border-[#2f6f63] bg-[#f2f8f6] p-4">
                       <div className="mb-3"><h4 className="text-[15px] font-bold text-[#163f38]">ログイン前の公開ページ利用状況</h4><p className="mt-1 text-[10px] leading-5 text-[#58736e]">匿名IDによる推定人数です。同じ方が別端末を利用した場合は別人として集計されることがあります。</p></div>
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
-                        {[["閲覧者", `${publicAnalytics.today.visitors}人`], ["一覧表示", `${publicAnalytics.today.listViews}回`], ["物件表示", `${publicAnalytics.today.propertyImpressions}回`], ["検索", `${publicAnalytics.today.searches}回`], ["資料希望", `${publicAnalytics.today.documentClicks}回`], ["問い合わせ", `${publicAnalytics.today.inquiryClicks}回`], ["登録クリック", `${publicAnalytics.today.registrationClicks}回`], ["申請完了", `${publicAnalytics.today.registrationRequests}件`]].map(([label, value]) => <div key={label} className="border border-[#bdd4cf] bg-white p-3"><p className="text-[10px] font-bold text-[#58736e]">{label}</p><p className="mt-1 text-xl font-bold tabular-nums text-[#163f38]">{value}</p></div>)}
+                        {[["閲覧者", `${publicAnalytics.today.visitors}人`], ["一覧表示", `${publicAnalytics.today.listViews}回`], ["物件表示", `${publicAnalytics.today.propertyImpressions}回`], ["検索", `${publicAnalytics.today.searches}回`], ["資料希望", `${publicAnalytics.today.documentClicks}回`], ["問い合わせ", `${publicAnalytics.today.inquiryClicks}回`], ["登録クリック", `${publicAnalytics.today.registrationClicks}回`], ["物件経由の申請送信", `${publicAnalytics.today.registrationRequests}件`]].map(([label, value]) => <div key={label} className="border border-[#bdd4cf] bg-white p-3"><p className="text-[10px] font-bold text-[#58736e]">{label}</p><p className="mt-1 text-xl font-bold tabular-nums text-[#163f38]">{value}</p></div>)}
                       </div>
                       <div className="mt-4 grid gap-3 xl:grid-cols-2">
-                        <div className="max-h-[360px] overflow-auto border border-[#bdd4cf] bg-white"><table className="w-full min-w-[680px] text-[11px]"><thead className="sticky top-0 bg-[#e2efec] text-[#58736e]"><tr><th className="px-3 py-2 text-left">日付</th><th className="px-3 py-2 text-right">閲覧者</th><th className="px-3 py-2 text-right">一覧</th><th className="px-3 py-2 text-right">検索</th><th className="px-3 py-2 text-right">資料</th><th className="px-3 py-2 text-right">問合せ</th><th className="px-3 py-2 text-right">登録</th><th className="px-3 py-2 text-right">申請完了</th></tr></thead><tbody className="divide-y divide-[#d8e5e2]">{publicAnalytics.last30Days.map((row, index) => <tr key={row.day} className={index === 0 ? "bg-[#fff8e8] font-bold" : ""}><td className="px-3 py-2">{index === 0 ? "本日 " : ""}{row.day.slice(5).replace("-", "/")}</td><td className="px-3 py-2 text-right">{row.visitors}</td><td className="px-3 py-2 text-right">{row.listViews}</td><td className="px-3 py-2 text-right">{row.searches}</td><td className="px-3 py-2 text-right">{row.documentClicks}</td><td className="px-3 py-2 text-right">{row.inquiryClicks}</td><td className="px-3 py-2 text-right">{row.registrationClicks}</td><td className="px-3 py-2 text-right">{row.registrationRequests}</td></tr>)}</tbody></table></div>
+                        <div className="max-h-[360px] overflow-auto border border-[#bdd4cf] bg-white"><table className="w-full min-w-[680px] text-[11px]"><thead className="sticky top-0 bg-[#e2efec] text-[#58736e]"><tr><th className="px-3 py-2 text-left">日付</th><th className="px-3 py-2 text-right">閲覧者</th><th className="px-3 py-2 text-right">一覧</th><th className="px-3 py-2 text-right">検索</th><th className="px-3 py-2 text-right">資料</th><th className="px-3 py-2 text-right">問合せ</th><th className="px-3 py-2 text-right">登録</th><th className="px-3 py-2 text-right">物件経由の申請</th></tr></thead><tbody className="divide-y divide-[#d8e5e2]">{publicAnalytics.last30Days.map((row, index) => <tr key={row.day} className={index === 0 ? "bg-[#fff8e8] font-bold" : ""}><td className="px-3 py-2">{index === 0 ? "本日 " : ""}{row.day.slice(5).replace("-", "/")}</td><td className="px-3 py-2 text-right">{row.visitors}</td><td className="px-3 py-2 text-right">{row.listViews}</td><td className="px-3 py-2 text-right">{row.searches}</td><td className="px-3 py-2 text-right">{row.documentClicks}</td><td className="px-3 py-2 text-right">{row.inquiryClicks}</td><td className="px-3 py-2 text-right">{row.registrationClicks}</td><td className="px-3 py-2 text-right">{row.registrationRequests}</td></tr>)}</tbody></table></div>
                         <div className="grid gap-3 sm:grid-cols-2"><div className="border border-[#bdd4cf] bg-white p-3"><h5 className="text-xs font-bold">反響のある公開物件（30日）</h5><div className="mt-2 space-y-2">{publicAnalytics.popularProperties.slice(0, 8).map(row => <div key={row.propertyId} className="border-t border-[#e1ebe9] pt-2 text-[10px]"><p className="truncate font-bold">PF-{row.propertyId} {row.propertyName}</p><p className="mt-1 text-[#58736e]">表示 {row.impressions}／資料 {row.documentClicks}／問合せ {row.inquiryClicks}</p></div>)}{publicAnalytics.popularProperties.length === 0 && <p className="text-[10px] text-muted-foreground">まだデータはありません</p>}</div></div><div className="border border-[#bdd4cf] bg-white p-3"><h5 className="text-xs font-bold">検索キーワード（30日）</h5><div className="mt-2 space-y-2">{publicAnalytics.popularSearches.slice(0, 8).map(row => <div key={row.keyword} className="flex justify-between gap-2 border-t border-[#e1ebe9] pt-2 text-[10px]"><span className="truncate font-bold">{row.keyword}</span><span className="shrink-0 text-[#58736e]">{row.count}回／平均{row.averageResults}件</span></div>)}{publicAnalytics.popularSearches.length === 0 && <p className="text-[10px] text-muted-foreground">まだデータはありません</p>}</div></div></div>
                       </div>
                     </section>;
@@ -2396,7 +2396,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
                       {[
-                        ["利用会社", `${analytics.today.activeCompanies}社`, "操作ログがある会社"],
+                        ["利用会社", `${analytics.today.activeCompanies}社`, "操作または物件閲覧がある会社"],
                         ["閲覧会社", `${analytics.today.viewingCompanies}社`, "物件を閲覧した会社"],
                         ["問い合わせ会社", `${analytics.today.inquiryCompanies}社`, "他社物件へDMした会社"],
                         ["物件登録会社", `${analytics.today.listingCompanies}社`, "物件を登録した会社"],
@@ -2503,10 +2503,10 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   </section>
                   <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     {[
-                      ["登録ユーザー", `${analytics.engagement.total}社`],
-                      ["30日アクティブ", `${analytics.engagement.active}社`],
+                      ["登録利用者", `${analytics.engagement.total}人`],
+                      ["30日以内に操作", `${analytics.engagement.active}人`],
                       ["アクティブ率", `${activeRate}%`],
-                      ["高頻度ユーザー", `${analytics.engagement.power}社`],
+                      ["高頻度利用者", `${analytics.engagement.power}人`],
                     ].map(([label, value]) => (
                       <div key={label} className="border border-border bg-muted/20 p-4">
                         <p className="text-xs text-muted-foreground">{label}</p>
@@ -2518,7 +2518,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   <div className="grid gap-5 xl:grid-cols-2">
                     <section className="border border-border p-4">
                       <h4 className="text-sm font-semibold">登録者・物件登録の増加推移</h4>
-                      <p className="mb-4 text-xs text-muted-foreground">月別の新規件数（直近12か月）</p>
+                      <p className="mb-4 text-xs text-muted-foreground">月別の新規件数（直近12か月・物件は削除済みを含む登録実績）</p>
                       <div className="space-y-3">
                         {analytics.growth.length === 0 && <p className="text-xs text-muted-foreground">期間内のデータはありません</p>}
                         {analytics.growth.map(row => (
@@ -2558,23 +2558,21 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                   </section>
 
                   <section className="border border-border p-4">
-                    <h4 className="text-sm font-semibold">物件閲覧後の利用ジャーニー</h4>
-                    <p className="mb-4 text-xs text-muted-foreground">直近30日・閲覧経路を問わず、資料作成とDMを独立して集計</p>
-                    <div className="grid items-center gap-3 sm:grid-cols-[1fr_48px_1.4fr]">
+                    <h4 className="text-sm font-semibold">物件閲覧後の問い合わせ状況</h4>
+                    <p className="mb-4 text-xs text-muted-foreground">直近30日・他社物件を閲覧した後、同じ物件へDMした利用者を集計</p>
+                    <div className="grid items-center gap-3 sm:grid-cols-[1fr_48px_1fr]">
                       <div className="bg-[#f3f6f9] p-4 text-center">
                         <p className="text-xs font-medium text-muted-foreground">物件閲覧</p>
-                        <p className="mt-1 text-2xl font-bold tabular-nums">{analytics.funnel.viewed}社</p>
+                        <p className="mt-1 text-2xl font-bold tabular-nums">{analytics.funnel.viewed}人</p>
                       </div>
-                      <div className="hidden text-center text-primary sm:block"><div>↗</div><div className="mt-5">↘</div></div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-1">
-                        {[["資料作成", analytics.funnel.documented], ["DM送信", analytics.funnel.messaged]].map(([label, count]) => <div key={String(label)} className="bg-blue-50 p-3 text-center">
-                          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-                          <p className="text-xl font-bold tabular-nums">{count}社</p>
-                          <p className="text-[11px] text-muted-foreground">閲覧から {analytics.funnel.viewed ? Math.round(Number(count) / analytics.funnel.viewed * 100) : 0}%</p>
-                        </div>)}
+                      <div className="hidden text-center text-primary sm:block">→</div>
+                      <div className="bg-blue-50 p-3 text-center">
+                        <p className="text-xs font-medium text-muted-foreground">閲覧した物件へDM</p>
+                        <p className="text-xl font-bold tabular-nums">{analytics.funnel.messaged}人</p>
+                        <p className="text-[11px] text-muted-foreground">閲覧者の {analytics.funnel.viewed ? Math.round(analytics.funnel.messaged / analytics.funnel.viewed * 100) : 0}%</p>
                       </div>
                     </div>
-                    <p className="mt-3 text-[10px] text-muted-foreground">閲覧には一覧・お気に入り・提案・共有URLなど、すべての流入経路を含みます。資料作成とDMは順不同で、両方を利用したユーザーはそれぞれに含まれます。</p>
+                    <p className="mt-3 text-[10px] text-muted-foreground">物件登録者本人と管理者による閲覧は除外します。閲覧より前のDMや、別物件へのDMは含みません。</p>
                   </section>
 
                   <div className="grid gap-5 xl:grid-cols-2">
@@ -2582,13 +2580,13 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                       <h4 className="flex items-center gap-2 text-sm font-semibold"><Activity className="h-4 w-4" />登録者の活用頻度</h4>
                       <p className="mb-4 text-xs text-muted-foreground">直近30日の操作回数で分類</p>
                       <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
-                        {[["高頻度", analytics.engagement.power, "10回以上"], ["継続利用", analytics.engagement.regular, "3〜9回"], ["低頻度", analytics.engagement.light, "1〜2回"], ["休眠", analytics.engagement.dormant, "0回"]].map(([label, count, note]) => <div key={String(label)} className="bg-muted/40 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-bold tabular-nums">{count}社</p><p className="text-[10px] text-muted-foreground">{note}</p></div>)}
+                        {[["高頻度", analytics.engagement.power, "10回以上"], ["継続利用", analytics.engagement.regular, "3〜9回"], ["低頻度", analytics.engagement.light, "1〜2回"], ["操作なし", analytics.engagement.dormant, "0回"]].map(([label, count, note]) => <div key={String(label)} className="bg-muted/40 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-bold tabular-nums">{count}人</p><p className="text-[10px] text-muted-foreground">{note}</p></div>)}
                       </div>
                     </section>
                     <section className="border border-border p-4">
                       <h4 className="text-sm font-semibold">利用されている機能</h4>
-                      <p className="mb-4 text-xs text-muted-foreground">直近30日の操作ログ</p>
-                      <div className="space-y-2.5">{analytics.features.slice(0, 8).map(row => <div key={row.action} className="grid grid-cols-[110px_1fr_80px] items-center gap-2 text-xs"><span className="truncate" title={row.label}>{row.label}</span><div className="h-2 bg-muted"><div className="h-full bg-violet-500" style={{ width: `${row.count / maxFeature * 100}%` }} /></div><span className="text-right tabular-nums">{row.count}回 / {row.users}社</span></div>)}</div>
+                      <p className="mb-4 text-xs text-muted-foreground">直近30日の操作履歴（作成後に削除された資料や、解除済みのお気に入りも操作回数に含みます）</p>
+                      <div className="space-y-2.5">{analytics.features.slice(0, 8).map(row => <div key={row.action} className="grid grid-cols-[110px_1fr_80px] items-center gap-2 text-xs"><span className="truncate" title={row.label}>{row.label}</span><div className="h-2 bg-muted"><div className="h-full bg-violet-500" style={{ width: `${row.count / maxFeature * 100}%` }} /></div><span className="text-right tabular-nums">{row.count}回 / {row.users}人</span></div>)}</div>
                     </section>
                   </div>
                   <p className="text-right text-[10px] text-muted-foreground">集計日時: {fmtDateTime(analytics.generatedAt)}</p>

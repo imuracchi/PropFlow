@@ -899,9 +899,9 @@ export async function getUsageAnalytics() {
   );
   const labels: Record<string, string> = {
     property_view: "物件閲覧",
-    favorite: "お気に入り",
+    favorite: "現在のお気に入り登録",
     inquiry_dm: "問い合わせ・DM",
-    document: "資料生成",
+    document: "現在保存中の紹介資料",
     search: "物件検索",
     property_request: "物件募集",
     property_create: "物件登録",
@@ -1115,25 +1115,30 @@ export async function getPlatformAnalytics() {
       `),
     db.execute(sql`
         WITH viewed AS (
-          SELECT u.id AS userId, MIN(v.viewedAt) AS viewedAt
+          SELECT u.id AS userId, v.propertyId, MIN(v.viewedAt) AS viewedAt
           FROM users u
           INNER JOIN property_view_events v ON v.userId = u.id
             AND v.viewedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          INNER JOIN properties viewed_property ON viewed_property.id = v.propertyId
           WHERE u.role = 'user' AND u.status = 'active'
-          GROUP BY u.id
+            AND viewed_property.deleted = 0
+            AND v.userId != viewed_property.userId
+          GROUP BY u.id, v.propertyId
         ), outcomes AS (
-          SELECT v.userId, v.viewedAt,
+          SELECT v.userId, v.propertyId, v.viewedAt,
             (SELECT MIN(d.createdAt) FROM generated_documents d
-              WHERE d.userId = v.userId AND v.viewedAt IS NOT NULL
+              WHERE d.userId = v.userId AND d.propertyId = v.propertyId
+                AND v.viewedAt IS NOT NULL
                 AND d.createdAt >= v.viewedAt) AS documentedAt,
             (SELECT MIN(dm.createdAt) FROM direct_messages dm
-              WHERE dm.senderId = v.userId AND v.viewedAt IS NOT NULL
+              WHERE dm.senderId = v.userId AND dm.propertyId = v.propertyId
+                AND v.viewedAt IS NOT NULL
                 AND dm.createdAt >= v.viewedAt) AS messagedAt
           FROM viewed v
         )
-        SELECT COUNT(*) AS viewed,
-          SUM(documentedAt IS NOT NULL) AS documented,
-          SUM(messagedAt IS NOT NULL) AS messaged
+        SELECT COUNT(DISTINCT userId) AS viewed,
+          COUNT(DISTINCT CASE WHEN documentedAt IS NOT NULL THEN userId END) AS documented,
+          COUNT(DISTINCT CASE WHEN messagedAt IS NOT NULL THEN userId END) AS messaged
         FROM outcomes
       `),
     db.execute(
@@ -1408,6 +1413,13 @@ export async function getPlatformAnalytics() {
         WHERE u.role = 'user' AND u.status = 'active'
           AND a.action NOT LIKE 'admin_%'
           AND a.action NOT IN ('login_error')
+        UNION ALL
+        SELECT
+          COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id)) AS companyKey,
+          u.id AS userId, v.viewedAt AS createdAt
+        FROM property_view_events v
+        INNER JOIN users u ON u.id = v.userId
+        WHERE u.role = 'user' AND u.status = 'active'
       ),
       today_activity AS (
         SELECT companyKey, COUNT(*) AS operations
@@ -1466,6 +1478,12 @@ export async function getPlatformAnalytics() {
         INNER JOIN users u ON u.id = a.userId
         WHERE u.role = 'user' AND u.status = 'active'
           AND a.action NOT LIKE 'admin_%' AND a.action NOT IN ('login_error')
+        UNION ALL
+        SELECT COALESCE(NULLIF(TRIM(u.company), ''), CONCAT('user:', u.id)) AS companyKey,
+          u.id AS userId, v.viewedAt AS createdAt
+        FROM property_view_events v
+        INNER JOIN users u ON u.id = v.userId
+        WHERE u.role = 'user' AND u.status = 'active'
       ),
       user_first AS (
         SELECT userId, DATE(MIN(createdAt)) AS firstDay
