@@ -55,6 +55,8 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function renderPropertyPdf(html: string) {
+  const { resolve } = await import("node:path");
+  process.env.PUPPETEER_CACHE_DIR ||= resolve(process.cwd(), ".cache", "puppeteer");
   const { default: puppeteer } = await import("puppeteer");
   const { existsSync } = await import("node:fs");
   const systemBrowser = [

@@ -4,6 +4,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
+    "postinstall": "PUPPETEER_CACHE_DIR=.cache/puppeteer node node_modules/puppeteer/install.mjs",
     "dev": "NODE_ENV=development DATABASE_URL=mysql://root:testpass@localhost:3306/propflow_test JWT_SECRET=propflow-jwt-secret-key-test SITE_URL=http://localhost:3000 tsx watch server/_core/index.ts",
     "dev:prod": "NODE_ENV=development tsx watch server/_core/index.ts",
     "db:push:test": "DATABASE_URL=mysql://root:testpass@localhost:3306/propflow_test drizzle-kit push",
