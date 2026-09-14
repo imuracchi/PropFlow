@@ -82,9 +82,9 @@ export function buildPropertyShareText(property: ShareableProperty, mode: "propf
   const body = `${introduction}\n\n${header}`;
   if (mode === "propflow") {
     if (property.externalListingConsent) {
-      return `${body}\n\n物件の詳細や資料は、PropFlowでご確認いただけます。\n\n▼物件情報\nhttps://propflow.jp/public/property/${property.id}\n\n物件番号：PF-${property.id}`;
+      return `${body}\n\n物件の詳細確認には、PropFlowのご利用がおすすめです。\n\n▼物件情報\nhttps://propflow.jp/public/property/${property.id}\n\n物件番号：PF-${property.id}`;
     }
-    return `${body}\n\n物件の詳細や資料は、PropFlowでご確認いただけます。\n\n▼PropFlowのご案内\nhttps://propflow.jp/propflow-intro.html\n\n▼登録申請\nhttps://propflow.jp/registration-request\n\n物件番号：PF-${property.id}`;
+    return `${body}\n\n物件の詳細確認には、PropFlowのご利用がおすすめです。\n\n▼PropFlowのご案内\nhttps://propflow.jp/propflow-intro.html\n\n▼登録申請\nhttps://propflow.jp/registration-request\n\n物件番号：PF-${property.id}`;
   }
-  return `${body}\n\n物件の詳細や資料をご希望の不動産業者様は、\n下記までお気軽にお問い合わせください。\n\nお問い合わせ先\nproperty@gspec.me\n\nメールの件名または本文に\n「物件番号：PF-${property.id}」\nとご記載ください。\n\n初めてお問い合わせいただく方は、\n確認のため名刺画像もあわせてお送りいただけますと、\nその後のご案内がスムーズです。`;
+  return `${body}\n\n物件の詳細や資料をご希望の不動産業者様は、\n下記までお気軽にお問い合わせください。\n\nお問い合わせ先\nproperty@gspec.me\n\nメールの件名または本文に\n「物件番号：PF-${property.id}」\nとご記載ください。\n\n初めてお問い合わせいただく方は、\n確認のため名刺画像もあわせてお送りください。`;
 }

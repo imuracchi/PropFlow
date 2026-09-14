@@ -2042,8 +2042,8 @@ export default function V2PropertyDetail({
             </div>
             <div className="mt-3 shrink-0 border-l-4 border-[#35724f] bg-[#eef7f1] px-3 py-2 text-[11px] font-bold leading-5 text-[#27613c]">
               {shareTextMode === "propflow"
-                ? "PropFlowの紹介ページと登録申請へ案内します。登録案内や手続きはPropFlow運営担当が対応するため、物件掲載者様にご対応いただく必要はありません。"
-                : "外部サービスへのリンクは載せず、property@gspec.meへ案内します。登録案内や手続きはPropFlow運営担当が対応するため、物件掲載者様にご対応いただく必要はありません。"}
+                ? "物件の詳細確認方法として、PropFlowの利用を提案する紹介文です。登録案内や手続きはPropFlow運営担当が対応します。"
+                : "外部サービスへのリンクは載せず、property@gspec.meへの問い合わせを案内します。物件掲載者様にご対応いただく必要はありません。"}
             </div>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain whitespace-pre-wrap border border-[#d9e0e8] bg-[#f8fafc] p-4 text-[12px] leading-6 text-[#334a66]">
               {propertyShareText}

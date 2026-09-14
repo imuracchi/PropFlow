@@ -46,6 +46,14 @@ describe("public property share text", () => {
       .toMatch(new RegExp(`^${socialIntroduction}`));
   });
 
+  it("uses only the email inquiry route in email mode", () => {
+    const text = buildPropertyShareText(property, "email");
+
+    expect(text).toContain("property@gspec.me");
+    expect(text).not.toContain("https://propflow.jp/");
+    expect(text).not.toContain("PropFlowへ会員登録");
+  });
+
   it("does not publish an individual URL before opt-in", () => {
     const text = buildPropertyShareText({ ...property, externalListingConsent: 0 }, "propflow");
 
