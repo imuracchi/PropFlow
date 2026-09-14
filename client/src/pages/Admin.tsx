@@ -264,6 +264,7 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
     enabled: activeSection === "usage",
   });
   const publicPageAnalyticsQuery = trpc.admin.publicPageAnalytics.useQuery(undefined);
+  const publicPropertyDocumentAnalyticsQuery = trpc.admin.publicPropertyDocumentAnalytics.useQuery(undefined);
   const addBroadcastLogMutation = trpc.admin.addBroadcastLog.useMutation({
     onSuccess: () => {
       utils.admin.broadcastLogs.invalidate();
@@ -2387,6 +2388,26 @@ export default function Admin({ v2 = false }: { v2?: boolean }) {
                         <div className="max-h-[360px] overflow-auto border border-[#bdd4cf] bg-white"><table className="w-full min-w-[680px] text-[11px]"><thead className="sticky top-0 bg-[#e2efec] text-[#58736e]"><tr><th className="px-3 py-2 text-left">日付</th><th className="px-3 py-2 text-right">閲覧者</th><th className="px-3 py-2 text-right">一覧</th><th className="px-3 py-2 text-right">検索</th><th className="px-3 py-2 text-right">資料</th><th className="px-3 py-2 text-right">問合せ</th><th className="px-3 py-2 text-right">登録</th><th className="px-3 py-2 text-right">物件経由の申請</th></tr></thead><tbody className="divide-y divide-[#d8e5e2]">{publicAnalytics.last30Days.map((row, index) => <tr key={row.day} className={index === 0 ? "bg-[#fff8e8] font-bold" : ""}><td className="px-3 py-2">{index === 0 ? "本日 " : ""}{row.day.slice(5).replace("-", "/")}</td><td className="px-3 py-2 text-right">{row.visitors}</td><td className="px-3 py-2 text-right">{row.listViews}</td><td className="px-3 py-2 text-right">{row.searches}</td><td className="px-3 py-2 text-right">{row.documentClicks}</td><td className="px-3 py-2 text-right">{row.inquiryClicks}</td><td className="px-3 py-2 text-right">{row.registrationClicks}</td><td className="px-3 py-2 text-right">{row.registrationRequests}</td></tr>)}</tbody></table></div>
                         <div className="grid gap-3 sm:grid-cols-2"><div className="border border-[#bdd4cf] bg-white p-3"><h5 className="text-xs font-bold">反響のある公開物件（30日）</h5><div className="mt-2 space-y-2">{publicAnalytics.popularProperties.slice(0, 8).map(row => <div key={row.propertyId} className="border-t border-[#e1ebe9] pt-2 text-[10px]"><p className="truncate font-bold">PF-{row.propertyId} {row.propertyName}</p><p className="mt-1 text-[#58736e]">表示 {row.impressions}／資料 {row.documentClicks}／問合せ {row.inquiryClicks}</p></div>)}{publicAnalytics.popularProperties.length === 0 && <p className="text-[10px] text-muted-foreground">まだデータはありません</p>}</div></div><div className="border border-[#bdd4cf] bg-white p-3"><h5 className="text-xs font-bold">検索キーワード（30日）</h5><div className="mt-2 space-y-2">{publicAnalytics.popularSearches.slice(0, 8).map(row => <div key={row.keyword} className="flex justify-between gap-2 border-t border-[#e1ebe9] pt-2 text-[10px]"><span className="truncate font-bold">{row.keyword}</span><span className="shrink-0 text-[#58736e]">{row.count}回／平均{row.averageResults}件</span></div>)}{publicAnalytics.popularSearches.length === 0 && <p className="text-[10px] text-muted-foreground">まだデータはありません</p>}</div></div></div>
                       </div>
+                    </section>;
+                  })()}
+                  {publicPropertyDocumentAnalyticsQuery.data && (() => {
+                    const documentAnalytics = publicPropertyDocumentAnalyticsQuery.data;
+                    const rows = [
+                      ["本日", documentAnalytics.today],
+                      ["直近30日", documentAnalytics.last30Days],
+                    ] as const;
+                    return <section className="border-2 border-[#6c5b9b] bg-[#f7f5fb] p-4">
+                      <div className="mb-3">
+                        <h4 className="text-[15px] font-bold text-[#3f3563]">一般公開用資料の利用状況</h4>
+                        <p className="mt-1 text-[10px] leading-5 text-[#6f6688]">公開ページとメール問い合わせ（GAS）から発行された専用URLを集計します。閲覧・ダウンロードは、この更新後に行われた操作から記録されます。</p>
+                      </div>
+                      <div className="overflow-auto border border-[#d4cde5] bg-white">
+                        <table className="w-full min-w-[720px] text-[11px]">
+                          <thead className="bg-[#ece8f5] text-[#665d7e]"><tr><th className="px-3 py-2 text-left">期間</th><th className="px-3 py-2 text-right">URL発行</th><th className="px-3 py-2 text-right">閲覧</th><th className="px-3 py-2 text-right">ダウンロード</th><th className="px-3 py-2 text-right">送付先</th><th className="px-3 py-2 text-right">メール問い合わせ</th><th className="px-3 py-2 text-right">公開ページ</th></tr></thead>
+                          <tbody className="divide-y divide-[#e5e0ee]">{rows.map(([label, row]) => <tr key={label}><td className="px-3 py-2 font-bold">{label}</td><td className="px-3 py-2 text-right font-bold tabular-nums">{row.issued}</td><td className="px-3 py-2 text-right tabular-nums">{row.viewed}</td><td className="px-3 py-2 text-right font-bold tabular-nums text-[#3f3563]">{row.downloads}</td><td className="px-3 py-2 text-right tabular-nums">{row.uniqueEmails}件</td><td className="px-3 py-2 text-right tabular-nums">{row.gasIssued}</td><td className="px-3 py-2 text-right tabular-nums">{row.publicPageIssued}</td></tr>)}</tbody>
+                        </table>
+                      </div>
+                      {documentAnalytics.last30Days.unknownIssued > 0 && <p className="mt-2 text-[10px] text-[#6f6688]">経路記録の開始前に発行されたURL：{documentAnalytics.last30Days.unknownIssued}件（URL発行の合計には含まれます）</p>}
                     </section>;
                   })()}
                   <section className="border-2 border-[#173f70] bg-white p-4">

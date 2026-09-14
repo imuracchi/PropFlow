@@ -146,6 +146,7 @@ async function startServer() {
       await createPublicPropertyDocumentAccess({
         propertyId: property.id,
         email,
+        source: "gas",
         accessTokenHash: createHash("sha256").update(accessToken).digest("hex"),
         expiresAt,
       });

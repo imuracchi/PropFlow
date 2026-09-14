@@ -28,6 +28,7 @@ import {
   externalFileShares,
   externalFileShareAccesses,
   publicPropertyDocumentAccesses,
+  publicPropertyDocumentEvents,
   propertyMemos,
   directMessages,
   dmMessageReactions,
@@ -178,6 +179,17 @@ export async function runStartupMigrations() {
       GROUP BY \`userId\`, \`propertyId\``,
     "ALTER TABLE `property_view_events` ADD INDEX `idx_property_view_events_attention` (`viewedAt`, `propertyId`, `userId`)",
     "ALTER TABLE `favorites` ADD INDEX `idx_favorites_attention` (`createdAt`, `propertyId`, `userId`)",
+    "ALTER TABLE `public_property_document_accesses` ADD COLUMN `source` varchar(32) NOT NULL DEFAULT 'unknown' AFTER `email`",
+    "ALTER TABLE `public_property_document_accesses` ADD COLUMN `viewedAt` timestamp NULL AFTER `expiresAt`",
+    "ALTER TABLE `public_property_document_accesses` ADD COLUMN `viewCount` int NOT NULL DEFAULT 0 AFTER `viewedAt`",
+    `CREATE TABLE IF NOT EXISTS \`public_property_document_events\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`accessId\` int NOT NULL,
+      \`eventType\` varchar(16) NOT NULL,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY \`idx_public_property_document_events_created_type\` (\`createdAt\`, \`eventType\`),
+      KEY \`idx_public_property_document_events_access\` (\`accessId\`)
+    )`,
     "ALTER TABLE `direct_messages` ADD INDEX `idx_direct_messages_attention` (`createdAt`, `propertyId`, `senderId`)",
     `CREATE TABLE IF NOT EXISTS \`dm_attachments\` (
       \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -4151,6 +4163,7 @@ export async function getDirectMessageById(id: number) {
 export async function createPublicPropertyDocumentAccess(input: {
   propertyId: number;
   email: string;
+  source: "public_page" | "gas";
   accessTokenHash: string;
   expiresAt: Date;
 }) {
@@ -4158,6 +4171,18 @@ export async function createPublicPropertyDocumentAccess(input: {
   if (!db) throw new Error("Database unavailable");
   const result = await db.insert(publicPropertyDocumentAccesses).values(input);
   return Number(result[0].insertId);
+}
+
+export async function recordPublicPropertyDocumentView(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.transaction(async tx => {
+    await tx.update(publicPropertyDocumentAccesses).set({
+        viewedAt: new Date(),
+        viewCount: sql`${publicPropertyDocumentAccesses.viewCount} + 1`,
+      }).where(eq(publicPropertyDocumentAccesses.id, id));
+    await tx.insert(publicPropertyDocumentEvents).values({ accessId: id, eventType: "view" });
+  });
 }
 
 export async function getPublicPropertyDocumentAccess(accessTokenHash: string) {
@@ -4176,13 +4201,13 @@ export async function getPublicPropertyDocumentAccess(accessTokenHash: string) {
 export async function recordPublicPropertyDocumentDownload(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db
-    .update(publicPropertyDocumentAccesses)
-    .set({
-      downloadedAt: new Date(),
-      downloadCount: sql`${publicPropertyDocumentAccesses.downloadCount} + 1`,
-    })
-    .where(eq(publicPropertyDocumentAccesses.id, id));
+  await db.transaction(async tx => {
+    await tx.update(publicPropertyDocumentAccesses).set({
+        downloadedAt: new Date(),
+        downloadCount: sql`${publicPropertyDocumentAccesses.downloadCount} + 1`,
+      }).where(eq(publicPropertyDocumentAccesses.id, id));
+    await tx.insert(publicPropertyDocumentEvents).values({ accessId: id, eventType: "download" });
+  });
 }
 
 export type DmReactionType = "request" | "handle" | "thanks";
@@ -5923,6 +5948,50 @@ export async function getPublicPageAnalytics() {
     popularProperties: rows(propertiesResult).map(row => ({ propertyId: Number(row.propertyId), propertyName: String(row.propertyName), impressions: Number(row.impressions), documentClicks: Number(row.documentClicks), inquiryClicks: Number(row.inquiryClicks) })),
     popularSearches: rows(searchesResult).map(row => ({ keyword: String(row.keyword), count: Number(row.count), averageResults: Number(row.averageResults ?? 0) })),
   };
+}
+
+/** 一般公開用物件概要書のURL発行・閲覧・ダウンロード集計。 */
+export async function getPublicPropertyDocumentAnalytics() {
+  const db = await getDb();
+  const emptyPeriod = { issued: 0, viewed: 0, downloads: 0, uniqueEmails: 0, gasIssued: 0, publicPageIssued: 0, unknownIssued: 0 };
+  if (!db) return { today: emptyPeriod, last30Days: emptyPeriod, generatedAt: new Date() };
+
+  const aggregatePeriod = async (days: number) => {
+    const start = days === 1
+      ? sql`CURRENT_DATE`
+      : sql`DATE_SUB(CURRENT_DATE, INTERVAL ${days - 1} DAY)`;
+    const [issuedResult, eventResult] = await Promise.all([
+      db.execute(sql`
+        SELECT COUNT(*) AS issued,
+          COUNT(DISTINCT email) AS uniqueEmails,
+          SUM(source = 'gas') AS gasIssued,
+          SUM(source = 'public_page') AS publicPageIssued,
+          SUM(source NOT IN ('gas', 'public_page')) AS unknownIssued
+        FROM public_property_document_accesses
+        WHERE createdAt >= ${start}
+      `),
+      db.execute(sql`
+        SELECT SUM(e.eventType = 'view') AS viewed,
+          SUM(e.eventType = 'download') AS downloads
+        FROM public_property_document_events e
+        WHERE e.createdAt >= ${start}
+      `),
+    ]);
+    const issued = ((issuedResult as any)?.[0] ?? [])[0] ?? {};
+    const events = ((eventResult as any)?.[0] ?? [])[0] ?? {};
+    return {
+      issued: Number(issued.issued ?? 0),
+      viewed: Number(events.viewed ?? 0),
+      downloads: Number(events.downloads ?? 0),
+      uniqueEmails: Number(issued.uniqueEmails ?? 0),
+      gasIssued: Number(issued.gasIssued ?? 0),
+      publicPageIssued: Number(issued.publicPageIssued ?? 0),
+      unknownIssued: Number(issued.unknownIssued ?? 0),
+    };
+  };
+
+  const [today, last30Days] = await Promise.all([aggregatePeriod(1), aggregatePeriod(30)]);
+  return { today, last30Days, generatedAt: new Date() };
 }
 
 export async function getActivityLogs(limit = 200) {

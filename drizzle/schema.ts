@@ -206,8 +206,11 @@ export const publicPropertyDocumentAccesses = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     propertyId: int("propertyId").notNull(),
     email: varchar("email", { length: 320 }).notNull(),
+    source: varchar("source", { length: 32 }).default("unknown").notNull(),
     accessTokenHash: varchar("accessTokenHash", { length: 64 }).notNull(),
     expiresAt: timestamp("expiresAt").notNull(),
+    viewedAt: timestamp("viewedAt"),
+    viewCount: int("viewCount").default(0).notNull(),
     downloadedAt: timestamp("downloadedAt"),
     downloadCount: int("downloadCount").default(0).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -215,6 +218,20 @@ export const publicPropertyDocumentAccesses = mysqlTable(
   table => ({
     tokenUnique: uniqueIndex("uq_public_property_document_access_token").on(table.accessTokenHash),
     propertyCreatedIdx: index("idx_public_property_document_property_created").on(table.propertyId, table.createdAt),
+  })
+);
+
+export const publicPropertyDocumentEvents = mysqlTable(
+  "public_property_document_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    accessId: int("accessId").notNull(),
+    eventType: varchar("eventType", { length: 16 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    createdTypeIdx: index("idx_public_property_document_events_created_type").on(table.createdAt, table.eventType),
+    accessIdx: index("idx_public_property_document_events_access").on(table.accessId),
   })
 );
 
