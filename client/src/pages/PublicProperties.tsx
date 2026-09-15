@@ -209,7 +209,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
                 <div className="flex w-full flex-col p-4 sm:p-5">
                   <div className="flex items-center justify-between gap-3 text-[11px] font-bold text-[#5d7797]"><div className="flex items-center gap-1.5"><span className="bg-[#edf3f8] px-2 py-1 text-[#315d8b]">{property.type}</span>{property.attention && <span className="bg-[#fff0dc] px-2 py-1 text-[#b8581d]">注目</span>}</div><span className="text-sm tracking-wide text-[#173f70]">PF-{property.id}</span></div>
                   <h2 className="mt-2 line-clamp-2 text-[16px] font-bold leading-6 text-[#102d50] sm:mt-3 sm:min-h-12 sm:text-[17px]">{property.name}</h2>
-                  <div className="mt-2 flex min-h-7 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 sm:mt-3"><p className="text-[13px] text-[#65748a] sm:text-sm">{property.area}</p><p className="text-[14px] font-bold text-[#173f70] sm:text-[15px]">価格はお問い合わせください</p></div>
+                  <div className="mt-2 min-h-7 sm:mt-3"><p className="text-[13px] text-[#65748a] sm:text-sm">{property.area}</p></div>
                   <button
                     type="button"
                     aria-expanded={expandedPropertyId === property.id}

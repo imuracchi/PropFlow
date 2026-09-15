@@ -102,7 +102,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
                   <div className="flex w-full flex-col p-4">
                     <div className="flex items-center justify-between gap-3 text-[11px] font-bold"><span className="bg-[#edf3f8] px-2 py-1 text-[#315d8b]">{property.type}</span><span className="text-sm tracking-wide text-[#173f70]">PF-{property.id}</span></div>
                     <h3 className="mt-3 line-clamp-2 min-h-12 text-[16px] font-bold leading-6">{property.name}</h3>
-                    <div className="mt-2 flex min-h-7 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-[#e1e7ed] pb-2"><p className="text-xs text-[#65748a]">{property.area}</p><p className="text-sm font-bold text-[#173f70]">価格はお問い合わせください</p></div>
+                    <div className="mt-2 min-h-7 border-b border-[#e1e7ed] pb-2"><p className="text-xs text-[#65748a]">{property.area}</p></div>
                     <p className="mt-3 min-h-12 text-[12px] leading-6 text-[#3f5269]">{buildPublicCardIntroduction({ ...property, address: property.area })}</p>
                     <div className="mt-auto grid gap-2 pt-4">
                       <button type="button" onClick={() => setDocumentRequest({ propertyId: property.id, propertyName: property.name })} className="flex h-11 items-center justify-center gap-2 bg-[#173f70] text-xs font-bold text-white"><FileText size={16} />物件概要書を見る</button>
