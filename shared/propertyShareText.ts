@@ -30,6 +30,8 @@ export function publicAreaLabel(address: string) {
   const municipalityName = county?.[1] ?? designatedWard?.[1] ?? municipality?.[1];
   if (!municipalityName) return prefecture;
   const neighborhoodAndStreet = rest.slice(municipalityName.length).trim();
+  const chome = neighborhoodAndStreet.match(/^(.+?)([0-9一二三四五六七八九十百〇]+丁目)/);
+  if (chome) return `${prefecture}${municipalityName}${chome[1]}${chome[2]}`;
   const neighborhood = neighborhoodAndStreet
     .replace(/^(.+?)[一二三四五六七八九十百〇]+丁目.*$/, "$1")
     .replace(/^(.+?)[0-9]+(?:丁目|番地?|号|-).*$/, "$1")
@@ -37,6 +39,15 @@ export function publicAreaLabel(address: string) {
     .replace(/^(.+?)\s+[0-9一二三四五六七八九十百〇-].*$/, "$1")
     .trim();
   return `${prefecture}${municipalityName}${neighborhood}`;
+}
+
+export function buildPublicPropertyTitle(property: Pick<ShareableProperty, "address" | "type" | "landArea" | "buildingArea">) {
+  const area = publicAreaLabel(property.address ?? "");
+  const measurements = [
+    property.landArea ? `土地${property.landArea}㎡` : null,
+    property.buildingArea ? `建物${property.buildingArea}㎡` : null,
+  ].filter(Boolean);
+  return `${area}・${measurements.length ? measurements.join("／") : property.type || "物件"}`;
 }
 
 export function propertyPriceLabel(price: number | null | undefined, negotiable?: number | boolean | null) {

@@ -16,7 +16,7 @@ import {
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql, { type RowDataPacket } from "mysql2/promise";
 import { diversifySameDayByPrefecture } from "@shared/regionDiversification";
-import { publicAreaLabel } from "@shared/propertyShareText";
+import { buildPublicPropertyTitle, publicAreaLabel } from "@shared/propertyShareText";
 import {
   InsertUser,
   users,
@@ -4059,6 +4059,7 @@ export async function getPublicSnsProperties() {
   const attentionCounts = await getRecentPropertyAttentionCountsForPublicPage();
   return rows.map(({ address, ...row }) => ({
     ...row,
+    name: buildPublicPropertyTitle({ address, type: row.type, landArea: row.landArea, buildingArea: row.buildingArea }),
     area: publicArea(address),
     attention: isPropertyAttentionWorthy(attentionCounts.get(row.id) ?? {}),
     hasPdf: files.some(file => file.propertyId === row.id && file.category === "document" && file.name.toLowerCase().endsWith(".pdf")),
@@ -4083,6 +4084,7 @@ export async function getPublicSnsPropertyById(id: number) {
   const { address, ...safeProperty } = property;
   return {
     ...safeProperty,
+    name: buildPublicPropertyTitle({ address, type: safeProperty.type, landArea: safeProperty.landArea, buildingArea: safeProperty.buildingArea }),
     area: publicArea(address),
     hasPdf: files.some(file => file.category === "document" && file.name.toLowerCase().endsWith(".pdf")),
   };
