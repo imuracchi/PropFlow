@@ -1449,6 +1449,7 @@ JSONのみ返してください。`,
           proposalRequestId: z.number().nullable().optional(),
           proposalOnly: z.boolean().optional(),
           externalListingConsent: z.boolean().optional(),
+          externalPriceVisible: z.boolean().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -1538,6 +1539,9 @@ JSONのみ返してください。`,
               (!proposalRequest || input.proposalOnly === false)
                 ? 1
                 : 0,
+            externalPriceVisible:
+              input.externalListingConsent && input.externalPriceVisible &&
+              (!proposalRequest || input.proposalOnly === false) ? 1 : 0,
             externalListingConsentedAt:
               input.externalListingConsent &&
               (!proposalRequest || input.proposalOnly === false)
@@ -1649,6 +1653,17 @@ JSONのみ返してください。`,
           `物件「${property.name}」の簡易掲載を${input.consent ? "開始" : "停止"}`,
           ctx.req.headers["user-agent"]
         ).catch(() => {});
+        return { success: true };
+      }),
+
+    setExternalPriceVisible: protectedProcedure
+      .input(z.object({ id: z.number(), visible: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        const property = await requirePropertyOwner(input.id, ctx.user);
+        if (input.visible && property.externalListingConsent !== 1) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "一般公開への簡易掲載を開始してから設定してください" });
+        }
+        await db.setPropertyExternalPriceVisible(input.id, input.visible);
         return { success: true };
       }),
 

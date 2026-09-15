@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import {
   buildPublicCardIntroduction,
   buildPropertyShareSummary,
+  propertyPriceLabel,
 } from "@shared/propertyShareText";
 import { normalizePropertySearchText } from "@shared/propertyNotification";
 
@@ -66,7 +67,7 @@ export function PublicDocumentDialog({ propertyId, propertyName, preview = false
     {sent ? <div className="mt-5 border border-[#b9d6c2] bg-[#eef8f1] px-4 py-4 text-sm leading-7 text-[#27613c]"><strong>ダウンロード用URLをメールで送りました。</strong><br/>届いたメールから物件概要書をダウンロードしてください。</div> : <>
       <p className="mt-4 text-sm leading-7 text-[#526176]">メールアドレスを入力すると、一般公開用の物件概要書をダウンロードするための専用URLが届きます。</p>
       <label className="mt-4 block text-xs font-bold text-[#526176]">メールアドレス<input type="email" value={email} onChange={event => { setEmail(event.target.value); setError(""); }} placeholder="example@company.jp" className="mt-1 h-12 w-full border border-[#cbd5df] px-3 text-sm font-normal outline-none focus:border-[#173f70]"/></label>
-      <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs leading-6 text-[#526176]"><input type="checkbox" checked={acceptedDocumentNotice} onChange={event => setAcceptedDocumentNotice(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>価格・掲載会社名・担当者情報・詳細住所等を非表示にした一般公開用資料であることを確認しました。</span></label>
+      <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs leading-6 text-[#526176]"><input type="checkbox" checked={acceptedDocumentNotice} onChange={event => setAcceptedDocumentNotice(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>掲載会社名・担当者情報・詳細住所等を非表示にした一般公開用資料であることを確認しました。</span></label>
       <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs font-bold leading-6 text-[#526176]"><input type="checkbox" checked={acceptedTransactionNotice} onChange={event => setAcceptedTransactionNotice(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>物件情報・お取引に関する注意を確認しました。</span></label>
       {error && <p className="mt-2 text-xs font-bold text-[#a72e2e]">{error}</p>}
       <button disabled={!email.trim() || !acceptedDocumentNotice || !acceptedTransactionNotice || requestDocument.isPending} onClick={async () => { try { setError(""); if (!preview) await requestDocument.mutateAsync({ propertyId, email: email.trim(), acceptedNotice: true, acceptedTransactionNotice: true }); setSent(true); } catch (cause) { setError(cause instanceof Error ? cause.message : "送信できませんでした"); } }} className="mt-5 h-12 w-full bg-[#173f70] text-sm font-bold text-white disabled:opacity-40">{requestDocument.isPending ? "送信中…" : "ダウンロード用URLをメールで受け取る"}</button>
@@ -91,6 +92,7 @@ type PublicPropertyFieldData = {
 
 function PublicPropertyFields({ property }: { property: PublicPropertyFieldData }) {
   const rows: Array<[string, ReactNode]> = [
+    ...(property.price || property.priceNegotiable ? [["価格", <strong className="text-[#173f70]">{propertyPriceLabel(property.price, property.priceNegotiable)}</strong>] as [string, ReactNode]] : []),
     ["面積", <span className="grid"><span><span className="mr-2 text-[#65748a]">土地</span>{property.landArea ? `${property.landArea}㎡` : "－"}</span><span><span className="mr-2 text-[#65748a]">建物</span>{property.buildingArea ? `${property.buildingArea}㎡` : "－"}</span></span>],
     ["構造・築年月", `${property.structure || "－"} ／ ${property.buildingAge || "－"}`],
     ["交通", property.transport || "－"],

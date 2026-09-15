@@ -427,6 +427,12 @@ export default function V2PropertyDetail({
         await utils.property.list.invalidate();
       },
     });
+  const setExternalPriceVisible = trpc.property.setExternalPriceVisible.useMutation({
+    onSuccess: async () => {
+      await propertyQuery.refetch();
+      await utils.property.list.invalidate();
+    },
+  });
   const logShareCopy = trpc.property.logShareCopy.useMutation();
   const saveMemo = trpc.memo.save.useMutation();
   const deleteMemo = trpc.memo.delete.useMutation();
@@ -1898,17 +1904,18 @@ export default function V2PropertyDetail({
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-[12px] font-bold text-[#526176]">一般公開への簡易掲載</p>
-                      <p className="mt-1 text-[10px] leading-5 text-[#758194]">ログイン前の公開物件一覧に、物件名・市区町村・町名（丁目・番地等を除く）・紹介文・面積・構造・築年月・交通を表示（価格は非表示）</p>
+                      <p className="mt-1 text-[10px] leading-5 text-[#758194]">ログイン前の公開物件一覧に、丁目までの所在地・面積・紹介文・構造・築年月・交通を表示します。</p>
                         <span className={`mt-2 inline-flex px-2 py-1 text-[10px] font-bold ${property.externalListingConsent === 1 ? "bg-[#e8f3ec] text-[#27613c]" : "bg-[#edf1f5] text-[#65748a]"}`}>
                           {property.externalListingConsent === 1 ? "簡易掲載に同意済み" : "簡易掲載しない"}
                         </span>
                         {property.externalListingConsent === 1 && property.published === 1 && property.status !== "sold" && <a href={`/public/property/${propertyId}`} target="_blank" rel="noopener noreferrer" className="ml-2 text-[10px] font-bold text-[#173f70] underline">公開ページを確認</a>}
+                        {property.externalListingConsent === 1 && <label className="mt-3 flex items-center gap-2 text-[11px] font-bold text-[#173f70]"><input type="checkbox" checked={property.externalPriceVisible === 1} disabled={setExternalPriceVisible.isPending} onChange={event => setExternalPriceVisible.mutate({ id: propertyId, visible: event.target.checked })} className="size-4" />一般公開で価格を表示する</label>}
                       </div>
                       <button
                         disabled={setExternalListingConsent.isPending}
                         onClick={async () => {
                           const consent = property.externalListingConsent !== 1;
-                          if (consent && !window.confirm("ログイン前の公開物件一覧に、物件名・市区町村・町名（丁目・番地等を除く）・紹介文・面積・構造・築年月・交通を簡易掲載します。価格、丁目・番地・建物名などの詳細住所、写真、添付資料、会社名、担当者名、連絡先、商流は表示されません。簡易掲載に同意しますか？")) return;
+                          if (consent && !window.confirm("ログイン前の公開物件一覧に、丁目までの所在地・物件種別・面積・紹介文・構造・築年月・交通を簡易掲載します。価格は別途選択した場合のみ表示します。番地・号、写真、添付資料、会社名、担当者名、連絡先、商流は表示されません。簡易掲載に同意しますか？")) return;
                           await setExternalListingConsent.mutateAsync({ id: propertyId, consent });
                         }}
                         className="h-10 shrink-0 border border-[#173f70] px-3 text-[11px] font-bold text-[#173f70] disabled:opacity-50"

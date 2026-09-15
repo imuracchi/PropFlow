@@ -22,4 +22,10 @@ describe("public property document", () => {
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
   });
+
+  it("renders price only when public price display is enabled", () => {
+    const html = buildPublicPropertyDocumentHtml({ id: 2, name: "公開物件", area: "東京都", price: 194_000_000, externalPriceVisible: 1 }, "https://propflow.jp");
+    expect(html).toContain(">価格<");
+    expect(html).toContain("194,000,000円");
+  });
 });

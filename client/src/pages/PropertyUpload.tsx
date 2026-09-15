@@ -134,6 +134,7 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
   };
   const [proposalOnly, setProposalOnly] = useState(proposalRequestId > 0);
   const [externalListingConsent, setExternalListingConsent] = useState(true);
+  const [externalPriceVisible, setExternalPriceVisible] = useState(false);
   const [excludedUsers, setExcludedUsers] = useState<
     { id: number; name: string | null; company: string | null }[]
   >([]);
@@ -354,6 +355,8 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
         proposalOnly,
         externalListingConsent:
           externalListingConsent && (!proposalRequestId || !proposalOnly),
+        externalPriceVisible:
+          externalListingConsent && externalPriceVisible && (!proposalRequestId || !proposalOnly),
         files:
           pdfFiles.length > 0
             ? pdfFiles.map(f => ({ name: f.name, size: f.size }))
@@ -2077,10 +2080,13 @@ export default function PropertyUpload({ v2 = false }: { v2?: boolean }) {
         </p>
       )}
       {publishMode !== "draft" && (!proposalRequestId || !proposalOnly) && (
-        <label className="flex items-start gap-3 border border-[#b9c9da] bg-[#f7f9fb] p-4 text-[12px] leading-5 text-[#526176]">
+        <div className="border border-[#b9c9da] bg-[#f7f9fb] p-4 text-[12px] leading-5 text-[#526176]">
+        <label className="flex items-start gap-3">
           <input type="checkbox" className="mt-1 size-4 shrink-0" checked={externalListingConsent} onChange={event => setExternalListingConsent(event.target.checked)} />
-          <span><strong className="block text-[13px] text-[#173f70]">ログインページへの簡易掲載に同意する</strong>市区・物件種別・価格帯・面積のみ、ログイン前の方へ表示します。詳細住所、会社名、担当者名、連絡先、資料は表示されません。</span>
+          <span><strong className="block text-[13px] text-[#173f70]">一般公開への簡易掲載に同意する</strong>市区町村・町名（丁目まで）・物件種別・面積などを、ログイン前の方へ表示します。番地・号、会社名、担当者名、連絡先、添付資料は表示されません。</span>
         </label>
+        {externalListingConsent && <label className="ml-7 mt-3 flex items-start gap-2 border-t border-[#d5dee8] pt-3"><input type="checkbox" className="mt-1 size-4 shrink-0" checked={externalPriceVisible} onChange={event => setExternalPriceVisible(event.target.checked)} /><span><strong className="block text-[#173f70]">一般公開で価格を表示する</strong>未選択の場合、価格は公開ページと一般公開用資料に表示されません。</span></label>}
+        </div>
       )}
 
       <div className="flex flex-col-reverse gap-3 border-t border-[#d4dde7] pt-5 sm:flex-row sm:justify-end">

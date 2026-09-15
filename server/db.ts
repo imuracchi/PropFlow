@@ -103,6 +103,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `properties` ADD COLUMN `proposalTargetUserId` int NULL",
     "ALTER TABLE `properties` ADD COLUMN `proposalRequestId` int NULL",
     "ALTER TABLE `properties` ADD COLUMN `externalListingConsent` int NOT NULL DEFAULT 0",
+    "ALTER TABLE `properties` ADD COLUMN `externalPriceVisible` int NOT NULL DEFAULT 0 AFTER `externalListingConsent`",
     "ALTER TABLE `properties` ADD COLUMN `externalListingConsentedAt` timestamp NULL",
     "ALTER TABLE `properties` ADD COLUMN `externalListingConsentVersion` varchar(20) NULL",
     "ALTER TABLE `properties` ADD COLUMN `socialIntroduction` text NULL AFTER `otherRestrictions`",
@@ -2312,6 +2313,7 @@ export async function listProperties(viewerUserId?: number) {
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
       externalListingConsent: properties.externalListingConsent,
+      externalPriceVisible: properties.externalPriceVisible,
       externalListingConsentedAt: properties.externalListingConsentedAt,
       proposalRequestTitle: propertySearchRequests.title,
       createdAt: properties.createdAt,
@@ -2671,6 +2673,7 @@ export async function getPropertyById(id: number) {
       proposalTargetUserId: properties.proposalTargetUserId,
       proposalRequestId: properties.proposalRequestId,
       externalListingConsent: properties.externalListingConsent,
+      externalPriceVisible: properties.externalPriceVisible,
       externalListingConsentedAt: properties.externalListingConsentedAt,
       proposalRequestTitle: propertySearchRequests.title,
       lineNotifiedAt: properties.lineNotifiedAt,
@@ -2892,12 +2895,19 @@ export async function setPropertyExternalListingConsent(
           }
         : {
             externalListingConsent: 0,
+            externalPriceVisible: 0,
             externalListingConsentedAt: null,
             externalListingConsentVersion: null,
           }
     )
     .where(eq(properties.id, id));
   invalidatePublicHighlights();
+}
+
+export async function setPropertyExternalPriceVisible(id: number, visible: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(properties).set({ externalPriceVisible: visible ? 1 : 0 }).where(eq(properties.id, id));
 }
 
 export async function deleteProperty(id: number) {
@@ -3032,6 +3042,7 @@ export async function listAllPropertiesAdmin() {
       scheduledPublishAt: properties.scheduledPublishAt,
       scheduledPublishNotify: properties.scheduledPublishNotify,
       externalListingConsent: properties.externalListingConsent,
+      externalPriceVisible: properties.externalPriceVisible,
       externalListingConsentedAt: properties.externalListingConsentedAt,
       viewCount: properties.viewCount,
       uniqueViewerCount:
@@ -4024,6 +4035,9 @@ const publicSnsFields = {
   name: properties.name,
   address: properties.address,
   type: properties.type,
+  price: properties.price,
+  priceNegotiable: properties.priceNegotiable,
+  externalPriceVisible: properties.externalPriceVisible,
   estimatedYield: properties.estimatedYield,
   landArea: properties.landArea,
   buildingArea: properties.buildingArea,
@@ -4059,6 +4073,8 @@ export async function getPublicSnsProperties() {
   const attentionCounts = await getRecentPropertyAttentionCountsForPublicPage();
   return rows.map(({ address, ...row }) => ({
     ...row,
+    price: row.externalPriceVisible === 1 ? row.price : null,
+    priceNegotiable: row.externalPriceVisible === 1 ? row.priceNegotiable : 0,
     name: buildPublicPropertyTitle({ address, type: row.type, landArea: row.landArea, buildingArea: row.buildingArea }),
     area: publicArea(address),
     attention: isPropertyAttentionWorthy(attentionCounts.get(row.id) ?? {}),
@@ -4084,6 +4100,8 @@ export async function getPublicSnsPropertyById(id: number) {
   const { address, ...safeProperty } = property;
   return {
     ...safeProperty,
+    price: safeProperty.externalPriceVisible === 1 ? safeProperty.price : null,
+    priceNegotiable: safeProperty.externalPriceVisible === 1 ? safeProperty.priceNegotiable : 0,
     name: buildPublicPropertyTitle({ address, type: safeProperty.type, landArea: safeProperty.landArea, buildingArea: safeProperty.buildingArea }),
     area: publicArea(address),
     hasPdf: files.some(file => file.category === "document" && file.name.toLowerCase().endsWith(".pdf")),

@@ -117,6 +117,7 @@ export const properties = mysqlTable("properties", {
   proposalTargetUserId: int("proposalTargetUserId"),
   proposalRequestId: int("proposalRequestId"),
   externalListingConsent: int("externalListingConsent").default(0).notNull(),
+  externalPriceVisible: int("externalPriceVisible").default(0).notNull(),
   externalListingConsentedAt: timestamp("externalListingConsentedAt"),
   externalListingConsentVersion: varchar("externalListingConsentVersion", { length: 20 }),
   lineNotifiedAt: timestamp("lineNotifiedAt"),
