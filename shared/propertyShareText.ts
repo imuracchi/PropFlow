@@ -76,7 +76,6 @@ export function buildPropertyShareSummary(property: ShareableProperty) {
   const details = [
     ["物件種別", property.type],
     ["所在地", publicAreaLabel(property.address ?? "")],
-    ["価格", propertyPriceLabel(property.price, property.priceNegotiable)],
     ["想定利回り", property.estimatedYield ? `${property.estimatedYield}%` : null],
     ["土地面積", property.landArea ? `${property.landArea}㎡` : null],
     ["建物面積", property.buildingArea ? `${property.buildingArea}㎡` : null],

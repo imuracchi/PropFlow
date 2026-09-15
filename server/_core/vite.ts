@@ -48,7 +48,7 @@ async function applySeoMetadata(html: string, pathname: string) {
       const property = await getPublicSnsPropertyById(Number(match[1]));
       if (property) {
         title = `${property.name}（PF-${property.id}）｜PropFlow`;
-        description = `${property.area}の${property.type || "物件"}。価格${property.priceNegotiable || !property.price ? "応相談" : `${Math.floor(property.price / 10000).toLocaleString("ja-JP")}万円`}。公開中の物件情報をご確認いただけます。`;
+        description = `${property.area}の${property.type || "物件"}。公開中の物件情報をご確認いただけます。価格などの詳細条件はお問い合わせください。`;
         canonical = `${PUBLIC_ORIGIN}/public/property/${property.id}`;
         structuredData = {
           "@context": "https://schema.org",

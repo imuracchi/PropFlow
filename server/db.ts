@@ -4024,8 +4024,6 @@ const publicSnsFields = {
   name: properties.name,
   address: properties.address,
   type: properties.type,
-  price: properties.price,
-  priceNegotiable: properties.priceNegotiable,
   estimatedYield: properties.estimatedYield,
   landArea: properties.landArea,
   buildingArea: properties.buildingArea,

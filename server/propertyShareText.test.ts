@@ -15,6 +15,8 @@ describe("public property share text", () => {
 
     expect(summary).toContain("所在地：東京都新宿区西新宿");
     expect(summary).not.toContain("1丁目2番3号");
+    expect(summary).not.toContain("価格：");
+    expect(summary).not.toContain("3億円");
   });
 
   it.each([
@@ -68,6 +70,8 @@ describe("public property share text", () => {
     expect(text).toContain("property@gspec.me");
     expect(text).not.toContain("https://propflow.jp/");
     expect(text).not.toContain("PropFlowへ会員登録");
+    expect(text).not.toContain("価格：");
+    expect(text).not.toContain("3億円");
   });
 
   it("does not publish an individual URL before opt-in", () => {

@@ -5,7 +5,6 @@ import { trpc } from "@/lib/trpc";
 import {
   buildPublicCardIntroduction,
   buildPropertyShareSummary,
-  propertyPriceLabel,
 } from "@shared/propertyShareText";
 import { normalizePropertySearchText } from "@shared/propertyNotification";
 
@@ -67,7 +66,7 @@ export function PublicDocumentDialog({ propertyId, propertyName, preview = false
     {sent ? <div className="mt-5 border border-[#b9d6c2] bg-[#eef8f1] px-4 py-4 text-sm leading-7 text-[#27613c]"><strong>ダウンロード用URLをメールで送りました。</strong><br/>届いたメールから物件概要書をダウンロードしてください。</div> : <>
       <p className="mt-4 text-sm leading-7 text-[#526176]">メールアドレスを入力すると、一般公開用の物件概要書をダウンロードするための専用URLが届きます。</p>
       <label className="mt-4 block text-xs font-bold text-[#526176]">メールアドレス<input type="email" value={email} onChange={event => { setEmail(event.target.value); setError(""); }} placeholder="example@company.jp" className="mt-1 h-12 w-full border border-[#cbd5df] px-3 text-sm font-normal outline-none focus:border-[#173f70]"/></label>
-      <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs leading-6 text-[#526176]"><input type="checkbox" checked={acceptedDocumentNotice} onChange={event => setAcceptedDocumentNotice(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>掲載会社名・担当者情報・詳細住所等を非表示にした一般公開用資料であることを確認しました。</span></label>
+      <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs leading-6 text-[#526176]"><input type="checkbox" checked={acceptedDocumentNotice} onChange={event => setAcceptedDocumentNotice(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>価格・掲載会社名・担当者情報・詳細住所等を非表示にした一般公開用資料であることを確認しました。</span></label>
       <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs font-bold leading-6 text-[#526176]"><input type="checkbox" checked={acceptedTransactionNotice} onChange={event => setAcceptedTransactionNotice(event.target.checked)} className="mt-1 size-4 shrink-0 accent-[#173f70]"/><span>物件情報・お取引に関する注意を確認しました。</span></label>
       {error && <p className="mt-2 text-xs font-bold text-[#a72e2e]">{error}</p>}
       <button disabled={!email.trim() || !acceptedDocumentNotice || !acceptedTransactionNotice || requestDocument.isPending} onClick={async () => { try { setError(""); if (!preview) await requestDocument.mutateAsync({ propertyId, email: email.trim(), acceptedNotice: true, acceptedTransactionNotice: true }); setSent(true); } catch (cause) { setError(cause instanceof Error ? cause.message : "送信できませんでした"); } }} className="mt-5 h-12 w-full bg-[#173f70] text-sm font-bold text-white disabled:opacity-40">{requestDocument.isPending ? "送信中…" : "ダウンロード用URLをメールで受け取る"}</button>
@@ -210,7 +209,7 @@ export function PublicPropertyList({ preview = false }: { preview?: boolean }) {
                 <div className="flex w-full flex-col p-4 sm:p-5">
                   <div className="flex items-center justify-between gap-3 text-[11px] font-bold text-[#5d7797]"><div className="flex items-center gap-1.5"><span className="bg-[#edf3f8] px-2 py-1 text-[#315d8b]">{property.type}</span>{property.attention && <span className="bg-[#fff0dc] px-2 py-1 text-[#b8581d]">注目</span>}</div><span className="text-sm tracking-wide text-[#173f70]">PF-{property.id}</span></div>
                   <h2 className="mt-2 line-clamp-2 text-[16px] font-bold leading-6 text-[#102d50] sm:mt-3 sm:min-h-12 sm:text-[17px]">{property.name}</h2>
-                  <div className="mt-2 flex min-h-7 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 sm:mt-3"><p className="text-[13px] text-[#65748a] sm:text-sm">{property.area}</p><p className="text-[17px] font-bold text-[#173f70] sm:text-lg">{propertyPriceLabel(property.price, property.priceNegotiable)}</p></div>
+                  <div className="mt-2 flex min-h-7 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 sm:mt-3"><p className="text-[13px] text-[#65748a] sm:text-sm">{property.area}</p><p className="text-[14px] font-bold text-[#173f70] sm:text-[15px]">価格はお問い合わせください</p></div>
                   <button
                     type="button"
                     aria-expanded={expandedPropertyId === property.id}

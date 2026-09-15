@@ -1,5 +1,3 @@
-import { propertyPriceLabel } from "../../shared/propertyShareText";
-
 type PublicPropertyDocumentData = {
   id: number;
   name: string;
@@ -24,7 +22,7 @@ const valueOrDash = (value: unknown, suffix = "") => value === null || value ===
 export function buildPublicPropertyDocumentHtml(property: PublicPropertyDocumentData, inquiryUrl: string) {
   const updatedAt = property.publishedAt ? new Date(property.publishedAt).toLocaleDateString("ja-JP") : new Date().toLocaleDateString("ja-JP");
   const rows: Array<[string, string, string, string]> = [
-    ["物件種別", valueOrDash(property.type), "価格", escapeHtml(propertyPriceLabel(property.price, property.priceNegotiable))],
+    ["物件種別", valueOrDash(property.type), "価格", "お問い合わせください"],
     ["所在地", escapeHtml(property.area), "想定利回り", property.estimatedYield ? `${escapeHtml(property.estimatedYield)}%` : "-"],
     ["土地面積", valueOrDash(property.landArea, "m²"), "建物面積", valueOrDash(property.buildingArea, "m²")],
     ["構造", valueOrDash(property.structure), "築年月", valueOrDash(property.buildingAge)],
@@ -35,7 +33,7 @@ export function buildPublicPropertyDocumentHtml(property: PublicPropertyDocument
   </style></head><body><div class="top"><p class="eyebrow">GENERAL PROPERTY INFORMATION</p><h1 class="title">${escapeHtml(property.name)}</h1><div class="meta"><span>物件番号 PF-${property.id}</span><span>情報更新日 ${escapeHtml(updatedAt)}</span></div></div>
   ${property.socialIntroduction ? `<div class="intro">${escapeHtml(property.socialIntroduction)}</div>` : ""}
   <table class="grid"><tbody>${rows.map(row => `<tr><th>${row[0]}</th><td>${row[1]}</td><th>${row[2]}</th><td>${row[3]}</td></tr>`).join("")}</tbody></table>
-  <div class="notice"><strong>一般公開用資料について</strong>本資料は、PropFlowに登録された物件情報をもとに自動作成した一般公開用資料です。掲載会社名・担当者情報・詳細住所等、一部の情報を非表示にしています。正式な資料や詳細条件は、会員登録後にご確認ください。</div>
+  <div class="notice"><strong>一般公開用資料について</strong>本資料は、PropFlowに登録された物件情報をもとに自動作成した一般公開用資料です。価格・掲載会社名・担当者情報・詳細住所等、一部の情報を非表示にしています。正式な資料や詳細条件は、会員登録後にご確認ください。</div>
   <div class="cta"><strong>この物件への問い合わせ</strong><br>詳細資料の確認・問い合わせには、PropFlowへの会員登録が必要です。<br><a href="${escapeHtml(inquiryUrl)}">${escapeHtml(inquiryUrl)}</a></div>
   <p class="foot">資料の内容・最新性・取引条件は、会員登録後に掲載者へご確認ください。</p></body></html>`;
 }
