@@ -7,6 +7,8 @@ const getProperty = vi.fn();
 const getDue = vi.fn();
 const claim = vi.fn();
 const claimNow = vi.fn();
+const findDuplicate = vi.fn();
+const setSchedule = vi.fn();
 
 vi.mock("../db", () => ({
   getPropertyByScheduleTaskUid: getByTask,
@@ -19,6 +21,8 @@ vi.mock("../db", () => ({
   getDueScheduledProperties: getDue,
   claimScheduledPropertyPublish: claim,
   claimScheduledPropertyPublishNow: claimNow,
+  findPublishedDuplicateProperty: findDuplicate,
+  setPropertyPublishSchedule: setSchedule,
 }));
 vi.mock("./heartbeat", () => ({ deleteHeartbeatJob: removeJob }));
 vi.mock("./mail", () => ({ sendMail: vi.fn() }));
@@ -29,6 +33,8 @@ describe("executeScheduledPropertyPublish", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     removeJob.mockResolvedValue(undefined);
+    findDuplicate.mockResolvedValue(null);
+    setSchedule.mockResolvedValue(undefined);
   });
 
   it("publishes a silent reservation once and removes its scheduler job", async () => {
@@ -63,5 +69,15 @@ describe("executeScheduledPropertyPublish", () => {
     const { executeDueScheduledPropertyPublishes } = await import("./propertyPublish");
     await expect(executeDueScheduledPropertyPublishes()).resolves.toBe(0);
     expect(getProperty).not.toHaveBeenCalled();
+  });
+
+  it("keeps an obvious duplicate unpublished and clears its reservation", async () => {
+    getByTask.mockResolvedValue({ id: 53, published: 0, scheduledPublishNotify: 1 });
+    findDuplicate.mockResolvedValue({ id: 12 });
+    const { executeScheduledPropertyPublish } = await import("./propertyPublish");
+    await expect(executeScheduledPropertyPublish("task-53")).resolves.toBeNull();
+    expect(complete).not.toHaveBeenCalled();
+    expect(setSchedule).toHaveBeenCalledWith(53, null, null, true);
+    expect(removeJob).toHaveBeenCalledWith("task-53", "");
   });
 });

@@ -50,6 +50,12 @@ export async function executeScheduledPropertyPublish(taskUid: string) {
   const property = await db.getPropertyByScheduleTaskUid(taskUid);
   if (!property) return null;
   if (property.published === 0) {
+    const duplicate = await db.findPublishedDuplicateProperty(property, property.id);
+    if (duplicate) {
+      await db.setPropertyPublishSchedule(property.id, null, null, true);
+      await deleteHeartbeatJob(taskUid, "").catch(() => {});
+      return null;
+    }
     const channels = decodePropertyNotificationChannels(property.scheduledPublishNotify);
     await db.completeScheduledPropertyPublish(property.id);
     if (Object.values(channels).some(Boolean))
@@ -63,6 +69,11 @@ export async function executeDueScheduledPropertyPublishes() {
   const due = await db.getDueScheduledProperties();
   let published = 0;
   for (const property of due) {
+    const duplicate = await db.findPublishedDuplicateProperty(property, property.id);
+    if (duplicate) {
+      await db.setPropertyPublishSchedule(property.id, null, null, true);
+      continue;
+    }
     const claimed = await db.claimScheduledPropertyPublish(property.id);
     if (!claimed) continue;
     published++;

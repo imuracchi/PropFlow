@@ -18,6 +18,10 @@ import mysql, { type RowDataPacket } from "mysql2/promise";
 import { diversifySameDayByPrefecture } from "@shared/regionDiversification";
 import { buildPublicPropertyTitle, publicAreaLabel } from "@shared/propertyShareText";
 import {
+  isDuplicateProperty,
+  type DuplicatePropertyCandidate,
+} from "@shared/propertyDuplicate";
+import {
   InsertUser,
   users,
   properties,
@@ -2902,6 +2906,35 @@ export async function setPropertyExternalListingConsent(
     )
     .where(eq(properties.id, id));
   invalidatePublicHighlights();
+}
+
+export async function findPublishedDuplicateProperty(
+  candidate: DuplicatePropertyCandidate,
+  excludeId?: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db
+    .select({
+      id: properties.id,
+      name: properties.name,
+      address: properties.address,
+      lotNumber: properties.lotNumber,
+      type: properties.type,
+      landArea: properties.landArea,
+      buildingArea: properties.buildingArea,
+    })
+    .from(properties)
+    .where(
+      and(
+        eq(properties.published, 1),
+        eq(properties.deleted, 0),
+        ne(properties.status, "sold")
+      )
+    );
+  return rows.find(
+    property => property.id !== excludeId && isDuplicateProperty(candidate, property)
+  ) ?? null;
 }
 
 export async function setPropertyExternalPriceVisible(id: number, visible: boolean) {

@@ -36,6 +36,26 @@ const publicFeedbackAttempts = new Map<string, number[]>();
 const publicAnalyticsAttempts = new Map<string, number[]>();
 const externalShareUnlockAttempts = new Map<string, number[]>();
 
+const DUPLICATE_PROPERTY_MESSAGE =
+  "類似する物件がすでに掲載されています。同一物件の場合は、先に掲載された物件を優先します。この物件は既存物件と明らかに同一と判定されたため公開できません。内容に相違がある場合は、ご意見箱から運営へご連絡ください。";
+
+async function ensurePropertyCanBePublished(
+  property: {
+    id?: number;
+    name: string;
+    address: string;
+    lotNumber?: string | null;
+    type: string;
+    landArea?: number | null;
+    buildingArea?: number | null;
+  }
+) {
+  const duplicate = await db.findPublishedDuplicateProperty(property, property.id);
+  if (duplicate) {
+    throw new TRPCError({ code: "CONFLICT", message: DUPLICATE_PROPERTY_MESSAGE });
+  }
+}
+
 function publicRequestKey(req: { headers: Record<string, unknown>; socket?: { remoteAddress?: string } }) {
   const forwarded = req.headers["x-forwarded-for"];
   return (Array.isArray(forwarded) ? forwarded[0] : String(forwarded ?? "").split(",")[0]).trim() || req.socket?.remoteAddress || "unknown";
@@ -1478,6 +1498,10 @@ JSONのみ返してください。`,
               code: "BAD_REQUEST",
               message: "提案先限定の物件は一時保存できません",
             });
+          const isPublicPublication =
+            input.published !== false &&
+            (!proposalRequest || input.proposalOnly === false);
+          if (isPublicPublication) await ensurePropertyCanBePublished(input);
           const socialIntroduction = await generatePropertySocialIntroduction({
             name: input.name,
             address: input.address,
@@ -1563,6 +1587,7 @@ JSONのみ返してください。`,
           }
           return result;
         } catch (e: any) {
+          if (e instanceof TRPCError) throw e;
           // Surface actual MySQL error to client for diagnosis
           const cause = e?.cause ?? e;
           const code = cause?.code ?? cause?.errno ?? "unknown";
@@ -2227,6 +2252,7 @@ ${propList}`,
             message: "LINE通知を含む公開予約は8:00〜21:00の日時を指定してください",
           });
         }
+        await ensurePropertyCanBePublished(prop);
         const taskUid = `internal-property-${prop.id}-${scheduledAt.getTime()}`;
         const hasIndividualSelection =
           input.sendLine !== undefined ||
@@ -2265,6 +2291,7 @@ ${propList}`,
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "公開予約機能は現在停止中です" });
         }
         const prop = await requirePropertyOwner(input.propertyId, ctx.user);
+        await ensurePropertyCanBePublished(prop);
         const channels = decodePropertyNotificationChannels(prop.scheduledPublishNotify);
         const claimed = await db.claimScheduledPropertyPublishNow(prop.id);
         if (claimed && Object.values(channels).some(Boolean)) {
@@ -2280,6 +2307,8 @@ ${propList}`,
         const prop = await db.getPropertyById(input.propertyId);
         if (!prop || (prop.userId !== ctx.user.id && ctx.user.role !== "admin"))
           return { success: false };
+        if (input.published && prop.visibilityScope !== "proposal")
+          await ensurePropertyCanBePublished(prop);
         if (prop.scheduleCronTaskUid)
           await db.setPropertyPublishSchedule(prop.id, null, null);
         await db.setPropertyPublished(
