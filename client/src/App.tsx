@@ -1,4 +1,5 @@
 import React from "react";
+import { ensurePushSubscription } from "./lib/pushSubscription";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -70,6 +71,7 @@ const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "";
 
 function usePushNotification() {
   const subscribeMutation = trpc.auth.subscribePush.useMutation();
+  const unsubscribeMutation = trpc.auth.unsubscribePush.useMutation();
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -84,35 +86,23 @@ function usePushNotification() {
     navigator.serviceWorker
       .register("/sw.js")
       .then(async reg => {
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) {
-          const key = existing.getKey("p256dh");
-          const auth = existing.getKey("auth");
-          if (key && auth) {
-            subscribeMutation.mutate({
-              endpoint: existing.endpoint,
-              p256dh: btoa(String.fromCharCode(...new Uint8Array(key))),
-              auth: btoa(String.fromCharCode(...new Uint8Array(auth))),
-            });
-          }
-          return;
-        }
-
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") return;
-
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: VAPID_PUBLIC_KEY,
-        });
+        const { subscription: sub, retiredEndpoint } = await ensurePushSubscription(
+          reg.pushManager,
+          VAPID_PUBLIC_KEY,
+          () => Notification.requestPermission(),
+        );
+        if (!sub) return;
         const key = sub.getKey("p256dh");
         const auth = sub.getKey("auth");
         if (key && auth) {
-          subscribeMutation.mutate({
+          await subscribeMutation.mutateAsync({
             endpoint: sub.endpoint,
             p256dh: btoa(String.fromCharCode(...new Uint8Array(key))),
             auth: btoa(String.fromCharCode(...new Uint8Array(auth))),
           });
+          if (retiredEndpoint && retiredEndpoint !== sub.endpoint) {
+            await unsubscribeMutation.mutateAsync({ endpoint: retiredEndpoint });
+          }
         }
       })
       .catch(() => {});
