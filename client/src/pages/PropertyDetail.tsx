@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fmtDate } from "@/lib/utils";
+import { getWalkingRoute, escapeRouteText } from "@/lib/walkingRoute";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -107,32 +108,15 @@ export async function printProperty(
 
   const pg = pages ?? { summary: true, map: true, streetview: true, photos: true, route: true, attachments: true };
 
-  let routeData: { polyline: string; duration: string; distance: string; startLat: number; startLng: number; endLat: number; endLng: number; steps: { instruction: string; distance: string }[] } | null = null;
+  let routeData: Awaited<ReturnType<typeof getWalkingRoute>> = null;
   const quoteMatch = p.transport?.match(/「([^」]+)」駅/);
   const plainMatch = p.transport?.match(/(\S+駅)/);
   const stationName = quoteMatch ? quoteMatch[1] + "駅" : plainMatch?.[1];
-  if (stationName && key) {
+  if (pg.route && stationName && key) {
     try {
       await loadGoogleMapsScript();
-      const g = (window as any).google;
-      const result = await new g.maps.DirectionsService().route({
-        origin: stationName,
-        destination: p.address,
-        travelMode: g.maps.TravelMode.WALKING,
-      });
-      const leg = result.routes[0].legs[0];
-      const poly = result.routes[0].overview_polyline;
-      routeData = {
-        polyline: typeof poly === "string" ? poly : poly?.points || poly,
-        duration: leg.duration?.text || "",
-        distance: leg.distance?.text || "",
-        startLat: leg.start_location.lat(),
-        startLng: leg.start_location.lng(),
-        endLat: leg.end_location.lat(),
-        endLng: leg.end_location.lng(),
-        steps: (leg.steps || []).map((s: any) => ({ instruction: s.instructions || "", distance: s.distance?.text || "" })),
-      };
-    } catch (e) { console.warn("Directions failed:", e); }
+      routeData = await getWalkingRoute((window as any).google.maps, stationName, p.address);
+    } catch (e) { console.warn("Walking route failed:", e); }
   }
 
   const page4 = routeData ? `<div class="page">
@@ -141,12 +125,13 @@ ${hdr}
 ${p.transport ? `<div class="tb">🚃 ${p.transport}</div>` : ""}
 <div style="display:flex;gap:14px;margin-top:12px;">
 <div style="flex:1;font-size:11px;line-height:2;">
-${routeData.steps.map((s: any, i: number) => `<div style="padding:2px 0;border-bottom:1px solid #eee;"><span style="display:inline-block;width:18px;color:#2b5c94;font-weight:700;">${i + 1}.</span>${s.instruction} <span style="color:#94a3b8;font-size:10px;">${s.distance}</span></div>`).join("")}
+${routeData.steps.map((s, i) => `<div style="padding:2px 0;border-bottom:1px solid #eee;"><span style="display:inline-block;width:18px;color:#2b5c94;font-weight:700;">${i + 1}.</span>${escapeRouteText(s.instruction)} <span style="color:#94a3b8;font-size:10px;">${escapeRouteText(s.distance)}</span></div>`).join("")}
 </div>
 <div style="flex:1.6;">
 <img src="https://maps.googleapis.com/maps/api/staticmap?size=640x480&scale=2&maptype=roadmap&path=color:0x4285F4ff%7Cweight:5%7Cenc:${encodeURIComponent(routeData.polyline)}&markers=color:green%7Clabel:S%7C${routeData.startLat},${routeData.startLng}&markers=color:red%7Clabel:G%7C${routeData.endLat},${routeData.endLng}&key=${key}" alt="ルート地図" style="width:100%;border:1px solid #c8d6e5;border-radius:4px;" />
 </div>
 </div>
+${routeData.warnings.map(warning => `<p style="font-size:10px;margin-top:8px;">${escapeRouteText(warning)}</p>`).join("")}
 ${footer}
 </div>` : `<div class="page">
 ${hdr}
