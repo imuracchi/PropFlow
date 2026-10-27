@@ -1,4 +1,5 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { isSoldPolicyActive, SOLD_POLICY_START } from "@shared/soldRetention";
 import { getSessionCookieOptions } from "./_core/cookies";
 import {
   publicProcedure,
@@ -1362,6 +1363,10 @@ JSONのみ返してください。`,
         })));
         return { success: true };
       }),
+    soldRetentionPolicy: publicProcedure.query(() => ({
+      active: isSoldPolicyActive(),
+      startsAt: SOLD_POLICY_START.toISOString(),
+    })),
     list: protectedProcedure.query(async ({ ctx }) => {
       return db.listProperties(ctx.user.id);
     }),

@@ -816,6 +816,25 @@ async function startServer() {
   });
   console.log("[CRON] Expired document cleanup scheduled at 0:00 JST daily");
 
+  // Every minute, with a hard 2026-11-04 JST activation guard inside the job.
+  let soldCleanupRunning = false;
+  const cleanSoldFiles = async () => {
+    if (soldCleanupRunning) return;
+    soldCleanupRunning = true;
+    try {
+      const db = await import("../db");
+      const cleaned = await db.purgeExpiredSoldPropertyFiles();
+      if (cleaned) console.log(`[CRON] Cleaned files for ${cleaned} sold properties`);
+    } catch (error) {
+      console.error("[CRON] Sold property file cleanup failed", error);
+    } finally {
+      soldCleanupRunning = false;
+    }
+  };
+  cron.schedule("* * * * *", cleanSoldFiles, { timezone: "Asia/Tokyo" });
+  void cleanSoldFiles();
+  console.log("[CRON] Sold file retention scheduled; activates 2026-11-04 00:00 JST");
+
   cron.schedule("0 15 * * *", async () => {
     try {
       const { cleanupExpiredDmAttachments } = await import("./dmAttachmentStorage");

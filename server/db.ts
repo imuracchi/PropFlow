@@ -62,6 +62,7 @@ import {
 } from "../shared/legal";
 import { isPropertyAttentionWorthy } from "../shared/propertyAttention";
 import { isExternalFileShareAvailable } from "./_core/externalFileShareAccess";
+import { isSoldPolicyActive, SOLD_RETENTION_MS } from "../shared/soldRetention";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _migrationsDone = false;
@@ -451,6 +452,13 @@ export async function runStartupMigrations() {
         )`,
     "ALTER TABLE `properties` ADD COLUMN `dealPrice` bigint NULL",
     "ALTER TABLE `properties` ADD COLUMN `ownerDeletedAt` timestamp NULL",
+    "ALTER TABLE `properties` ADD COLUMN `soldAt` timestamp NULL",
+    `UPDATE properties p SET soldAt = COALESCE(
+      (SELECT MAX(a.createdAt) FROM activity_logs a
+       WHERE a.action = 'property_mark_sold'
+       AND a.detail LIKE CONCAT('%（PF-', p.id, '）%')),
+      '2026-10-27 15:00:00')
+      WHERE p.status = 'sold' AND p.soldAt IS NULL`,
     "ALTER TABLE `users` MODIFY COLUMN `status` ENUM('pending','active','suspended') NOT NULL DEFAULT 'active'",
     "UPDATE `users` SET `status` = 'active' WHERE `status` = 'pending'",
   ];
@@ -2878,7 +2886,14 @@ export async function updateProperty(
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(properties).set(data).where(eq(properties.id, id));
+  // Record the transition atomically; ordinary edits must not restart retention.
+  const values: Record<string, any> = { ...data };
+  if (data.status === "sold") {
+    values.soldAt = sql`COALESCE(${properties.soldAt}, UTC_TIMESTAMP())`;
+  } else if (data.status) {
+    values.soldAt = null;
+  }
+  await db.update(properties).set(values).where(eq(properties.id, id));
   return getPropertyById(id);
 }
 
@@ -3009,6 +3024,34 @@ export async function ownerDeleteProperty(id: number) {
     .where(eq(properties.id, id));
 }
 
+export async function purgeExpiredSoldPropertyFiles(now = new Date()) {
+  // This guard also protects startup/manual invocations before the announced date.
+  if (!isSoldPolicyActive(now)) return 0;
+  const db = await getDb();
+  if (!db) return 0;
+  const expiry = new Date(now.getTime() - SOLD_RETENTION_MS);
+  const eligible = and(
+    eq(properties.status, "sold"),
+    lte(properties.soldAt, expiry),
+    sql`(${properties.files} IS NOT NULL OR EXISTS
+      (SELECT 1 FROM property_files f WHERE f.propertyId = ${properties.id}))`,
+  );
+  const candidates = await db.select({ id: properties.id }).from(properties)
+    .where(eligible).limit(50);
+  let cleaned = 0;
+  for (const property of candidates) {
+    await db.transaction(async tx => {
+      const current = await tx.select({ id: properties.id }).from(properties)
+        .where(and(eq(properties.id, property.id), eligible)).for("update");
+      if (!current.length) return;
+      await tx.delete(propertyFiles).where(eq(propertyFiles.propertyId, property.id));
+      await tx.update(properties).set({ files: null }).where(eq(properties.id, property.id));
+      cleaned++;
+    });
+  }
+  return cleaned;
+}
+
 export async function purgeExpiredOwnerDeletedProperties() {
   const db = await getDb();
   if (!db) return 0;
@@ -3017,7 +3060,8 @@ export async function purgeExpiredOwnerDeletedProperties() {
     .select({ id: properties.id })
     .from(properties)
     .where(
-      and(eq(properties.deleted, 1), lt(properties.ownerDeletedAt, expiry))
+      and(eq(properties.deleted, 1), lt(properties.ownerDeletedAt, expiry),
+        isSoldPolicyActive() ? undefined : ne(properties.status, "sold"))
     );
   // 削除操作から30日を過ぎた物件は写真・添付ファイルだけを削除する。
   // 物件概要と問い合わせ履歴はマーケティングデータとして活用するため保持する。

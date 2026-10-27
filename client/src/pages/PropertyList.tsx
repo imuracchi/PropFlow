@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { matchesSoldList } from "@shared/soldRetention";
 import { fmtDate, fmtDateShort } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,8 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const [maxPrice, setMaxPrice] = useState("");
   const [showNewOnly, setShowNewOnly] = useState(false);
   const [showHotOnly, setShowHotOnly] = useState(false);
+  const [soldOnly, setSoldOnly] = useState(false);
+  const soldPolicy = trpc.property.soldRetentionPolicy.useQuery(undefined, { refetchInterval: 60_000 });
   const [filterRegion, setFilterRegion] = useState<string | null>(null);
   const [filterPrefecture, setFilterPrefecture] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -115,6 +118,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
   const sourceList = mode === "mine" ? (myProperties ?? []) as any[] : (properties ?? []);
 
   const baseFiltered = sourceList.filter((p: any) => {
+    if (!matchesSoldList(p.status, soldOnly, soldPolicy.data?.active ?? false)) return false;
     if (mode === "favorites") return (favoriteIds ?? []).includes(p.id);
     if (mode === "memo") return (memoIds ?? []).includes(p.id);
     if (mode === "chat") return chatIds.includes(p.id);
@@ -442,6 +446,7 @@ export default function PropertyList({ mode = "all", hideHeader = false }: { mod
                 >
                   <Flame className="w-3.5 h-3.5" />注目のみ
                 </Button>
+                {soldPolicy.data?.active && <Button size="sm" variant={soldOnly ? "default" : "outline"} onClick={() => { setSoldOnly(!soldOnly); setShowNewOnly(false); setShowHotOnly(false); }}>成約物件</Button>}
               </div>
             </div>
 

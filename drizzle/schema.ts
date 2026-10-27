@@ -103,6 +103,7 @@ export const properties = mysqlTable("properties", {
   files: json("files").$type<{ name: string; size: number }[]>(),
   viewCount: int("viewCount").default(0).notNull(),
   dealPrice: bigint("dealPrice", { mode: "number" }),
+  soldAt: timestamp("soldAt"),
   deleted: int("deleted").default(0).notNull(),
   ownerDeletedAt: timestamp("ownerDeletedAt"),
   published: int("published").default(1).notNull(),

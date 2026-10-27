@@ -2360,6 +2360,7 @@ export default function PropertyDetail() {
             </div>
             <div className="px-5 py-4 space-y-3">
               <p className="text-sm text-foreground">「{property.name}」を成約済みにします。問い合わせのあった方にはDMで自動的にお知らせします。</p>
+              <p className="text-sm text-muted-foreground">2026年11月4日より、成約物件は通常の物件リストから非表示になり、「成約物件」から確認できます。写真・添付資料は成約から1週間後（11月4日以前は削除しません）に削除されます。物件情報と問い合わせ履歴は保持します。</p>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">成約金額（円・わからなければ空欄でOK）</label>
                 <Input

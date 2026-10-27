@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { matchesSoldList } from "@shared/soldRetention";
 import {
   Building2,
   CheckCircle2,
@@ -243,6 +244,8 @@ export default function V2PropertyList({
   const [maxPrice, setMaxPrice] = useState("");
   const [minArea, setMinArea] = useState("");
   const [maxArea, setMaxArea] = useState("");
+  const [soldOnly, setSoldOnly] = useState(false);
+  const soldPolicy = trpc.property.soldRetentionPolicy.useQuery(undefined, { refetchInterval: 60_000 });
   const [newOnly, setNewOnly] = useState(false);
   const [hotOnly, setHotOnly] = useState(false);
   const [negotiatingOnly, setNegotiatingOnly] = useState(false);
@@ -310,6 +313,7 @@ export default function V2PropertyList({
   const filtered = useMemo(
     () =>
       (properties ?? []).filter((p: any) => {
+        if (!matchesSoldList(p.status, soldOnly, soldPolicy.data?.active ?? false)) return false;
         if (collection !== "mine" && p.published === 0) return false;
         if (collection === "favorites" && !favSet.has(p.id)) return false;
         if (collection === "mine" && p.userId !== viewerId) return false;
@@ -339,14 +343,16 @@ export default function V2PropertyList({
           return false;
         if (maxArea && (!p.landArea || p.landArea > Number(maxArea)))
           return false;
-        if (newOnly && (p.userId === user?.id || readSet.has(p.id)))
+        if (!soldOnly && newOnly && (p.userId === user?.id || readSet.has(p.id)))
           return false;
-        if (hotOnly && !isPropertyAttentionWorthy(p)) return false;
-        if (negotiatingOnly && p.status !== "negotiating") return false;
+        if (!soldOnly && hotOnly && !isPropertyAttentionWorthy(p)) return false;
+        if (!soldOnly && negotiatingOnly && p.status !== "negotiating") return false;
         return true;
       }),
     [
       properties,
+      soldOnly,
+      soldPolicy.data?.active,
       collection,
       favSet,
       viewerId,
@@ -453,7 +459,8 @@ export default function V2PropertyList({
     sortKey,
     sortDirection,
   ]);
-  const previousPaginationFilterKey = useRef(paginationFilterKey);
+  const soldPaginationKey = `${soldOnly}:${soldPolicy.data?.active}:${paginationFilterKey}`;
+  const previousPaginationFilterKey = useRef(soldPaginationKey);
 
   useEffect(() => {
     const page = Number(new URLSearchParams(window.location.search).get("page"));
@@ -462,11 +469,11 @@ export default function V2PropertyList({
   }, [location]);
 
   useEffect(() => {
-    if (previousPaginationFilterKey.current === paginationFilterKey) return;
-    previousPaginationFilterKey.current = paginationFilterKey;
+    if (previousPaginationFilterKey.current === soldPaginationKey) return;
+    previousPaginationFilterKey.current = soldPaginationKey;
     setCurrentPage(1);
     setLocation(listPath, { replace: true });
-  }, [listPath, paginationFilterKey, setLocation]);
+  }, [listPath, soldPaginationKey, setLocation]);
 
   useEffect(() => {
     if (isLoading || currentPage <= totalPages) return;
@@ -809,23 +816,28 @@ export default function V2PropertyList({
               詳細条件{detailFilterCount > 0 && ` ${detailFilterCount}`}
             </button>
             <button
-              onClick={() => setNewOnly(!newOnly)}
+              onClick={() => { setSoldOnly(false); setNewOnly(!newOnly); }}
               className={`border px-2 py-1.5 text-[10px] font-bold sm:px-3 sm:py-2 sm:text-[11px] ${newOnly ? "border-[#173f70] bg-[#edf3f9] text-[#173f70]" : "border-[#cbd5df] text-[#65748a]"}`}
             >
               未読
             </button>
             <button
-              onClick={() => setHotOnly(!hotOnly)}
+              onClick={() => { setSoldOnly(false); setHotOnly(!hotOnly); }}
               className={`border px-2 py-1.5 text-[10px] font-bold sm:px-3 sm:py-2 sm:text-[11px] ${hotOnly ? "border-[#b67b12] bg-[#fff0c9] text-[#8b5a08]" : "border-[#cbd5df] text-[#65748a]"}`}
             >
               注目
             </button>
             <button
-              onClick={() => setNegotiatingOnly(!negotiatingOnly)}
+              onClick={() => { setSoldOnly(false); setNegotiatingOnly(!negotiatingOnly); }}
               className={`border px-2 py-1.5 text-[10px] font-bold sm:px-3 sm:py-2 sm:text-[11px] ${negotiatingOnly ? "border-[#d5ad54] bg-[#fff1b8] text-[#765500]" : "border-[#cbd5df] text-[#65748a]"}`}
             >
               問合せあり
             </button>
+            {soldPolicy.data?.active && <button
+              onClick={() => { setSoldOnly(!soldOnly); setNewOnly(false); setHotOnly(false); setNegotiatingOnly(false); setCurrentPage(1); }}
+              aria-pressed={soldOnly}
+              className={`border px-2 py-1.5 text-[10px] font-bold sm:px-3 sm:py-2 sm:text-[11px] ${soldOnly ? "border-[#3f7d5a] bg-[#edf6f0] text-[#3f7d5a]" : "border-[#cbd5df] text-[#65748a]"}`}
+            >成約物件</button>}
             {collection === "all" && (
               <button
                 onClick={() => setFavoriteOnly(!favoriteOnly)}
