@@ -3078,6 +3078,7 @@ ${propList}`,
   }),
 
   propertySearch: router({
+    hasActive: protectedProcedure.query(() => db.hasActivePropertySearchRequests()),
     list: protectedProcedure.query(({ ctx }) =>
       db.listPropertySearchRequests(
         ctx.user.id,

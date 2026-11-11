@@ -1,3 +1,4 @@
+import PropertySearchBanner from "@/components/v2/PropertySearchBanner";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { matchesSoldList } from "@shared/soldRetention";
 import {
@@ -269,6 +270,7 @@ export default function V2PropertyList({
       return [902];
     }
   });
+  const recruitmentQuery = trpc.propertySearch.hasActive.useQuery(undefined, { enabled: !preview && collection === "all", staleTime: 60_000 });
   const propertyQuery = trpc.property.list.useQuery(undefined, {
     enabled: !preview,
   });
@@ -625,6 +627,7 @@ export default function V2PropertyList({
   return (
     <V2Layout preview={preview}>
       <main className="w-full max-w-[1500px] p-4 lg:p-7">
+        <PropertySearchBanner visible={collection === "all" && (preview || recruitmentQuery.data === true)} />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[14px] text-[#758194]">{pageDescription}</p>

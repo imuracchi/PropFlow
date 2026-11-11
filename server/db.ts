@@ -409,6 +409,8 @@ export async function runStartupMigrations() {
       \`requestId\` int NOT NULL PRIMARY KEY,
       \`recipientCount\` int NOT NULL DEFAULT 0,
       \`sentCount\` int NOT NULL DEFAULT 0,
+      \`lineSentCount\` int NOT NULL DEFAULT 0,
+      \`lineRecipientCount\` int NOT NULL DEFAULT 0,
       \`status\` varchar(20) NOT NULL DEFAULT 'sending',
       \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
       \`completedAt\` timestamp NULL
@@ -1898,6 +1900,18 @@ export async function getPropertySearchDigestData(start: Date, end: Date) {
   return { requests, recipients };
 }
 
+export async function hasActivePropertySearchRequests() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db.select({ id: propertySearchRequests.id }).from(propertySearchRequests).where(and(
+    inArray(propertySearchRequests.status, ["active", "negotiating"]),
+    eq(propertySearchRequests.adminHidden, 0),
+    sql`${propertySearchRequests.publishedAt} IS NOT NULL`,
+    sql`${propertySearchRequests.expiresAt} > NOW()`
+  )).limit(1);
+  return rows.length > 0;
+}
+
 export async function getPropertySearchPublicationData(requestId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1908,7 +1922,7 @@ export async function getPropertySearchPublicationData(requestId: number) {
     sql`${propertySearchRequests.publishedAt} IS NOT NULL`,
     sql`${propertySearchRequests.expiresAt} > NOW()`
   ));
-  const recipients = await db.select({ email: users.email }).from(users).where(and(
+  const recipients = await db.select({ email: users.email, lineUserId: users.lineUserId }).from(users).where(and(
     eq(users.status, "active"), eq(users.notifyPropertySearch, 1), eq(users.announcementExcluded, 0)
   ));
   return { requests, recipients };
@@ -1921,10 +1935,10 @@ export async function claimPropertySearchPublication(requestId: number, recipien
   return (result[0] as any).affectedRows === 1;
 }
 
-export async function completePropertySearchPublication(requestId: number, sentCount: number, status: "sent" | "error") {
+export async function completePropertySearchPublication(requestId: number, sentCount: number, status: "sent" | "error", lineSentCount = 0, lineRecipientCount = 0) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.execute(sql`UPDATE property_search_publication_deliveries SET sentCount=${sentCount}, status=${status}, completedAt=NOW() WHERE requestId=${requestId}`);
+  await db.execute(sql`UPDATE property_search_publication_deliveries SET sentCount=${sentCount}, lineSentCount=${lineSentCount}, lineRecipientCount=${lineRecipientCount}, status=${status}, completedAt=NOW() WHERE requestId=${requestId}`);
 }
 
 function notifyPublishedPropertySearch(requestId: number) {

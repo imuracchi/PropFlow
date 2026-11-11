@@ -948,7 +948,7 @@ function NotifySettings({ v2 = false }: { v2?: boolean }) {
           <div>
             <span className="text-sm font-medium">物件募集のお知らせ</span>
             <p className="text-xs text-muted-foreground">
-              物件募集が公開されたときにお知らせ
+              物件募集が公開されたときにメール・LINE（連携済みの方）でお知らせ
             </p>
           </div>
         </label>

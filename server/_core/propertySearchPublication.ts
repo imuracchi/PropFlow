@@ -4,6 +4,7 @@ import {
   getPropertySearchPublicationData,
 } from "../db";
 import { sendMail } from "./mail";
+import { sendLinePush } from "./line";
 import { PUBLIC_SITE_URL } from "./publicUrl";
 
 function escapeHtml(value: unknown) {
@@ -54,7 +55,11 @@ export async function sendPropertySearchPublication(requestId: number) {
   </div>`;
 
   let sentCount = 0;
-  for (const { email } of recipients) {
+  let lineSentCount = 0;
+  const lineRecipientCount = recipients.filter(recipient => !!recipient.lineUserId).length;
+  const request = requests[0];
+  const lineText = ["物件をお探しの方がいます", request.title, `エリア：${(request.areas ?? []).join("、") || "指定なし"}`, `種別：${(request.propertyTypes ?? []).join("、") || "指定なし"}`, `予算：${money(request.minPrice)}〜${money(request.maxPrice)}`, "募集中の物件を見る", `${siteUrl}/v2/property-search`].join("\n");
+  for (const { email, lineUserId } of recipients) {
     if (
       await sendMail(
         email,
@@ -63,16 +68,21 @@ export async function sendPropertySearchPublication(requestId: number) {
       ).catch(() => false)
     )
       sentCount += 1;
+    if (lineUserId && await sendLinePush(lineUserId, lineText).catch(() => false)) lineSentCount += 1;
   }
   await completePropertySearchPublication(
     requestId,
     sentCount,
-    sentCount === recipients.length ? "sent" : "error"
+    sentCount === recipients.length && lineSentCount === lineRecipientCount ? "sent" : "error",
+    lineSentCount,
+    lineRecipientCount
   );
   return {
     skipped: false,
     requestId,
 
+    lineSentCount,
+    lineRecipientCount,
     recipientCount: recipients.length,
     sentCount,
   };
