@@ -26,7 +26,7 @@ vi.mock("../db", () => ({
 }));
 vi.mock("./heartbeat", () => ({ deleteHeartbeatJob: removeJob }));
 vi.mock("./mail", () => ({ sendMail: vi.fn() }));
-vi.mock("./line", () => ({ buildPropertyFlexMessage: vi.fn(), sendLineBroadcast: vi.fn() }));
+vi.mock("./line", () => ({ buildPropertyFlexMessage: vi.fn(), sendConfiguredLineBroadcast: vi.fn() }));
 vi.mock("./webpush", () => ({ sendPushToUsers: vi.fn() }));
 
 describe("executeScheduledPropertyPublish", () => {

@@ -1,6 +1,6 @@
 import * as db from "../db";
 import { sendMail } from "./mail";
-import { buildPropertyFlexMessage, sendLineBroadcast } from "./line";
+import { buildPropertyFlexMessage, sendConfiguredLineBroadcast } from "./line";
 import { sendPushToUsers } from "./webpush";
 import { deleteHeartbeatJob } from "./heartbeat";
 import { PUBLIC_SITE_URL } from "./publicUrl";
@@ -30,7 +30,7 @@ export async function sendScheduledPropertyNotifications(
   const excludedIds = await db.getPropertyExcludedUserIds(propertyId);
   const lineAllowed = channels.line && isLineNotificationAllowedAt();
   if (lineAllowed && !prop.lineNotifiedAt && !excludedIds.length)
-    await sendLineBroadcast(buildPropertyFlexMessage(prop)).catch(() => {});
+    await sendConfiguredLineBroadcast(buildPropertyFlexMessage(prop), "newProperty", excludedIds).catch(() => {});
   if (lineAllowed && !prop.lineNotifiedAt) await db.markPropertyLineNotified(propertyId);
   const priceLine = prop.priceNegotiable ? "応相談" : prop.price ? `${prop.price.toLocaleString()}円` : "未定";
   const notificationTitle = notificationPropertyTitle(prop.id, prop.name);

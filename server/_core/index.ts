@@ -702,9 +702,7 @@ async function startServer() {
             batch.receiverId,
             "dm"
           );
-          const receiverLineUserId = await db.getLineUserIdByUserId(
-            batch.receiverId
-          );
+          const receiverLineUserId = (await db.getNotificationRecipient(batch.receiverId, "dm", "line"))?.lineUserId;
           const emailOk = receiverEmail
             ? await sendMail(
                 receiverEmail,
@@ -759,7 +757,11 @@ async function startServer() {
       const { sendMail } = await import("./mail");
       const siteUrl = PUBLIC_SITE_URL;
       const unreadList = await db.getUnreadDmCounts();
-      for (const { email, unreadCount } of unreadList) {
+      for (const { userId, email, unreadCount } of unreadList) {
+        const mailRecipient=await db.getNotificationRecipient(userId,"unreadDm","email");
+        const lineRecipient=await db.getNotificationRecipient(userId,"unreadDm","line");
+        if(lineRecipient?.lineUserId){const {sendLinePush}=await import("./line");await sendLinePush(lineRecipient.lineUserId,`未読メッセージが${unreadCount}件あります\n${siteUrl}/v2/messages`);}
+        if(!mailRecipient)continue;
         await sendMail(
           email,
           `【PropFlow】未読メッセージが${unreadCount}件あります`,
@@ -785,6 +787,12 @@ async function startServer() {
   console.log("[CRON] Unread DM check scheduled at 19:00 JST daily");
 
   // 物件募集は公開時に通知するため、翌朝のまとめ配信は行わない。
+  cron.schedule("0 10 * * 1", async () => {
+    try {const {sendWeeklyPropertySearchDigest}=await import("./weeklyPropertySearchDigest");console.log("[CRON] Weekly recruitment digest:",await sendWeeklyPropertySearchDigest());}
+    catch(error){console.error("[CRON] Weekly recruitment digest failed:",error);}
+  },{timezone:"Asia/Tokyo"});
+  console.log("[CRON] Weekly recruitment email scheduled Monday 10:00 JST");
+
 
   // 毎日深夜0時（JST）にダウンロード資料（3日超）を自動削除
   cron.schedule("0 15 * * *", async () => {
@@ -876,7 +884,7 @@ async function startServer() {
       if (pending.length === 0) return;
 
       const { sendMail } = await import("./mail");
-      const { sendLineBroadcast } = await import("./line");
+      const { sendConfiguredLineBroadcast } = await import("./line");
       const siteUrl = PUBLIC_SITE_URL;
 
       for (const schedule of pending) {
@@ -891,7 +899,7 @@ async function startServer() {
 
           let emailSent = 0;
           if (!schedule.skipEmail && emailBody) {
-            const emails = await db.getAllActiveUserEmails();
+            const emails = await db.getActiveUserEmailsForNotify("announce");
             const imageBlock = schedule.imageUrl
               ? `<img src="${schedule.imageUrl}" alt="" style="width:100%;display:block;border-radius:4px;margin-bottom:16px" />`
               : "";
@@ -984,7 +992,7 @@ async function startServer() {
                 ],
               },
             };
-            lineSent = await sendLineBroadcast({
+            lineSent = await sendConfiguredLineBroadcast({
               type: "flex",
               altText: cleanSubject,
               contents: bubbleContents,

@@ -1,3 +1,4 @@
+import { NOTIFICATION_EVENTS, NOTIFICATION_LABELS, notificationPreferences, type NotificationEvent, type NotificationChannel } from "@shared/notificationPreferences";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -850,132 +851,27 @@ function VisibilitySettings({ v2 = false }: { v2?: boolean }) {
 }
 
 function NotifySettings({ v2 = false }: { v2?: boolean }) {
-  const { data: settings, isLoading } = trpc.auth.getNotifySettings.useQuery();
-  const mutation = trpc.auth.updateNotifySettings.useMutation();
-  const utils = trpc.useUtils();
-
-  const [notifyNewProperty, setNotifyNewProperty] = useState(1);
-  const [notifyPropertySearch, setNotifyPropertySearch] = useState(1);
-  const [notifyDm, setNotifyDm] = useState(1);
-  const [notifyAnnounce, setNotifyAnnounce] = useState(1);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    if (settings && !loaded) {
-      setNotifyNewProperty(settings.notifyNewProperty);
-      setNotifyPropertySearch(settings.notifyPropertySearch);
-      setNotifyDm(settings.notifyDm);
-      setNotifyAnnounce(settings.notifyAnnounce);
-      setLoaded(true);
-    }
-  }, [settings]);
-
-  const save = async (np: number, ps: number, dm: number, an: number) => {
-    setNotifyNewProperty(np);
-    setNotifyPropertySearch(ps);
-    setNotifyDm(dm);
-    setNotifyAnnounce(an);
-    await mutation.mutateAsync({
-      notifyNewProperty: np,
-      notifyPropertySearch: ps,
-      notifyDm: dm,
-      notifyAnnounce: an,
-    });
-    utils.auth.getNotifySettings.invalidate();
-  };
-
-  if (isLoading) return null;
-
-  return (
-    <div
-      className={
-        v2
-          ? "overflow-hidden border border-[#d4dde7] bg-white"
-          : "bg-card border border-border rounded-lg overflow-hidden"
-      }
-    >
-      <div
-        className={
-          v2
-            ? "border-b border-[#d4dde7] bg-[#edf1f5] px-5 py-4"
-            : "px-5 py-3 border-b border-border bg-muted/40"
-        }
-      >
-        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <Mail className="w-4 h-4 text-primary" />
-          メール通知設定
-        </h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          チェックを入れた項目のメール通知を受け取ります
-        </p>
-      </div>
-      <div className="p-5 space-y-3">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            className="accent-primary w-4 h-4"
-            checked={notifyNewProperty === 1}
-            onChange={e =>
-              save(
-                e.target.checked ? 1 : 0,
-                notifyPropertySearch,
-                notifyDm,
-                notifyAnnounce
-              )
-            }
-          />
-          <div>
-            <span className="text-sm font-medium">新着物件情報</span>
-            <p className="text-xs text-muted-foreground">
-              新しい物件が登録された時にメールでお知らせ
-            </p>
-          </div>
-        </label>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            className="accent-primary w-4 h-4"
-            checked={notifyPropertySearch === 1}
-            onChange={e =>
-              save(
-                notifyNewProperty,
-                e.target.checked ? 1 : 0,
-                notifyDm,
-                notifyAnnounce
-              )
-            }
-          />
-          <div>
-            <span className="text-sm font-medium">物件募集のお知らせ</span>
-            <p className="text-xs text-muted-foreground">
-              物件募集が公開されたときにメール・LINE（連携済みの方）でお知らせ
-            </p>
-          </div>
-        </label>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            className="accent-primary w-4 h-4"
-            checked={notifyDm === 1}
-            onChange={e =>
-              save(
-                notifyNewProperty,
-                notifyPropertySearch,
-                e.target.checked ? 1 : 0,
-                notifyAnnounce
-              )
-            }
-          />
-          <div>
-            <span className="text-sm font-medium">DMが届いた</span>
-            <p className="text-xs text-muted-foreground">
-              ダイレクトメッセージを受信した時にメールでお知らせ
-            </p>
-          </div>
-        </label>
-      </div>
-    </div>
-  );
+ const query=trpc.auth.getNotifySettings.useQuery();
+ const mutation=trpc.auth.updateNotifySettings.useMutation();
+ const [saving,setSaving]=useState(false);
+ const [error,setError]=useState("");
+ if(query.isLoading)return <p>通知設定を読み込んでいます…</p>;
+ if(!query.data)return <p role="alert">通知設定を取得できませんでした。画面を再読み込みしてください。</p>;
+ const preferences=notificationPreferences(query.data);
+ const save=async(event:NotificationEvent,channel:NotificationChannel,checked:boolean)=>{
+  const next={...preferences,[event]:{...preferences[event],[channel]:checked}};
+  setSaving(true);setError("");
+  try{await mutation.mutateAsync({notificationPreferences:next,notifyNewProperty:next.newProperty.email?1:0,notifyPropertySearch:next.propertySearch.email?1:0,notifyDm:next.dm.email?1:0,notifyAnnounce:next.announce.email?1:0});await query.refetch();}
+  catch{setError("保存結果を確認できませんでした。再読み込みして設定をご確認ください。");}
+  finally{setSaving(false);}
+ };
+ return <section className="overflow-hidden border border-[#d4dde7] bg-white">
+  <div className="border-b bg-[#edf1f5] px-5 py-4"><h2 className="text-sm font-semibold">通知設定</h2><p className="mt-1 text-xs text-muted-foreground">通知の種類ごとに、メールとLINEを選べます。変更はその場で保存されます。</p></div>
+  <div className="p-4"><table className="w-full text-sm"><thead><tr><th className="py-3 text-left">通知内容</th><th className="px-2">メール</th><th className="px-2">LINE</th></tr></thead><tbody>{NOTIFICATION_EVENTS.map(event=><tr key={event} className="border-t"><th className="py-4 text-left font-medium">{NOTIFICATION_LABELS[event]}{event==='propertySearchWeekly'&&<p className="mt-1 text-xs font-normal text-muted-foreground">毎週月曜10:00</p>}{event==='unreadDm'&&<p className="mt-1 text-xs font-normal text-muted-foreground">毎日19:00</p>}</th>{(['email','line'] as const).map(channel=><td key={channel} className="px-2 text-center">{event==='propertySearchWeekly'&&channel==='line'?<span aria-label="LINE配信なし">―</span>:<input type="checkbox" className="size-5 accent-primary" aria-label={NOTIFICATION_LABELS[event]+'・'+(channel==='email'?'メール':'LINE')} checked={preferences[event][channel]} disabled={saving||(channel==='line'&&!query.data.lineLinked)} onChange={e=>save(event,channel,e.target.checked)} />}</td>)}</tr>)}</tbody></table>
+  {!query.data.lineLinked&&<p className="mt-3 text-xs">LINE通知を受け取るには、LINE連携が必要です。</p>}
+  <p className="mt-3 text-xs text-muted-foreground">登録確認・パスワード再設定・ご自身で依頼した資料送付など、手続きに必要なメールはこの設定の対象外です。端末のプッシュ通知はブラウザー側で設定できます。</p>
+  {error&&<p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}{saving&&<p role="status">保存しています…</p>}
+ </div></section>;
 }
 
 function ChangePasswordForm({ v2 = false }: { v2?: boolean }) {

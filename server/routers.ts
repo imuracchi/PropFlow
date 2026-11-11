@@ -1,3 +1,4 @@
+import type { NotificationEvent } from "../shared/notificationPreferences";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { isSoldPolicyActive, SOLD_POLICY_START } from "@shared/soldRetention";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -197,6 +198,7 @@ async function sendDmNotifications(opts: {
   path?: string;
   ctaLabel?: string | null;
   skipEmailAndLine?: boolean;
+  notificationEvent?: NotificationEvent;
 }) {
   const propInfo = opts.propertyId
     ? await db.getPropertyById(opts.propertyId)
@@ -220,7 +222,7 @@ async function sendDmNotifications(opts: {
 
   const receiverEmail = opts.skipEmailAndLine
     ? null
-    : await db.getUserEmailIfNotify(opts.receiverId, "dm");
+    : await db.getUserEmailIfNotify(opts.receiverId, opts.notificationEvent ?? "dm");
   if (receiverEmail) {
     const { sendMail } = await import("./_core/mail");
     const mailHtml = `
@@ -242,7 +244,7 @@ async function sendDmNotifications(opts: {
 
   const receiverLineUserId = opts.skipEmailAndLine
     ? null
-    : await db.getLineUserIdByUserId(opts.receiverId);
+    : (await db.getNotificationRecipient(opts.receiverId, opts.notificationEvent ?? "dm", "line"))?.lineUserId;
   if (receiverLineUserId) {
     const { sendLinePush } = await import("./_core/line");
     const lineText = [
@@ -267,9 +269,10 @@ async function sendBroadcastToAll(opts: {
   skipLine?: boolean;
   skipEmail?: boolean;
   audience?: "all" | "propertyOwners";
+  notificationEvent?: NotificationEvent;
 }) {
   const { sendMail } = await import("./_core/mail");
-  const { sendLineBroadcast } = await import("./_core/line");
+  const { sendConfiguredLineBroadcast } = await import("./_core/line");
   const siteUrl = PUBLIC_SITE_URL;
   const cleanSubject = opts.subject.replace(/^【PropFlow】\s*/, "");
   const emailBody = opts.message ?? "";
@@ -285,7 +288,9 @@ async function sendBroadcastToAll(opts: {
   const emails =
     audience === "propertyOwners"
       ? await db.getActivePropertyOwnerEmails()
-      : await db.getAllActiveUserEmails();
+      : await db.getActiveUserEmailsForNotify(opts.notificationEvent ?? "announce");
+  const allowedEmails=new Set(await db.getActiveUserEmailsForNotify(opts.notificationEvent ?? "announce"));
+  const filteredEmails=emails.filter(email=>allowedEmails.has(email));
   let emailSent = 0;
   if (!opts.skipEmail && emailBody) {
     const imageBlock = opts.imageUrl
@@ -307,7 +312,7 @@ async function sendBroadcastToAll(opts: {
           <p style="margin:4px 0 0;font-size:11px;color:#9ca3af">このメールはPropFlowからの送信専用です。ご返信頂けません。</p>
         </div>
       </div>`;
-    for (const email of emails) {
+    for (const email of filteredEmails) {
       const ok = await sendMail(
         email,
         `【PropFlow】${cleanSubject}`,
@@ -378,11 +383,11 @@ async function sendBroadcastToAll(opts: {
         ],
       },
     };
-    lineSent = await sendLineBroadcast({
+    lineSent = await sendConfiguredLineBroadcast({
       type: "flex",
       altText: cleanSubject,
       contents: bubbleContents,
-    });
+    }, opts.notificationEvent ?? "announce");
   }
 
   await db.saveBroadcastLog({
@@ -1089,10 +1094,19 @@ JSONのみ返してください。`,
     updateNotifySettings: protectedProcedure
       .input(
         z.object({
-          notifyNewProperty: z.number(),
-          notifyPropertySearch: z.number(),
-          notifyDm: z.number(),
-          notifyAnnounce: z.number(),
+          notificationPreferences: z.object({
+            newProperty: z.object({email:z.boolean(),line:z.boolean()}),
+            propertySearch: z.object({email:z.boolean(),line:z.boolean()}),
+            propertySearchWeekly: z.object({email:z.boolean(),line:z.boolean()}),
+            dm: z.object({email:z.boolean(),line:z.boolean()}),
+            unreadDm: z.object({email:z.boolean(),line:z.boolean()}),
+            announce: z.object({email:z.boolean(),line:z.boolean()}),
+            sold: z.object({email:z.boolean(),line:z.boolean()}),
+          }).optional(),
+          notifyNewProperty: z.union([z.literal(0),z.literal(1)]),
+          notifyPropertySearch: z.union([z.literal(0),z.literal(1)]),
+          notifyDm: z.union([z.literal(0),z.literal(1)]),
+          notifyAnnounce: z.union([z.literal(0),z.literal(1)]),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -1789,6 +1803,7 @@ JSONのみ返してください。`,
             receiverId: partnerId,
             propertyId: input.id,
             content: notifyContent,
+            notificationEvent: "sold",
             title: "🎉 物件が成約しました",
             emailSubject: `【PropFlow】「${prop.name}」が成約しました`,
             emailHeading: "🎉 物件が成約しました",
@@ -1803,6 +1818,7 @@ JSONのみ返してください。`,
             : "";
           const message = `「${prop.name}」が${priceText}成約しました！`;
           broadcastResult = await sendBroadcastToAll({
+            notificationEvent: "sold",
             subject: `「${prop.name}」成約のお知らせ`,
             message,
             lineMessage: message,
@@ -2161,10 +2177,10 @@ ${propList}`,
 
         // LINE（閲覧制限なしの場合のみ）
         if (input.sendLine && !hasExclusions) {
-          const { sendLineBroadcast, buildPropertyFlexMessage } = await import(
+          const { sendConfiguredLineBroadcast, buildPropertyFlexMessage } = await import(
             "./_core/line"
           );
-          await sendLineBroadcast(buildPropertyFlexMessage(prop)).catch(
+          await sendConfiguredLineBroadcast(buildPropertyFlexMessage(prop), "newProperty", excludedIds).catch(
             () => {}
           );
         }

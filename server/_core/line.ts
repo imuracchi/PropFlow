@@ -180,3 +180,12 @@ export function buildPropertyFlexMessage(prop: {
     },
   };
 }
+
+// Use per-member preferences instead of sending to every LINE follower.
+export async function sendConfiguredLineBroadcast(message: string | object, event: import("../../shared/notificationPreferences").NotificationEvent = "announce", excludeUserIds: number[] = []): Promise<boolean> {
+ const {getNotificationRecipients}=await import("../db");
+ const recipients=await getNotificationRecipients(event,"line",excludeUserIds);
+ let success=true;
+ for(const user of recipients) if(!await sendLinePush(user.lineUserId!,message))success=false;
+ return recipients.length>0 && success;
+}

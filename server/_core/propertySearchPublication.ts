@@ -59,9 +59,9 @@ export async function sendPropertySearchPublication(requestId: number) {
   const lineRecipientCount = recipients.filter(recipient => !!recipient.lineUserId).length;
   const request = requests[0];
   const lineText = ["物件をお探しの方がいます", request.title, `エリア：${(request.areas ?? []).join("、") || "指定なし"}`, `種別：${(request.propertyTypes ?? []).join("、") || "指定なし"}`, `予算：${money(request.minPrice)}〜${money(request.maxPrice)}`, "募集中の物件を見る", `${siteUrl}/v2/property-search`].join("\n");
-  for (const { email, lineUserId } of recipients) {
+  for (const { email, lineUserId, sendEmail: emailEnabled } of recipients) {
     if (
-      await sendMail(
+      emailEnabled !== false && await sendMail(
         email,
         `【PropFlow】物件募集：${requests[0].title}`,
         html
@@ -73,7 +73,7 @@ export async function sendPropertySearchPublication(requestId: number) {
   await completePropertySearchPublication(
     requestId,
     sentCount,
-    sentCount === recipients.length && lineSentCount === lineRecipientCount ? "sent" : "error",
+    sentCount === recipients.filter(recipient=>recipient.sendEmail!==false).length && lineSentCount === lineRecipientCount ? "sent" : "error",
     lineSentCount,
     lineRecipientCount
   );

@@ -1,3 +1,4 @@
+import { canReceiveNotification, notificationPreferences, type NotificationEvent, type NotificationChannel, type NotificationPreferences } from "../shared/notificationPreferences";
 import {
   eq,
   desc,
@@ -128,6 +129,7 @@ export async function runStartupMigrations() {
     "ALTER TABLE `users` ADD COLUMN `businessCardBase64` longtext NULL",
     "ALTER TABLE `users` ADD COLUMN `termsAgreedVersion` varchar(20) NULL AFTER `termsAgreedAt`",
     "ALTER TABLE `users` ADD COLUMN `lastActiveAt` timestamp NULL AFTER `lastSignedIn`",
+    "ALTER TABLE `users` ADD COLUMN `notificationPreferences` json NULL",
     "ALTER TABLE `users` ADD COLUMN `notifyAnnounce` int NOT NULL DEFAULT 1",
     "ALTER TABLE `users` ADD COLUMN `announcementExcluded` int NOT NULL DEFAULT 0",
     "ALTER TABLE `users` ADD COLUMN `announcementExclusionNote` text NULL",
@@ -404,6 +406,13 @@ export async function runStartupMigrations() {
       \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       KEY \`idx_search_proposals_request\` (\`requestId\`),
       KEY \`idx_search_proposals_user\` (\`userId\`)
+    )`,
+    `CREATE TABLE IF NOT EXISTS \`weekly_property_search_deliveries\` (
+      \`weekStart\` varchar(10) NOT NULL,
+      \`userId\` int NOT NULL,
+      \`status\` varchar(20) NOT NULL DEFAULT 'sending',
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (\`weekStart\`, \`userId\`)
     )`,
     `CREATE TABLE IF NOT EXISTS \`property_search_publication_deliveries\` (
       \`requestId\` int NOT NULL PRIMARY KEY,
@@ -1758,61 +1767,24 @@ export async function getActivePropertyOwnerEmails(): Promise<string[]> {
   return rows.map(row => row.email);
 }
 
-export async function getActiveUserEmailsForNotify(
-  type: "newProperty" | "dm" | "announce",
-  excludeUserIds?: number[]
-): Promise<string[]> {
-  const db = await getDb();
-  if (!db) return [];
-  const col =
-    type === "newProperty"
-      ? users.notifyNewProperty
-      : type === "dm"
-        ? users.notifyDm
-        : users.notifyAnnounce;
-  const conditions = [eq(users.status, "active"), eq(col, 1)];
-  if (type !== "dm") conditions.push(eq(users.announcementExcluded, 0));
-  if (excludeUserIds && excludeUserIds.length > 0)
-    conditions.push(notInArray(users.id, excludeUserIds));
-  const rows = await db
-    .select({ email: users.email })
-    .from(users)
-    .where(and(...conditions));
-  return rows.map(r => r.email);
+export async function getNotificationRecipients(event: NotificationEvent, channel: NotificationChannel, excludeUserIds: number[] = []) {
+ const db = await getDb(); if(!db) return [];
+ const rows = await db.select({id:users.id,email:users.email,status:users.status,lineUserId:users.lineUserId,announcementExcluded:users.announcementExcluded,notificationPreferences:users.notificationPreferences,notifyNewProperty:users.notifyNewProperty,notifyPropertySearch:users.notifyPropertySearch,notifyDm:users.notifyDm,notifyAnnounce:users.notifyAnnounce}).from(users).where(eq(users.status,"active"));
+ return rows.filter(user=>!excludeUserIds.includes(user.id) && canReceiveNotification(user,event,channel)).map(user=>({id:user.id,email:user.email,lineUserId:user.lineUserId}));
 }
-
-export async function getUserEmailIfNotify(
-  userId: number,
-  type: "newProperty" | "dm" | "announce"
-): Promise<string | null> {
-  const db = await getDb();
-  if (!db) return null;
-  const col =
-    type === "newProperty"
-      ? users.notifyNewProperty
-      : type === "dm"
-        ? users.notifyDm
-        : users.notifyAnnounce;
-  const rows = await db
-    .select({ email: users.email })
-    .from(users)
-    .where(and(eq(users.id, userId), eq(col, 1), ...(type === "dm" ? [] : [eq(users.announcementExcluded, 0)])))
-    .limit(1);
-  return rows[0]?.email ?? null;
+export async function getNotificationRecipient(userId: number, event: NotificationEvent, channel: NotificationChannel) {
+ return (await getNotificationRecipients(event,channel)).find(user=>user.id===userId) ?? null;
 }
-
-export async function updateNotifySettings(
-  userId: number,
-  settings: {
-    notifyNewProperty: number;
-    notifyPropertySearch: number;
-    notifyDm: number;
-    notifyAnnounce: number;
-  }
-) {
-  const db = await getDb();
-  if (!db) return;
-  await db.update(users).set(settings).where(eq(users.id, userId));
+export async function getActiveUserEmailsForNotify(type: NotificationEvent, excludeUserIds: number[] = []) {
+ return (await getNotificationRecipients(type,"email",excludeUserIds)).map(user=>user.email);
+}
+export async function getUserEmailIfNotify(userId: number, type: NotificationEvent): Promise<string|null> {
+ return (await getNotificationRecipient(userId,type,"email"))?.email ?? null;
+}
+export async function updateNotifySettings(userId: number, settings: {notifyNewProperty:number;notifyPropertySearch:number;notifyDm:number;notifyAnnounce:number;notificationPreferences?:NotificationPreferences}) {
+ const db=await getDb();if(!db)throw new Error("Database not available");
+ if(!settings.notificationPreferences){const user=await getUserById(userId);if(user?.notificationPreferences){const prefs=notificationPreferences(user);prefs.newProperty.email=settings.notifyNewProperty===1;prefs.propertySearch.email=settings.notifyPropertySearch===1;prefs.dm.email=settings.notifyDm===1;prefs.announce.email=settings.notifyAnnounce===1;settings={...settings,notificationPreferences:prefs};}}
+ await db.update(users).set(settings).where(eq(users.id,userId));
 }
 
 export async function getVisibilitySettings(userId: number) {
@@ -1841,32 +1813,9 @@ export async function updateVisibilitySettings(
 }
 
 export async function getNotifySettings(userId: number) {
-  const db = await getDb();
-  if (!db)
-    return {
-      notifyNewProperty: 1,
-      notifyPropertySearch: 1,
-      notifyDm: 1,
-      notifyAnnounce: 1,
-    };
-  const rows = await db
-    .select({
-      notifyNewProperty: users.notifyNewProperty,
-      notifyPropertySearch: users.notifyPropertySearch,
-      notifyDm: users.notifyDm,
-      notifyAnnounce: users.notifyAnnounce,
-    })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  return (
-    rows[0] ?? {
-      notifyNewProperty: 1,
-      notifyPropertySearch: 1,
-      notifyDm: 1,
-      notifyAnnounce: 1,
-    }
-  );
+ const user=await getUserById(userId);
+ if(!user)throw new Error("User not found");
+ return {notifyNewProperty:user.notifyNewProperty,notifyPropertySearch:user.notifyPropertySearch,notifyDm:user.notifyDm,notifyAnnounce:user.notifyAnnounce,notificationPreferences:notificationPreferences(user),lineLinked:!!user.lineUserId};
 }
 
 export async function getPropertySearchDigestData(start: Date, end: Date) {
@@ -1922,10 +1871,12 @@ export async function getPropertySearchPublicationData(requestId: number) {
     sql`${propertySearchRequests.publishedAt} IS NOT NULL`,
     sql`${propertySearchRequests.expiresAt} > NOW()`
   ));
-  const recipients = await db.select({ email: users.email, lineUserId: users.lineUserId }).from(users).where(and(
-    eq(users.status, "active"), eq(users.notifyPropertySearch, 1), eq(users.announcementExcluded, 0)
-  ));
-  return { requests, recipients };
+  const emailRecipients=await getNotificationRecipients("propertySearch","email");
+  const lineRecipients=await getNotificationRecipients("propertySearch","line");
+  const all=new Map<number,{email:string;lineUserId:string|null;sendEmail:boolean}>();
+  for(const user of emailRecipients)all.set(user.id,{email:user.email,lineUserId:null,sendEmail:true});
+  for(const user of lineRecipients)all.set(user.id,{email:user.email,sendEmail:all.get(user.id)?.sendEmail??false,lineUserId:user.lineUserId});
+  return {requests,recipients:[...all.values()]};
 }
 
 export async function claimPropertySearchPublication(requestId: number, recipientCount: number) {
@@ -6575,7 +6526,7 @@ export async function getUnreadDmCounts(): Promise<
   const activeUsers = await db
     .select({ id: users.id, email: users.email, notifyDm: users.notifyDm })
     .from(users)
-    .where(and(eq(users.status, "active"), eq(users.notifyDm, 1)));
+    .where(eq(users.status, "active"));
 
   const results: { userId: number; email: string; unreadCount: number }[] = [];
 
@@ -6948,4 +6899,18 @@ export async function listPropertyPublishSchedulerProbes() {
     executedAt: Date | null;
     createdAt: Date;
   }>;
+}
+
+export async function getCurrentPropertySearchRequests() {
+ const db=await getDb();if(!db)throw new Error("Database not available");
+ return db.select().from(propertySearchRequests).where(and(inArray(propertySearchRequests.status,["active","negotiating"]),eq(propertySearchRequests.adminHidden,0),sql`${propertySearchRequests.publishedAt} IS NOT NULL`,sql`${propertySearchRequests.expiresAt} > NOW()`)).orderBy(desc(propertySearchRequests.publishedAt));
+}
+export async function claimWeeklyPropertySearch(weekStart:string,userId:number) {
+ const db=await getDb();if(!db)throw new Error("Database not available");
+ const result=await db.execute(sql`INSERT IGNORE INTO weekly_property_search_deliveries (weekStart,userId) VALUES (${weekStart},${userId})`);
+ return (result[0] as any).affectedRows===1;
+}
+export async function completeWeeklyPropertySearch(weekStart:string,userId:number,sent:boolean) {
+ const db=await getDb();if(!db)throw new Error("Database not available");
+ await db.execute(sql`UPDATE weekly_property_search_deliveries SET status=${sent?'sent':'error'} WHERE weekStart=${weekStart} AND userId=${userId}`);
 }

@@ -50,6 +50,7 @@ export const users = mysqlTable("users", {
   lastActiveAt: timestamp("lastActiveAt"),
   termsAgreedAt: timestamp("termsAgreedAt"),
   termsAgreedVersion: varchar("termsAgreedVersion", { length: 20 }),
+  notificationPreferences: json("notificationPreferences").$type<import("../shared/notificationPreferences").NotificationPreferences>(),
   notifyNewProperty: int("notifyNewProperty").default(1).notNull(),
   notifyPropertySearch: int("notifyPropertySearch").default(1).notNull(),
   notifyDm: int("notifyDm").default(1).notNull(),
