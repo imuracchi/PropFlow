@@ -40,7 +40,8 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     splitLink({
-      condition: (op) => op.path === "property.extractFromPdf" || op.path === "property.uploadFile" || op.path === "property.downloadFile",
+      // Keep notification preferences independent of slower My Page queries.
+      condition: (op) => op.path === "auth.getNotifySettings" || op.path === "auth.updateNotifySettings" || op.path === "property.extractFromPdf" || op.path === "property.uploadFile" || op.path === "property.downloadFile",
       true: httpLink({
         url: "/api/trpc",
         transformer: superjson,
