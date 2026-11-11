@@ -769,10 +769,10 @@ async function startServer() {
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
             <h2 style="color:#1e3a5f;">💬 未読メッセージのお知らせ</h2>
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">
-              <p style="font-size:18px;font-weight:700;color:#1e3a5f;margin:0;">返信できていないメッセージが ${unreadCount}件 あります</p>
-              <p style="margin:8px 0 0;color:#64748b;">確認して返信してください。</p>
+              <p style="font-size:18px;font-weight:700;color:#1e3a5f;margin:0;">未読メッセージが ${unreadCount}件 あります</p>
+              <p style="margin:8px 0 0;color:#64748b;">PropFlowでメッセージをご確認ください。</p>
             </div>
-            <a href="${siteUrl}/dm-list" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">DMを確認する</a>
+            <a href="${siteUrl}/v2/messages" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;">DMを確認する</a>
             <p style="margin-top:20px;font-size:12px;color:#94a3b8;">PropFlow - 不動産情報プラットフォーム</p>
           </div>`
         );

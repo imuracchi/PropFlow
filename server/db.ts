@@ -1,3 +1,4 @@
+import { countUnreadDmForReminder } from "./_core/unreadDm";
 import { canReceiveNotification, notificationPreferences, type NotificationEvent, type NotificationChannel, type NotificationPreferences } from "../shared/notificationPreferences";
 import {
   eq,
@@ -6545,19 +6546,8 @@ export async function getUnreadDmCounts(): Promise<
       .select()
       .from(dmReadStatus)
       .where(eq(dmReadStatus.userId, u.id));
-    const readMap = new Map<string, Date>();
-    for (const r of readStatuses) {
-      readMap.set(`${r.partnerId}-${r.propertyId ?? 0}`, r.lastReadAt);
-    }
-
-    let unread = 0;
-    for (const dm of allDms) {
-      const key = `${dm.senderId}-${dm.propertyId ?? 0}`;
-      const lastRead = readMap.get(key);
-      if (!lastRead || dm.createdAt > lastRead) {
-        unread++;
-      }
-    }
+    const exitedKeys = await getExitedDmKeys(u.id);
+    const unread = countUnreadDmForReminder(allDms, readStatuses, exitedKeys);
 
     if (unread > 0) {
       results.push({ userId: u.id, email: u.email, unreadCount: unread });
