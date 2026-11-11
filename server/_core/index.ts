@@ -784,24 +784,7 @@ async function startServer() {
   });
   console.log("[CRON] Unread DM check scheduled at 19:00 JST daily");
 
-  // 毎朝10時（JST）に、前日公開分の物件募集をまとめてメール配信
-  cron.schedule(
-    "0 10 * * *",
-    async () => {
-      console.log("[CRON] Sending previous-day property search digest...");
-      try {
-        const { sendPreviousDayPropertySearchDigest } = await import(
-          "./propertySearchDigest"
-        );
-        const result = await sendPreviousDayPropertySearchDigest();
-        console.log("[CRON] Property search digest result:", result);
-      } catch (e) {
-        console.error("[CRON] Property search digest error:", e);
-      }
-    },
-    { timezone: "Asia/Tokyo" }
-  );
-  console.log("[CRON] Property search digest scheduled at 10:00 JST daily");
+  // 物件募集は公開時に通知するため、翌朝のまとめ配信は行わない。
 
   // 毎日深夜0時（JST）にダウンロード資料（3日超）を自動削除
   cron.schedule("0 15 * * *", async () => {

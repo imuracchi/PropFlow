@@ -948,7 +948,7 @@ function NotifySettings({ v2 = false }: { v2?: boolean }) {
           <div>
             <span className="text-sm font-medium">物件募集のお知らせ</span>
             <p className="text-xs text-muted-foreground">
-              前日に公開された物件募集を朝10時にまとめてお知らせ
+              物件募集が公開されたときにお知らせ
             </p>
           </div>
         </label>

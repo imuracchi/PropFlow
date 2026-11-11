@@ -405,6 +405,14 @@ export async function runStartupMigrations() {
       KEY \`idx_search_proposals_request\` (\`requestId\`),
       KEY \`idx_search_proposals_user\` (\`userId\`)
     )`,
+    `CREATE TABLE IF NOT EXISTS \`property_search_publication_deliveries\` (
+      \`requestId\` int NOT NULL PRIMARY KEY,
+      \`recipientCount\` int NOT NULL DEFAULT 0,
+      \`sentCount\` int NOT NULL DEFAULT 0,
+      \`status\` varchar(20) NOT NULL DEFAULT 'sending',
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`completedAt\` timestamp NULL
+    )`,
     `CREATE TABLE IF NOT EXISTS \`property_search_digest_deliveries\` (
       \`digestDate\` varchar(10) NOT NULL PRIMARY KEY,
       \`requestCount\` int NOT NULL DEFAULT 0,
@@ -1888,6 +1896,40 @@ export async function getPropertySearchDigestData(start: Date, end: Date) {
     .from(users)
     .where(and(eq(users.status, "active"), eq(users.notifyPropertySearch, 1), eq(users.announcementExcluded, 0)));
   return { requests, recipients };
+}
+
+export async function getPropertySearchPublicationData(requestId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const requests = await db.select().from(propertySearchRequests).where(and(
+    eq(propertySearchRequests.id, requestId),
+    eq(propertySearchRequests.adminHidden, 0),
+    inArray(propertySearchRequests.status, ["active", "negotiating"]),
+    sql`${propertySearchRequests.publishedAt} IS NOT NULL`,
+    sql`${propertySearchRequests.expiresAt} > NOW()`
+  ));
+  const recipients = await db.select({ email: users.email }).from(users).where(and(
+    eq(users.status, "active"), eq(users.notifyPropertySearch, 1), eq(users.announcementExcluded, 0)
+  ));
+  return { requests, recipients };
+}
+
+export async function claimPropertySearchPublication(requestId: number, recipientCount: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.execute(sql`INSERT IGNORE INTO property_search_publication_deliveries (requestId, recipientCount) VALUES (${requestId}, ${recipientCount})`);
+  return (result[0] as any).affectedRows === 1;
+}
+
+export async function completePropertySearchPublication(requestId: number, sentCount: number, status: "sent" | "error") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.execute(sql`UPDATE property_search_publication_deliveries SET sentCount=${sentCount}, status=${status}, completedAt=NOW() WHERE requestId=${requestId}`);
+}
+
+function notifyPublishedPropertySearch(requestId: number) {
+  import("./_core/propertySearchPublication").then(({ sendPropertySearchPublication }) => sendPropertySearchPublication(requestId))
+    .catch(error => console.error("[PropertySearchPublication]", requestId, error));
 }
 
 export async function claimPropertySearchDigest(
@@ -5522,7 +5564,9 @@ export async function createPropertySearchRequest(
     publishedAt: data.status === "draft" ? null : new Date(),
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   });
-  return Number(result[0].insertId);
+  const id = Number(result[0].insertId);
+  if (data.status !== "draft") notifyPublishedPropertySearch(id);
+  return id;
 }
 
 export async function updatePropertySearchRequest(
@@ -5578,7 +5622,9 @@ export async function updatePropertySearchRequest(
         eq(propertySearchRequests.userId, userId)
       )
     );
-  return result[0].affectedRows > 0;
+  const success = result[0].affectedRows > 0;
+  if (success && existing[0].status === "draft" && nextStatus === "active") notifyPublishedPropertySearch(id);
+  return success;
 }
 
 export async function closePropertySearchRequest(id: number, userId: number) {
