@@ -46,7 +46,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { normalizeBusinessCardImage } from "@/lib/businessCardImage";
+import { normalizeBusinessCardImage, BUSINESS_CARD_ACCEPT, BusinessCardImageError } from "@/lib/businessCardImage";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PropertyRegisterNudgeBanner } from "@/components/PropertyRegisterNudgeBanner";
 
@@ -105,6 +105,7 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
   const [restoreTarget, setRestoreTarget] = useState<any>(null);
   const [notifyRestore, setNotifyRestore] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState("");
+  const [cardProcessing, setCardProcessing] = useState(false);
 
   useEffect(() => {
     if (window.matchMedia("(display-mode: standalone)").matches) {
@@ -393,20 +394,25 @@ export default function MyPage({ v2 = false }: { v2?: boolean }) {
             >
               <input
                 type="file"
-                accept="image/*"
+                accept={BUSINESS_CARD_ACCEPT}
+                disabled={cardProcessing || cardMutation.isPending}
                 className="hidden"
                 onChange={async e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
+                  setCardProcessing(true);
                   try {
                     const normalized = await normalizeBusinessCardImage(file);
                     cardMutation.mutate({ businessCardBase64: normalized.base64 });
-                  } catch {
-                    window.alert("名刺画像を読み込めませんでした。別の画像をお試しください。");
+                  } catch (error) {
+                    window.alert(error instanceof BusinessCardImageError ? error.message : "名刺画像を読み込めませんでした。別の画像をお試しください。");
+                  } finally {
+                    setCardProcessing(false);
+                    e.target.value = "";
                   }
                 }}
               />
-              {cardMutation.isPending ? (
+              {cardProcessing || cardMutation.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Upload className="w-3.5 h-3.5" />

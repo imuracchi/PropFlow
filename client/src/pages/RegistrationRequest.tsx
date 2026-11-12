@@ -3,10 +3,9 @@ import { useLocation } from "wouter";
 import { Building2, Camera, CheckCircle, Loader2, Send } from "lucide-react";
 import AuthPageShell from "@/components/v2/AuthPageShell";
 import { trpc } from "@/lib/trpc";
-import { normalizeBusinessCardImage } from "@/lib/businessCardImage";
+import { normalizeBusinessCardImage, isSupportedBusinessCard, BUSINESS_CARD_ACCEPT, BusinessCardImageError } from "@/lib/businessCardImage";
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 type CardData = {
   name: string;
@@ -28,7 +27,7 @@ export default function RegistrationRequest() {
   const sourcePath = sourcePropertyId > 0 ? `/public/property/${sourcePropertyId}` : "/";
   const cardInputRef = useRef<HTMLInputElement>(null);
   const [cardBase64, setCardBase64] = useState("");
-  const [cardMimeType, setCardMimeType] = useState<(typeof ACCEPTED_TYPES)[number]>("image/jpeg");
+  const [cardMimeType, setCardMimeType] = useState<"image/jpeg">("image/jpeg");
   const [cardData, setCardData] = useState<CardData | null>(null);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState("");
@@ -41,8 +40,8 @@ export default function RegistrationRequest() {
   const selectCard = async (file: File) => {
     setError("");
     setCardData(null);
-    if (!ACCEPTED_TYPES.includes(file.type as (typeof ACCEPTED_TYPES)[number])) {
-      setError("JPEG、PNG、WebP形式の画像を選択してください");
+    if (!isSupportedBusinessCard(file)) {
+      setError("JPEG、PNG、WebP、HEIC形式の画像を選択してください");
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -74,8 +73,8 @@ export default function RegistrationRequest() {
         url: data.url ?? undefined,
         license: data.license ?? undefined,
       });
-    } catch {
-      setError("名刺を読み取れませんでした。文字が鮮明な名刺画像を選び直してください");
+    } catch (error) {
+      setError(error instanceof BusinessCardImageError ? error.message : "名刺を読み取れませんでした。文字が鮮明な名刺画像を選び直してください");
     } finally {
       setReading(false);
     }
@@ -138,12 +137,12 @@ export default function RegistrationRequest() {
         </header>
         <div className="space-y-5 p-6">
           <div className="border border-dashed border-[#9fb1c5] bg-[#f7f9fb] p-5 text-center">
-            <input ref={cardInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={event => { const file = event.target.files?.[0]; if (file) void selectCard(file); event.target.value = ""; }}/>
+            <input ref={cardInputRef} type="file" accept={BUSINESS_CARD_ACCEPT} disabled={reading} capture="environment" className="hidden" onChange={event => { const file = event.target.files?.[0]; if (file) void selectCard(file); event.target.value = ""; }}/>
             {cardBase64 && <img src={`data:${cardMimeType};base64,${cardBase64}`} alt="送信する名刺" className="mx-auto mb-4 max-h-52 max-w-full object-contain"/>}
             <button type="button" disabled={reading} onClick={() => cardInputRef.current?.click()} className="inline-flex h-12 items-center gap-2 bg-[#173f70] px-6 text-sm font-bold text-white disabled:opacity-60">
               {reading ? <Loader2 size={18} className="animate-spin"/> : <Camera size={18}/>} {reading ? "名刺を確認中…" : cardBase64 ? "名刺を選び直す" : "名刺を撮影・選択"}
             </button>
-            <p className="mt-3 text-xs text-[#758194]">JPEG・PNG・WebP／8MB以下</p>
+            <p className="mt-3 text-xs text-[#758194]">JPEG・PNG・WebP・HEIC（HEIF）／8MB以下。HEICは自動変換します。</p>
           </div>
           {cardData && <div className="border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800"><CheckCircle className="mr-2 inline size-4"/>名刺を確認できました。このまま送信してください。</div>}
           {error && <p role="alert" className="border border-red-200 bg-red-50 px-3 py-2 text-sm leading-6 text-red-700">{error}</p>}

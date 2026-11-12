@@ -1,0 +1,19 @@
+PropFlow HEIC conversion component
+
+heic-to 1.6.7 by Hopper Gee, distributed under LGPL-3.0-or-later.
+The library is loaded as a separate JavaScript module only when a HEIC/HEIF
+business card is selected. The upstream library source is unmodified.
+
+Project and build instructions: https://github.com/hoppergee/heic-to
+Corresponding packaged source: https://registry.npmjs.org/heic-to/-/heic-to-1.6.7.tgz
+License text: /licenses/heic-to-LGPL-3.0.txt
+GNU GPL v3 (incorporated by LGPL v3): https://www.gnu.org/licenses/gpl-3.0.html
+
+The packaged source includes the libheif JavaScript decoder used by heic-to.
+PropFlow integration source and build configuration:
+https://github.com/imuracchi/PropFlow
+client/src/lib/businessCardImage.ts imports heic-to/csp dynamically.
+To rebuild with a modified compatible library, replace the heic-to package
+in the project and run the package.json build script. You may modify and
+reverse engineer this combination for debugging modifications to the LGPL
+component as permitted by its license.

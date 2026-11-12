@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { normalizeBusinessCardImage } from "@/lib/businessCardImage";
+import { normalizeBusinessCardImage, BUSINESS_CARD_ACCEPT, BusinessCardImageError } from "@/lib/businessCardImage";
 import AuthPageShell from "@/components/v2/AuthPageShell";
 
 export default function Register() {
@@ -100,8 +100,8 @@ export default function Register() {
       } else {
         setCardError("読み取れませんでした。手動で入力してください。");
       }
-    } catch {
-      setCardError("読み取りに失敗しました。手動で入力してください。");
+    } catch (error) {
+      setCardError(error instanceof BusinessCardImageError ? error.message : "読み取りに失敗しました。手動で入力してください。");
     }
     setCardReading(false);
   };
@@ -275,7 +275,8 @@ export default function Register() {
                     <input
                       ref={cardInputRef}
                       type="file"
-                      accept="image/*"
+                      accept={BUSINESS_CARD_ACCEPT}
+                      disabled={cardReading}
                       capture="environment"
                       className="hidden"
                       onChange={e => {
@@ -288,10 +289,13 @@ export default function Register() {
                       size="sm"
                       className="gap-2 bg-[#173f70] hover:bg-[#102f56] text-white"
                       onClick={() => cardInputRef.current?.click()}
+                      disabled={cardReading}
                     >
                       <Camera className="w-4 h-4" />
-                      名刺を撮影 / 選択する
+                      {cardReading ? "画像を変換・読み取り中…" : "名刺を撮影 / 選択する"}
                     </Button>
+                    {cardError && <p role="alert" className="mt-2 text-xs text-amber-600">{cardError}</p>}
+                    <p className="mt-2 text-xs text-muted-foreground">JPEG・PNG・WebP・HEIC（HEIF）／8MB以下。HEICは自動変換します。</p>
                   </div>
                 )}
               </div>
